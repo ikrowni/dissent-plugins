@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Event Card</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0a0a12;
+    color: rgba(255,255,255,0.85);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: rgba(var(--glow, 108,99,255), 0.2);
+    color: rgba(var(--bright, 168,139,250), 1);
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .meta { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+  .fights { display: flex; flex-direction: column; gap: 10px; }
+  .fight {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  .fighter { font-weight: 600; }
+  .vs { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+  .status { font-size: 10px; color: rgba(var(--bright, 168,139,250), 0.7); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">Event Card</div>
+  <h1 id="title">Loading event…</h1>
+  <p class="meta" id="meta"></p>
+  <div class="fights" id="fights"></div>
+</div>
+<script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
+<script>
+  function applyTheme(theme) {
+    if (theme['--theme-glow-rgb']) document.documentElement.style.setProperty('--glow', theme['--theme-glow-rgb']);
+    if (theme['--theme-bright-rgb']) document.documentElement.style.setProperty('--bright', theme['--theme-bright-rgb']);
+  }
+
+  function render(config) {
+    const eventId = config.event_id || 'ufc-unknown';
+    document.getElementById('title').textContent = config.event_title || eventId.toUpperCase().replace(/-/g, ' ');
+    document.getElementById('meta').textContent = config.event_date
+      ? `${config.event_date} · ${config.venue || 'Venue TBA'}`
+      : 'Date TBA';
+
+    const fightsEl = document.getElementById('fights');
+    const fights = config.fights || [
+      { a: 'Fighter A', b: 'Fighter B', bout: 'Main Event', status: 'Scheduled' },
+      { a: 'Fighter C', b: 'Fighter D', bout: 'Co-Main', status: 'Scheduled' },
+      { a: 'Fighter E', b: 'Fighter F', bout: 'Prelim', status: 'Scheduled' },
+    ];
+    fightsEl.innerHTML = fights.map(f => `
+      <div class="fight">
+        <span class="fighter">${f.a}</span>
+        <div style="text-align:center">
+          <div class="vs">vs</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">${f.bout}</div>
+        </div>
+        <span class="fighter">${f.b}</span>
+        <span class="status">${f.status}</span>
+      </div>
+    `).join('');
+  }
+
+  async function main() {
+    const ctx = await Dissent.init({ onFallback: () => console.warn('Running outside Dissent') });
+    applyTheme(ctx.theme || {});
+    render(ctx.config || {});
+
+    Dissent.on('theme-update', (theme) => applyTheme(theme || {}));
+  }
+
+  main().catch(err => console.error(err));
+</script>
+</body>
+</html>

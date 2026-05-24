@@ -1,0 +1,13 @@
+{
+  "id": "ufc-news-sidebar",
+  "name": "UFC News",
+  "description": "Live UFC/MMA news feed in the sidebar — breaking news, injuries, scratches, contracts, and fight results. Updates every 5 minutes.",
+  "author": "Dissent Official",
+  "tier": 2,
+  "context": ["sidebar"],
+  "url": "https://app.dissent.chat/plugins/ufc-news-sidebar.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["fetch:external"],
+  "allowed_fetch_domains": ["site.api.espn.com", "news.google.com"]
+}

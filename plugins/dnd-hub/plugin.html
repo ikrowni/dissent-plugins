@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <base href="https://app.dissent.chat/plugins/">
+  <title>D&D Hub</title>
+  <link rel="stylesheet" href="dnd-hub/dnd-hub-styles.css">
+</head>
+<body>
+  <div id="screen-loading">
+    <div class="spinner"></div>
+    <span style="font-size:13px;color:var(--dnd-muted)">Loading D&D Hub…</span>
+  </div>
+  <div id="screen-lobby"        class="hidden fade-in"></div>
+  <div id="screen-dm-portal"    class="hidden fade-in" style="padding:24px 20px;gap:0"></div>
+  <div id="screen-join"         class="hidden fade-in" style="padding:24px 20px;gap:0"></div>
+  <div id="screen-cam-wizard"   class="hidden fade-in" style="padding:24px 20px"></div>
+  <div id="screen-char-creator" class="hidden"></div>
+  <div id="screen-campaign"     class="hidden"></div>
+  <script>
+  window.addEventListener('error', e => {
+    document.body.innerHTML = '<pre style="color:#f87171;padding:16px;white-space:pre-wrap;font-size:12px">ERROR: ' + (e.message||'') + '\n' + (e.filename||'') + ':' + e.lineno + '\n' + (e.error?.stack||'') + '</pre>';
+  });
+  window.addEventListener('unhandledrejection', e => {
+    document.body.innerHTML = '<pre style="color:#f87171;padding:16px;white-space:pre-wrap;font-size:12px">UNHANDLED REJECTION: ' + (e.reason?.message||String(e.reason)) + '\n' + (e.reason?.stack||'') + '</pre>';
+  });
+  </script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.min.js","cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script type="module" src="dnd-hub/dnd-hub-main.js?v=20260502p4"></script>
+</body>
+</html>

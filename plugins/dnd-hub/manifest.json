@@ -1,0 +1,13 @@
+{
+  "id": "dnd-hub",
+  "name": "D&D Hub",
+  "description": "Full virtual tabletop for D&D 5e — battle maps with fog of war, token movement, initiative tracker, encounter builder, and ambient sound.",
+  "author": "Dissent Official",
+  "tier": 3,
+  "context": ["channel"],
+  "url": "https://app.dissent.chat/plugins/dnd-hub.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["storage:server", "storage:user", "realtime", "members:read", "bot:post", "identity"],
+  "allowed_fetch_domains": []
+}

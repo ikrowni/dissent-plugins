@@ -1,0 +1,18 @@
+{
+  "id": "nfl-hub",
+  "name": "NFL Hub",
+  "description": "Live NFL scores, standings, schedules, news, and optional fantasy matchup integration. Auto-updates during games.",
+  "author": "Dissent Official",
+  "tier": 3,
+  "context": ["channel"],
+  "url": "https://app.dissent.chat/plugins/nfl-hub.html",
+  "version": "1.0.0",
+  "config_schema": {
+    "sleeper_league_id": {
+      "type": "string",
+      "label": "Sleeper League ID (optional — enables live fantasy matchups, free at sleeper.com)"
+    }
+  },
+  "declared_permissions": ["fetch:external"],
+  "allowed_fetch_domains": ["api.the-odds-api.com", "api.sleeper.app", "site.api.espn.com", "sports.core.api.espn.com"]
+}

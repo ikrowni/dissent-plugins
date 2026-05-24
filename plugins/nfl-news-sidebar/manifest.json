@@ -1,0 +1,13 @@
+{
+  "id": "nfl-news-sidebar",
+  "name": "NFL News",
+  "description": "Live NFL news feed in the sidebar — breaking news, injuries, trades, scores, and standings. Updates every 60s.",
+  "author": "Dissent Official",
+  "tier": 2,
+  "context": ["sidebar"],
+  "url": "https://app.dissent.chat/plugins/nfl-news-sidebar.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["fetch:external"],
+  "allowed_fetch_domains": ["site.api.espn.com", "sports.core.api.espn.com"]
+}

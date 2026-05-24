@@ -1,0 +1,13 @@
+{
+  "id": "sleeper-sidebar",
+  "name": "Sleeper Fantasy",
+  "description": "Your Sleeper fantasy football leagues — matchup, standings, and transactions. Each user connects their own account.",
+  "author": "Dissent Official",
+  "tier": 2,
+  "context": ["sidebar"],
+  "url": "https://app.dissent.chat/plugins/sleeper-sidebar.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["storage:user", "fetch:external"],
+  "allowed_fetch_domains": ["api.sleeper.app"]
+}

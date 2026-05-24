@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Polymarket Hub</title>
+<base href="https://app.dissent.chat/plugins/"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a14;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--text:rgba(255,255,255,0.9);--muted:rgba(255,255,255,0.4);--accent:#9147ff;--green:#22c55e;--red:#ef4444}
+html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+@keyframes spin{to{transform:rotate(360deg)}}
+.header{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.header-title{font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px}
+.header-logo{font-size:18px}
+.header-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.body{padding:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+.label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.address{font-family:monospace;font-size:12px;color:var(--text);word-break:break-all}
+.balance{font-size:22px;font-weight:800;color:var(--text)}
+.balance-unit{font-size:13px;color:var(--muted);margin-left:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:38px;padding:0 20px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-danger{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-connected{background:var(--green)}
+.notice{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:#fca5a5;margin-bottom:14px}
+.empty{color:var(--muted);font-size:12px;text-align:center;padding:20px 0}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title"><span class="header-logo">📈</span> Polymarket Hub</div>
+  <div class="header-sub">Real-money prediction markets</div>
+</div>
+<div class="body" id="root">
+  <div style="text-align:center;padding:32px 0"><div class="spinner"></div><p style="color:var(--muted);font-size:12px">Loading…</p></div>
+</div>
+
+<script type="module">
+import { handleSDKMessage, request } from './plugin-sdk.js';
+
+let _connected = false;
+let _address = null;
+let _balance = null;
+
+window.addEventListener('message', e => handleSDKMessage(e, onInit, null));
+
+async function onInit() {
+  await refresh();
+}
+
+async function refresh() {
+  try {
+    const status = await request('polymarket:status', {});
+    _connected = status.connected;
+    _address = status.address;
+    _balance = status.usdcBalance;
+  } catch {
+    _connected = false;
+    _address = null;
+    _balance = null;
+  }
+  render();
+}
+
+async function connect() {
+  renderConnecting();
+  try {
+    const result = await request('polymarket:connect', {});
+    _connected = true;
+    _address = result.address;
+    _balance = result.usdcBalance;
+  } catch (e) {
+    renderError(e?.message ?? 'Connection failed. Make sure MetaMask or Coinbase Wallet is installed and on Polygon network.');
+    return;
+  }
+  render();
+}
+
+function disconnect() {
+  renderDisconnectInfo();
+}
+
+function renderConnecting() {
+  document.getElementById('root').innerHTML = `
+    <div style="text-align:center;padding:32px 0">
+      <div class="spinner"></div>
+      <p style="color:var(--muted);font-size:12px">Connecting wallet…</p>
+    </div>`;
+}
+
+const WALLET_LINKS_HTML = `
+  <div style="margin-top:12px">
+    <p style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Get a wallet</p>
+    <div style="display:flex;gap:8px">
+      <a href="https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn"
+         target="_blank" rel="noopener"
+         style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-decoration:none">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width="16" height="16" style="border-radius:3px" alt=""/>
+        MetaMask
+      </a>
+      <a href="https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad"
+         target="_blank" rel="noopener"
+         style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-decoration:none">
+        <img src="https://www.coinbase.com/favicon.ico" width="16" height="16" style="border-radius:3px" alt=""/>
+        Coinbase Wallet
+      </a>
+    </div>
+  </div>`;
+
+function renderError(msg) {
+  const noWallet = msg.toLowerCase().includes('no wallet') || msg.toLowerCase().includes('not detected');
+  document.getElementById('root').innerHTML = `
+    <div class="notice">${esc(msg)}</div>
+    ${noWallet ? WALLET_LINKS_HTML : ''}
+    <button class="btn btn-primary" id="retry-btn" style="margin-top:12px;width:100%">Try Again</button>`;
+  document.getElementById('retry-btn').addEventListener('click', connect);
+}
+
+function renderDisconnectInfo() {
+  document.getElementById('root').innerHTML = `
+    <div class="notice">To disconnect, remove this site from your wallet's connected sites (MetaMask or Coinbase Wallet), then refresh.</div>
+    <button class="btn btn-primary" id="back-btn">Back</button>`;
+  document.getElementById('back-btn').addEventListener('click', render);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function shortAddr(addr) {
+  if (!addr) return '';
+  return addr.slice(0,6) + '…' + addr.slice(-4);
+}
+
+function render() {
+  const root = document.getElementById('root');
+  if (!_connected) {
+    root.innerHTML = `
+      <div class="card" style="text-align:center;padding:24px 16px">
+        <div style="font-size:32px;margin-bottom:12px">📈</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:16px;line-height:1.6">
+          Connect your MetaMask or Coinbase Wallet on Polygon to place real-money bets on Polymarket prediction markets from inside Dissent.
+        </p>
+        <button class="btn btn-primary" style="width:100%" id="connect-btn">Connect Wallet</button>
+        ${WALLET_LINKS_HTML}
+      </div>
+      <div class="notice" style="margin-top:0">
+        You need USDC on the Polygon network to place bets.
+      </div>`;
+    document.getElementById('connect-btn').addEventListener('click', connect);
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="label">Wallet</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span class="address">${esc(shortAddr(_address))}</span>
+        <span style="color:var(--green);font-size:11px;font-weight:700">
+          <span class="status-dot dot-connected"></span>Connected
+        </span>
+      </div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:10px">
+        <div>
+          <div class="label">USDC Balance <span style="font-size:9px;color:var(--muted);text-transform:none;letter-spacing:0">(Polygon)</span></div>
+          <div class="balance" id="balance-val">${esc(_balance ?? '—')}<span class="balance-unit">USDC</span></div>
+        </div>
+        <button id="refresh-btn" title="Refresh balance" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:16px;height:34px;width:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0">↻</button>
+      </div>
+    </div>
+    <div class="notice" style="font-size:11px">
+      Balance shows USDC.e on <strong>Polygon</strong> only. If you added funds on Ethereum or Coinbase Base, you need to bridge them to Polygon first.
+    </div>
+    <div class="card">
+      <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:12px">
+        Your wallet is connected. Open any supported plugin (UFC Fights, NFL Hub, etc.) and tap the <strong style="color:var(--text)">Bet</strong> button to place a bet on a live Polymarket market.
+      </p>
+      <button class="btn btn-danger" id="disconnect-btn" style="width:100%">Disconnect Wallet</button>
+    </div>`;
+  document.getElementById('disconnect-btn').addEventListener('click', disconnect);
+  document.getElementById('refresh-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('refresh-btn');
+    btn.textContent = '…';
+    btn.disabled = true;
+    try {
+      const status = await request('polymarket:status', {});
+      _balance = status.usdcBalance;
+      document.getElementById('balance-val').innerHTML = `${esc(_balance ?? '—')}<span class="balance-unit">USDC</span>`;
+    } catch { /* keep existing value */ } finally {
+      btn.textContent = '↻';
+      btn.disabled = false;
+    }
+  });
+}
+</script>
+</body>
+</html>

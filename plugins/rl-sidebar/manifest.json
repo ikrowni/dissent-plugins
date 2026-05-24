@@ -1,0 +1,15 @@
+{
+  "id": "rl-sidebar",
+  "name": "Rocket League Profile",
+  "description": "Deep-dive player stats sidebar. Shows your own ranks, MMR history, career stats, and recent replays. Click any player in the RL Hub to view their profile.",
+  "author": "Dissent Official",
+  "tier": 3,
+  "context": ["sidebar"],
+  "url": "https://app.dissent.chat/plugins/rl-sidebar.html",
+  "version": "1.2.0",
+  "config_schema": {
+    "ballchasing_token": { "type": "string", "label": "Ballchasing.com Token (optional — enables Recent Matches tab)" }
+  },
+  "declared_permissions": ["identity", "storage:server", "storage:user", "realtime", "fetch:external", "members:read"],
+  "allowed_fetch_domains": ["rlstats.net", "ballchasing.com"]
+}

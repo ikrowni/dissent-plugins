@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <base href="https://app.dissent.chat/plugins/">
+  <title>D&amp;D Player</title>
+  <link rel="stylesheet" href="dnd-player/dnd-player-styles.css?v=20260504">
+</head>
+<body>
+  <div id="loading" style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--muted);gap:8px">
+    <div class="spinner"></div>Loading sheet…
+  </div>
+  <div id="app" style="display:none;flex-direction:column;height:100%">
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="char-name">—</div>
+        <div style="font-size:10px;color:var(--muted)" id="char-subtitle">—</div>
+      </div>
+      <button onclick="openCharEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px;border-radius:4px;flex-shrink:0;line-height:1" title="Edit Character">✏️</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('main')">Main</div>
+      <div class="tab" onclick="switchTab('combat')">Combat</div>
+      <div class="tab" onclick="switchTab('abilities')">Abilities</div>
+      <div class="tab" onclick="switchTab('spells')">Spells</div>
+      <div class="tab" onclick="switchTab('inventory')">Inventory</div>
+      <div class="tab" onclick="switchTab('features')">Features</div>
+      <div class="tab" onclick="switchTab('notes')">Notes</div>
+      <div class="tab" onclick="switchTab('resources')">Resources</div>
+    </div>
+    <div class="tab-content">
+      <div class="tab-pane active" id="tab-main"></div>
+      <div class="tab-pane" id="tab-combat"></div>
+      <div class="tab-pane" id="tab-abilities"></div>
+      <div class="tab-pane" id="tab-spells"></div>
+      <div class="tab-pane" id="tab-inventory"></div>
+      <div class="tab-pane" id="tab-features"></div>
+      <div class="tab-pane" id="tab-notes"></div>
+      <div class="tab-pane" id="tab-resources"></div>
+    </div>
+    <div class="dice-bar" id="dice-bar"></div>
+  </div>
+  <script type="module">import('./dnd-player/dnd-player-main.js?v=20260504b');</script>
+</body>
+</html>

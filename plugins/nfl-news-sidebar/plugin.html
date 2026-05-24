@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NFL Live</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --nfl-blue: #013369; --nfl-red: #D50A0A; --nfl-gold: #FFB612;
+  --bg: #0a0a14; --surface: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.07);
+  --text: rgba(255,255,255,0.9); --text-dim: rgba(255,255,255,0.5); --text-muted: rgba(255,255,255,0.25);
+  --win: #22c55e; --loss: #ef4444;
+}
+body { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 12px; overflow-x: hidden; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+@keyframes barPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.s-header {
+  background: linear-gradient(135deg, rgba(1,51,105,.4) 0%, rgba(10,10,20,1) 80%);
+  padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px);
+}
+.s-header-row { display: flex; align-items: center; justify-content: space-between; }
+.s-title { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.s-live { display: flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; text-transform: uppercase; color: rgba(255,255,255,.4); letter-spacing: .08em; }
+.s-live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--win); animation: blink .9s ease-in-out infinite; }
+.s-updated { font-size: 7px; color: rgba(255,255,255,.22); margin-top: 3px; }
+
+.s-sect { font-size: 7px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.22); padding: 10px 12px 5px; display: flex; align-items: center; gap: 6px; }
+.s-sect::after { content:''; flex:1; height:1px; background: rgba(255,255,255,.07); }
+
+.score-block {
+  margin: 4px 8px; background: linear-gradient(135deg, rgba(1,51,105,.3), rgba(213,10,10,.12));
+  border: 1px solid rgba(1,51,105,.4); border-radius: 10px; padding: 9px 12px;
+  position: relative; overflow: hidden;
+}
+.score-block::before { content:''; position:absolute; left:0;top:0;bottom:0;width:3px; background:linear-gradient(180deg,var(--nfl-gold),var(--nfl-red)); animation:barPulse 2s ease-in-out infinite; }
+.sb-label { font-size: 7px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--nfl-gold); margin-bottom: 7px; padding-left: 4px; }
+.sb-matchup { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding-left: 4px; }
+.sb-team { text-align: center; flex: 1; }
+.sb-logo { width: 26px; height: 26px; border-radius: 50%; margin: 0 auto 3px; background: rgba(255,255,255,.07); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.sb-logo img { width:100%;height:100%;object-fit:contain; }
+.sb-abbr { font-size: 9px; font-weight: 800; }
+.sb-pts { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.sb-pts.lead { color: #fff; } .sb-pts.trail { color: rgba(255,255,255,.3); }
+.sb-sep { font-size: 9px; color: rgba(255,255,255,.2); font-weight: 700; }
+.sb-status { font-size: 7px; font-weight: 700; color: var(--nfl-gold); text-align: center; margin-top: 5px; padding-left: 4px; letter-spacing:.04em; }
+.sb-status.final { color: rgba(255,255,255,.3); }
+.score-block.dimmed { opacity: .55; }
+
+.news-card { margin: 4px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; display: block; }
+.news-card:hover { background: rgba(255,255,255,.07); }
+.news-thumb { width: 100%; height: 78px; position: relative; overflow: hidden; background: linear-gradient(135deg, #1a1a2e, #0a0a1a); display: flex; align-items: center; justify-content: center; }
+.news-thumb-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.88) saturate(1.1); }
+.thumb-art { font-size: 30px; opacity: .35; }
+.news-thumb-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,.75) 100%); }
+.news-tag { position: absolute; top: 7px; left: 7px; z-index: 2; font-size: 7px; font-weight: 800; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: .07em; }
+.tag-breaking { background: rgba(255,182,18,.9); color: #000; }
+.tag-injury   { background: rgba(239,68,68,.85); color: #fff; }
+.tag-trade    { background: rgba(34,197,94,.85); color: #000; }
+.tag-gameday  { background: rgba(1,51,105,.9); color: #fff; }
+.tag-fantasy  { background: rgba(139,92,246,.9); color: #fff; }
+.tag-general  { background: rgba(255,255,255,.15); color: rgba(255,255,255,.85); }
+.news-body { padding: 7px 10px 9px; }
+.news-headline { font-size: 10px; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 8px; color: rgba(255,255,255,.3); }
+.news-source { font-weight: 600; }
+
+.news-compact { margin: 3px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; display: block; }
+.news-compact:hover { background: rgba(255,255,255,.07); }
+.nc-row { display: flex; align-items: flex-start; gap: 7px; }
+.nc-tag { font-size: 7px; font-weight: 800; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; margin-top: 1px; }
+.nc-head { font-size: 10px; font-weight: 600; line-height: 1.4; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nc-meta { font-size: 8px; color: rgba(255,255,255,.3); margin-top: 3px; }
+
+.injury-row { margin: 3px 8px; display: flex; align-items: center; gap: 8px; background: rgba(239,68,68,.05); border: 1px solid rgba(239,68,68,.1); border-radius: 9px; padding: 7px 10px; }
+.inj-photo { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.07); border: 1px solid var(--border); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.inj-photo img { width:100%;height:100%;object-fit:cover; }
+.inj-info { flex: 1; min-width: 0; }
+.inj-name { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inj-detail { font-size: 8px; color: rgba(255,255,255,.4); margin-top: 1px; }
+.inj-badge { font-size: 7px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; }
+.s-out { background: rgba(239,68,68,.2); color: var(--loss); }
+.s-d   { background: rgba(249,115,22,.15); color: #f97316; }
+.s-q   { background: rgba(255,182,18,.12); color: var(--nfl-gold); }
+
+.upcoming-block { margin: 4px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+.upc-slot { font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,182,18,.8); margin-bottom: 6px; }
+.upc-matchup { display: flex; align-items: center; gap: 5px; }
+.upc-team { display: flex; align-items: center; gap: 5px; flex: 1; }
+.upc-team.right { flex-direction: row-reverse; }
+.upc-logo { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.upc-logo img { width:100%;height:100%;object-fit:contain; }
+.upc-name { font-size: 10px; font-weight: 700; }
+.upc-record { font-size: 7px; color: var(--text-muted); margin-top: 1px; }
+.upc-sep { font-size: 8px; color: rgba(255,255,255,.2); font-weight: 700; }
+.upc-venue { font-size: 8px; color: rgba(255,255,255,.35); margin-top: 5px; }
+.upc-weather { font-size: 7px; color: rgba(255,255,255,.28); margin-top: 2px; }
+
+.sm-row { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 7px; margin: 2px 8px; background: var(--surface); border: 1px solid var(--border); }
+.sm-seed { font-size: 8px; font-weight: 800; color: var(--text-muted); width: 14px; flex-shrink: 0; }
+.sm-seed.playoff { color: var(--win); }
+.sm-logo { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid var(--border); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.sm-logo img { width:100%;height:100%;object-fit:contain; }
+.sm-name { font-size: 9px; font-weight: 700; flex: 1; }
+.sm-record { font-size: 9px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.sm-streak { font-size: 8px; font-weight: 700; }
+.sm-streak.w { color: var(--win); } .sm-streak.l { color: var(--loss); }
+
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--nfl-gold); border-radius: 50%; animation: spin .7s linear infinite; margin: 24px auto; }
+
+.s-footer { padding: 10px 12px 16px; text-align: center; border-top: 1px solid var(--border); font-size: 8px; color: rgba(255,255,255,.2); margin-top: 10px; }
+.s-footer a { color: rgba(255,182,18,.5); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="s-header">
+  <div class="s-header-row">
+    <div class="s-title">🏈 NFL Live</div>
+    <div class="s-live"><div class="s-live-dot"></div>Live</div>
+  </div>
+  <div class="s-updated" id="updatedAt">Loading…</div>
+</div>
+
+<div id="main"><div class="spinner"></div></div>
+
+<div class="s-footer"><a href="https://www.espn.com/nfl/" target="_blank">View all NFL news →</a> · ESPN</div>
+
+<script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
+<script>
+let _config = {};
+let _refreshTimer = null;
+
+function teamLogoUrl(abbr) {
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${(abbr||'').toLowerCase()}.png`;
+}
+function logoImg(abbr) {
+  return `<div class="sb-logo"><img src="${teamLogoUrl(abbr)}" alt="${esc(abbr)}" onerror="this.parentNode.innerHTML='🏈'"></div>`;
+}
+function upcLogo(abbr) {
+  return `<div class="upc-logo"><img src="${teamLogoUrl(abbr)}" alt="${esc(abbr)}" onerror="this.parentNode.innerHTML='🏈'"></div>`;
+}
+function smLogo(abbr) {
+  return `<div class="sm-logo"><img src="${teamLogoUrl(abbr)}" alt="${esc(abbr)}" onerror="this.parentNode.innerHTML='🏈'"></div>`;
+}
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function timeAgo(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h} hr ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+function inferTag(title, categories) {
+  const t = (title + ' ' + (categories||[]).join(' ')).toLowerCase();
+  if (/breaking|report:|sources:/.test(t)) return 'breaking';
+  if (/injur|injured|out|questionable|doubtful|\bir\b|ruled out|limited|hamstring|knee|ankle|concussion/.test(t)) return 'injury';
+  if (/trade|acquir|sign|release|free agent|contract|extension|deal/.test(t)) return 'trade';
+  if (/preview|forecast|weather|kickoff|week \d+|game day|picks|prediction/.test(t)) return 'gameday';
+  if (/fantasy|waiver|start|sit|projected|add|drop/.test(t)) return 'fantasy';
+  return 'general';
+}
+function tagLabel(tag) {
+  return { breaking:'Breaking', injury:'Injury', trade:'Trade', gameday:'Game Day', fantasy:'Fantasy', general:'News' }[tag] || 'News';
+}
+
+function dedupeNews(items) {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = item.headline.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ').slice(0,8).join(' ');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function fetchAll() {
+  const [espnNewsRes, googleNewsRes, injuryRes, scoreboardRes] = await Promise.allSettled([
+    Dissent.fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=20'),
+    Dissent.fetch('https://news.google.com/rss/search?q=NFL+breaking+news&hl=en-US&gl=US&ceid=US:en'),
+    Dissent.fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries'),
+    Dissent.fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'),
+  ]);
+
+  let espnNews = [];
+  if (espnNewsRes.status === 'fulfilled') {
+    try {
+      const d = JSON.parse(espnNewsRes.value.body);
+      espnNews = (d.articles || []).map(a => ({
+        headline: a.headline || '',
+        link: a.links?.web?.href || '',
+        published: a.published || '',
+        source: 'ESPN',
+        image: a.images?.[0]?.url || null,
+        categories: (a.categories || []).map(c => c.description || c.type || ''),
+        tag: inferTag(a.headline||'', (a.categories||[]).map(c=>c.description||'')),
+      }));
+    } catch(_) {}
+  }
+
+  let googleNews = [];
+  if (googleNewsRes.status === 'fulfilled') {
+    try {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(googleNewsRes.value.body, 'text/xml');
+      googleNews = Array.from(xml.querySelectorAll('item')).slice(0, 15).map(item => {
+        const title = item.querySelector('title')?.textContent || '';
+        const link = item.querySelector('link')?.textContent || item.querySelector('link')?.getAttribute('href') || '';
+        const pubDate = item.querySelector('pubDate')?.textContent || '';
+        const sourceName = item.querySelector('source')?.textContent || 'Google News';
+        return {
+          headline: title,
+          link,
+          published: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+          source: sourceName,
+          image: null,
+          categories: [],
+          tag: inferTag(title, []),
+        };
+      });
+    } catch(_) {}
+  }
+
+  const allNews = dedupeNews([...espnNews, ...googleNews]).sort((a, b) => new Date(b.published) - new Date(a.published));
+
+  let injuries = [];
+  if (injuryRes.status === 'fulfilled') {
+    try {
+      const d = JSON.parse(injuryRes.value.body);
+      (d.injuries || []).forEach(teamEntry => {
+        (teamEntry.injuries || []).forEach(inj => {
+          if (!['Out','Doubtful','Questionable'].includes(inj.status)) return;
+          injuries.push({
+            name: inj.athlete?.displayName || '?',
+            pos: inj.athlete?.position?.abbreviation || '',
+            id: inj.athlete?.id || '',
+            team: teamEntry.team?.abbreviation || '',
+            body: inj.shortComment || inj.longComment || '',
+            status: inj.status,
+          });
+        });
+      });
+    } catch(_) {}
+  }
+
+  let liveGames = [], upcomingGames = [], finalGames = [];
+  if (scoreboardRes.status === 'fulfilled') {
+    try {
+      const d = JSON.parse(scoreboardRes.value.body);
+      (d.events || []).forEach(ev => {
+        const comp = ev.competitions?.[0] ?? {};
+        const away = comp.competitors?.find(c => c.homeAway === 'away') ?? {};
+        const home = comp.competitors?.find(c => c.homeAway === 'home') ?? {};
+        const isLive = ev.status?.type?.name === 'STATUS_IN_PROGRESS' || ev.status?.type?.name === 'STATUS_HALFTIME';
+        const isFinal = ev.status?.type?.completed ?? false;
+        const game = {
+          id: ev.id, date: ev.date, slot: ev.shortName || '',
+          away: { abbr: away.team?.abbreviation||'?', score: away.score||'0', record: away.records?.[0]?.summary||'' },
+          home: { abbr: home.team?.abbreviation||'?', score: home.score||'0', record: home.records?.[0]?.summary||'' },
+          period: ev.status?.period || 0, clock: ev.status?.displayClock || '',
+          isLive, isFinal,
+          venue: comp.venue?.fullName || '',
+          weather: comp.weather?.displayValue || '',
+        };
+        if (isLive) liveGames.push(game);
+        else if (isFinal) finalGames.push(game);
+        else upcomingGames.push(game);
+      });
+    } catch(_) {}
+  }
+
+  return { allNews, injuries, liveGames, upcomingGames, finalGames };
+}
+
+async function fetchStandings(featuredDiv) {
+  const target = (featuredDiv || 'NFC East').toLowerCase();
+  try {
+    const res = await Dissent.fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings');
+    const d = JSON.parse(res.body);
+    for (const conf of (d.children || [])) {
+      for (const div of (conf.children || [])) {
+        if (div.name?.toLowerCase() === target) {
+          return (div.standings?.entries || []).map(entry => ({
+            abbr: entry.team?.abbreviation || '',
+            name: entry.team?.shortDisplayName || entry.team?.abbreviation || '',
+            record: entry.stats?.find(s => s.name==='overall')?.displayValue || '',
+            streak: entry.stats?.find(s => s.name==='streak')?.displayValue || '',
+            seed: parseInt(entry.stats?.find(s => s.name==='playoffSeed')?.displayValue || '99'),
+          }));
+        }
+      }
+    }
+  } catch(_) {}
+  return [];
+}
+
+function render(data, standings) {
+  const { allNews, injuries, liveGames, upcomingGames, finalGames } = data;
+  let html = '';
+
+  if (liveGames.length > 0 || finalGames.length > 0) {
+    html += `<div class="s-sect">⚡ Live Now</div>`;
+    liveGames.forEach(g => {
+      const ap = parseInt(g.away.score)||0, hp = parseInt(g.home.score)||0;
+      html += `<div class="score-block">
+        <div class="sb-label">${esc(g.slot)} · Q${g.period} ${esc(g.clock)}</div>
+        <div class="sb-matchup">
+          <div class="sb-team">${logoImg(g.away.abbr)}<div class="sb-abbr">${esc(g.away.abbr)}</div><div class="sb-pts ${ap>=hp?'lead':'trail'}">${esc(g.away.score)}</div></div>
+          <div class="sb-sep">–</div>
+          <div class="sb-team">${logoImg(g.home.abbr)}<div class="sb-abbr">${esc(g.home.abbr)}</div><div class="sb-pts ${hp>=ap?'lead':'trail'}">${esc(g.home.score)}</div></div>
+        </div>
+        <div class="sb-status">${ap>hp?esc(g.away.abbr)+' leads':hp>ap?esc(g.home.abbr)+' leads':'Tied'}</div>
+      </div>`;
+    });
+    finalGames.slice(0,2).forEach(g => {
+      const ap = parseInt(g.away.score)||0, hp = parseInt(g.home.score)||0;
+      html += `<div class="score-block dimmed">
+        <div class="sb-label" style="color:rgba(255,255,255,.3)">${esc(g.slot)} · Final</div>
+        <div class="sb-matchup">
+          <div class="sb-team">${logoImg(g.away.abbr)}<div class="sb-abbr">${esc(g.away.abbr)}</div><div class="sb-pts ${ap>=hp?'lead':'trail'}">${esc(g.away.score)}</div></div>
+          <div class="sb-sep">–</div>
+          <div class="sb-team">${logoImg(g.home.abbr)}<div class="sb-abbr">${esc(g.home.abbr)}</div><div class="sb-pts ${hp>=ap?'lead':'trail'}">${esc(g.home.score)}</div></div>
+        </div>
+        <div class="sb-status final">Final</div>
+      </div>`;
+    });
+  }
+
+  const breaking = allNews.filter(n => n.tag === 'breaking' || n.tag === 'gameday').slice(0, 3);
+  if (breaking.length > 0) {
+    html += `<div class="s-sect">📰 Breaking News</div>`;
+    breaking.forEach(n => {
+      const thumbHtml = n.image
+        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🏟️</div>'">`
+        : `<div class="thumb-art">🏈</div>`;
+      html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="news-thumb">
+          ${thumbHtml}
+          <div class="news-thumb-overlay"></div>
+          <div class="news-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+        </div>
+        <div class="news-body">
+          <div class="news-headline">${esc(n.headline)}</div>
+          <div class="news-meta"><span class="news-source">${esc(n.source)}</span><span>·</span><span>${esc(timeAgo(n.published))}</span></div>
+        </div>
+      </a>`;
+    });
+  }
+
+  if (injuries.length > 0) {
+    html += `<div class="s-sect">🚑 Injury Report</div>`;
+    injuries.slice(0, 6).forEach(i => {
+      const cls = i.status==='Out'?'s-out':i.status==='Doubtful'?'s-d':'s-q';
+      html += `<div class="injury-row">
+        <div class="inj-photo"><img src="https://a.espncdn.com/i/headshots/nfl/players/full/${esc(i.id)}.png" alt="${esc(i.name)}" onerror="this.parentNode.innerHTML='🧑'"></div>
+        <div class="inj-info"><div class="inj-name">${esc(i.name)}</div><div class="inj-detail">${esc(i.team)} · ${esc(i.pos)}${i.body?' · '+esc(i.body):''}</div></div>
+        <div class="inj-badge ${cls}">${esc(i.status)}</div>
+      </div>`;
+    });
+  }
+
+  const tradeItems = allNews.filter(n => n.tag === 'trade').slice(0, 3);
+  if (tradeItems.length > 0) {
+    html += `<div class="s-sect">🔄 Transactions</div>`;
+    tradeItems.forEach(n => {
+      const thumbHtml = n.image
+        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🔄</div>'">`
+        : `<div class="thumb-art">🔄</div>`;
+      html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="news-thumb">
+          ${thumbHtml}
+          <div class="news-thumb-overlay"></div>
+          <div class="news-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+        </div>
+        <div class="news-body">
+          <div class="news-headline">${esc(n.headline)}</div>
+          <div class="news-meta"><span class="news-source">${esc(n.source)}</span><span>·</span><span>${esc(timeAgo(n.published))}</span></div>
+        </div>
+      </a>`;
+    });
+  }
+
+  const fantasyItems = allNews.filter(n => n.tag === 'fantasy').slice(0, 3);
+  if (fantasyItems.length > 0) {
+    html += `<div class="s-sect">🎮 Fantasy</div>`;
+    fantasyItems.forEach(n => {
+      const thumbHtml = n.image
+        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🎮</div>'" style="height:60px">`
+        : `<div class="thumb-art">🎮</div>`;
+      html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="news-thumb" style="height:60px">
+          ${thumbHtml}
+          <div class="news-thumb-overlay"></div>
+          <div class="news-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+        </div>
+        <div class="news-body">
+          <div class="news-headline">${esc(n.headline)}</div>
+          <div class="news-meta"><span class="news-source">${esc(n.source)}</span><span>·</span><span>${esc(timeAgo(n.published))}</span></div>
+        </div>
+      </a>`;
+    });
+  }
+
+  const other = allNews.filter(n => !['breaking','gameday','trade','fantasy'].includes(n.tag)).slice(0, 6);
+  if (other.length > 0) {
+    html += `<div class="s-sect">🔔 Latest</div>`;
+    other.forEach(n => {
+      html += `<a class="news-compact" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="nc-row">
+          <div class="nc-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+          <div class="nc-head">${esc(n.headline)}</div>
+        </div>
+        <div class="nc-meta">${esc(n.source)} · ${esc(timeAgo(n.published))}</div>
+      </a>`;
+    });
+  }
+
+  if (upcomingGames.length > 0) {
+    html += `<div class="s-sect">📅 Up Next</div>`;
+    upcomingGames.slice(0, 3).forEach(g => {
+      html += `<div class="upcoming-block">
+        <div class="upc-slot">${esc(g.slot)}</div>
+        <div class="upc-matchup">
+          <div class="upc-team">${upcLogo(g.away.abbr)}<div><div class="upc-name">${esc(g.away.abbr)}</div><div class="upc-record">${esc(g.away.record)}</div></div></div>
+          <div class="upc-sep">@</div>
+          <div class="upc-team right">${upcLogo(g.home.abbr)}<div style="text-align:right"><div class="upc-name">${esc(g.home.abbr)}</div><div class="upc-record">${esc(g.home.record)}</div></div></div>
+        </div>
+        ${g.venue ? `<div class="upc-venue">${esc(g.venue)}</div>` : ''}
+        ${g.weather ? `<div class="upc-weather">🌤 ${esc(g.weather)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  if (standings.length > 0) {
+    const divName = _config.featured_division || 'NFC East';
+    html += `<div class="s-sect">📊 ${esc(divName)}</div>`;
+    standings.forEach(team => {
+      const isPlayoff = team.seed <= 7;
+      const streakClass = (team.streak||'').startsWith('W') ? 'w' : 'l';
+      html += `<div class="sm-row">
+        <div class="sm-seed${isPlayoff?' playoff':''}">${team.seed <= 7 ? team.seed : ''}</div>
+        ${smLogo(team.abbr)}
+        <div class="sm-name">${esc(team.name)}</div>
+        <div class="sm-record">${esc(team.record)}</div>
+        <div class="sm-streak ${streakClass}">${esc(team.streak)}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('main').innerHTML = html;
+  document.getElementById('updatedAt').textContent = 'Updated just now';
+}
+
+async function refresh() {
+  try {
+    const [data, standings] = await Promise.all([
+      fetchAll(),
+      fetchStandings(_config.featured_division),
+    ]);
+    render(data, standings);
+    const hasLive = data.liveGames.length > 0;
+    clearInterval(_refreshTimer);
+    _refreshTimer = setInterval(refresh, hasLive ? 60000 : 300000);
+  } catch(e) {
+    document.getElementById('main').innerHTML = `<div style="padding:20px;text-align:center;font-size:10px;color:rgba(255,255,255,.3)">Failed to load. Will retry.</div>`;
+    clearInterval(_refreshTimer);
+    _refreshTimer = setInterval(refresh, 120000);
+  }
+}
+
+Dissent.init({ onFallback: () => {} }).then(ctx => {
+  _config = ctx.config || {};
+  refresh();
+}).catch(console.error);
+</script>
+</body>
+</html>

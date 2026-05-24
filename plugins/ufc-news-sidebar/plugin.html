@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UFC News</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ufc-gold: #C8A84B; --ufc-red: #C8102E;
+  --bg: #0a0a14; --surface: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.07);
+  --text: rgba(255,255,255,0.9); --text-dim: rgba(255,255,255,0.5); --text-muted: rgba(255,255,255,0.25);
+}
+body { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 12px; overflow-x: hidden; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.s-header {
+  background: linear-gradient(135deg, rgba(200,16,46,.25) 0%, rgba(10,10,20,1) 80%);
+  padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px);
+}
+.s-header-row { display: flex; align-items: center; justify-content: space-between; }
+.s-title { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.s-live { display: flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; text-transform: uppercase; color: rgba(255,255,255,.4); letter-spacing: .08em; }
+.s-live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ufc-gold); animation: blink .9s ease-in-out infinite; }
+.s-updated { font-size: 7px; color: rgba(255,255,255,.22); margin-top: 3px; }
+
+.s-sect { font-size: 7px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.22); padding: 10px 12px 5px; display: flex; align-items: center; gap: 6px; }
+.s-sect::after { content:''; flex:1; height:1px; background: rgba(255,255,255,.07); }
+
+.news-card { margin: 4px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; display: block; }
+.news-card:hover { background: rgba(255,255,255,.07); }
+.news-thumb { width: 100%; height: 78px; position: relative; overflow: hidden; background: linear-gradient(135deg, #1a0a0e, #0a0a1a); display: flex; align-items: center; justify-content: center; }
+.news-thumb-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.88) saturate(1.1); }
+.thumb-art { font-size: 30px; opacity: .35; }
+.news-thumb-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,.75) 100%); }
+.news-tag { position: absolute; top: 7px; left: 7px; z-index: 2; font-size: 7px; font-weight: 800; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: .07em; }
+.tag-breaking  { background: rgba(200,168,75,.9); color: #000; }
+.tag-injury    { background: rgba(239,68,68,.85); color: #fff; }
+.tag-contract  { background: rgba(34,197,94,.85); color: #000; }
+.tag-results   { background: rgba(200,16,46,.9); color: #fff; }
+.tag-fight-news { background: rgba(255,255,255,.15); color: rgba(255,255,255,.85); }
+.news-body { padding: 7px 10px 9px; }
+.news-headline { font-size: 10px; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 8px; color: rgba(255,255,255,.3); }
+.news-source { font-weight: 600; }
+
+.injury-row { margin: 3px 8px; display: flex; align-items: flex-start; gap: 8px; background: rgba(239,68,68,.05); border: 1px solid rgba(239,68,68,.1); border-radius: 9px; padding: 7px 10px; }
+.inj-info { flex: 1; min-width: 0; }
+.inj-head { font-size: 10px; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.inj-detail { font-size: 8px; color: rgba(255,255,255,.4); margin-top: 2px; }
+.inj-badge { font-size: 7px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; margin-top: 1px; }
+.badge-scratched   { background: rgba(249,115,22,.2); color: #f97316; }
+.badge-questionable { background: rgba(200,168,75,.15); color: var(--ufc-gold); }
+.badge-injured     { background: rgba(239,68,68,.2); color: #ef4444; }
+
+.news-compact { margin: 3px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; cursor: pointer; transition: background .12s; text-decoration: none; color: inherit; display: block; }
+.news-compact:hover { background: rgba(255,255,255,.07); }
+.nc-row { display: flex; align-items: flex-start; gap: 7px; }
+.nc-tag { font-size: 7px; font-weight: 800; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; margin-top: 1px; }
+.nc-head { font-size: 10px; font-weight: 600; line-height: 1.4; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nc-meta { font-size: 8px; color: rgba(255,255,255,.3); margin-top: 3px; }
+
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--ufc-gold); border-radius: 50%; animation: spin .7s linear infinite; margin: 24px auto; }
+
+.s-footer { padding: 10px 12px 16px; text-align: center; border-top: 1px solid var(--border); font-size: 8px; color: rgba(255,255,255,.2); margin-top: 10px; }
+.s-footer a { color: rgba(200,168,75,.5); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="s-header">
+  <div class="s-header-row">
+    <div class="s-title">🥊 UFC News</div>
+    <div class="s-live"><div class="s-live-dot"></div>Live</div>
+  </div>
+  <div class="s-updated" id="updatedAt">Loading…</div>
+</div>
+
+<div id="main"><div class="spinner"></div></div>
+
+<div class="s-footer"><a href="https://mmajunkie.usatoday.com/" target="_blank">View all UFC news →</a> · MMA Junkie</div>
+
+<script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
+<script>
+let _refreshTimer = null;
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function timeAgo(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h} hr ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+function inferTag(headline) {
+  const t = headline.toLowerCase();
+  if (/breaking|report:|sources:|per /.test(t)) return 'breaking';
+  if (/injur|scratch|medic|usada|ruled out|pulled|withdraw/.test(t)) return 'injury';
+  if (/signs|sign\b|contract|release\b|\bcut\b|free agent|extension|deal/.test(t)) return 'contract';
+  if (/wins|defeats|def\.|tko|\bko\b|submission|decision|unanimous|split/.test(t)) return 'results';
+  return 'fight-news';
+}
+function tagLabel(tag) {
+  return { breaking:'Breaking', injury:'Injury', contract:'Signing', results:'Results', 'fight-news':'UFC' }[tag] || 'UFC';
+}
+
+function dedupeNews(items) {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = item.headline.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ').slice(0,8).join(' ');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function injuryBadge(headline) {
+  const t = headline.toLowerCase();
+  if (/scratch|withdraw|pull/.test(t)) return { cls: 'badge-scratched', label: 'Scratched' };
+  if (/questionable/.test(t)) return { cls: 'badge-questionable', label: 'Questionable' };
+  return { cls: 'badge-injured', label: 'Injured' };
+}
+
+function parseRss(body) {
+  try {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(body, 'text/xml');
+    return Array.from(xml.querySelectorAll('item')).slice(0, 15).map(item => {
+      const title = item.querySelector('title')?.textContent || '';
+      const link = item.querySelector('link')?.textContent || item.querySelector('link')?.getAttribute('href') || '';
+      const pubDate = item.querySelector('pubDate')?.textContent || '';
+      const sourceName = item.querySelector('source')?.textContent || 'Google News';
+      return {
+        headline: title,
+        link,
+        published: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+        source: sourceName,
+        image: null,
+        tag: inferTag(title),
+      };
+    });
+  } catch(_) { return []; }
+}
+
+async function fetchAll() {
+  const [espnRes, googleBreakingRes, googleInjuryRes] = await Promise.allSettled([
+    Dissent.fetch('https://site.api.espn.com/apis/site/v2/sports/mma/ufc/news?limit=20'),
+    Dissent.fetch('https://news.google.com/rss/search?q=UFC+MMA+breaking+news&hl=en-US&gl=US&ceid=US:en'),
+    Dissent.fetch('https://news.google.com/rss/search?q=UFC+fighter+injury+scratch&hl=en-US&gl=US&ceid=US:en'),
+  ]);
+
+  let espnNews = [];
+  if (espnRes.status === 'fulfilled') {
+    try {
+      const d = JSON.parse(espnRes.value.body);
+      espnNews = (d.articles || []).map(a => ({
+        headline: a.headline || '',
+        link: a.links?.web?.href || '',
+        published: a.published || '',
+        source: 'ESPN',
+        image: a.images?.[0]?.url || null,
+        tag: inferTag(a.headline || ''),
+      }));
+    } catch(_) {}
+  }
+
+  let googleBreaking = [];
+  if (googleBreakingRes.status === 'fulfilled') {
+    googleBreaking = parseRss(googleBreakingRes.value.body);
+  }
+
+  let googleInjury = [];
+  if (googleInjuryRes.status === 'fulfilled') {
+    googleInjury = parseRss(googleInjuryRes.value.body);
+  }
+
+  const allNews = dedupeNews([...espnNews, ...googleBreaking, ...googleInjury])
+    .sort((a, b) => new Date(b.published) - new Date(a.published));
+
+  return allNews;
+}
+
+function render(allNews) {
+  let html = '';
+  const shownHeadlines = new Set();
+
+  // Section 1: Breaking News (top 3 tagged breaking or fight-news)
+  const breaking = allNews.filter(n => n.tag === 'breaking' || n.tag === 'fight-news').slice(0, 3);
+  if (breaking.length > 0) {
+    html += `<div class="s-sect">📰 Breaking News</div>`;
+    breaking.forEach(n => {
+      shownHeadlines.add(n.headline);
+      const thumbHtml = n.image
+        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🥊</div>'">`
+        : `<div class="thumb-art">🥊</div>`;
+      html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="news-thumb">
+          ${thumbHtml}
+          <div class="news-thumb-overlay"></div>
+          <div class="news-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+        </div>
+        <div class="news-body">
+          <div class="news-headline">${esc(n.headline)}</div>
+          <div class="news-meta"><span class="news-source">${esc(n.source)}</span><span>·</span><span>${esc(timeAgo(n.published))}</span></div>
+        </div>
+      </a>`;
+    });
+  }
+
+  // Section 2: Injuries & Scratches (up to 6 tagged injury)
+  const injuries = allNews.filter(n => n.tag === 'injury').slice(0, 6);
+  if (injuries.length > 0) {
+    html += `<div class="s-sect">🚑 Injuries &amp; Scratches</div>`;
+    injuries.forEach(n => {
+      shownHeadlines.add(n.headline);
+      const badge = injuryBadge(n.headline);
+      html += `<div class="injury-row">
+        <div class="inj-info">
+          <div class="inj-head">${esc(n.headline)}</div>
+          <div class="inj-detail">${esc(n.source)} · ${esc(timeAgo(n.published))}</div>
+        </div>
+        <div class="inj-badge ${badge.cls}">${badge.label}</div>
+      </div>`;
+    });
+  }
+
+  // Section 3: Contracts & Signings (up to 3 tagged contract)
+  const contracts = allNews.filter(n => n.tag === 'contract').slice(0, 3);
+  if (contracts.length > 0) {
+    html += `<div class="s-sect">📋 Contracts &amp; Signings</div>`;
+    contracts.forEach(n => {
+      shownHeadlines.add(n.headline);
+      const thumbHtml = n.image
+        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>📋</div>'" style="height:60px">`
+        : `<div class="thumb-art">📋</div>`;
+      html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="news-thumb" style="height:60px">
+          ${thumbHtml}
+          <div class="news-thumb-overlay"></div>
+          <div class="news-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+        </div>
+        <div class="news-body">
+          <div class="news-headline">${esc(n.headline)}</div>
+          <div class="news-meta"><span class="news-source">${esc(n.source)}</span><span>·</span><span>${esc(timeAgo(n.published))}</span></div>
+        </div>
+      </a>`;
+    });
+  }
+
+  // Section 4: Latest (up to 8 remaining items not already shown)
+  const latest = allNews.filter(n => !shownHeadlines.has(n.headline)).slice(0, 8);
+  if (latest.length > 0) {
+    html += `<div class="s-sect">🔔 Latest</div>`;
+    latest.forEach(n => {
+      html += `<a class="news-compact" href="${esc(n.link)}" target="_blank" rel="noopener">
+        <div class="nc-row">
+          <div class="nc-tag tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</div>
+          <div class="nc-head">${esc(n.headline)}</div>
+        </div>
+        <div class="nc-meta">${esc(n.source)} · ${esc(timeAgo(n.published))}</div>
+      </a>`;
+    });
+  }
+
+  if (!html) {
+    html = `<div style="padding:20px;text-align:center;font-size:10px;color:rgba(255,255,255,.3)">No UFC news available right now.</div>`;
+  }
+
+  document.getElementById('main').innerHTML = html;
+  document.getElementById('updatedAt').textContent = 'Updated just now';
+}
+
+async function refresh() {
+  try {
+    const allNews = await fetchAll();
+    render(allNews);
+    clearInterval(_refreshTimer);
+    _refreshTimer = setInterval(refresh, 300000);
+  } catch(e) {
+    document.getElementById('main').innerHTML = `<div style="padding:20px;text-align:center;font-size:10px;color:rgba(255,255,255,.3)">Failed to load. Will retry.</div>`;
+    clearInterval(_refreshTimer);
+    _refreshTimer = setInterval(refresh, 120000);
+  }
+}
+
+Dissent.init({ onFallback: () => {} }).then(() => { refresh(); }).catch(console.error);
+</script>
+</body>
+</html>

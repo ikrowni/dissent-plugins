@@ -1,0 +1,13 @@
+{
+  "id": "dnd-player",
+  "name": "D&D Player",
+  "description": "Player character sidebar — HP tracking, spell slots, inventory, dice roller, conditions, and live sync with the DM.",
+  "author": "Dissent Official",
+  "tier": 3,
+  "context": ["sidebar"],
+  "url": "https://app.dissent.chat/plugins/dnd-player.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["storage:user", "realtime", "identity"],
+  "allowed_fetch_domains": []
+}

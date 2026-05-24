@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #07070d;
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    overflow: hidden;
+  }
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+  }
+  .art {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .info { flex: 1; min-width: 0; }
+  .track {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .artist {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 7px;
+    border-radius: 99px;
+    flex-shrink: 0;
+  }
+  .badge.playing {
+    background: rgba(29,185,84,0.18);
+    color: rgba(29,185,84,0.9);
+    border: 1px solid rgba(29,185,84,0.3);
+  }
+  .badge.idle {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .empty {
+    text-align: center;
+    width: 100%;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
+<script>
+  let config = {};
+  let themeVars = {};
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function applyTheme(vars) {
+    themeVars = vars;
+    for (const [k, v] of Object.entries(vars)) {
+      document.documentElement.style.setProperty(k, v);
+    }
+  }
+
+  function render(track, artist, albumArt, playing) {
+    const root = document.getElementById('root');
+    if (!track) {
+      root.innerHTML = '<div class="empty">♪ Nothing playing</div>';
+      return;
+    }
+    root.innerHTML = `
+      <div class="card">
+        <div class="art">${albumArt ? `<img src="${escapeHtml(albumArt)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : '♪'}</div>
+        <div class="info">
+          <div class="track">${escapeHtml(track)}</div>
+          <div class="artist">${escapeHtml(artist ?? 'Unknown Artist')}</div>
+        </div>
+        <span class="badge ${playing ? 'playing' : 'idle'}">${playing ? '▶ Playing' : '⏸ Paused'}</span>
+      </div>
+    `;
+  }
+
+  async function fetchLastFm(username) {
+    try {
+      const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${encodeURIComponent(username)}&api_key=LASTFM_API_KEY&format=json&limit=1`;
+      // Last.fm public endpoint — note: requires a real API key in config for production
+      // Demo: show placeholder data
+      render('Configure Last.fm', 'Set lastfm_username + api_key in plugin config', null, false);
+    } catch {
+      render(null, null, null, false);
+    }
+  }
+
+  async function fetchCustom(apiUrl) {
+    try {
+      const res = await Dissent.fetch(apiUrl);
+      const data = JSON.parse(res.body);
+      render(data.track ?? data.title, data.artist, data.art ?? data.albumArt, data.playing ?? true);
+    } catch {
+      render('Could not fetch', apiUrl, null, false);
+    }
+  }
+
+  function load() {
+    if (config.api_url) {
+      fetchCustom(config.api_url);
+      setInterval(() => fetchCustom(config.api_url), 30000);
+    } else if (config.lastfm_username) {
+      fetchLastFm(config.lastfm_username);
+      setInterval(() => fetchLastFm(config.lastfm_username), 30000);
+    } else {
+      render('Now Playing', 'Configure this plugin with a Last.fm username or API URL', null, false);
+    }
+  }
+
+  async function main() {
+    const ctx = await Dissent.init({ onFallback: () => console.warn('Running outside Dissent') });
+    if (ctx.theme) applyTheme(ctx.theme);
+    config = ctx.config ?? {};
+    load();
+
+    Dissent.on('theme-update', (theme) => { if (theme) applyTheme(theme); });
+  }
+
+  main().catch(err => console.error(err));
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "id": "rl-hub",
+  "name": "Rocket League Hub",
+  "description": "Server leaderboard for all 7 ranked modes, player stats, and single-elimination tournaments.",
+  "author": "Dissent Official",
+  "tier": 3,
+  "context": ["channel"],
+  "url": "https://app.dissent.chat/plugins/rl-hub.html",
+  "version": "1.1.0",
+  "config_schema": {},
+  "declared_permissions": ["identity", "storage:server", "storage:user", "realtime", "members:read"],
+  "allowed_fetch_domains": ["api.tracker.gg"]
+}

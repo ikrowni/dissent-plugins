@@ -1,0 +1,78 @@
+/* dnd-player-styles.css — all styles for dnd-player plugin */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dnd-red:#c0392b;--dnd-gold:#d4af37;--bg:#0e0808;
+  --surface:rgba(255,255,255,0.05);--border:rgba(212,175,55,0.18);
+  --text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.45);
+  --dim:rgba(255,255,255,0.2);
+}
+html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.tab-bar{display:flex;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+.tab-bar::-webkit-scrollbar{height:0}
+.tab{padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
+.tab.active{color:var(--dnd-gold);border-bottom-color:var(--dnd-gold)}
+.tab:hover:not(.active){color:var(--text)}
+.tab-content{flex:1;overflow-y:auto;padding:12px}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.btn-primary{background:var(--dnd-red);color:#fff}.btn-primary:hover{background:#a93226}
+.btn-gold{background:var(--dnd-gold);color:#1a0a0a}.btn-gold:hover{background:#b8972e}
+.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:4px 9px;font-size:11px}
+.hp-bar-wrap{background:rgba(0,0,0,.4);border-radius:6px;height:8px;overflow:hidden;margin:6px 0}
+.hp-bar{height:100%;border-radius:6px;transition:width .3s,background .3s}
+.stat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.stat-chip{flex:1;min-width:60px;text-align:center;padding:8px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.stat-chip-value{font-size:18px;font-weight:800;color:var(--dnd-gold)}
+.stat-chip-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.ability-card{text-align:center;padding:10px 6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer}
+.ability-score{font-size:20px;font-weight:800}
+.ability-mod{font-size:13px;color:var(--dnd-gold);font-weight:700}
+.ability-name{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.skill-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.skill-prof-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid var(--muted)}
+.skill-prof-dot.proficient{background:var(--dnd-gold);border-color:var(--dnd-gold)}
+.skill-prof-dot.expertise{background:#60a5fa;border-color:#60a5fa}
+.skill-name{flex:1;font-size:11px;color:var(--muted)}
+.skill-bonus{font-size:11px;font-weight:700;width:28px;text-align:right}
+.condition-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.condition-chip{padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:10px;cursor:pointer;transition:all .15s;text-align:center}
+.condition-chip.active{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.save-pips{display:flex;gap:6px}
+.save-pip{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;transition:all .15s}
+.save-pip.success.filled{background:#22c55e;border-color:#22c55e}
+.save-pip.failure.filled{background:#ef4444;border-color:#ef4444}
+.dice-bar{flex-shrink:0;border-top:1px solid var(--border);padding:10px 12px;background:rgba(0,0,0,.3);display:flex;flex-direction:column;gap:8px}
+.dice-row{display:flex;align-items:center;gap:6px}
+.die-btn{padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--text)}
+.die-btn.active{border-color:var(--dnd-gold);color:var(--dnd-gold);background:rgba(212,175,55,.1)}
+.roll-result{font-size:18px;font-weight:900;color:var(--dnd-gold);margin-left:auto}
+.roll-label{font-size:9px;color:var(--muted);text-align:right}
+#loading{display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--muted);gap:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--dnd-gold);border-radius:50%;animation:spin .8s linear infinite}
+/* Action economy pills */
+.action-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  background: rgba(34, 197, 94, .07);
+  transition: opacity .2s, background .2s, border-color .2s;
+}
+.action-pill.used {
+  opacity: 0.5;
+  background: var(--surface);
+  border-color: var(--border);
+}
+/* Global select theming — -webkit-appearance:none forces CSS bg instead of OS native white */
+select{-webkit-appearance:none;appearance:none;background:#100808 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,.4)'/%3E%3C/svg%3E") no-repeat right 7px center;background-size:8px 5px;border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:3px 22px 3px 6px;outline:none;cursor:pointer}
+select:focus{border-color:var(--dnd-gold)}
+option{background:#100808;color:var(--text)}

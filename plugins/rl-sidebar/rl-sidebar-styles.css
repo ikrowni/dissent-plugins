@@ -1,0 +1,250 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --rl-blue: #1a6fdb;
+  --rl-orange: #f76c1b;
+  --rl-dark: #090912;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --text: rgba(255,255,255,0.92);
+  --text-dim: rgba(255,255,255,0.55);
+  --text-muted: rgba(255,255,255,0.28);
+  --win: #22c55e;
+  --loss: #ef4444;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--rl-dark);
+  color: var(--text);
+  font-size: 12px;
+  overflow-x: hidden;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+#root { display: flex; flex-direction: column; min-height: 100vh; }
+
+.sidebar-loading {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 8px; padding: 40px;
+  color: var(--text-muted); font-size: 12px;
+}
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--rl-orange); animation: spin .7s linear infinite; }
+
+/* ── Profile header ── */
+.profile-header {
+  padding: 12px 12px 0;
+  background: linear-gradient(180deg, rgba(26,111,219,.18) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+  backdrop-filter: blur(10px);
+}
+.back-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 11px; font-weight: 600;
+  cursor: pointer; padding: 0 0 8px; display: flex; align-items: center; gap: 4px;
+}
+.back-btn:hover { color: var(--text); }
+.profile-identity { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
+.profile-avatar { font-size: 26px; }
+.profile-name { font-size: 14px; font-weight: 900; line-height: 1.2; }
+.profile-platform-badge {
+  font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 99px; margin-top: 3px; display: inline-block;
+  background: rgba(26,111,219,.2); border: 1px solid rgba(26,111,219,.35); color: #7bb4f5;
+}
+
+/* ── Tab bar ── */
+.sidebar-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  overflow-x: auto; flex-shrink: 0;
+}
+.sidebar-tabs::-webkit-scrollbar { display: none; }
+.s-tab {
+  padding: 8px 11px; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); white-space: nowrap; cursor: pointer;
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .12s, border-color .12s;
+}
+.s-tab:hover { color: var(--text-dim); }
+.s-tab.active { color: var(--rl-orange); border-bottom-color: var(--rl-orange); }
+
+/* ── Tab panels ── */
+.tab-panel { display: none; padding: 12px; animation: fadeIn .15s ease; }
+.tab-panel.active { display: block; }
+
+/* ── Epic friend row ── */
+.epic-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+}
+.epic-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; }
+.epic-name { font-size: 12px; font-weight: 700; }
+.copy-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-dim); font-size: 11px; padding: 3px 8px; cursor: pointer;
+  transition: background .12s;
+}
+.copy-btn:hover { background: var(--surface-hover); }
+
+/* ── Ranks grid ── */
+.sect-label {
+  font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.sect-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.ranks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 14px; }
+.rank-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 10px; display: flex; align-items: center; gap: 8px;
+}
+.rank-icon { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.rank-icon-placeholder { width: 36px; height: 36px; background: var(--surface); border-radius: 4px; flex-shrink: 0; }
+.rank-info { flex: 1; min-width: 0; }
+.rank-mode { font-size: 8px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.rank-name { font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-mmr  { font-size: 10px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ── Season reward ── */
+.reward-row { margin-bottom: 14px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.reward-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.reward-label { font-size: 11px; font-weight: 700; }
+.reward-level { font-size: 10px; color: var(--text-dim); }
+.reward-bar-bg { height: 5px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; }
+.reward-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--rl-blue), var(--rl-orange)); transition: width .4s ease; }
+
+/* ── Career stats ── */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 6px; text-align: center; }
+.stat-value { font-size: 15px; font-weight: 800; color: #7bb4f5; font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 8px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+
+/* ── MMR chart ── */
+.chart-wrap { margin-bottom: 14px; }
+.chart-mode-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.chart-mode-btn {
+  font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  padding: 3px 8px; border-radius: 99px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.chart-mode-btn.active { background: rgba(26,111,219,.2); border-color: var(--rl-blue); color: #7bb4f5; }
+.chart-svg-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 6px 4px; overflow: hidden; }
+.chart-svg-wrap svg { display: block; }
+
+/* ── Season history ── */
+.season-selector { width: 100%; padding: 7px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 12px; outline: none; margin-bottom: 12px; }
+.season-selector option { background: #1a1a2e; }
+
+/* ── Replays ── */
+.replay-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
+.replay-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; cursor: pointer; }
+.replay-header:hover { background: var(--surface-hover); }
+.replay-result { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; }
+.replay-result.win  { background: rgba(34,197,94,.15);  color: var(--win);  border: 1px solid rgba(34,197,94,.2);  }
+.replay-result.loss { background: rgba(239,68,68,.12);  color: var(--loss); border: 1px solid rgba(239,68,68,.18); }
+.replay-meta { font-size: 10px; color: var(--text-dim); }
+.replay-date { font-size: 9px; color: var(--text-muted); }
+.replay-stats { padding: 8px 10px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.replay-stat { text-align: center; }
+.replay-stat-val { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.replay-stat-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+
+.empty-state { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+
+/* ── Members tab ── */
+@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+.mem-list { display: flex; flex-direction: column; gap: 5px; }
+
+.mem-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.mem-card.live {
+  background: rgba(34,197,94,.04);
+  border-color: rgba(34,197,94,.22);
+}
+
+.mem-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 10px; cursor: pointer;
+  background: none; border: none;
+  color: var(--text); font-family: inherit;
+  text-align: left; transition: background .12s;
+}
+.mem-btn:hover { background: rgba(255,255,255,.04); }
+.mem-card.live > .mem-btn:hover { background: rgba(34,197,94,.06); }
+.mem-card.open > .mem-btn { background: rgba(255,255,255,.05); border-radius: 10px 10px 0 0; }
+
+/* Avatar + status ring */
+.mem-av-wrap { position: relative; flex-shrink: 0; }
+.mem-av {
+  width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
+  background: rgba(255,255,255,.07);
+  border: 2px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mem-card.live .mem-av { border-color: rgba(34,197,94,.55); }
+.mem-av-initial { font-size: 14px; font-weight: 800; color: rgba(255,255,255,.55); }
+.mem-ring {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: #22c55e; border: 2px solid var(--rl-dark);
+  box-shadow: 0 0 7px rgba(34,197,94,.7);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+.mem-ring-off {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: rgba(255,255,255,.14); border: 2px solid var(--rl-dark);
+}
+
+/* Name + rank */
+.mem-info { flex: 1; min-width: 0; }
+.mem-name { font-size: 12px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.mem-rank-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.mem-mode { font-size: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.mem-sep { font-size: 8px; color: rgba(255,255,255,.18); }
+.mem-rank { font-size: 10px; font-weight: 700; color: var(--text-dim); white-space: nowrap; }
+
+/* Right side: LIVE badge + chevron */
+.mem-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.mem-live-badge {
+  font-size: 8px; font-weight: 800; letter-spacing: .06em;
+  padding: 2px 7px; border-radius: 99px;
+  background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3);
+  color: #4ade80;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+.mem-chevron { font-size: 10px; color: var(--text-muted); flex-shrink: 0; transition: transform .2s; }
+.mem-card.open .mem-chevron { transform: rotate(180deg); }
+
+/* Expanded body */
+.mem-body {
+  background: var(--surface); border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 12px; animation: fadeIn .15s ease;
+}
+.mem-body.hidden { display: none; }
+
+.watch-live-btn {
+  display: block; width: 100%; margin-top: 14px;
+  padding: 11px; border-radius: 8px;
+  font-family: inherit; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: var(--text-muted);
+  cursor: not-allowed; transition: background .15s, color .15s, border-color .15s;
+}
+.watch-live-btn.live {
+  background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.3); color: #4ade80;
+  cursor: pointer;
+}
+.watch-live-btn.live:hover { background: rgba(34,197,94,.25); }

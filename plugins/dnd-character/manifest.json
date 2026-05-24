@@ -1,0 +1,13 @@
+{
+  "id": "dnd-character",
+  "name": "D&D Character",
+  "description": "Show your D&D character on your profile — class, level, race, HP, and a brief backstory.",
+  "author": "Dissent Official",
+  "tier": 1,
+  "context": ["profile"],
+  "url": "https://app.dissent.chat/plugins/dnd-character.html",
+  "version": "1.0.0",
+  "config_schema": null,
+  "declared_permissions": ["storage:user", "identity"],
+  "allowed_fetch_domains": []
+}

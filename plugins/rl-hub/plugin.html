@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <base href="https://app.dissent.chat/plugins/">
+  <title>Rocket League Hub</title>
+  <link rel="stylesheet" href="rl-hub/rl-hub-styles.css?v=16">
+</head>
+<body>
+  <!-- Screens -->
+  <div id="screen-loading" class="screen">
+    <div class="spinner"></div>
+    <span class="loading-text">Loading Rocket League Hub…</span>
+  </div>
+
+  <div id="screen-register" class="screen hidden">
+    <div class="reg-card">
+      <div class="reg-logo">🚀</div>
+      <h2 class="reg-title">Connect Your Account</h2>
+      <p class="reg-sub">Link your Rocket League profile to appear on the server leaderboard.</p>
+      <label class="field-label">Platform</label>
+      <select id="reg-platform" class="field-input">
+        <option value="epic">Epic Games</option>
+        <option value="steam">Steam</option>
+        <option value="psn">PlayStation</option>
+        <option value="xbl">Xbox</option>
+        <option value="switch">Nintendo Switch</option>
+      </select>
+      <label class="field-label">Rocket League Username</label>
+      <input id="reg-username" class="field-input" type="text" placeholder="e.g. green crayola" autocomplete="off"/>
+      <label class="field-label">Epic Username <span class="field-optional">(optional — shown to others for friend requests)</span></label>
+      <input id="reg-epic" class="field-input" type="text" placeholder="e.g. GreenCrayola" autocomplete="off"/>
+      <label class="field-label">Twitch Username <span class="field-optional">(optional — shows a Watch Live button during your broadcasts)</span></label>
+      <input id="reg-twitch" class="field-input" type="text" placeholder="e.g. YourTwitchName" autocomplete="off"/>
+      <div id="reg-error" class="reg-error hidden"></div>
+      <button class="btn-primary" onclick="submitRegistration()">Connect Account</button>
+      <details class="companion-accordion">
+        <summary class="companion-summary">Live Broadcast (optional)</summary>
+        <div class="companion-body">
+          <p class="companion-desc">Show a live match view in the hub for all server members while you play. The companion runs silently in the background — no terminal needed after install.</p>
+          <div class="companion-actions">
+            <button class="btn-companion btn-install" id="btn-install-companion" onclick="installCompanion()">Install on Windows</button>
+            <button class="btn-companion" id="btn-copy-token" onclick="copyAuthToken()">Copy Token only</button>
+          </div>
+          <p class="companion-hint hidden" id="install-hint">Open <strong>PowerShell</strong> (Win + R → powershell) and paste. It installs Node check, downloads the script, enables the RL Stats API, and sets it to auto-start on login.</p>
+          <p class="companion-cmd"><strong>Manual:</strong> <a class="companion-link" href="rl-hub/rl-companion.js" download="rl-companion.js">Download script</a> · then run: <code>node rl-companion.js --server … --token … --server-id … --channel-id …</code></p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div id="screen-hub" class="screen hidden">
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="rl-logo">🏎️</div>
+        <div>
+          <div class="page-title">Rocket League Hub</div>
+          <div class="page-sub" id="hub-season-label">Season —</div>
+        </div>
+      </div>
+      <button class="icon-btn" title="Edit my account" onclick="showEditAccount()">⚙️</button>
+    </div>
+    <div id="versus-panel"></div>
+    <div id="live-debug" class="live-debug hidden">
+      <span id="live-debug-text">Waiting for companion…</span>
+      <button class="live-debug-dismiss" onclick="dismissLiveDebug()">✕</button>
+    </div>
+    <!-- Flash overlay (goal scored, crossbar alert) -->
+    <div id="vsb-flash-overlay" class="vsb-flash-overlay hidden"></div>
+
+    <!-- Paused overlay -->
+    <div id="vsb-paused-overlay" class="vsb-paused-overlay hidden">
+      <div class="vsb-paused-card">⏸ MATCH PAUSED</div>
+    </div>
+  </div>
+
+  <script>
+  window.addEventListener('error', e => {
+    document.body.innerHTML = '<pre style="color:#f87171;padding:16px;white-space:pre-wrap;font-size:12px">ERROR: '
+      + (e.message||'') + '\n' + (e.filename||'') + ':' + e.lineno + '\n' + (e.error?.stack||'') + '</pre>';
+  });
+  window.addEventListener('unhandledrejection', e => {
+    document.body.innerHTML = '<pre style="color:#f87171;padding:16px;white-space:pre-wrap;font-size:12px">UNHANDLED: '
+      + (e.reason?.message||String(e.reason)) + '\n' + (e.reason?.stack||'') + '</pre>';
+  });
+  </script>
+  <script type="module" src="rl-hub/rl-hub-main.js?v=5"></script>
+</body>
+</html>
