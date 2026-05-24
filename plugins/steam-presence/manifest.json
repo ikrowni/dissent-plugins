@@ -1,0 +1,16 @@
+{
+  "id": "steam-presence",
+  "name": "Steam Presence",
+  "version": "1.0.0",
+  "description": "Show your Steam status and recently played games on your profile.",
+  "author": "Dissent Official",
+  "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
+  "tier": 1,
+  "context": ["profile"],
+  "url": "https://plugins.dissent.chat/plugins/steam-presence/plugin.html",
+  "declared_permissions": ["fetch:external"],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["gaming", "profile"],
+  "sdk_version": "1"
+}

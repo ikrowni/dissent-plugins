@@ -1,13 +1,16 @@
 {
   "id": "dnd-master",
   "name": "D&D Master",
-  "description": "Dungeon Master sidebar — manage players, encounters, initiative, maps, sounds, and session notes for your D&D Hub campaign.",
+  "version": "1.0.0",
+  "description": "Dungeon Master control panel for managing encounters, actors, and journals.",
   "author": "Dissent Official",
+  "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
   "context": ["sidebar"],
-  "url": "https://app.dissent.chat/plugins/dnd-master.html",
-  "version": "1.0.0",
-  "config_schema": null,
+  "url": "https://plugins.dissent.chat/plugins/dnd-master/plugin.html",
   "declared_permissions": ["storage:server", "storage:user", "realtime", "identity", "members:read"],
-  "allowed_fetch_domains": []
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["gaming", "vtt"],
+  "sdk_version": "1"
 }
