@@ -1,0 +1,46 @@
+name: Deploy to plugins.dissent.chat
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all manifests
+        run: |
+          errors=0
+          for f in plugins/*/manifest.json; do
+            python3 -m json.tool "$f" > /dev/null 2>&1 || { echo "Invalid JSON: $f"; errors=$((errors+1)); }
+          done
+          if [ $errors -gt 0 ]; then
+            echo "$errors manifest(s) failed validation"
+            exit 1
+          fi
+          echo "All manifests valid"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy plugin files and SDK
+        run: |
+          rsync -avz --delete \
+            plugins/ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/dissent-plugins/plugins/
+          rsync -avz --delete \
+            sdk/ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/dissent-plugins/sdk/
+
+      - name: Verify deployment
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://plugins.dissent.chat/plugins/event-card/plugin.html)
+          [ "$STATUS" = "200" ] || { echo "Deployment check failed: HTTP $STATUS"; exit 1; }
+          echo "Deployment verified: HTTP $STATUS"
