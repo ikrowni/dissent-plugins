@@ -67,13 +67,39 @@
 
 <script>
   let profileOwnerId = null;
-  let coreUrl = '';
+
+  // A direct fetch of the core API is impossible here: the plugin runs in a
+  // sandboxed srcdoc iframe (origin null), so every cross-origin request is
+  // CORS-blocked. Presence is read through the host's `presence:read` bridge
+  // action instead — the same unified endpoint the native profile header uses,
+  // so this panel can never contradict it.
+  const pending = new Map();
+  let reqSeq = 0;
+
+  function hostRequest(action, params) {
+    return new Promise((resolve, reject) => {
+      const id = 'steam-presence-' + (++reqSeq) + '-' + Date.now();
+      pending.set(id, { resolve, reject });
+      window.parent.postMessage({ type: 'dissent:request', id, action, params }, '*');
+      setTimeout(() => {
+        if (pending.has(id)) { pending.delete(id); reject(new Error('timed out')); }
+      }, 10000);
+    });
+  }
 
   window.addEventListener('message', e => {
-    if (e.data?.type === 'dissent:init') {
-      profileOwnerId = e.data.context?.profileOwnerId ?? null;
-      coreUrl = e.data.context?.coreUrl ?? '';
+    const d = e.data;
+    if (!d || !d.type) return;
+    if (d.type === 'dissent:init') {
+      profileOwnerId = d.context?.profileOwnerId ?? null;
       onInit();
+      return;
+    }
+    if (d.type === 'dissent:response') {
+      const p = pending.get(d.id);
+      if (!p) return;
+      pending.delete(d.id);
+      if (d.ok) p.resolve(d.data ?? null); else p.reject(new Error(d.error || 'request failed'));
     }
   });
 
@@ -89,11 +115,14 @@
   }
 
   async function loadPresence() {
-    if (!profileOwnerId || !coreUrl) return;
+    if (!profileOwnerId) return;
     try {
-      const res = await fetch(`${coreUrl}/api/v1/presence/steam/${profileOwnerId}`);
-      const data = await res.json();
-      render(data);
+      const unified = await hostRequest('presence:read');
+      // Unified presence resolves Steam-wins precedence server-side; this
+      // panel only shows the Steam half.
+      render(unified && unified.source === 'steam' && unified.app_name
+        ? { game_name: unified.app_name }
+        : null);
     } catch {
       render(null);
     }
