@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="https://app.dissent.chat/plugins/">
+  <meta charset="utf-8">
+  <style>
+    body { font-family: monospace; font-size: 12px; background: #111; color: #ddd; padding: 12px; }
+    .pass { color: #4ade80; } .fail { color: #f87171; } .skip { color: #facc15; }
+    #probe-summary { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div id="probe-summary">RUNNING</div>
+  <div id="probe-rows"></div>
+  <script src="https://app.dissent.chat/sdk/v1/dissent-plugin-sdk.iife.js"></script>
+  <script>
+  (async () => {
+    const rows = document.getElementById('probe-rows');
+    const results = [];
+    function report(name, status, detail) {
+      results.push({ name, status });
+      const div = document.createElement('div');
+      div.className = status.toLowerCase();
+      div.setAttribute('data-probe', name);
+      div.setAttribute('data-status', status);
+      div.textContent = `${status} ${name}${detail ? ' — ' + detail : ''}`;
+      rows.appendChild(div);
+    }
+    async function test(name, fn) {
+      try { const d = await fn(); report(name, 'PASS', d); }
+      catch (e) { report(name, 'FAIL', e && e.message); }
+    }
+    // expectErr: the promise must reject and the message must contain `frag`
+    async function expectErr(name, frag, fn) {
+      try { await fn(); report(name, 'FAIL', 'expected rejection'); }
+      catch (e) {
+        const m = (e && e.message) || '';
+        if (m.includes(frag)) report(name, 'PASS', m);
+        else report(name, 'FAIL', `wrong error: ${m}`);
+      }
+    }
+    // raw postMessage request for actions the SDK has no helper for
+    let rawSeq = 0;
+    function raw(action, params) {
+      return new Promise((resolve, reject) => {
+        const id = `probe-${++rawSeq}-${Date.now()}`;
+        const h = (ev) => {
+          const m = ev.data;
+          if (m && m.type === 'dissent:response' && m.id === id) {
+            window.removeEventListener('message', h);
+            if (m.ok) resolve(m.data); else reject(new Error(m.error || 'failed'));
+          }
+        };
+        window.addEventListener('message', h);
+        window.parent.postMessage({ type: 'dissent:request', id, action, params }, '*');
+        setTimeout(() => { window.removeEventListener('message', h); reject(new Error('timeout')); }, 8000);
+      });
+    }
+
+    const ctx = await Dissent.init();
+    report('init', ctx && ctx.server ? 'PASS' : 'FAIL',
+      ctx && `server=${ctx.server.id} perms=${(ctx.permissions||[]).join(',')}`);
+
+    // ---- storage (granted: storage:server, storage:user) ----
+    await test('storage:set/get/delete (server)', async () => {
+      await raw('storage:set', { scope: 'server', key: 'probe-k', value: { n: 42 } });
+      const got = await raw('storage:get', { scope: 'server', key: 'probe-k' });
+      if (!got || !got.value || got.value.n !== 42) throw new Error('round-trip mismatch: ' + JSON.stringify(got));
+      await raw('storage:delete', { scope: 'server', key: 'probe-k' });
+    });
+    await test('storage:set/get (user)', async () => {
+      await raw('storage:set', { scope: 'user', key: 'probe-u', value: 'hello' });
+      const got = await raw('storage:get', { scope: 'user', key: 'probe-u' });
+      if (!got || got.value !== 'hello') throw new Error('round-trip mismatch');
+      await raw('storage:delete', { scope: 'user', key: 'probe-u' });
+    });
+    await test('storage:list (server)', async () => {
+      await raw('storage:set', { scope: 'server', key: 'probe-l1', value: 1 });
+      const l = await raw('storage:list', { scope: 'server', prefix: 'probe-l' });
+      await raw('storage:delete', { scope: 'server', key: 'probe-l1' });
+      if (!l || !JSON.stringify(l).includes('probe-l1')) throw new Error('list missing key: ' + JSON.stringify(l));
+    });
+
+    // ---- reads (granted: channel:read, profile:read, identity, members:read) ----
+    await test('channel:read', async () => {
+      const msgs = await Dissent.getMessages({ limit: 5 });
+      if (!Array.isArray(msgs)) throw new Error('not an array');
+      return `${msgs.length} msgs`;
+    });
+    await test('profile:read', async () => {
+      const u = await Dissent.getUser();
+      if (!u || !u.displayName) throw new Error('no user');
+      return u.displayName;
+    });
+    await test('identity:get', async () => {
+      const r = await raw('identity:get', {});
+      if (!r || !r.id) throw new Error('no id');
+    });
+    await test('members:list', async () => {
+      const m = await raw('members:list', {});
+      if (!m) throw new Error('no data');
+    });
+
+    // ---- fetch proxy (granted: fetch:external; allowlist = example.com) ----
+    await test('fetch:external (allowed domain)', async () => {
+      const r = await Dissent.fetch('https://example.com/');
+      if (!r || typeof r.status !== 'number') throw new Error('no status');
+      return `status=${r.status}`;
+    });
+    await expectErr('fetch:external (blocked domain)', 'fetch failed',
+      () => Dissent.fetch('https://api.github.com/'));
+
+    // ---- realtime + local relay ----
+    await test('realtime:publish + event round-trip', async () => {
+      const got = new Promise((res, rej) => {
+        Dissent.on('probe-ping', (d) => res(d));
+        setTimeout(() => rej(new Error('no event within 5s')), 5000);
+      });
+      await raw('realtime:publish', { event: 'probe-ping', data: { x: 1 } });
+      const d = await got;
+      if (!d || d.x !== 1) throw new Error('payload mismatch');
+    });
+    await test('localRelay:publish (self round-trip)', async () => {
+      const got = new Promise((res, rej) => {
+        Dissent.on('probe-local', (d) => res(d));
+        setTimeout(() => rej(new Error('no relay event within 3s')), 3000);
+      });
+      await raw('localRelay:publish', { registryId: 'capability-probe', event: 'probe-local', data: { y: 2 } });
+      const d = await got;
+      if (!d || d.y !== 2) throw new Error('payload mismatch');
+    });
+
+    // ---- files ----
+    await test('files:upload/list/delete', async () => {
+      const buf = new TextEncoder().encode('probe-file-content').buffer;
+      const up = await raw('files:upload', { data: buf, name: 'probe.txt', mime: 'text/plain' });
+      if (!up || !up.id) throw new Error('no file id: ' + JSON.stringify(up));
+      const url = await raw('files:getUrl', { fileId: up.id });
+      if (!url || !url.url) throw new Error('no url');
+      const lst = await raw('files:list', {});
+      await raw('files:delete', { fileId: up.id });
+      if (!JSON.stringify(lst).includes(up.id)) throw new Error('uploaded file not listed');
+    });
+
+    // ---- deny paths (exact error strings = behavior contract) ----
+    await expectErr('bot:post denied', 'bot:post not granted', () => Dissent.postMessage('x'));
+    await expectErr('unknown action', 'unknown action', () => raw('no:such-action', {}));
+    await expectErr('voice:setGain denied (pre-M3: realtime overload rejects bad params)', 'userId required',
+      () => raw('voice:setGain', { gain: 0.5 }));
+    await expectErr('auth:copy-token denied', 'identity:native not granted', () => raw('auth:copy-token', {}));
+    await expectErr('polymarket denied', 'polymarket not granted', () => raw('polymarket:status', {}));
+
+    // ---- image proxy URL shape (SDK copy staleness canary) ----
+    await test('imageUrl rewrites', async () => {
+      const u = Dissent.imageUrl('https://a.espncdn.com/x.png');
+      if (!u.includes('/api/v1/plugins/image?url=')) throw new Error('not rewritten: ' + u);
+      if (!u.includes('plugin_install_id=')) throw new Error('missing install id');
+    });
+
+    const fails = results.filter(r => r.status === 'FAIL').length;
+    const summary = document.getElementById('probe-summary');
+    summary.textContent = `${fails === 0 ? 'ALL-PASS' : 'FAILURES'} ${results.length - fails}/${results.length}`;
+    summary.setAttribute('data-fails', String(fails));
+  })();
+  </script>
+</body>
+</html>
