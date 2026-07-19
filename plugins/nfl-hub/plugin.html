@@ -437,7 +437,7 @@ const TEAM_COLORS = {
 };
 
 function teamLogoUrl(abbr) {
-  return `https://a.espncdn.com/i/teamlogos/nfl/500/${(abbr||'').toLowerCase()}.png`;
+  return Dissent.imageUrl(`https://a.espncdn.com/i/teamlogos/nfl/500/${(abbr||'').toLowerCase()}.png`);
 }
 
 function logoImg(abbr, cls, clickFn) {
@@ -737,7 +737,7 @@ async function openModal(abbr) {
           if (players.length>0) {
             liveStatsHtml += `<div class="modal-section"><div class="modal-section-title">Key players</div>`+
               players.slice(0,3).map(p=>`<div class="player-row">
-                <div class="player-headshot"><img src="https://a.espncdn.com/i/headshots/nfl/players/full/${esc(p.id)}.png" alt="${esc(p.name)}" onerror="this.parentNode.innerHTML='🧑'"></div>
+                <div class="player-headshot"><img src="${Dissent.imageUrl(`https://a.espncdn.com/i/headshots/nfl/players/full/${esc(p.id)}.png`)}" alt="${esc(p.name)}" onerror="this.parentNode.innerHTML='🧑'"></div>
                 <div class="player-info"><div class="player-name">${esc(p.name)}</div><div class="player-pos">${esc(p.pos)}</div></div>
                 <div class="player-stat">${esc(p.stat)}</div>
               </div>`).join('')+`</div>`;
