@@ -1167,7 +1167,7 @@ async function enrichWithCloudFront(event) {
 // Per-fight "Bet on [Fighter]" buttons open polymarket.com in a new tab; hrefs are updated async.
 
 const _pmData = {};  // key → fight's polymarket data
-let _pmWs = null;    // single WebSocket for all fights
+let _pmPollTimer = null;    // single poll timer for all fights
 
 async function fetchExternalSilent(url) {
   try {
@@ -1347,38 +1347,23 @@ async function enrichOddsFromGamma(event) {
 }
 
 function connectPolymarketWS(event) {
-  if (_pmWs) return;
-
-  const allTokenIds = Object.values(_pmData)
-    .flatMap(d => d.tokenIds || [])
-    .filter(Boolean);
-  if (!allTokenIds.length) return;
-
-  try {
-    _pmWs = new WebSocket('wss://ws-subscriptions-clob.polymarket.com/ws/');
-
-    _pmWs.onopen = () => {
-      _pmWs.send(JSON.stringify({ type: 'subscribe', channel: 'price_change', assets_ids: allTokenIds }));
-      document.querySelectorAll('.pm-live-dot').forEach(el => el.classList.add('pm-live-on'));
-    };
-
-    _pmWs.onmessage = (e) => {
-      try {
-        const msgs = JSON.parse(e.data);
-        for (const msg of (Array.isArray(msgs) ? msgs : [msgs])) {
-          handlePMPriceUpdate(msg, event);
-        }
-      } catch {}
-    };
-
-    _pmWs.onclose = () => {
-      _pmWs = null;
-      document.querySelectorAll('.pm-live-dot').forEach(el => el.classList.remove('pm-live-on'));
-      setTimeout(() => connectPolymarketWS(event), 6000);
-    };
-
-    _pmWs.onerror = () => { _pmWs = null; };
-  } catch {}
+  // CSP blocks the external WebSocket (wss://ws-subscriptions-clob.polymarket.com).
+  // Poll the already-allowlisted CLOB REST price endpoint through the fetch:external
+  // proxy instead — same price data, ~15s cadence, no direct socket, user IP hidden.
+  if (_pmPollTimer) return;
+  const poll = () => {
+    const allTokenIds = Object.values(_pmData).flatMap(d => d.tokenIds || []).filter(Boolean);
+    if (!allTokenIds.length) return;
+    document.querySelectorAll('.pm-live-dot').forEach(el => el.classList.add('pm-live-on'));
+    allTokenIds.forEach(tokenId => {
+      fetchExternalSilent(`https://clob.polymarket.com/price?token_id=${tokenId}&side=buy`)
+        .then(r => {
+          if (r && r.price != null) handlePMPriceUpdate({ asset_id: tokenId, price: r.price }, event);
+        });
+    });
+  };
+  poll();
+  _pmPollTimer = setInterval(poll, 15000);
 }
 
 function handlePMPriceUpdate(msg, event) {
@@ -1484,7 +1469,7 @@ function renderPolymarketSection(fight, key) {
 
   const html = `<div style="padding: 11px 14px 13px">
     <div class="pm-header">
-      <span class="pm-live-dot${_pmWs ? ' pm-live-on' : ''}"></span>
+      <span class="pm-live-dot${_pmPollTimer ? ' pm-live-on' : ''}"></span>
       <span class="pm-title">🟣 Polymarket</span>
       ${d.volume > 0 ? `<span class="pm-vol">${fmtVol(d.volume)} vol · ${fmtVol(d.liquidity)} liq</span>` : ''}
     </div>

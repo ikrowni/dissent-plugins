@@ -136,7 +136,7 @@ let _config = {};
 let _refreshTimer = null;
 
 function teamLogoUrl(abbr) {
-  return `https://a.espncdn.com/i/teamlogos/nfl/500/${(abbr||'').toLowerCase()}.png`;
+  return Dissent.imageUrl(`https://a.espncdn.com/i/teamlogos/nfl/500/${(abbr||'').toLowerCase()}.png`);
 }
 function logoImg(abbr) {
   return `<div class="sb-logo"><img src="${teamLogoUrl(abbr)}" alt="${esc(abbr)}" onerror="this.parentNode.innerHTML='🏈'"></div>`;
@@ -361,7 +361,7 @@ function render(data, standings) {
     injuries.slice(0, 6).forEach(i => {
       const cls = i.status==='Out'?'s-out':i.status==='Doubtful'?'s-d':'s-q';
       html += `<div class="injury-row">
-        <div class="inj-photo"><img src="https://a.espncdn.com/i/headshots/nfl/players/full/${esc(i.id)}.png" alt="${esc(i.name)}" onerror="this.parentNode.innerHTML='🧑'"></div>
+        <div class="inj-photo"><img src="${Dissent.imageUrl(`https://a.espncdn.com/i/headshots/nfl/players/full/${esc(i.id)}.png`)}" alt="${esc(i.name)}" onerror="this.parentNode.innerHTML='🧑'"></div>
         <div class="inj-info"><div class="inj-name">${esc(i.name)}</div><div class="inj-detail">${esc(i.team)} · ${esc(i.pos)}${i.body?' · '+esc(i.body):''}</div></div>
         <div class="inj-badge ${cls}">${esc(i.status)}</div>
       </div>`;

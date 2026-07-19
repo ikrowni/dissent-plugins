@@ -199,7 +199,7 @@ function render(allNews) {
     breaking.forEach(n => {
       shownHeadlines.add(n.headline);
       const thumbHtml = n.image
-        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🥊</div>'">`
+        ? `<img class="news-thumb-img" src="${Dissent.imageUrl(esc(n.image))}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🥊</div>'">`
         : `<div class="thumb-art">🥊</div>`;
       html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
         <div class="news-thumb">
@@ -239,7 +239,7 @@ function render(allNews) {
     contracts.forEach(n => {
       shownHeadlines.add(n.headline);
       const thumbHtml = n.image
-        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>📋</div>'" style="height:60px">`
+        ? `<img class="news-thumb-img" src="${Dissent.imageUrl(esc(n.image))}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>📋</div>'" style="height:60px">`
         : `<div class="thumb-art">📋</div>`;
       html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
         <div class="news-thumb" style="height:60px">
