@@ -132,8 +132,11 @@
 
     // ---- files ----
     await test('files:upload/list/delete', async () => {
-      const buf = new TextEncoder().encode('probe-file-content').buffer;
-      const up = await raw('files:upload', { data: buf, name: 'probe.txt', mime: 'text/plain' });
+      // 1x1 transparent PNG — the backend sniffs magic bytes and only accepts real media MIMEs.
+      const pngB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+      const bytes = Uint8Array.from(atob(pngB64), c => c.charCodeAt(0));
+      const buf = bytes.buffer;
+      const up = await raw('files:upload', { data: buf, name: 'probe.png', mime: 'image/png' });
       if (!up || !up.id) throw new Error('no file id: ' + JSON.stringify(up));
       const url = await raw('files:getUrl', { fileId: up.id });
       if (!url || !url.url) throw new Error('no url');
