@@ -41,7 +41,7 @@
     }
     // raw postMessage request for actions the SDK has no helper for
     let rawSeq = 0;
-    function raw(action, params) {
+    function raw(action, params, timeoutMs = 8000) {
       return new Promise((resolve, reject) => {
         const id = `probe-${++rawSeq}-${Date.now()}`;
         const h = (ev) => {
@@ -53,7 +53,7 @@
         };
         window.addEventListener('message', h);
         window.parent.postMessage({ type: 'dissent:request', id, action, params }, '*');
-        setTimeout(() => { window.removeEventListener('message', h); reject(new Error('timeout')); }, 8000);
+        setTimeout(() => { window.removeEventListener('message', h); reject(new Error('timeout')); }, timeoutMs);
       });
     }
 
@@ -158,10 +158,31 @@
     // ---- deny paths (exact error strings = behavior contract) ----
     await expectErr('bot:post denied', 'bot:post not granted', () => Dissent.postMessage('x'));
     await expectErr('unknown action', 'unknown action', () => raw('no:such-action', {}));
-    await expectErr('voice.setGain denied', 'voice not granted', () => raw('voice.setGain', { userId: 'u', gain: 0.5 }));
-    await expectErr('media.embed denied', 'media:embed not granted', () => raw('media.embed', { url: 'https://example.com/' }));
-    await expectErr('identity.exportToken denied', 'identity:native not granted', () => raw('identity.exportToken', {}));
-    await expectErr('companion.install denied', 'identity:native not granted', () => raw('companion.install', { template: 'x' }));
+    const perms = (ctx && ctx.permissions) || [];
+    if (perms.includes('voice')) {
+      await test('voice.setGain (granted)', () => raw('voice.setGain', { userId: 'probe-user', gain: 0.5 }));
+    } else {
+      await expectErr('voice.setGain denied', 'voice not granted', () => raw('voice.setGain', { userId: 'u', gain: 0.5 }));
+    }
+    if (perms.includes('media:embed')) {
+      await test('media.embed (granted) opens overlay', () =>
+        raw('media.embed', { url: 'https://example.com/', title: 'Probe Overlay' }));
+    } else {
+      await expectErr('media.embed denied', 'media:embed not granted', () => raw('media.embed', { url: 'https://example.com/' }));
+    }
+    if (perms.includes('identity:native')) {
+      // The driver dismisses the confirm dialog → the decline path is the assertion.
+      await expectErr('identity.exportToken confirm→declined', 'user declined',
+        () => raw('identity.exportToken', {}, 30000));
+      // The driver clicks Copy & Close (or Cancel) on the visible-command modal within 30s.
+      await test('companion.install shows command modal', () =>
+        raw('companion.install', {
+          template: "$env:PROBE_T='{{TOKEN}}'; $env:PROBE_S='{{SERVER_ID}}'; irm '{{APP_ORIGIN}}/probe.ps1' | iex",
+        }, 30000));
+    } else {
+      await expectErr('identity.exportToken denied', 'identity:native not granted', () => raw('identity.exportToken', {}));
+      await expectErr('companion.install denied', 'identity:native not granted', () => raw('companion.install', { template: 'x' }));
+    }
     await expectErr('old action names retired', 'unknown action', () => raw('auth:copy-token', {}));
     await expectErr('polymarket denied', 'polymarket not granted', () => raw('polymarket:status', {}));
 
