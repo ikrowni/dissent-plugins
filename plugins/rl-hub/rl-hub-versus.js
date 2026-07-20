@@ -1,5 +1,5 @@
 // rl-hub-versus.js — Broadcast versus panel
-import { esc, openMediaOverlay } from '../plugin-sdk.js';
+import { esc, mediaEmbed, getInitContext } from '../plugin-sdk.js';
 import { addBallHitPoint, restoreOverlayState, resetOverlayState } from './rl-hub-versus-overlay.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
@@ -616,5 +616,10 @@ function _stopStaleness() {
 }
 
 window.watchTwitch = (username) => {
-  openMediaOverlay({ twitchChannel: username });
+  // parent= must be the raw hostname of the embedding app (Twitch requirement).
+  const parent = getInitContext()?.hostHostname || 'app.dissent.chat';
+  mediaEmbed(
+    `https://player.twitch.tv/?channel=${encodeURIComponent(username)}&parent=${parent}&muted=false&autoplay=true`,
+    `${username} on Twitch`,
+  );
 };

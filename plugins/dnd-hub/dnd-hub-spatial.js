@@ -1,7 +1,7 @@
 // dnd-hub-spatial.js — Phase 8: distance-based spatial audio
 // updateSpatialAudio() is called on every token:move and map:set.
 // It computes linear gain falloff from token positions and adjusts
-// each remote participant's local playback volume via voice:setGain.
+// each remote participant's local playback volume via voice.setGain.
 import { request } from '../plugin-sdk.js';
 import { effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 
@@ -39,7 +39,7 @@ export async function updateSpatialAudio(myUserId, tokens, mapData, dmUserId, ma
     }
 
     try {
-      await request('voice:setGain', { userId: t.userId, gain });
+      await request('voice.setGain', { userId: t.userId, gain });
     } catch {
       // Silently ignore — user may not be in a voice channel
     }

@@ -4,6 +4,10 @@
 const _pending = {};
 let _msgId = 0;
 let _identity = null;
+let _initContext = null;
+
+// Init context from dissent:init (serverId, channelId, coreUrl, installId, hostHostname…).
+export function getInitContext() { return _initContext; }
 
 export function request(action, params = {}) {
   return new Promise((resolve, reject) => {
@@ -29,6 +33,7 @@ export function requestWithTransfer(action, params, transfers, timeoutMs = 60000
 export function handleSDKMessage(e, onInit, onEvent) {
   if (e.data?.type === 'dissent:init') {
     if (e.data.user?.id) _identity = e.data.user; // pre-cache identity
+    if (e.data.context) _initContext = e.data.context;
     if (onInit) onInit(e.data);
     return;
   }
@@ -91,18 +96,45 @@ export async function localPublish(registryId, eventName, data) {
 
 /**
  * Opens an embedded media player overlay in the host frame, bypassing sandbox
- * restrictions. The overlay renders above the plugin with a visible source URL
- * header and a dismiss button.
+ * restrictions. The overlay renders above the plugin with a visible source-domain
+ * header and a dismiss button. Requires the 'media:embed' permission.
  *
- * params.src          — full https:// URL to embed (any embeddable content)
- * params.twitchChannel — Twitch channel name (host constructs the correct embed URL)
- * params.title        — optional label shown in the overlay header
- *
- * Only https:// URLs are accepted. The source domain is always visible to the
- * user so they can see what they are viewing.
+ * url   — full https:// URL to embed (build it yourself; use getInitContext().hostHostname
+ *         for embeds that need a parent= hostname, e.g. Twitch)
+ * title — optional label shown in the overlay header (defaults to the URL's hostname)
  */
-export async function openMediaOverlay(params) {
-  try { return await request('ui:media-overlay', params); } catch { return null; }
+export async function mediaEmbed(url, title) {
+  try { return await request('media.embed', { url, title }); } catch { return null; }
+}
+
+/** Adjust the local playback volume of a voice participant. Requires 'voice' permission. */
+export async function voiceSetGain(userId, gain) {
+  return request('voice.setGain', { userId, gain });
+}
+
+/** ⚠ T3: copy the user's login token to their clipboard (host confirms first). Requires 'identity:native'. */
+export async function identityExportToken() {
+  return request('identity.exportToken', {});
+}
+
+/**
+ * ⚠ T3: mint a companion token and show the user your install command with
+ * {{API_BASE}} {{APP_ORIGIN}} {{TOKEN}} {{SERVER_ID}} {{CHANNEL_ID}} substituted.
+ * Requires 'identity:native'.
+ */
+export async function companionInstall(template, channelId) {
+  return request('companion.install', { template, channelId });
+}
+
+/** Device-local KV (never leaves this browser). Requires 'storage:local' permission. */
+export async function storageLocalGet(key) {
+  try { const r = await request('storage:localGet', { key }); return r?.value ?? null; } catch { return null; }
+}
+export async function storageLocalSet(key, value) {
+  return request('storage:localSet', { key, value });
+}
+export async function storageLocalDelete(key) {
+  return request('storage:localDelete', { key });
 }
 
 export async function storageGetCompanion(registryId, key, scope = 'server') {

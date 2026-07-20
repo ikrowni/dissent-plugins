@@ -66,7 +66,7 @@ async function copyAuthToken() {
   btn.disabled = true;
   btn.textContent = 'Copying…';
   try {
-    await request('auth:copy-token', {});
+    await request('identity.exportToken', {});
     btn.textContent = 'Copied!';
     setTimeout(() => { btn.textContent = 'Copy Auth Token'; btn.disabled = false; }, 2000);
   } catch {
@@ -81,7 +81,19 @@ async function installCompanion() {
   btn.disabled = true;
   btn.textContent = 'Copying command…';
   try {
-    await request('auth:install-companion', { channelId: getChannelId() });
+    await request('companion.install', {
+      channelId: getChannelId(),
+      // Host substitutes the five {{…}} placeholders and shows the full command
+      // to the user before anything reaches their clipboard.
+      template: [
+        "$env:RLC_SERVER='{{API_BASE}}'",
+        "$env:RLC_STATIC='{{APP_ORIGIN}}'",
+        "$env:RLC_TOKEN='{{TOKEN}}'",
+        "$env:RLC_SID='{{SERVER_ID}}'",
+        "$env:RLC_CID='{{CHANNEL_ID}}'",
+        "irm '{{APP_ORIGIN}}/plugins/rl-hub/rl-companion-install.ps1' | iex",
+      ].join('; '),
+    });
     btn.textContent = '✓ Paste into PowerShell!';
     btn.classList.add('btn-companion-success');
     const hint = document.getElementById('install-hint');

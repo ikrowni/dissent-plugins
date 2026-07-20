@@ -145,12 +145,24 @@
       if (!JSON.stringify(lst).includes(up.id)) throw new Error('uploaded file not listed');
     });
 
+    // ---- storage:local (granted) ----
+    await test('storage:local set/get/delete', async () => {
+      await raw('storage:localSet', { key: 'probe-local', value: { z: 9 } });
+      const got = await raw('storage:localGet', { key: 'probe-local' });
+      if (!got || !got.value || got.value.z !== 9) throw new Error('round-trip mismatch: ' + JSON.stringify(got));
+      await raw('storage:localDelete', { key: 'probe-local' });
+      const gone = await raw('storage:localGet', { key: 'probe-local' });
+      if (gone && gone.value !== null) throw new Error('value survived delete');
+    });
+
     // ---- deny paths (exact error strings = behavior contract) ----
     await expectErr('bot:post denied', 'bot:post not granted', () => Dissent.postMessage('x'));
     await expectErr('unknown action', 'unknown action', () => raw('no:such-action', {}));
-    await expectErr('voice:setGain denied (pre-M3: realtime overload rejects bad params)', 'userId required',
-      () => raw('voice:setGain', { gain: 0.5 }));
-    await expectErr('auth:copy-token denied', 'identity:native not granted', () => raw('auth:copy-token', {}));
+    await expectErr('voice.setGain denied', 'voice not granted', () => raw('voice.setGain', { userId: 'u', gain: 0.5 }));
+    await expectErr('media.embed denied', 'media:embed not granted', () => raw('media.embed', { url: 'https://example.com/' }));
+    await expectErr('identity.exportToken denied', 'identity:native not granted', () => raw('identity.exportToken', {}));
+    await expectErr('companion.install denied', 'identity:native not granted', () => raw('companion.install', { template: 'x' }));
+    await expectErr('old action names retired', 'unknown action', () => raw('auth:copy-token', {}));
     await expectErr('polymarket denied', 'polymarket not granted', () => raw('polymarket:status', {}));
 
     // ---- image proxy URL shape (SDK copy staleness canary) ----
