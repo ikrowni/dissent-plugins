@@ -29,6 +29,14 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .dot-connected{background:var(--green)}
 .notice{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:#fca5a5;margin-bottom:14px}
 .empty{color:var(--muted);font-size:12px;text-align:center;padding:20px 0}
+.input{width:100%;height:36px;padding:0 12px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+.input:focus{border-color:var(--accent)}
+.mkt{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer;font-size:12px}
+.mkt:hover,.mkt.sel{border-color:var(--accent);background:rgba(145,71,255,0.08)}
+.outcome{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;margin:6px 6px 0 0}
+.outcome.sel{border-color:var(--accent);background:rgba(145,71,255,0.15)}
+.ok-line{color:var(--green);font-size:12px;margin-top:10px}
+.err-line{color:#fca5a5;font-size:12px;margin-top:10px;word-break:break-word}
 </style>
 </head>
 <body>
@@ -42,38 +50,32 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 
 <script type="module">
 import { handleSDKMessage, request } from './plugin-sdk.js';
+import {
+  searchMarkets, connectAndAuth, getStoredCreds, clearCreds, usdcBalance,
+  buildOrderParams, signOrder, submitOrder,
+} from './polymarket-hub/pm-clob.js';
 
-let _connected = false;
-let _address = null;
+let _creds = null;      // { address, apiKey, secret, passphrase } — device-local only
 let _balance = null;
+let _markets = [];
+let _selMarket = -1;
+let _selOutcome = 0;
 
 window.addEventListener('message', e => handleSDKMessage(e, onInit, null));
 
 async function onInit() {
-  await refresh();
-}
-
-async function refresh() {
   try {
-    const status = await request('polymarket:status', {});
-    _connected = status.connected;
-    _address = status.address;
-    _balance = status.usdcBalance;
-  } catch {
-    _connected = false;
-    _address = null;
-    _balance = null;
-  }
+    _creds = await getStoredCreds();
+    if (_creds) { try { _balance = await usdcBalance(); } catch { _balance = null; } }
+  } catch { _creds = null; }
   render();
 }
 
 async function connect() {
   renderConnecting();
   try {
-    const result = await request('polymarket:connect', {});
-    _connected = true;
-    _address = result.address;
-    _balance = result.usdcBalance;
+    _creds = await connectAndAuth();
+    try { _balance = await usdcBalance(); } catch { _balance = null; }
   } catch (e) {
     renderError(e?.message ?? 'Connection failed. Make sure MetaMask or Coinbase Wallet is installed and on Polygon network.');
     return;
@@ -81,7 +83,9 @@ async function connect() {
   render();
 }
 
-function disconnect() {
+async function disconnect() {
+  await clearCreds().catch(() => {});
+  _creds = null; _balance = null; _markets = []; _selMarket = -1;
   renderDisconnectInfo();
 }
 
@@ -123,7 +127,7 @@ function renderError(msg) {
 
 function renderDisconnectInfo() {
   document.getElementById('root').innerHTML = `
-    <div class="notice">To disconnect, remove this site from your wallet's connected sites (MetaMask or Coinbase Wallet), then refresh.</div>
+    <div class="notice">Local Polymarket credentials cleared. To fully disconnect, also remove this site from your wallet's connected sites (MetaMask or Coinbase Wallet).</div>
     <button class="btn btn-primary" id="back-btn">Back</button>`;
   document.getElementById('back-btn').addEventListener('click', render);
 }
@@ -139,7 +143,7 @@ function shortAddr(addr) {
 
 function render() {
   const root = document.getElementById('root');
-  if (!_connected) {
+  if (!_creds) {
     root.innerHTML = `
       <div class="card" style="text-align:center;padding:24px 16px">
         <div style="font-size:32px;margin-bottom:12px">📈</div>
@@ -160,7 +164,7 @@ function render() {
     <div class="card">
       <div class="label">Wallet</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span class="address">${esc(shortAddr(_address))}</span>
+        <span class="address">${esc(shortAddr(_creds.address))}</span>
         <span style="color:var(--green);font-size:11px;font-weight:700">
           <span class="status-dot dot-connected"></span>Connected
         </span>
@@ -173,29 +177,97 @@ function render() {
         <button id="refresh-btn" title="Refresh balance" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:16px;height:34px;width:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0">↻</button>
       </div>
     </div>
+    <div class="card">
+      <div class="label">Place a bet</div>
+      <div style="display:flex;gap:8px">
+        <input class="input" id="bet-query" placeholder="Search markets (e.g. UFC 313)"/>
+        <button class="btn btn-primary" id="bet-search" style="flex-shrink:0">Search</button>
+      </div>
+      <div id="bet-results"></div>
+      <div id="bet-detail"></div>
+      <div id="bet-status"></div>
+    </div>
     <div class="notice" style="font-size:11px">
       Balance shows USDC.e on <strong>Polygon</strong> only. If you added funds on Ethereum or Coinbase Base, you need to bridge them to Polygon first.
     </div>
     <div class="card">
-      <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:12px">
-        Your wallet is connected. Open any supported plugin (UFC Fights, NFL Hub, etc.) and tap the <strong style="color:var(--text)">Bet</strong> button to place a bet on a live Polymarket market.
-      </p>
       <button class="btn btn-danger" id="disconnect-btn" style="width:100%">Disconnect Wallet</button>
     </div>`;
   document.getElementById('disconnect-btn').addEventListener('click', disconnect);
   document.getElementById('refresh-btn').addEventListener('click', async () => {
     const btn = document.getElementById('refresh-btn');
-    btn.textContent = '…';
-    btn.disabled = true;
+    btn.textContent = '…'; btn.disabled = true;
     try {
-      const status = await request('polymarket:status', {});
-      _balance = status.usdcBalance;
+      _balance = await usdcBalance();
       document.getElementById('balance-val').innerHTML = `${esc(_balance ?? '—')}<span class="balance-unit">USDC</span>`;
     } catch { /* keep existing value */ } finally {
-      btn.textContent = '↻';
-      btn.disabled = false;
+      btn.textContent = '↻'; btn.disabled = false;
     }
   });
+  document.getElementById('bet-search').addEventListener('click', doSearch);
+  document.getElementById('bet-query').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+}
+
+async function doSearch() {
+  const q = document.getElementById('bet-query').value.trim();
+  if (!q) return;
+  const resultsEl = document.getElementById('bet-results');
+  resultsEl.innerHTML = '<div class="empty">Searching…</div>';
+  document.getElementById('bet-detail').innerHTML = '';
+  document.getElementById('bet-status').innerHTML = '';
+  _markets = await searchMarkets(q);
+  _selMarket = -1;
+  if (!_markets.length) { resultsEl.innerHTML = '<div class="empty">No open markets found.</div>'; return; }
+  resultsEl.innerHTML = _markets.map((m, i) =>
+    `<div class="mkt" data-i="${i}">${esc(m.question)}</div>`).join('');
+  resultsEl.querySelectorAll('.mkt').forEach(el => el.addEventListener('click', () => selectMarket(Number(el.dataset.i))));
+}
+
+function selectMarket(i) {
+  _selMarket = i; _selOutcome = 0;
+  document.querySelectorAll('.mkt').forEach((el, j) => el.classList.toggle('sel', j === i));
+  renderDetail();
+}
+
+function renderDetail() {
+  const m = _markets[_selMarket];
+  const detail = document.getElementById('bet-detail');
+  detail.innerHTML = `
+    <div style="margin-top:10px">
+      ${m.outcomes.map((o, i) =>
+        `<span class="outcome${i === _selOutcome ? ' sel' : ''}" data-i="${i}">${esc(o)} <strong>${Math.round((m.outcomePrices[i] ?? 0) * 100)}¢</strong></span>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input class="input" id="bet-amount" type="number" min="1" step="1" value="5" style="width:110px" />
+      <button class="btn btn-primary" id="bet-place" style="flex:1">Place bet (USDC)</button>
+    </div>`;
+  detail.querySelectorAll('.outcome').forEach(el =>
+    el.addEventListener('click', () => { _selOutcome = Number(el.dataset.i); renderDetail(); }));
+  document.getElementById('bet-place').addEventListener('click', placeBet);
+}
+
+async function placeBet() {
+  const m = _markets[_selMarket];
+  const amount = Math.max(1, Number(document.getElementById('bet-amount').value) || 0);
+  const statusEl = document.getElementById('bet-status');
+  const btn = document.getElementById('bet-place');
+  btn.disabled = true; btn.textContent = 'Awaiting signature…';
+  statusEl.innerHTML = '';
+  try {
+    const params = buildOrderParams(m, _selOutcome, amount, _creds.address);
+    const signed = await signOrder(params, m, m.outcomes[_selOutcome], amount);
+    btn.textContent = 'Submitting…';
+    const { orderId } = await submitOrder(signed, _creds);
+    statusEl.innerHTML = `<div class="ok-line">✓ Order placed — ${esc(orderId)}</div>`;
+    try {
+      _balance = await usdcBalance();
+      document.getElementById('balance-val').innerHTML = `${esc(_balance ?? '—')}<span class="balance-unit">USDC</span>`;
+    } catch { /* balance refresh best-effort */ }
+  } catch (e) {
+    statusEl.innerHTML = `<div class="err-line">${esc(e?.message ?? 'bet failed')}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Place bet (USDC)';
+  }
 }
 </script>
 </body>

@@ -184,7 +184,23 @@
       await expectErr('companion.install denied', 'identity:native not granted', () => raw('companion.install', { template: 'x' }));
     }
     await expectErr('old action names retired', 'unknown action', () => raw('auth:copy-token', {}));
-    await expectErr('polymarket denied', 'polymarket not granted', () => raw('polymarket:status', {}));
+    await expectErr('polymarket actions retired', 'unknown action', () => raw('polymarket:status', {}));
+    if (perms.includes('wallet')) {
+      // Grant-path wallet checks need a window.ethereum stub in the PARENT frame —
+      // the driver injects it; without a stub, connect must fail gracefully.
+      await test('wallet.connect (granted, stub or graceful error)', async () => {
+        try {
+          const r = await raw('wallet.connect', { chainId: 137 }, 30000);
+          if (!r || !r.address) throw new Error('no address returned');
+          return 'address=' + r.address;
+        } catch (e) {
+          if ((e.message || '').includes('No wallet detected')) return 'graceful no-wallet error';
+          throw e;
+        }
+      });
+    } else {
+      await expectErr('wallet.connect denied', 'wallet not granted', () => raw('wallet.connect', { chainId: 137 }));
+    }
 
     // ---- image proxy URL shape (SDK copy staleness canary) ----
     await test('imageUrl rewrites', async () => {

@@ -8,8 +8,8 @@
   "tier": 2,
   "context": ["sidebar"],
   "url": "https://plugins.dissent.chat/plugins/polymarket-hub/plugin.html",
-  "declared_permissions": ["polymarket"],
-  "allowed_fetch_domains": [],
+  "declared_permissions": ["wallet", "storage:local", "fetch:external"],
+  "allowed_fetch_domains": ["gamma-api.polymarket.com", "clob.polymarket.com"],
   "config_schema": null,
   "categories": ["betting", "finance"],
   "sdk_version": "1"

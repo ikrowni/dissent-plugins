@@ -144,33 +144,4 @@ export async function storageSetCompanion(registryId, key, scope, value) {
   try { return await request('storage:set-companion', { registryId, key, scope: scope || 'server', value }); } catch { return null; }
 }
 
-/**
- * Connect the user's MetaMask wallet to Polymarket.
- * Returns { address, usdcBalance } or throws on error / user rejection.
- * Requires 'polymarket' permission.
- */
-export async function polymarketConnect() {
-  return request('polymarket:connect', {});
-}
 
-/**
- * Returns current wallet connection status without triggering a connect flow.
- * Returns { connected: bool, address: string|null, usdcBalance: string|null }.
- * Requires 'polymarket' permission.
- */
-export async function polymarketStatus() {
-  return request('polymarket:status', {});
-}
-
-/**
- * Opens the Polymarket bet modal for the given search query.
- * Searches for matching markets, lets the user pick + confirm, then places the order.
- * Returns { ok: true, orderId } or { ok: false, error }.
- * Requires 'polymarket' permission.
- *
- * @param {string} query - search string (e.g. "Pereira vs Ankalaev UFC 313")
- * @param {number} [suggestedAmount] - pre-fills the USDC amount input
- */
-export async function polymarketBet(query, suggestedAmount) {
-  return request('polymarket:bet', { query, suggestedAmount });
-}
