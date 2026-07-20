@@ -9,12 +9,16 @@ let _initContext = null;
 // Init context from dissent:init (serverId, channelId, coreUrl, installId, hostHostname…).
 export function getInitContext() { return _initContext; }
 
-export function request(action, params = {}) {
+// Interactive capabilities (wallet signatures, native confirms) block on a human
+// clicking a host modal — pass a generous timeoutMs (e.g. INTERACTIVE_TIMEOUT_MS).
+export const INTERACTIVE_TIMEOUT_MS = 120000;
+
+export function request(action, params = {}, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const id = ++_msgId;
     _pending[id] = { resolve, reject };
     parent.postMessage({ type: 'dissent:request', id, action, params }, '*');
-    setTimeout(() => { if (_pending[id]) { delete _pending[id]; reject(new Error('timeout')); } }, 10000);
+    setTimeout(() => { if (_pending[id]) { delete _pending[id]; reject(new Error('timeout')); } }, timeoutMs);
   });
 }
 
@@ -114,7 +118,7 @@ export async function voiceSetGain(userId, gain) {
 
 /** ⚠ T3: copy the user's login token to their clipboard (host confirms first). Requires 'identity:native'. */
 export async function identityExportToken() {
-  return request('identity.exportToken', {});
+  return request('identity.exportToken', {}, INTERACTIVE_TIMEOUT_MS);
 }
 
 /**
@@ -123,7 +127,7 @@ export async function identityExportToken() {
  * Requires 'identity:native'.
  */
 export async function companionInstall(template, channelId) {
-  return request('companion.install', { template, channelId });
+  return request('companion.install', { template, channelId }, INTERACTIVE_TIMEOUT_MS);
 }
 
 /** Device-local KV (never leaves this browser). Requires 'storage:local' permission. */

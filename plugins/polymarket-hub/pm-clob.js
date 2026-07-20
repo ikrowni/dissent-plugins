@@ -3,7 +3,7 @@
 // signTypedData (host-mediated, every signature behind the host's confirm modal), and
 // storage:local (device-only CLOB API creds — the node never sees them).
 // Ported from the pre-capability core code (src/lib/polymarket/{gamma,clob,wallet}.ts).
-import { request, storageLocalGet, storageLocalSet, storageLocalDelete } from '../plugin-sdk.js';
+import { request, storageLocalGet, storageLocalSet, storageLocalDelete, INTERACTIVE_TIMEOUT_MS } from '../plugin-sdk.js';
 
 const GAMMA_BASE = 'https://gamma-api.polymarket.com';
 const CLOB_BASE = 'https://clob.polymarket.com';
@@ -61,7 +61,7 @@ export async function usdcBalance() {
 
 /** Connect the wallet (Polygon), derive CLOB API creds if not cached. Returns creds. */
 export async function connectAndAuth() {
-  const { address } = await request('wallet.connect', { chainId: 137 });
+  const { address } = await request('wallet.connect', { chainId: 137 }, INTERACTIVE_TIMEOUT_MS);
   const cached = await getStoredCreds();
   if (cached && cached.address.toLowerCase() === address.toLowerCase()) return cached;
 
@@ -86,7 +86,7 @@ export async function connectAndAuth() {
     primaryType: 'ClobAuth',
     message: { address, timestamp, nonce, message: 'This message attests that I control the given wallet' },
     summary: 'Authenticate with Polymarket (no funds move)',
-  });
+  }, INTERACTIVE_TIMEOUT_MS);
 
   // CLOB L1 auth: credentials go in request headers, no body or Content-Type.
   const res = await proxyFetch(`${CLOB_BASE}/auth/api-key`, {
@@ -153,7 +153,7 @@ export async function signOrder(params, market, outcomeLabel, usdcAmount) {
     primaryType: 'Order',
     message: orderData,
     summary: `Bet $${usdcAmount} on "${outcomeLabel}" — ${market.question}`,
-  });
+  }, INTERACTIVE_TIMEOUT_MS);
   return { ...params, signature, signatureType: 0, expiration: 0, nonce: 0, feeRateBps: 0, taker: '0x0000000000000000000000000000000000000000' };
 }
 
