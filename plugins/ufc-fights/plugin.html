@@ -625,7 +625,7 @@ function renderThumb(last, first, athleteId, corner) {
   const sil = corner === 'red' ? 'mini-red' : 'mini-blue';
   if (!url) return `<div class="row-thumb"><div class="mini-sil-wrap"><div class="mini-sil ${sil}"></div></div></div>`;
   return `<div class="row-thumb">
-    <img src="${url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${first} ${last}"/>
+    <img src="${Dissent.imageUrl(url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${first} ${last}"/>
     <div class="mini-sil-wrap" style="display:none"><div class="mini-sil ${sil}"></div></div>
   </div>`;
 }
@@ -637,7 +637,7 @@ function renderExpandedImg(last, first, athleteId, corner) {
   return `<div class="exp-img-frame">
     <div class="corner-pip ${pip}"></div>
     ${url
-      ? `<img src="${url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${first} ${last}"/>`
+      ? `<img src="${Dissent.imageUrl(url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${first} ${last}"/>`
       : ''}
     <div class="exp-img-fallback" style="display:none"><div class="silhouette ${sil}"></div></div>
   </div>`;

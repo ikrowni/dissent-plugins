@@ -112,7 +112,7 @@
     }
     root.innerHTML = `
       <div class="card">
-        <div class="art">${albumArt ? `<img src="${escapeHtml(albumArt)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : '♪'}</div>
+        <div class="art">${albumArt ? `<img src="${Dissent.imageUrl(albumArt)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : '♪'}</div>
         <div class="info">
           <div class="track">${escapeHtml(track)}</div>
           <div class="artist">${escapeHtml(artist ?? 'Unknown Artist')}</div>
