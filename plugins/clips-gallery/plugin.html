@@ -110,9 +110,9 @@
       <div class="clip">
         <div class="clip-thumb">
           ${isImage(item.url)
-            ? `<img src="${item.url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;">`
+            ? `<img src="${Dissent.imageUrl(item.url)}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;">`
             : isVideo(item.url)
-            ? `<video src="${item.url}" muted style="width:100%;height:100%;object-fit:cover;"></video>`
+            ? `<video src="${Dissent.mediaUrl(item.url)}" muted style="width:100%;height:100%;object-fit:cover;"></video>`
             : '📎'}
         </div>
         <div class="clip-meta">
