@@ -415,7 +415,7 @@ function renderSpellRow(spell, type) {
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700">${esc(spell.name)}</div>
         <div style="font-size:10px;color:var(--dnd-muted)">${esc(spell.school||'')}${spell.casting_time?' · '+esc(spell.casting_time):''}${spell.range?' · '+esc(spell.range):''}</div>
-        ${spell.description ? `<div style="font-size:10px;color:var(--dnd-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(spell.description.slice(0,80))}${spell.description.length>80?'…':''}</div>` : ''}
+        ${spell.desc ? `<div style="font-size:10px;color:var(--dnd-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(spell.desc.slice(0,80))}${spell.desc.length>80?'…':''}</div>` : ''}
       </div>
     </div>
   `;
