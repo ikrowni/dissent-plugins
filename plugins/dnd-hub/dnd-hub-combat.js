@@ -1,7 +1,8 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
 
@@ -71,7 +72,7 @@ export async function applyConditions(token, conditions, campaignId) {
   token.conditions = conditions;
   if (MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
     serverData.campaigns[campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   await realtimePublish(EV.TOKEN_CONDITIONS, {
     type: EV.TOKEN_CONDITIONS, campaignId, tokenId: token.id,
@@ -89,7 +90,7 @@ export async function setTokenAC(token, campaignId) {
   token.ac = ac;
   if (MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
     serverData.campaigns[campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   // Broadcast updated token so other clients see new AC
   await realtimePublish(EV.TOKENS_SPAWN, {
@@ -164,7 +165,7 @@ async function _damageToken(token, damage, campaignId) {
   token.hp = Math.max(0, token.hp - damage);
   if (MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
     serverData.campaigns[campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   await realtimePublish(EV.HP_CHANGE, {
     type: EV.HP_CHANGE, campaignId, tokenId: token.id,

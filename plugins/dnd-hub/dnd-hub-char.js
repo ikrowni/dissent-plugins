@@ -1,8 +1,9 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { storageGetUser, storageSetUser, storageSet, storageGet, realtimePublish, getIdentity, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20260502p4';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // Callback injected by bootstrap to avoid screens.js ↔ char.js circular import.
 // Set via onFinishRegister(enterCampaignAsPlayer) before any user interaction.
@@ -187,7 +188,7 @@ export async function finishCharacterCreation() {
   await storageSetUser(`char-draft-${CC.campaignId}`, null);
 
   // Update campaign character summary in server storage
-  const serverData = await storageGet(HUB_DM_KEY);
+  const serverData = await loadHubDm();
   if (serverData?.campaigns?.[CC.campaignId]) {
     if (!serverData.campaigns[CC.campaignId].characterSummaries) {
       serverData.campaigns[CC.campaignId].characterSummaries = {};
@@ -199,7 +200,7 @@ export async function finishCharacterCreation() {
       portraitFileId: CC.draft.portraitFileId || '',
     };
     serverData.campaigns[CC.campaignId].updatedAt = new Date().toISOString();
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
     setServerData(serverData); // sync module-level state so renderTokens sees the new summary
   }
 

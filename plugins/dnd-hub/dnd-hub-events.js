@@ -1,5 +1,5 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, HUB_DM_KEY, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
 import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderMapBackground } from './dnd-hub-map-bg.js?v=20260502p4';
@@ -19,6 +19,7 @@ import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20260502p4';
 import { renderTriggers, checkTriggers, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
 // used to skip re-animating our own broadcast when it bounces back via realtime.
@@ -68,11 +69,11 @@ export async function onInit(initData) {
   // Legacy migration: if hub-dm doesn't exist yet, copy from old 'hub' key once.
   // Also merge any maps from 'hub' that are missing from 'hub-dm' (fixes VTT maps
   // that were accidentally saved to the wrong key before the storageSet bug was fixed).
-  let dmData = await storageGet(HUB_DM_KEY);
+  let dmData = await loadHubDm();
   const hubData = await storageGet('hub');
   if (!dmData && hubData) {
     console.log('[dnd-hub] migrating storage: hub → hub-dm');
-    await storageSet(HUB_DM_KEY, hubData);
+    await saveHubDm( hubData);
     dmData = hubData;
   } else if (dmData && hubData) {
     let merged = false;
@@ -98,7 +99,7 @@ export async function onInit(initData) {
     }
     if (merged) {
       console.log('[dnd-hub] merged maps from hub → hub-dm');
-      await storageSet(HUB_DM_KEY, dmData);
+      await saveHubDm( dmData);
     }
   }
   setServerData(dmData || { campaigns: {} });
@@ -143,7 +144,7 @@ export async function handleMapEvent(p) {
   // Lazy-reload serverData when the campaign isn't cached yet.
   // This prevents isDMEvent from failing on player hubs that haven't fully loaded.
   if (p.campaignId && !serverData?.campaigns?.[p.campaignId]) {
-    setServerData(await storageGet(HUB_DM_KEY));
+    setServerData(await loadHubDm());
   }
 
   // Block privileged events from non-DM senders (requires fromUserId to be stamped)
@@ -162,7 +163,7 @@ export async function handleMapEvent(p) {
         serverData.campaigns[p.campaignId].maps[p.mapId] = p.mapEntry;
         serverData.campaigns[p.campaignId].activeMapId = p.mapId;
       } else {
-        setServerData(await storageGet(HUB_DM_KEY));
+        setServerData(await loadHubDm());
       }
       MAP.mapId = p.mapId;
       MAP.mapData = serverData?.campaigns?.[p.campaignId]?.maps?.[p.mapId];
@@ -264,7 +265,7 @@ export async function handleMapEvent(p) {
           MAP.mapData = cached?.maps?.[activeId] ?? null;
         }
         if (!MAP.mapData) {
-          const fresh = await storageGet(HUB_DM_KEY);
+          const fresh = await loadHubDm();
           setServerData(fresh);
           const freshCampaign = fresh?.campaigns?.[MAP.campaignId];
           const freshActiveId = MAP.mapId || freshCampaign?.activeMapId;
@@ -286,7 +287,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       // A player just created their character — reload storage so their
       // characterSummary is present, then re-render tokens to spawn them.
-      setServerData(await storageGet(HUB_DM_KEY));
+      setServerData(await loadHubDm());
       MAP.mapData = serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId];
       if (MAP.mapData) { renderTokens(); }
       break;
@@ -339,7 +340,7 @@ export async function handleMapEvent(p) {
       MAP.mapData.doors = p.doors;
       if (MAP.isDM) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        storageSet(HUB_DM_KEY, serverData);
+        saveHubDm( serverData);
       }
       renderWalls();
       break;
@@ -613,7 +614,7 @@ export async function handleMapEvent(p) {
           tok.hp = Math.max(0, (tok.hp || 0) - p.damage);
           if (MAP.isDM) {
             serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-            storageSet(HUB_DM_KEY, serverData);
+            saveHubDm( serverData);
             realtimePublish(EV.HP_CHANGE, {
               type: EV.HP_CHANGE, campaignId: MAP.campaignId,
               tokenId: p.tokenId, hp: tok.hp, hpMax: tok.hpMax, fromUserId: userId,

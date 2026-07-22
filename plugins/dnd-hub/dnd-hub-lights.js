@@ -1,8 +1,9 @@
 // dnd-hub-lights.js — dynamic light sources: raycasting, PIXI glow rendering, flicker, storage
-import { MAP, serverData, userId, effectiveGs, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { computeVisibleCells } from './dnd-hub-los.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── Raycasting ────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export function stopFlicker() {
 export async function saveLightsAndBroadcast() {
   if (!MAP.mapData || !MAP.campaignId || !MAP.mapId) return;
   serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-  await storageSet(HUB_DM_KEY, serverData);
+  await saveHubDm( serverData);
   await realtimePublish(EV.LIGHTS_UPDATE, {
     type: EV.LIGHTS_UPDATE,
     campaignId: MAP.campaignId,

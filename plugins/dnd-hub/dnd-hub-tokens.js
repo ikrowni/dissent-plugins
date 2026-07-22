@@ -1,5 +1,5 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, HUB_DM_KEY, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
@@ -8,6 +8,7 @@ import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20260502p4';
 import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20260502p4';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // Portrait texture cache — keyed by portraitFileId
 const _portraitCache = new Map();  // fileId → PIXI.Texture
@@ -52,7 +53,7 @@ export function renderTokens() {
     }
   });
   if (changed) {
-    storageSet(HUB_DM_KEY, serverData); // fire-and-forget
+    saveHubDm( serverData); // fire-and-forget
     // Tell all clients to add the newly created tokens
     const spawnedTokens = (campaign.members || [])
       .map(uid => mapData.tokens[`player_${uid}`]).filter(Boolean);
@@ -398,7 +399,7 @@ function setupTokenDrag(container, token) {
       MAP.mapData.tokens[token.id].x = snappedX;
       MAP.mapData.tokens[token.id].y = snappedY;
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      debounceStorageSet(HUB_DM_KEY, serverData);
+      saveHubDm( serverData);
     }
 
     // Recompute local LOS after player moves their own token
@@ -553,7 +554,7 @@ export function showContextMenu(token, cx, cy) {
       if (!isNaN(hpMax)) token.hpMax = hpMax;
       if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
       await realtimePublish(EV.HP_CHANGE, {
         type: EV.HP_CHANGE, campaignId: MAP.campaignId,
@@ -590,7 +591,7 @@ export function showContextMenu(token, cx, cy) {
       token.locked = !token.locked;
       if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
       await realtimePublish(EV.TOKENS_SPAWN, {
         type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId,
@@ -604,7 +605,7 @@ export function showContextMenu(token, cx, cy) {
       token.visible = !token.visible;
       if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
       renderTokens();
       await realtimePublish(EV.TOKENS_SPAWN, {
@@ -627,7 +628,7 @@ export function showContextMenu(token, cx, cy) {
         if (token.dead) token.hp = 0;
         if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
           serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-          await storageSet(HUB_DM_KEY, serverData);
+          await saveHubDm( serverData);
         }
         if (token.dead) {
           await realtimePublish(EV.HP_CHANGE, {
@@ -647,7 +648,7 @@ export function showContextMenu(token, cx, cy) {
         token.lootable = !token.lootable;
         if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
           serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-          await storageSet(HUB_DM_KEY, serverData);
+          await saveHubDm( serverData);
         }
         await realtimePublish(EV.TOKENS_SPAWN, {
           type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId,
@@ -681,7 +682,7 @@ export function showContextMenu(token, cx, cy) {
 
       if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
 
       renderTokens();
@@ -741,7 +742,7 @@ async function _showSizeDialog(token) {
     token.size = size;
     if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      await storageSet(HUB_DM_KEY, serverData);
+      await saveHubDm( serverData);
     }
     await realtimePublish(EV.TOKENS_SPAWN, {
       type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId,

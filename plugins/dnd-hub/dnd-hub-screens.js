@@ -1,10 +1,11 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20260502p4';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -189,14 +190,14 @@ export async function requestJoin(campaignId) {
   if (c.autoAccept) {
     c.members = [...(c.members || []), userId];
     serverData.campaigns[campaignId] = c;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
     await realtimePublish(EV.JOIN_APPROVED, { type: EV.JOIN_APPROVED, campaignId, userId });
     renderJoinScreen();
     await enterCampaignAsPlayer(campaignId);
   } else {
     c.joinRequests = [...new Set([...(c.joinRequests || []), userId])];
     serverData.campaigns[campaignId] = c;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
     await realtimePublish(EV.JOIN_REQUEST, { type: EV.JOIN_REQUEST, campaignId, userId });
     alert('Join request sent! The DM will review it.');
   }
@@ -252,7 +253,7 @@ export async function createCampaign() {
       if (btn) btn.disabled = false;
       return;
     }
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
     await realtimePublish(EV.CAMPAIGN_CREATED, { type: EV.CAMPAIGN_CREATED, campaignId, name });
     enterCampaignAsDM(campaignId);
   } catch (err) {
@@ -283,7 +284,7 @@ export async function enterCampaignAsPlayer(campaignId) {
 export async function renderCampaignView(campaignId, isDM) {
   // Refresh from storage so characterSummaries and any other changes made
   // since onInit (e.g. just after character creation) are visible to renderTokens.
-  const fresh = await storageGet(HUB_DM_KEY);
+  const fresh = await loadHubDm();
   if (fresh) setServerData(fresh);
 
   // Tear down prior PixiJS instance

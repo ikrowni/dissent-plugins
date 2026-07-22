@@ -1,7 +1,8 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
-import { MAP, serverData, userId, effectiveGs, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, genId, esc, request } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
@@ -87,7 +88,7 @@ export function renderTriggers() {
 // ── Persistence ────────────────────────────────────────────────────────────────
 
 export async function saveTriggersAndBroadcast() {
-  await storageSet(HUB_DM_KEY, serverData);
+  await saveHubDm( serverData);
   renderTriggers();
 }
 

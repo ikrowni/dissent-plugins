@@ -1,5 +1,5 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
@@ -14,6 +14,7 @@ import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=2026
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20260502p4';
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20260502p4';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
@@ -241,7 +242,7 @@ export async function initPixiApp() {
           MAP.mapData.walls.push({ id, x1: drawStart.x, y1: drawStart.y, x2: ex, y2: ey });
         }
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
         renderWalls();
         await realtimePublish(EV.WALLS_UPDATE, { type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
       } else if (tool === 'door') {
@@ -254,7 +255,7 @@ export async function initPixiApp() {
           MAP.mapData.doors[doorId] = { id: doorId, x1: drawStart.x, y1: drawStart.y, x2: ex, y2: ey, state: 'closed' };
         }
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
         renderWalls();
         await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
       }
@@ -527,7 +528,7 @@ export async function initPixiApp() {
       MAP.mapData.tokens[tokenId].x = snappedX;
       MAP.mapData.tokens[tokenId].y = snappedY;
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      await storageSet(HUB_DM_KEY, serverData);
+      await saveHubDm( serverData);
       await realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x: snappedX, y: snappedY, fromUserId: userId });
       renderTokens();
     }
@@ -591,7 +592,7 @@ export async function initPixiApp() {
         // Only DM writes to storage — player hubs receive the event and apply locally
         if (MAP.isDM) {
           serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-          await storageSet(HUB_DM_KEY, serverData);
+          await saveHubDm( serverData);
         }
         renderWalls();
         await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
@@ -670,7 +671,7 @@ export function initKeyboardHandlers() {
       if (spr) { spr.x = newX; spr.y = newY; }
 
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      debounceStorageSet(HUB_DM_KEY, serverData);
+      saveHubDm( serverData);
 
       renderTokens(); // incremental — rebuilds only the changed token sprite
 
@@ -702,7 +703,7 @@ export function initKeyboardHandlers() {
       MAP.selectedWall = null;
       if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
       renderWalls();
       await realtimePublish(EV.WALLS_UPDATE, { type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
@@ -713,7 +714,7 @@ export function initKeyboardHandlers() {
       MAP.selectedDoor = null;
       if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        await storageSet(HUB_DM_KEY, serverData);
+        await saveHubDm( serverData);
       }
       renderWalls();
       await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });

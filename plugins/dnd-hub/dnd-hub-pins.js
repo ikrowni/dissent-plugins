@@ -2,6 +2,7 @@
 import { MAP, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, genId, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 let _pinSprites = []; // PixiJS containers currently on the ui layer
 
@@ -109,7 +110,7 @@ async function _placePin(worldX, worldY) {
   const camp = serverData?.campaigns?.[MAP.campaignId];
   if (camp) {
     camp.maps[MAP.mapId] = MAP.mapData;
-    await storageSet('hub-dm', serverData);
+    await saveHubDm( serverData);
   }
   await realtimePublish(EV.PINS_UPDATE, {
     type: EV.PINS_UPDATE, campaignId: MAP.campaignId, mapId: MAP.mapId,
@@ -124,7 +125,7 @@ export async function deletePinById(id) {
   const camp = serverData?.campaigns?.[MAP.campaignId];
   if (camp) {
     camp.maps[MAP.mapId] = MAP.mapData;
-    await storageSet('hub-dm', serverData);
+    await saveHubDm( serverData);
   }
   await realtimePublish(EV.PINS_UPDATE, {
     type: EV.PINS_UPDATE, campaignId: MAP.campaignId, mapId: MAP.mapId,

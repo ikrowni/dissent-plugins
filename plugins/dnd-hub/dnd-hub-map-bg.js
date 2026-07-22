@@ -1,5 +1,5 @@
 // dnd-hub-map-bg.js — map background loading, upload, fitSprite, loadMapData
-import { MAP, serverData, HUB_DM_KEY } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { request, requestWithTransfer, storageSet, realtimePublish, genId } from '../plugin-sdk.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderTokens } from './dnd-hub-tokens.js?v=20260502p4';
@@ -7,6 +7,7 @@ import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // Math.min = letterbox: full map visible, image anchored at _bgOffset.
@@ -150,7 +151,7 @@ export async function renderMapBackground() {
     MAP.mapData.bgScaledH = MAP._bgImgH * MAP._bgScale;
     if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      storageSet(HUB_DM_KEY, serverData).catch(() => {});
+      saveHubDm( serverData).catch(() => {});
     }
   }
 }
@@ -180,7 +181,7 @@ export async function setGridSettings(patch) {
   Object.assign(MAP.mapData, patch);
   if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
     serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   renderGrid();
   renderFog();
@@ -232,7 +233,7 @@ export async function removeAllWalls() {
   MAP.selectedWall = null;
   if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
     serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   renderWalls();
   await realtimePublish('walls:update', { type: 'walls:update', campaignId: MAP.campaignId, walls: [] });
@@ -245,7 +246,7 @@ export async function removeAllDoors() {
   MAP.selectedDoor = null;
   if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
     serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
   }
   renderWalls();
   await realtimePublish('door:state', { type: 'door:state', campaignId: MAP.campaignId, doors: {} });
@@ -306,7 +307,7 @@ export async function handleMapUpload(input) {
     serverData.campaigns[MAP.campaignId].maps[mapId] = mapEntry;
     serverData.campaigns[MAP.campaignId].activeMapId = mapId;
     serverData.campaigns[MAP.campaignId].updatedAt = new Date().toISOString();
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
 
     MAP.mapId = mapId;
     MAP.mapData = mapEntry;
@@ -487,7 +488,7 @@ export async function runVTTImport() {
     serverData.campaigns[MAP.campaignId].maps[mapId] = mapEntry;
     serverData.campaigns[MAP.campaignId].activeMapId = mapId;
     serverData.campaigns[MAP.campaignId].updatedAt = new Date().toISOString();
-    await storageSet(HUB_DM_KEY, serverData);
+    await saveHubDm( serverData);
 
     MAP.mapId = mapId;
     MAP.mapData = mapEntry;
