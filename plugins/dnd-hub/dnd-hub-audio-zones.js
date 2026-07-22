@@ -155,7 +155,12 @@ export function showZoneDialog(wx, wy, existingZone) {
       const file = fileEl.files[0];
       const buf  = await file.arrayBuffer();
       try {
-        const res = await request('files:upload', { data: buf, name: file.name, mime: file.type });
+        // attachContext keeps zone audio tied to the campaign (reclaimed with it,
+        // never swept as an abandoned upload) — plugin-storage spec §7.
+        const res = await request('files:upload', {
+          data: buf, name: file.name, mime: file.type,
+          attachContext: `campaign:${MAP.campaignId}`,
+        });
         fileId = res?.id || null;
       } catch (e) {
         console.error('Zone audio upload failed', e);

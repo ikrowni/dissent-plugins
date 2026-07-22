@@ -587,7 +587,12 @@ export async function handlePortraitUpload(input) {
   try {
     const buf = await file.arrayBuffer();
     const { request } = await import('../plugin-sdk.js');
-    const result = await request('files:upload', { data: buf, name: file.name, mime: file.type });
+    // attachContext ties the portrait to the campaign so it is reclaimed with it
+    // and never swept as an abandoned upload — plugin-storage spec §7.
+    const result = await request('files:upload', {
+      data: buf, name: file.name, mime: file.type,
+      attachContext: `campaign:${CC.campaignId}`,
+    });
     CC.draft.portraitUrl    = result.url;
     CC.draft.portraitFileId = result.id;
     const preview = document.getElementById('cc-portrait-preview');

@@ -278,8 +278,12 @@ export async function handleMapUpload(input) {
 
   try {
     const buf = await file.arrayBuffer();
+    // attachContext ties the file to this campaign so it is reclaimed when the
+    // campaign is deleted, and is never treated as an abandoned upload by the
+    // node's 7-day sweep. See the plugin-storage spec §7.
     const uploadResult = await requestWithTransfer('files:upload', {
       name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf,
+      attachContext: `campaign:${MAP.campaignId}`,
     }, [buf], 120000);
 
     const fileId = uploadResult?.id;

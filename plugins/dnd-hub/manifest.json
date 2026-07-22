@@ -8,7 +8,7 @@
   "tier": 3,
   "context": ["channel"],
   "url": "https://plugins.dissent.chat/plugins/dnd-hub/plugin.html",
-  "declared_permissions": ["storage:server", "storage:user", "realtime", "members:read", "identity"],
+  "declared_permissions": ["storage:server", "storage:user", "realtime", "members:read", "identity", "voice", "bot:post"],
   "allowed_fetch_domains": [],
   "config_schema": null,
   "categories": ["gaming", "vtt"],
