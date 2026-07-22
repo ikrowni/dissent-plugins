@@ -30,7 +30,7 @@ function renderRanksGrid(data, seasonNum) {
     html += `
       <div class="rank-card">
         ${iconSrc
-          ? `<img class="rank-icon" src="${esc(iconSrc)}" alt="${esc(rankName)}" loading="lazy">`
+          ? `<img class="rank-icon" src="${esc(Dissent.imageUrl(iconSrc))}" alt="${esc(rankName)}" loading="lazy">`
           : `<div class="rank-icon-placeholder"></div>`}
         <div class="rank-info">
           <div class="rank-mode">${esc(mode.short)}</div>

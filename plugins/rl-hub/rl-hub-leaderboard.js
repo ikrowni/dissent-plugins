@@ -55,7 +55,7 @@ function renderRow(member, pos, profileData, modeId, isLive) {
   const unranked = mmr === null;
 
   const iconHtml = iconUrl
-    ? `<img class="lb-rank-icon" src="${esc(iconUrl)}" alt="${esc(rankName ?? 'Unranked')}" loading="lazy">`
+    ? `<img class="lb-rank-icon" src="${esc(Dissent.imageUrl(iconUrl))}" alt="${esc(rankName ?? 'Unranked')}" loading="lazy">`
     : `<div class="lb-rank-icon-placeholder"></div>`;
 
   const mmrHtml = unranked

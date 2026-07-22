@@ -340,7 +340,7 @@ function render(data, standings) {
     html += `<div class="s-sect">📰 Breaking News</div>`;
     breaking.forEach(n => {
       const thumbHtml = n.image
-        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🏟️</div>'">`
+        ? `<img class="news-thumb-img" src="${esc(Dissent.imageUrl(n.image))}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🏟️</div>'">`
         : `<div class="thumb-art">🏈</div>`;
       html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
         <div class="news-thumb">
@@ -373,7 +373,7 @@ function render(data, standings) {
     html += `<div class="s-sect">🔄 Transactions</div>`;
     tradeItems.forEach(n => {
       const thumbHtml = n.image
-        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🔄</div>'">`
+        ? `<img class="news-thumb-img" src="${esc(Dissent.imageUrl(n.image))}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🔄</div>'">`
         : `<div class="thumb-art">🔄</div>`;
       html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
         <div class="news-thumb">
@@ -394,7 +394,7 @@ function render(data, standings) {
     html += `<div class="s-sect">🎮 Fantasy</div>`;
     fantasyItems.forEach(n => {
       const thumbHtml = n.image
-        ? `<img class="news-thumb-img" src="${esc(n.image)}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🎮</div>'" style="height:60px">`
+        ? `<img class="news-thumb-img" src="${esc(Dissent.imageUrl(n.image))}" alt="" onerror="this.parentNode.innerHTML='<div class=thumb-art>🎮</div>'" style="height:60px">`
         : `<div class="thumb-art">🎮</div>`;
       html += `<a class="news-card" href="${esc(n.link)}" target="_blank" rel="noopener">
         <div class="news-thumb" style="height:60px">
