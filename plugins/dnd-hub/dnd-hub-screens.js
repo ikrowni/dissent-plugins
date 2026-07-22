@@ -1,11 +1,11 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
 import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
-import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId } from '../plugin-sdk.js';
+import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20260502p4';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -127,7 +127,19 @@ export function renderDMPortal() {
     listEl.innerHTML = '<div class="empty-state">No campaigns yet. Start your first adventure above.</div>';
     return;
   }
-  listEl.innerHTML = myCampaigns.map(c => `
+  listEl.innerHTML = myCampaigns.map(c => c.id === _pendingDelete ? `
+    <div class="campaign-row" style="border-color:#ef4444">
+      <div class="campaign-row-icon">🗑</div>
+      <div class="campaign-row-info">
+        <div class="campaign-row-name">Delete “${esc(c.name)}”?</div>
+        <div class="campaign-row-meta">Maps, tokens and uploaded files for this campaign are removed. This cannot be undone.</div>
+      </div>
+      <button class="btn btn-danger" style="padding:6px 12px;margin-right:6px"
+              onclick="event.stopPropagation();deleteCampaign('${c.id}')">Delete</button>
+      <button class="btn" style="padding:6px 12px"
+              onclick="event.stopPropagation();cancelDeleteCampaign()">Cancel</button>
+    </div>
+  ` : `
     <div class="campaign-row" onclick="enterCampaignAsDM('${c.id}')">
       <div class="campaign-row-icon">🏰</div>
       <div class="campaign-row-info">
@@ -135,8 +147,37 @@ export function renderDMPortal() {
         <div class="campaign-row-meta">${c.members?.length ?? 0} players · Last updated ${fmtDate(c.updatedAt)}</div>
       </div>
       <span class="status-badge status-${c.status || 'active'}">${c.status || 'active'}</span>
+      <button class="btn" title="Delete campaign" style="padding:4px 9px;margin-left:8px;opacity:0.55"
+              onclick="event.stopPropagation();confirmDeleteCampaign('${c.id}')">🗑</button>
     </div>
   `).join('');
+}
+
+// ── Campaign deletion ─────────────────────────────────────────────────────────
+// Two-step inline confirm rather than window.confirm(): Tauri routes native
+// dialogs through IPC, which the plugin CSP blocks (same reason alert() is
+// shimmed in plugin.html).
+let _pendingDelete = null;
+
+export function confirmDeleteCampaign(id) { _pendingDelete = id; renderDMPortal(); }
+export function cancelDeleteCampaign() { _pendingDelete = null; renderDMPortal(); }
+
+export async function deleteCampaign(id) {
+  _pendingDelete = null;
+  const camp = serverData?.campaigns?.[id];
+  if (!camp) { renderDMPortal(); return; }
+
+  delete serverData.campaigns[id];
+  // Persist the removal FIRST. If the later cleanup fails the campaign is still
+  // gone from the DM's list rather than reappearing on next load.
+  await saveHubDm(serverData);
+
+  // Reclaim the campaign's own storage: its shard key, and any files uploaded
+  // under attachContext "campaign:<id>" (map backgrounds, zone audio, portraits).
+  try { await storageDelete(hubCampKey(id)); } catch { /* index no longer lists it */ }
+  try { await releaseFileContext(`campaign:${id}`); } catch { /* swept after 7d anyway */ }
+
+  renderDMPortal();
 }
 
 // ── Join Screen ───────────────────────────────────────────────────────────────

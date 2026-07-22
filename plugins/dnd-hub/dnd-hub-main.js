@@ -3,6 +3,7 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen } from './dnd-hub-state.js?v=20260502p4';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20260502p4';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20260502p4';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20260502p4';
 import { setZoom } from './dnd-hub-canvas.js?v=20260502p4';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
@@ -46,6 +47,9 @@ window.showCampaignWizard  = showCampaignWizard;
 window.createCampaign      = createCampaign;
 window.requestJoin         = requestJoin;
 window.enterCampaignAsDM   = enterCampaignAsDM;
+window.confirmDeleteCampaign = confirmDeleteCampaign;
+window.cancelDeleteCampaign  = cancelDeleteCampaign;
+window.deleteCampaign        = deleteCampaign;
 window.enterCampaignAsPlayer = enterCampaignAsPlayer;
 window.setTool             = setTool;
 window.toggleEditMode      = toggleEditMode;

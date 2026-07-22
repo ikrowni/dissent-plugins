@@ -55,6 +55,18 @@ export async function storageGet(key, scope = 'server') {
 export async function storageSet(key, value, scope = 'server') {
   try { return await request('storage:set', { key, value, scope }); } catch { return null; }
 }
+/** Delete one stored value. Used when the thing that owned it is gone
+ *  (e.g. a deleted campaign) so the plugin's storage does not leak keys. */
+export async function storageDelete(key, scope = 'server') {
+  return request('storage:delete', { key, scope });
+}
+
+/** Release every uploaded file attached to a context key, so the node can
+ *  reclaim them. Pair this with the attachContext passed at upload time. */
+export async function releaseFileContext(context) {
+  return request('files:releaseContext', { context });
+}
+
 export async function storageGetUser(key) { return storageGet(key, 'user'); }
 export async function storageSetUser(key, value) { return storageSet(key, value, 'user'); }
 
