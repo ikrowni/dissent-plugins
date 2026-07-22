@@ -1244,3 +1244,11 @@ setTimeout(() => {
 
 // ── Message bridge ────────────────────────────────────────────────────────────
 window.addEventListener('message', e => handleSDKMessage(e, onInit, onEvent));
+
+// Replay anything the host sent while this module was still loading (see the
+// buffering note in plugin.html) — dissent:init in particular.
+window.__dndPlayerReady = true;
+for (const buffered of (window.__dndPlayerQueue || [])) {
+  handleSDKMessage(buffered, onInit, onEvent);
+}
+window.__dndPlayerQueue = [];

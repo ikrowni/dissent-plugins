@@ -58,6 +58,19 @@
   window.addEventListener('unhandledrejection', function (e) {
     window.__dndPlayerFail('Sidebar failed:', e.reason && (e.reason.stack || e.reason.message) || e.reason);
   });
+
+  // Buffer host messages until the module graph is ready.
+  //
+  // The host posts dissent:init on the iframe's load event. A <script type="module"
+  // src> blocks that event, so plugins built that way (dnd-hub) always have their
+  // listener registered in time. This plugin boots with a dynamic import() from an
+  // inline module, which does NOT block load — so init was posted before the real
+  // listener existed and was dropped, leaving the panel on "Loading sheet…" forever.
+  // Plugin assets are served no-store, so the import never wins that race.
+  window.__dndPlayerQueue = [];
+  window.addEventListener('message', function (e) {
+    if (!window.__dndPlayerReady) window.__dndPlayerQueue.push(e);
+  });
   </script>
   <script type="module">
     import('./dnd-player/dnd-player-main.js?v=20260722a')
