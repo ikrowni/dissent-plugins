@@ -29,14 +29,17 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy plugin files and SDK
+      # NOTE: this repo deliberately does NOT ship the SDK. dissent-client is the
+      # single source of truth and its `npm run deploy` rsyncs dist/sdk/ to all
+      # three served copies, including /var/www/dissent-plugins/sdk. This repo
+      # used to carry a committed sdk/ and rsync it to the same path, so whichever
+      # pipeline ran last won — and the copy here had been frozen since 2026-05-24,
+      # silently reverting the SDK to a build with no imageUrl/mediaUrl/wallet.
+      - name: Deploy plugin files
         run: |
           rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519" \
             plugins/ \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/dissent-plugins/plugins/
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519" \
-            sdk/ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/dissent-plugins/sdk/
 
       - name: Cleanup SSH key
         if: always()
