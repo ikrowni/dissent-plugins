@@ -3,6 +3,7 @@ import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realt
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
+import { loadHubDmCompanion, saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let encounterCreatures = [];
 let _targetDifficulty = null;
@@ -324,7 +325,7 @@ export async function launchEncounter() {
     const initiative = { active: true, round: 1, currentIndex: 0, order };
     _state.dmCampaign.initiative = initiative;
     _state.serverData.campaigns[_state.dmCampaignId].initiative = initiative;
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+    await saveHubDmCompanion(_state.serverData);
     setInitiativeState(initiative);
     const initPayload = { type: EV.INITIATIVE_UPDATE, campaignId: _state.dmCampaignId, initiative, fromUserId: _state.userId };
     await realtimePublish(EV.INITIATIVE_UPDATE, initPayload);
@@ -344,7 +345,7 @@ export async function launchEncounter() {
 
 async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId = {}) {
   try {
-    const freshData = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+    const freshData = await loadHubDmCompanion();
     if (!freshData) return;
     const campaign = freshData.campaigns?.[dmCampaignId];
     const activeMapId = campaign?.activeMapId;
@@ -379,7 +380,7 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
     }
     if (!newTokens.length) return;
 
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', freshData);
+    await saveHubDmCompanion(freshData);
     const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
     localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
     realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
@@ -388,7 +389,7 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
 
 export async function removeMonsterTokensFromMap(monsterIds, dmCampaignId, userId) {
   try {
-    const freshData = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+    const freshData = await loadHubDmCompanion();
     if (!freshData) return;
     const campaign = freshData.campaigns?.[dmCampaignId];
     const activeMapId = campaign?.activeMapId;
@@ -400,7 +401,7 @@ export async function removeMonsterTokensFromMap(monsterIds, dmCampaignId, userI
     if (!deleted.length) return;
     deleted.forEach(id => { delete mapData.tokens[id]; });
 
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', freshData);
+    await saveHubDmCompanion(freshData);
     const payload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: [], deleted, fromUserId: userId };
     localPublish('dnd-hub', EV.TOKENS_SPAWN, payload);
     realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, payload);

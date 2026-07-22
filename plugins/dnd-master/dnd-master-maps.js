@@ -1,6 +1,7 @@
 // dnd-master-maps.js — Maps tab: list, activate, rename, upload
 import { request, requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _fileInput = null;
@@ -88,7 +89,7 @@ export function renameMapInline(mapId) {
     if (maps[mapId]) {
       maps[mapId].name = newName;
       _state.serverData.campaigns[_state.dmCampaignId].maps = maps;
-      await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+      await saveHubDmCompanion(_state.serverData);
     }
     renderMapsTab();
   };
@@ -108,7 +109,7 @@ export async function activateMapFromList(mapId) {
     if (!r?.url) { alert('Could not get map URL.'); return; }
     _state.dmCampaign.activeMapId = mapId;
     _state.serverData.campaigns[_state.dmCampaignId].activeMapId = mapId;
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+    await saveHubDmCompanion(_state.serverData);
     const mapPayload = { type: EV.MAP_SET, campaignId: _state.dmCampaignId, mapId, fileId: m.fileId, signedUrl: r.url, mapEntry: m };
     // Reach all hub canvas instances (players + DM's own hub tab)
     localPublish('dnd-hub', EV.MAP_SET, mapPayload);
@@ -162,7 +163,7 @@ async function _handleMapFile(file) {
     _state.serverData.campaigns[_state.dmCampaignId].maps      = _state.dmCampaign.maps;
     _state.serverData.campaigns[_state.dmCampaignId].activeMapId = mapId;
     _thumbCache.set(mapId, url);
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+    await saveHubDmCompanion(_state.serverData);
     const uploadPayload = { type: EV.MAP_SET, campaignId: _state.dmCampaignId, mapId, fileId, signedUrl: url };
     localPublish('dnd-hub', EV.MAP_SET, uploadPayload);
     await realtimePublishCompanion('dnd-hub', EV.MAP_SET, uploadPayload);
@@ -182,6 +183,6 @@ export async function deleteMap(mapId) {
   if (_state.dmCampaign.activeMapId === mapId) _state.dmCampaign.activeMapId = null;
   _state.serverData.campaigns[_state.dmCampaignId].maps      = maps;
   _state.serverData.campaigns[_state.dmCampaignId].activeMapId = _state.dmCampaign.activeMapId;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderMapsTab();
 }

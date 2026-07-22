@@ -1,5 +1,6 @@
 // dnd-master-notes.js — Notes tab: freeform DM notes, debounce-saved every 2 s
 import { storageSetCompanion } from '../plugin-sdk.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state        = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _debounceTimer = null;
@@ -32,6 +33,6 @@ function _onInput(value) {
 async function _save(value) {
   _state.dmCampaign.notes = value;
   _state.serverData.campaigns[_state.dmCampaignId].notes = value;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   if (_statusEl) { _statusEl.textContent = 'Saved'; setTimeout(() => { if (_statusEl) _statusEl.textContent = ''; }, 2000); }
 }

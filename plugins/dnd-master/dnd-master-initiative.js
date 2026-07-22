@@ -1,6 +1,7 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { loadHubDmCompanion, saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let currentInitiative = null;
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
@@ -53,7 +54,7 @@ async function saveAndBroadcastInit() {
   const { dmCampaignId, dmCampaign, serverData } = _state;
   dmCampaign.initiative = currentInitiative;
   serverData.campaigns[dmCampaignId].initiative = currentInitiative;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', serverData);
+  await saveHubDmCompanion(serverData);
   const initPayload = { type: EV.INITIATIVE_UPDATE, campaignId: dmCampaignId, initiative: currentInitiative, fromUserId: _state.userId };
   await realtimePublish(EV.INITIATIVE_UPDATE, initPayload);
   await realtimePublishCompanion('dnd-player', EV.INITIATIVE_UPDATE, initPayload);
@@ -147,7 +148,7 @@ export async function endEncounter() {
   currentInitiative = { active: false, round: 1, currentIndex: 0, order: [] };
   _state.dmCampaign.initiative = currentInitiative;
   _state.serverData.campaigns[_state.dmCampaignId].initiative = currentInitiative;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   const endPayload = { type: EV.INITIATIVE_UPDATE, campaignId: _state.dmCampaignId, initiative: currentInitiative, fromUserId: _state.userId };
   await realtimePublish(EV.INITIATIVE_UPDATE, endPayload);
   await realtimePublishCompanion('dnd-player', EV.INITIATIVE_UPDATE, endPayload);
@@ -162,7 +163,7 @@ export async function endEncounter() {
 }
 
 async function _removeMonsterTokensFromMap(monsterIds) {
-  const freshData = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+  const freshData = await loadHubDmCompanion();
   if (!freshData) return;
   const campaign = freshData.campaigns?.[_state.dmCampaignId];
   const activeMapId = campaign?.activeMapId;
@@ -174,7 +175,7 @@ async function _removeMonsterTokensFromMap(monsterIds) {
   if (!deleted.length) return;
   deleted.forEach(id => { delete mapData.tokens[id]; });
 
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', freshData);
+  await saveHubDmCompanion(freshData);
   const payload = { type: EV.TOKENS_SPAWN, campaignId: _state.dmCampaignId, mapId: activeMapId, tokens: [], deleted, fromUserId: _state.userId };
   localPublish('dnd-hub', EV.TOKENS_SPAWN, payload);
   realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, payload);
@@ -210,7 +211,7 @@ export async function spawnTokensOnMap() {
   const { dmCampaignId, userId } = _state;
 
   // Always read fresh data from hub storage to avoid overwriting recent hub changes.
-  const freshData = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+  const freshData = await loadHubDmCompanion();
   if (!freshData) { alert('Could not read campaign data. Make sure the D&D Hub is open.'); return; }
 
   const campaign = freshData.campaigns?.[dmCampaignId];
@@ -252,7 +253,7 @@ export async function spawnTokensOnMap() {
 
   if (!newTokens.length) { alert('All monsters are already on the map.'); return; }
 
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', freshData);
+  await saveHubDmCompanion(freshData);
   const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
   localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
   realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);

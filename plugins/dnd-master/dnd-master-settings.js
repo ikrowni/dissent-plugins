@@ -1,6 +1,7 @@
 // dnd-master-settings.js — DM automation toggles (Phase 2)
 import { storageSetCompanion, realtimePublish } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
 
@@ -66,7 +67,7 @@ export async function setSpatialRange(value) {
   if (!dmCampaign.settings) dmCampaign.settings = { ...DEFAULT_SETTINGS };
   dmCampaign.settings.spatialRange = range;
   serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', serverData);
+  await saveHubDmCompanion(serverData);
   await realtimePublish(EV.COMBAT_SETTINGS, {
     type: EV.COMBAT_SETTINGS, campaignId: dmCampaignId,
     settings: dmCampaign.settings, fromUserId: userId,
@@ -79,7 +80,7 @@ export async function toggleSetting(key, value) {
   if (!dmCampaign.settings) dmCampaign.settings = { ...DEFAULT_SETTINGS };
   dmCampaign.settings[key] = value;
   serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', serverData);
+  await saveHubDmCompanion(serverData);
   await realtimePublish(EV.COMBAT_SETTINGS, {
     type: EV.COMBAT_SETTINGS, campaignId: dmCampaignId,
     settings: dmCampaign.settings, fromUserId: userId,

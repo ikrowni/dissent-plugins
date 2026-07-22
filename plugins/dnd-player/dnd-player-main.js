@@ -15,6 +15,7 @@ import { setResourceState, renderResources, toggleResourcePip,
 import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpRollHP, levelUpTakeAverage, levelUpToggleSpell,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
+import { loadHubDmCompanion, saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let CHAR = null;
 let CAMPAIGN_ID = null;
@@ -445,7 +446,7 @@ function initTabHTML() {
 async function onInit(data) {
   const identity = await getIdentity();
   USER_ID = identity?.id ?? null;
-  SERVER_DATA = await storageGetCompanion('dnd-hub', 'hub-dm') || { campaigns: {} };
+  SERVER_DATA = await loadHubDmCompanion() || { campaigns: {} };
   const storedCampaignId = await storageGetCompanion('dnd-hub', 'activePlayerCampaignId', 'user');
   const campaigns = Object.values(SERVER_DATA.campaigns || {});
   let myCampaign = storedCampaignId
@@ -486,7 +487,7 @@ async function onInit(data) {
   const pendingRewards = (SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.pendingRewards?.[USER_ID] || []);
   if (pendingRewards.length) {
     SERVER_DATA.campaigns[CAMPAIGN_ID].pendingRewards[USER_ID] = [];
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', SERVER_DATA);
+    await saveHubDmCompanion(SERVER_DATA);
     for (const reward of pendingRewards) {
       const item = _resolveItemFromLibrary(reward.itemId);
       if (!item) continue;
@@ -510,7 +511,7 @@ async function onInit(data) {
   _resolveInventoryImages().then(() => renderAll()).catch(() => {});
 
   // Phase 7 — load initial audio zones from DM companion storage
-  const hubDm = await storageGetCompanion('dnd-hub', 'hub-dm') || {};
+  const hubDm = await loadHubDmCompanion() || {};
   const activeCampaign = (hubDm.campaigns || {})[CAMPAIGN_ID];
   const activeMapId = activeCampaign?.activeMapId;
   if (activeMapId) {
@@ -531,7 +532,7 @@ async function _openShopTab(shopId) {
   const dmCatalog = await storageGetCompanion('dnd-master', 'dm-catalog');
   const dmCamp    = dmCatalog?.campaigns?.[CAMPAIGN_ID];
 
-  SERVER_DATA = await storageGetCompanion('dnd-hub', 'hub-dm') || SERVER_DATA || { campaigns: {} };
+  SERVER_DATA = await loadHubDmCompanion() || SERVER_DATA || { campaigns: {} };
   const hubCamp = SERVER_DATA?.campaigns?.[CAMPAIGN_ID];
 
   // Prefer dm-catalog for items and shops; fall back to hub-dm
@@ -920,7 +921,7 @@ async function onEvent(ev) {
         const dmgMatch = srcStr.match(/(\d+)\s*damage/i);
         const dmg = dmgMatch ? parseInt(dmgMatch[1], 10) : 0;
         const dc  = Math.max(10, Math.floor(dmg / 2));
-        const hubDm = await storageGetCompanion('dnd-hub', 'hub-dm').catch(() => null);
+        const hubDm = await loadHubDmCompanion().catch(() => null);
         const autoRoll = hubDm?.campaigns?.[CAMPAIGN_ID]?.settings?.concentrationAutoRoll ?? false;
         if (autoRoll && dmg > 0) {
           document.getElementById('dice-mod').value = Math.floor(((CHAR.con ?? 10) - 10) / 2);
@@ -1028,7 +1029,7 @@ async function onEvent(ev) {
 
   if (p.type === 'loot:resolved' && p.campaignId === CAMPAIGN_ID) {
     if (p.winner === USER_ID && CHAR) {
-      SERVER_DATA = await storageGetCompanion('dnd-hub', 'hub-dm') || SERVER_DATA || { campaigns: {} };
+      SERVER_DATA = await loadHubDmCompanion() || SERVER_DATA || { campaigns: {} };
       const item = _resolveItemFromLibrary(p.itemId);
       if (item) {
         _addItemToChar(item, 1, p.goldCost || 0);
@@ -1037,7 +1038,7 @@ async function onEvent(ev) {
         if (pr?.length) {
           const i = pr.findIndex(r => r.itemId === p.itemId);
           if (i !== -1) pr.splice(i, 1);
-          storageSetCompanion('dnd-hub', 'hub-dm', 'server', SERVER_DATA).catch(() => {});
+          saveHubDmCompanion(SERVER_DATA).catch(() => {});
         }
         await saveChar();
         _resolveInventoryImages().then(() => renderAll()).catch(() => {});
@@ -1155,11 +1156,11 @@ function openCharEdit() {
     await saveChar();
     // Update characterSummary + mirror portrait to hub token
     try {
-      const sd = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+      const sd = await loadHubDmCompanion();
       if (sd?.campaigns?.[CAMPAIGN_ID]?.characterSummaries?.[USER_ID]) {
         sd.campaigns[CAMPAIGN_ID].characterSummaries[USER_ID].portraitUrl    = CHAR.portraitUrl || '';
         sd.campaigns[CAMPAIGN_ID].characterSummaries[USER_ID].portraitFileId = CHAR.portraitFileId || '';
-        await storageSetCompanion('dnd-hub', 'hub-dm', 'server', sd);
+        await saveHubDmCompanion(sd);
       }
       if (CHAR.portraitFileId) {
         await realtimePublishCompanion('dnd-hub', 'tokens:spawn', {

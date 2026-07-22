@@ -1,6 +1,7 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260502p4';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingItemImg = null;
@@ -327,7 +328,7 @@ export async function handleContestResult(p) {
     }
   }
 
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   delete _lootContests[contestKey];
 
@@ -425,7 +426,7 @@ export async function saveNewItem() {
   if (!_state.dmCampaign.items) _state.dmCampaign.items = {};
   _state.dmCampaign.items[item.id] = item;
   _state.serverData.campaigns[_state.dmCampaignId].items = _state.dmCampaign.items;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   _pendingItemImg = null;
   _forgeEffects = [];
@@ -442,7 +443,7 @@ export async function deleteItem(id) {
   _state.dmCampaign.shops = shops;
   _state.serverData.campaigns[_state.dmCampaignId].items = _state.dmCampaign.items;
   _state.serverData.campaigns[_state.dmCampaignId].shops = shops;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   renderItemsTab();
 }

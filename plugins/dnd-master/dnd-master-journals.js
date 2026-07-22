@@ -1,6 +1,7 @@
 // dnd-master-journals.js — Journals tab: create, edit, delete, push to players
 import { storageSetCompanion, realtimePublish, genId, esc } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _editingId = null; // journal id currently open in editor
@@ -87,7 +88,7 @@ export async function saveJournal() {
     createdAt: existing?.createdAt || new Date().toISOString(),
   };
   _state.serverData.campaigns[_state.dmCampaignId] = _state.dmCampaign;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   _editingId = null;
   renderJournalsTab();
 }
@@ -96,7 +97,7 @@ export async function deleteJournal(id) {
   if (!confirm('Delete this journal entry?')) return;
   delete _state.dmCampaign.journals[id];
   _state.serverData.campaigns[_state.dmCampaignId] = _state.dmCampaign;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderJournalsTab();
 }
 

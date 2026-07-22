@@ -1,6 +1,7 @@
 // dnd-master-scenes.js — Scenes tab: create, delete, load
 import { requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, genId, esc } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260502p4';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingVideo = null; // File object selected but not yet uploaded
@@ -111,7 +112,7 @@ export async function saveNewScene() {
   const shopId = document.getElementById('scene-shop-select')?.value || null;
   _state.dmCampaign.scenes[id] = { id, name, mapId: mapId || null, shopId, videoFileId, soundtrackFileId, ambientVolume: volume };
   _state.serverData.campaigns[_state.dmCampaignId] = _state.dmCampaign;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   _pendingVideo = null; _pendingAudio = null;
   renderScenesTab();
 }
@@ -120,7 +121,7 @@ export async function deleteScene(id) {
   if (!confirm('Delete this scene?')) return;
   delete _state.dmCampaign.scenes[id];
   _state.serverData.campaigns[_state.dmCampaignId] = _state.dmCampaign;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderScenesTab();
 }
 

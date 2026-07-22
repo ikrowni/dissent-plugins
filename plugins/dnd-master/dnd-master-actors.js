@@ -1,5 +1,6 @@
 // dnd-master-actors.js — Actors tab: custom NPC/monster builder
 import { storageSetCompanion, esc, genId } from '../plugin-sdk.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingAttacks = [];
@@ -129,7 +130,7 @@ export async function saveNewActor() {
   if (!_state.dmCampaign.customActors) _state.dmCampaign.customActors = {};
   _state.dmCampaign.customActors[actor.id] = actor;
   _state.serverData.campaigns[_state.dmCampaignId].customActors = _state.dmCampaign.customActors;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderActorsTab();
 }
 
@@ -137,6 +138,6 @@ export async function deleteActor(id) {
   if (!_state.dmCampaign.customActors?.[id]) return;
   delete _state.dmCampaign.customActors[id];
   _state.serverData.campaigns[_state.dmCampaignId].customActors = _state.dmCampaign.customActors;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderActorsTab();
 }

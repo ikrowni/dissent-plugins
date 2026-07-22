@@ -1,6 +1,7 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260503';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingShopVideo = null;   // File object for new shop upload
@@ -138,7 +139,7 @@ export async function saveNewShop() {
   if (!_state.dmCampaign.shops) _state.dmCampaign.shops = {};
   _state.dmCampaign.shops[shop.id] = shop;
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   _pendingShopVideo = null;
   if (btn) { btn.disabled = false; btn.textContent = '+ Shop'; }
@@ -149,7 +150,7 @@ export async function deleteShop(shopId) {
   if (!confirm('Delete this shop?')) return;
   if (_state.dmCampaign.shops?.[shopId]) delete _state.dmCampaign.shops[shopId];
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   renderShopsTab();
 }
@@ -163,7 +164,7 @@ export async function addItemToShop(shopId) {
   if (!shop.items) shop.items = [];
   shop.items.push({ slotId: genId(), itemId, price });
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   renderShopsTab();
 }
@@ -173,7 +174,7 @@ export async function removeShopItem(shopId, slotId) {
   if (!shop) return;
   shop.items = (shop.items || []).filter(si => si.slotId !== slotId);
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   renderShopsTab();
 }
@@ -184,7 +185,7 @@ export async function loadShop(shopId) {
   // Flush DM's authoritative serverData to hub-dm before the player reads it.
   // Without this, a concurrent hub write (token move, map update) can overwrite
   // hub-dm with stale data that lacks items/shops, leaving the player shop empty.
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   await realtimePublishCompanion('dnd-hub', EV.SHOP_OPEN, {
     type: EV.SHOP_OPEN, shopId,
     videoFileId: shop.videoFileId || null,
@@ -206,7 +207,7 @@ export function onShopVolumeChange(shopId, value) {
   clearTimeout(_shopVolDebounce[shopId]);
   _shopVolDebounce[shopId] = setTimeout(async () => {
     _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+    await saveHubDmCompanion(_state.serverData);
     await realtimePublishCompanion('dnd-hub', EV.SHOP_VOLUME, {
       type: EV.SHOP_VOLUME, shopId,
       volume: shop.ambientVolume,
@@ -225,7 +226,7 @@ export async function onShopVideoSelected(shopId, fileId) {
     if (!shop) return;
     shop.videoFileId = fileId || null;
     _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-    await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+    await saveHubDmCompanion(_state.serverData);
     await _persistDmCatalog();
     renderShopsTab();
   }

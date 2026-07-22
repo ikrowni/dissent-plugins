@@ -1,5 +1,6 @@
 // dnd-master-logs.js — Logs tab: append-only campaign event log (max 500 entries)
 import { storageSetCompanion } from '../plugin-sdk.js';
+import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 
@@ -61,7 +62,7 @@ export async function appendLogEntry({ type, message }) {
   _state.dmCampaign.log.push({ ts: new Date().toISOString(), type, message });
   if (_state.dmCampaign.log.length > 500) _state.dmCampaign.log = _state.dmCampaign.log.slice(-500);
   _state.serverData.campaigns[_state.dmCampaignId].log = _state.dmCampaign.log;
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   const el = document.getElementById('tab-logs');
   if (el && !el.classList.contains('hidden')) renderLogsTab();
 }
@@ -70,7 +71,7 @@ export async function clearLog() {
   if (!confirm('Clear the entire campaign log? This cannot be undone.')) return;
   _state.dmCampaign.log = [];
   _state.serverData.campaigns[_state.dmCampaignId].log = [];
-  await storageSetCompanion('dnd-hub', 'hub-dm', 'server', _state.serverData);
+  await saveHubDmCompanion(_state.serverData);
   renderLogsTab();
 }
 

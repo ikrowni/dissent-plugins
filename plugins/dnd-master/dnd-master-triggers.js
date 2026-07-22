@@ -1,5 +1,6 @@
 // dnd-master-triggers.js — DM sidebar tab: list triggers and audio zones (Phase 7)
 import { storageGetCompanion } from '../plugin-sdk.js';
+import { loadHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let _sharedState = null;
 
@@ -13,7 +14,7 @@ export async function renderTriggersTab() {
 
   // Always read fresh data — triggers are placed in the hub and the master's
   // cached dmCampaign won't reflect them until we re-read from storage.
-  const freshData = await storageGetCompanion('dnd-hub', 'hub-dm', 'server');
+  const freshData = await loadHubDmCompanion();
   const dmCampaignId = _sharedState?.dmCampaignId;
   const campaign = freshData?.campaigns?.[dmCampaignId] || _sharedState?.dmCampaign;
   const activeMapId = campaign?.activeMapId;

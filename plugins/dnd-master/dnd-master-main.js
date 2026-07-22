@@ -27,6 +27,7 @@ import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
   dmEditExhaustion, dmEditNotes } from './dnd-master-players.js';
+import { loadHubDmCompanion } from '../dnd-hub-shared-storage.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 
@@ -56,7 +57,7 @@ function switchDMTab(name) {
 async function onInit(data) {
   const id = await getIdentity();
   userId = id?.id ?? null;
-  serverData = await storageGetCompanion('dnd-hub', 'hub-dm') || { campaigns: {} };
+  serverData = await loadHubDmCompanion() || { campaigns: {} };
 
   // Restore items/shops from the dm-catalog backup in case dnd-hub overwrote hub-dm
   // with an older serverData (race: dnd-hub writes hub-dm frequently from its own copy).
