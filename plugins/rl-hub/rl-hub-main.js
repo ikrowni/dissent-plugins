@@ -269,6 +269,9 @@ function showScreen(name) {
 
 window.dismissLiveDebug = dismissLiveDebug;
 window.showEditAccount = showEditAccount;
+// Leaving the settings/edit screen without saving — the gear icon used to be a
+// one-way trip.
+window.cancelEditAccount = () => { loadHubScreen(); };
 window.submitRegistration = () => {
   const fn = window._rlHubSubmitReg;
   if (fn) fn();

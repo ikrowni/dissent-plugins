@@ -35,6 +35,11 @@
       <input id="reg-twitch" class="field-input" type="text" placeholder="e.g. YourTwitchName" autocomplete="off"/>
       <div id="reg-error" class="reg-error hidden"></div>
       <button class="btn-primary" onclick="submitRegistration()">Connect Account</button>
+      <!-- Shown only when editing an existing account: reaching this screen via the
+           gear icon previously had no way out. Hidden during first registration,
+           where there is no hub to go back to yet. -->
+      <button class="btn-companion hidden" id="btn-cancel-edit" onclick="cancelEditAccount()"
+              style="width:100%;margin-top:8px">Cancel</button>
       <details class="companion-accordion">
         <summary class="companion-summary">Live Broadcast (optional)</summary>
         <div class="companion-body">

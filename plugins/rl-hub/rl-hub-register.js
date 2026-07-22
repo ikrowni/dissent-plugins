@@ -26,6 +26,11 @@ export async function showRegisterScreen(isEdit = false) {
     }
   }
 
+  // Only offer Cancel when editing — during first registration there is no hub
+  // to return to.
+  const cancelBtn = document.getElementById('btn-cancel-edit');
+  if (cancelBtn) cancelBtn.classList.toggle('hidden', !isEdit);
+
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   const screen = document.getElementById('screen-register');
   if (screen) screen.classList.remove('hidden');

@@ -1071,8 +1071,12 @@ async function fetchAndApplyPoster(event) {
   }
 
   // Event art is uploaded 1–3 months before the event. Try each candidate month.
-  // Using browser-direct <img> probes so the request comes from the user's browser
-  // IP — ufc.com only blocks server/proxy IPs, not user browsers.
+  // Probed AND rendered through Dissent.imageUrl() (the node image proxy).
+  // The previous comment here claimed ufc.com blocks server/proxy IPs and only
+  // browser-direct loads work; that is wrong — the proxy fetches these fine
+  // (verified 2026-07-22: 200, image/jpeg, 768x512) while a bare server-side
+  // request 403s. Browser-direct is also blocked by the plugin CSP now, which is
+  // why the poster silently stopped appearing.
   const candidates = [];
   for (let mOffset = 0; mOffset <= 2; mOffset++) {
     const d = new Date(date.getFullYear(), date.getMonth() - mOffset, 1);
@@ -1081,9 +1085,10 @@ async function fetchAndApplyPoster(event) {
   }
 
   for (const url of candidates) {
-    if (await probeImage(url)) {
+    const proxied = Dissent.imageUrl(url);
+    if (await probeImage(proxied)) {
       const el = document.getElementById('hero-poster');
-      if (el) { el.src = url; el.style.display = 'block'; }
+      if (el) { el.src = proxied; el.style.display = 'block'; }
       return;
     }
   }
