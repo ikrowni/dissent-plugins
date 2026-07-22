@@ -41,6 +41,27 @@
     </div>
     <div class="dice-bar" id="dice-bar"></div>
   </div>
-  <script type="module">import('./dnd-player/dnd-player-main.js?v=20260504b');</script>
+  <script>
+  // Surface failures instead of spinning forever. The entry below is a dynamic
+  // import() whose rejection was previously unhandled, so ANY load-time error
+  // (bad specifier, 404, syntax error, throw during module init) left the user
+  // staring at "Loading sheet…" with nothing in the UI to explain it.
+  window.__dndPlayerFail = function (what, detail) {
+    var el = document.getElementById('loading');
+    if (!el) return;
+    el.innerHTML = '<div style="padding:14px;font-size:11px;color:#f87171;white-space:pre-wrap">' +
+      what + '\n' + String(detail || '') + '</div>';
+  };
+  window.addEventListener('error', function (e) {
+    window.__dndPlayerFail('Sidebar error:', (e.message || '') + '\n' + (e.filename || ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    window.__dndPlayerFail('Sidebar failed:', e.reason && (e.reason.stack || e.reason.message) || e.reason);
+  });
+  </script>
+  <script type="module">
+    import('./dnd-player/dnd-player-main.js?v=20260722a')
+      .catch(err => window.__dndPlayerFail('Could not load the sheet module:', err && (err.stack || err.message) || err));
+  </script>
 </body>
 </html>
