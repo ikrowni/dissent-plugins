@@ -1,5 +1,5 @@
 // rl-hub-leaderboard.js — leaderboard rendering and player click handler
-import { esc, realtimePublishCompanion } from '../plugin-sdk.js';
+import { esc, imageUrl, realtimePublishCompanion } from '../plugin-sdk.js';
 import { MODES, getMembers, getStatsCache, isFresh, getLiveGames } from './rl-hub-main.js';
 import { showVersus } from './rl-hub-versus.js';
 
@@ -55,7 +55,7 @@ function renderRow(member, pos, profileData, modeId, isLive) {
   const unranked = mmr === null;
 
   const iconHtml = iconUrl
-    ? `<img class="lb-rank-icon" src="${esc(Dissent.imageUrl(iconUrl))}" alt="${esc(rankName ?? 'Unranked')}" loading="lazy">`
+    ? `<img class="lb-rank-icon" src="${esc(imageUrl(iconUrl))}" alt="${esc(rankName ?? 'Unranked')}" loading="lazy">`
     : `<div class="lb-rank-icon-placeholder"></div>`;
 
   const mmrHtml = unranked

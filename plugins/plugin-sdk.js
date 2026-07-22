@@ -79,6 +79,17 @@ export async function getIdentity() {
   try { const r = await request('identity:get', {}); _identity = r; return r; } catch { return null; }
 }
 
+/** Route a remote image through the node proxy. Required inside the plugin frame:
+ *  the CSP blocks third-party image hosts, and a direct load would leak the
+ *  viewer's IP to that host. Relative/local URLs pass through untouched.
+ *  Mirrors Dissent.imageUrl() in the built SDK -- keep the two in step. */
+export function imageUrl(remoteUrl) {
+  if (!/^https?:\/\//i.test(remoteUrl)) return remoteUrl;
+  const base = _initContext?.coreUrl ?? '';
+  const inst = _initContext?.installId ?? '';
+  return `${base}/api/v1/plugins/image?url=${encodeURIComponent(remoteUrl)}&plugin_install_id=${inst}`;
+}
+
 export function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
