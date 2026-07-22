@@ -19,6 +19,33 @@
   <div id="screen-char-creator" class="hidden"></div>
   <div id="screen-campaign"     class="hidden"></div>
   <script>
+  // In-plugin replacement for window.alert().
+  //
+  // Tauri intercepts alert() and routes it through its dialog plugin over IPC
+  // (http://ipc.localhost). The plugin CSP blocks that origin on purpose -- the
+  // plugin frame has no business reaching the native bridge, and Tauri's own ACL
+  // rejects the dialog command anyway. Without this shim the blocked IPC call
+  // throws and takes the caller with it, which broke character-creation
+  // validation (ccValidateStep -> ccNext) on desktop.
+  //
+  // Non-blocking by design: every call site here is a validation notice, not a
+  // flow that depends on alert()'s synchronous pause.
+  window.alert = function (msg) {
+    var n = document.getElementById('dnd-notice') || (function () {
+      var d = document.createElement('div');
+      d.id = 'dnd-notice';
+      d.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);' +
+        'z-index:99999;max-width:80%;padding:10px 14px;border-radius:8px;' +
+        'background:rgba(20,10,30,0.95);color:#f4f4f5;border:1px solid #f76c1b;' +
+        'font:13px system-ui;box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:pre-wrap';
+      document.body.appendChild(d);
+      return d;
+    })();
+    n.textContent = String(msg);
+    n.style.display = 'block';
+    clearTimeout(window.__dndNoticeT);
+    window.__dndNoticeT = setTimeout(function () { n.style.display = 'none'; }, 4000);
+  };
   window.addEventListener('error', e => {
     document.body.innerHTML = '<pre style="color:#f87171;padding:16px;white-space:pre-wrap;font-size:12px">ERROR: ' + (e.message||'') + '\n' + (e.filename||'') + ':' + e.lineno + '\n' + (e.error?.stack||'') + '</pre>';
   });
