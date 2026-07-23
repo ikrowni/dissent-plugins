@@ -1,139 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Clips Gallery</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: system-ui, sans-serif;
-    background: #0a0a12;
-    color: rgba(255,255,255,0.85);
-    min-height: 100vh;
-    padding: 20px;
-  }
-  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 99px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    background: rgba(var(--glow, 108,99,255), 0.2);
-    color: rgba(var(--bright, 168,139,250), 1);
-  }
-  h2 { font-size: 17px; font-weight: 700; }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-  }
-  .clip {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .clip:hover { border-color: rgba(var(--glow, 108,99,255), 0.4); }
-  .clip-thumb {
-    width: 100%;
-    aspect-ratio: 16/9;
-    background: rgba(var(--glow, 108,99,255), 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-  }
-  .clip-meta { padding: 8px 10px; }
-  .clip-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .clip-by { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
-  .empty { text-align: center; padding: 48px 0; color: rgba(255,255,255,0.25); font-size: 13px; }
-  .loading { text-align: center; padding: 48px 0; color: rgba(255,255,255,0.2); font-size: 12px; }
-</style>
-</head>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a12;color:rgba(255,255,255,.85);padding:16px}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .muted{color:rgba(255,255,255,.4);font-size:13px}
+  .btn{background:rgba(108,99,255,.18);border:1px solid rgba(108,99,255,.3);color:#c3bcff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .btn:hover{background:rgba(108,99,255,.28)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:14px}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+  .card:hover{border-color:rgba(108,99,255,.4)}
+  .thumb{width:100%;aspect-ratio:16/9;background:rgba(108,99,255,.08);display:flex;align-items:center;justify-content:center;font-size:26px;object-fit:cover;cursor:pointer;border:0;color:inherit}
+  .cap{padding:8px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .contrib{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer;margin-bottom:6px;width:100%;text-align:left;border:0;color:inherit}
+  .contrib:hover{background:rgba(255,255,255,.06)}
+  .avatar{width:34px;height:34px;border-radius:50%;background:rgba(108,99,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50}
+  .lightbox video{max-width:100%;max-height:80vh;border-radius:12px}
+  .close{position:absolute;top:16px;right:20px;font-size:24px;cursor:pointer;color:#fff;background:0;border:0}
+  .edit{display:flex;gap:6px;padding:6px 10px;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
+  .edit button{background:0;border:0;color:rgba(255,255,255,.45);cursor:pointer;font-size:12px}
+  .edit button:hover{color:#fff}
+</style></head>
 <body>
-<div class="header">
-  <span class="badge">Clips Gallery</span>
-  <h2 id="title">Clips</h2>
-</div>
-<div id="content"><div class="loading">Requesting channel access…</div></div>
+<div id="app"><p class="muted">Loading gallery…</p></div>
 <script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
 <script>
-  function applyTheme(theme) {
-    if (theme['--theme-glow-rgb']) document.documentElement.style.setProperty('--glow', theme['--theme-glow-rgb']);
-    if (theme['--theme-bright-rgb']) document.documentElement.style.setProperty('--bright', theme['--theme-bright-rgb']);
-  }
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let ME=null, STATE={};
+const app = () => document.getElementById('app');
 
-  async function loadClips() {
-    const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading">Loading clips…</div>';
+async function showContributors(){
+  STATE={view:'contributors'};
+  let list=[];
+  try { const r = await Dissent.gallery.contributors(); list=(r&&r.contributors)||[]; } catch(e){ console.error(e); }
+  const share = `<div class="row" style="margin-bottom:14px"><button class="btn" id="shareBtn">Share a folder</button></div>`;
+  if(!list.length){ app().innerHTML = share + `<p class="muted">No clips shared here yet. Share one of your folders to start the gallery.</p>`; wireShare(); return; }
+  app().innerHTML = share + list.map((c,i) => `
+    <button class="contrib" data-i="${i}">
+      <span class="avatar">${c.latest_thumb_url?`<img src="${esc(c.latest_thumb_url)}" alt="">`:esc((c.display_name||'?').slice(0,2).toUpperCase())}</span>
+      <span><span style="font-size:14px">${esc(c.display_name)}</span><br>
+      <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clips</span></span>
+    </button>`).join('');
+  app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
+    const c = list[+el.dataset.i];
+    showClips(c.user_id, c.folder, c.game_name);
+  });
+  wireShare();
+}
 
-    let messages;
+async function showClips(userId, folder, game){
+  STATE={view:'clips',userId,folder,game};
+  const isOwner = ME && ME.id === userId;
+  let clips=[];
+  try { const r = await Dissent.gallery.list(userId, folder); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
+  app().innerHTML = `<div class="row"><button class="btn" id="back">← Back</button>
+    <span style="font-size:14px">${esc(game||folder)}${isOwner?' <span class="muted">(your gallery)</span>':''}</span></div>
+    <div class="grid">${clips.map((c,i)=>card(c,i,isOwner)).join('') || '<p class="muted">No clips.</p>'}</div>`;
+  document.getElementById('back').onclick = showContributors;
+  app().querySelectorAll('[data-play]').forEach(el => el.onclick = () => openLightbox(el.dataset.play));
+  if(isOwner) wireEdit(clips);
+}
+
+function card(c, i, isOwner){
+  const poster = c.thumb_url
+    ? `<img class="thumb" data-play="${esc(c.video_url)}" src="${esc(c.thumb_url)}" alt="" loading="lazy">`
+    : `<button class="thumb" data-play="${esc(c.video_url)}">▶</button>`;
+  const edit = isOwner ? `<div class="edit" data-i="${i}">
+      <button data-act="caption">Caption</button>
+      <button data-act="feature">${c.featured?'Unfeature':'Feature'}</button>
+      <button data-act="hide">Hide</button>
+      <button data-act="delete">Delete</button></div>` : '';
+  return `<div class="card">${poster}<div class="cap">${esc(c.caption||'')}</div>${edit}</div>`;
+}
+
+function wireEdit(clips){
+  app().querySelectorAll('.edit').forEach(box => box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    const c = clips[+box.dataset.i], id = c.attachment_id, act = b.dataset.act, folder = STATE.folder;
     try {
-      messages = await Dissent.getMessages({ limit: 50 });
-    } catch {
-      messages = null;
-    }
-    if (!Array.isArray(messages)) {
-      content.innerHTML = '<div class="empty">Could not load clips. You may need to grant channel:read permission.</div>';
-      return;
-    }
+      if(act==='delete'){ if(!confirm('Delete this clip permanently?')) return; await Dissent.gallery.deleteClip(id); }
+      else if(act==='caption'){ const cap = prompt('Caption', c.caption||''); if(cap==null) return; await Dissent.gallery.editClip(id, {caption:cap}, folder); }
+      else if(act==='hide'){ await Dissent.gallery.editClip(id, {hidden:true}, folder); }
+      else if(act==='feature'){ await Dissent.gallery.editClip(id, {sort_order: c.featured?0:1}, folder); }
+      showClips(STATE.userId, folder, STATE.game);
+    } catch(e){ console.error(e); }
+  }));
+}
 
-    // Filter to messages with attachments (image/video)
-    const clips = messages.filter(msg => {
-      try {
-        const p = JSON.parse(msg.ciphertext || msg.content || '{}');
-        return p.attachments && p.attachments.length > 0;
-      } catch { return false; }
-    });
+function wireShare(){
+  const btn = document.getElementById('shareBtn'); if(!btn) return;
+  btn.onclick = async () => {
+    let folders=[];
+    try { const r = await Dissent.gallery.myFolders(); folders=(r&&r.folders)||[]; } catch(e){ console.error(e); }
+    if(!folders.length){ alert('You have no clip folders yet. Record and save some clips first.'); return; }
+    const pick = prompt('Share which folder?\n' + folders.join('\n'), folders[0]);
+    if(pick && folders.includes(pick)){ try { await Dissent.gallery.share(pick, pick); showContributors(); } catch(e){ console.error(e); } }
+  };
+}
 
-    if (clips.length === 0) {
-      content.innerHTML = '<div class="empty">No media attachments found in this channel.</div>';
-      return;
-    }
+function openLightbox(videoUrl){
+  const box = document.createElement('div'); box.className='lightbox';
+  box.innerHTML = `<button class="close" aria-label="Close">✕</button><video src="${esc(videoUrl)}" controls autoplay></video>`;
+  box.onclick = e => { if(e.target===box || e.target.classList.contains('close')) box.remove(); };
+  document.body.appendChild(box);
+}
 
-    const items = clips.flatMap(msg => {
-      try {
-        const p = JSON.parse(msg.ciphertext || msg.content || '{}');
-        return (p.attachments || []).map(a => ({ url: a.url, name: a.filename, by: msg.username || 'unknown' }));
-      } catch { return []; }
-    });
-
-    const isImage = url => /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url);
-    const isVideo = url => /\.(mp4|webm|mov)(\?|$)/i.test(url);
-
-    content.innerHTML = `<div class="grid">${items.map(item => `
-      <div class="clip">
-        <div class="clip-thumb">
-          ${isImage(item.url)
-            ? `<img src="${Dissent.imageUrl(item.url)}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;">`
-            : isVideo(item.url)
-            ? `<video src="${Dissent.mediaUrl(item.url)}" muted style="width:100%;height:100%;object-fit:cover;"></video>`
-            : '📎'}
-        </div>
-        <div class="clip-meta">
-          <div class="clip-name">${item.name}</div>
-          <div class="clip-by">by ${item.by}</div>
-        </div>
-      </div>
-    `).join('')}</div>`;
-  }
-
-  async function main() {
-    const ctx = await Dissent.init({ onFallback: () => console.warn('Running outside Dissent') });
-    applyTheme(ctx.theme || {});
-    const config = ctx.config || {};
-    document.getElementById('title').textContent = config.title || 'Clips Gallery';
-    loadClips();
-
-    Dissent.on('theme-update', (theme) => applyTheme(theme || {}));
-  }
-
-  main().catch(err => console.error(err));
+async function main(){
+  const ctx = await Dissent.init({ onFallback: () => {} });
+  ME = ctx.user || null;
+  await showContributors();
+}
+main().catch(e => { app().innerHTML = '<p class="muted">Gallery failed to load.</p>'; console.error(e); });
 </script>
-</body>
-</html>
+</body></html>
