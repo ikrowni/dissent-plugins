@@ -40,7 +40,7 @@ async function showContributors(){
   if(!list.length){ app().innerHTML = share + `<p class="muted">No clips shared here yet. Share one of your folders to start the gallery.</p>`; wireShare(); return; }
   app().innerHTML = share + list.map((c,i) => `
     <button class="contrib" data-i="${i}">
-      <span class="avatar">${c.latest_thumb_url?`<img src="${esc(c.latest_thumb_url)}" alt="">`:esc((c.display_name||'?').slice(0,2).toUpperCase())}</span>
+      <span class="avatar">${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:esc((c.display_name||'?').slice(0,2).toUpperCase())}</span>
       <span><span style="font-size:14px">${esc(c.display_name)}</span><br>
       <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clips</span></span>
     </button>`).join('');
