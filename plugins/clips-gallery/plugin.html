@@ -322,7 +322,7 @@ async function showContributors(){
         <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
       </button>`).join('');
   app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
-    const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name);
+    const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name, c.display_name, c.avatar_url);
   });
   wireShare();
   renderFeatured();
@@ -372,8 +372,8 @@ async function renderFeatured(){
 }
 
 // ============ CLIPS: filter bar + grid ============
-async function showClips(userId, folder, game){
-  STATE={view:'clips',userId,folder,game,sort:'newest',featuredOnly:false,tag:null};
+async function showClips(userId, folder, game, name, avatar){
+  STATE={view:'clips',userId,folder,game,cname:name,cavatar:avatar,sort:'newest',featuredOnly:false,tag:null};
   const isOwner = ME && ME.id === userId;
   app().innerHTML = emptyState('Loading clips…', true);
   let clips=[];
@@ -386,8 +386,10 @@ async function showClips(userId, folder, game){
         ${isOwner?'<span class="muted">your gallery — drag to reorder</span>':''}</div>
       <button class="btn" id="playAll">▶ Play all</button>
     </div>
+    <div id="cpage"></div>
     <div class="toolbar" id="toolbar"></div>
     <div class="grid" id="grid"></div>`;
+  renderContribPage(isOwner);
   document.getElementById('back').onclick = showContributors;
   document.getElementById('playAll').onclick = () => {
     const view = currentView(); if(view.length) openLightbox(view, 0, {reel:true, title:esc(game||folder), interactive:!isOwner});
@@ -401,6 +403,35 @@ function currentView(){
   if(STATE.featuredOnly) v = v.filter(c=>c.featured);
   if(STATE.tag) v = v.filter(c=>(c.tags||[]).includes(STATE.tag));
   return sortClips(v, STATE.sort);
+}
+
+// Per-contributor page header: a hero of their #1 all-time clip + identity + stats.
+function renderContribPage(isOwner){
+  const host = document.getElementById('cpage'); if(!host) return;
+  const clips = STATE.all||[];
+  const hero = topRatedClip(clips);
+  const stats = contributorStats(clips);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const heroMedia = hero
+    ? ((!reduce && hero.video_url) ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
+       : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="this.remove()">` : ART))
+    : ART;
+  const avgStat = stats.avg>0 ? `<div class="st"><b>★ ${stats.avg.toFixed(1)}</b><span>Avg rating</span></div>` : '';
+  host.innerHTML = `<div class="cpage">
+      <div class="hero" data-hero>${heroMedia}<div class="glow"></div></div>
+      <div class="side">
+        <div class="idrow">${avatarHTML(STATE.cname, STATE.cavatar)}
+          <div><div class="nm">${esc(STATE.cname||STATE.game||'Contributor')}</div>
+          <div class="gm">${esc(STATE.game||STATE.folder)}</div></div></div>
+        <div class="cstats">
+          <div class="st"><b>${stats.count}</b><span>Clips</span></div>
+          ${avgStat}
+          <div class="st"><b>${stats.totalRatings}</b><span>Ratings</span></div>
+        </div>
+      </div>
+    </div>`;
+  const hv = host.querySelector('.hero video'); if(hv) hv.play().catch(()=>{});
+  if(hero){ host.querySelector('.hero[data-hero]').onclick = () => openLightbox([hero], 0, {title:esc(STATE.game||STATE.folder), interactive:!isOwner}); }
 }
 
 function renderToolbar(){
