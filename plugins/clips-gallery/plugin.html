@@ -2,47 +2,145 @@
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Clips Gallery</title>
 <style>
+  :root{
+    --bg:#08080f; --bg2:#0e0e1a; --fg:rgba(255,255,255,.88); --dim:rgba(255,255,255,.45);
+    --faint:rgba(255,255,255,.28); --accent:#6c63ff; --accent-soft:rgba(108,99,255,.16);
+    --accent-line:rgba(108,99,255,.32); --gold:#ffcf5c; --line:rgba(255,255,255,.08);
+    --panel:rgba(255,255,255,.035);
+  }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;background:#0a0a12;color:rgba(255,255,255,.85);padding:16px}
+  body{font-family:system-ui,-apple-system,sans-serif;background:
+      radial-gradient(1200px 600px at 15% -10%,rgba(108,99,255,.10),transparent 60%),
+      radial-gradient(1000px 500px at 110% 10%,rgba(108,99,255,.06),transparent 55%),
+      var(--bg);color:var(--fg);padding:16px;min-height:100vh}
   .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .muted{color:rgba(255,255,255,.4);font-size:13px}
-  .btn{background:rgba(108,99,255,.18);border:1px solid rgba(108,99,255,.3);color:#c3bcff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .spread{justify-content:space-between}
+  .muted{color:var(--dim);font-size:13px}
+  h2.sec{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+    font-weight:700;margin:0 2px 10px;display:flex;align-items:center;gap:8px}
+  .btn{background:var(--accent-soft);border:1px solid var(--accent-line);color:#c9c3ff;
+    border-radius:9px;padding:7px 13px;font-size:13px;cursor:pointer;transition:background .15s,transform .1s}
   .btn:hover{background:rgba(108,99,255,.28)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:14px}
-  .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;animation:cardIn .32s ease both}
-  .card:hover{border-color:rgba(108,99,255,.4)}
-  .card.drag{opacity:.4}
-  .card.over{border-color:rgba(108,99,255,.7);box-shadow:0 0 0 2px rgba(108,99,255,.35)}
-  .card[draggable=true] .thumb{cursor:grab}
-  .thumb{width:100%;aspect-ratio:16/9;background:rgba(108,99,255,.08);display:flex;align-items:center;justify-content:center;font-size:26px;object-fit:cover;cursor:pointer;border:0;color:inherit}
-  .cap{padding:8px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .contrib{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer;margin-bottom:6px;width:100%;text-align:left;border:0;color:inherit;animation:cardIn .3s ease both}
-  .contrib:hover{background:rgba(255,255,255,.06)}
-  .avatar{width:34px;height:34px;border-radius:50%;background:rgba(108,99,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;overflow:hidden}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--dim)}
+  .btn.ghost:hover{color:var(--fg);border-color:var(--accent-line)}
+
+  /* toolbar / filter bar */
+  .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  select.sort{background:var(--bg2);color:var(--fg);border:1px solid var(--line);
+    border-radius:9px;padding:7px 10px;font-size:13px;cursor:pointer}
+  .chip{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;transition:all .15s}
+  .chip:hover{color:var(--fg)}
+  .chip.active{background:var(--accent-soft);border-color:var(--accent-line);color:#c9c3ff}
+  .chip.static{cursor:default;color:var(--faint)}
+  .chip.gold.active{background:rgba(255,207,92,.14);border-color:rgba(255,207,92,.4);color:var(--gold)}
+
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:14px}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;animation:cardIn .34s ease both;transition:transform .18s,border-color .18s,box-shadow .18s}
+  .card:hover{transform:translateY(-3px);border-color:var(--accent-line);
+    box-shadow:0 12px 30px -12px rgba(108,99,255,.5)}
+  .card.drag{opacity:.35}
+  .card.over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-line)}
+  .card[draggable=true] .media{cursor:grab}
+  .media{position:relative;width:100%;aspect-ratio:16/9;background:#05050b;
+    display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--faint);
+    cursor:pointer;border:0;overflow:hidden}
+  .media img,.media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .media video.hp{opacity:0;transition:opacity .25s}
+  .media video.hp.on{opacity:1}
+  .media .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),transparent 30%,transparent 55%,rgba(0,0,0,.6));opacity:.9;pointer-events:none}
+  .badge{position:absolute;top:8px;left:8px;display:flex;align-items:center;gap:4px;
+    background:rgba(255,207,92,.16);border:1px solid rgba(255,207,92,.42);color:var(--gold);
+    font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;backdrop-filter:blur(4px)}
+  .pill{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.62);color:#fff;
+    font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;backdrop-filter:blur(2px);font-variant-numeric:tabular-nums}
+  .star{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:4px 10px;
+    font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(3px);transition:all .14s;font-variant-numeric:tabular-nums}
+  .star:hover{border-color:rgba(255,207,92,.5)}
+  .star .glyph{color:var(--faint);transition:color .14s,transform .14s}
+  .star.on{border-color:rgba(255,207,92,.5)}
+  .star.on .glyph{color:var(--gold)}
+  .star.pop .glyph{transform:scale(1.35)}
+  .media .star{position:absolute;bottom:8px;left:8px}
+  .cap{padding:9px 11px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+  .cap:empty{display:none}
+
+  /* contributors */
+  .contrib{display:flex;align-items:center;gap:11px;padding:11px;border-radius:12px;
+    background:var(--panel);cursor:pointer;margin-bottom:7px;width:100%;text-align:left;border:1px solid transparent;color:inherit;animation:cardIn .3s ease both;transition:background .15s,border-color .15s}
+  .contrib:hover{background:rgba(255,255,255,.06);border-color:var(--accent-line)}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;overflow:hidden;color:#c9c3ff}
   .avatar img{width:100%;height:100%;object-fit:cover}
-  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;animation:fade .18s ease both}
+  .cposter{width:52px;height:32px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:#05050b}
+
+  /* featured section */
+  .frow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:14px;
+    overflow-x:auto;padding:2px 2px 12px;scrollbar-width:thin}
+  .fcard{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);
+    background:var(--panel);cursor:pointer;animation:cardIn .34s ease both;transition:transform .18s,box-shadow .18s,border-color .18s}
+  .fcard:hover{transform:translateY(-3px);border-color:rgba(255,207,92,.4);box-shadow:0 12px 30px -12px rgba(255,207,92,.4)}
+  .fcard .media{aspect-ratio:16/9}
+  .rank{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;
+    background:rgba(0,0,0,.6);color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(3px)}
+  .rank.r1{background:linear-gradient(135deg,#ffcf5c,#e0a020);color:#2a1e00;border-color:transparent}
+  .rank.r2{background:linear-gradient(135deg,#dfe6ef,#a9b4c2);color:#1a2030;border-color:transparent}
+  .rank.r3{background:linear-gradient(135deg,#e6a86a,#b9793e);color:#2a1500;border-color:transparent}
+
+  /* lightbox */
+  .lightbox{position:fixed;inset:0;background:rgba(3,3,8,.92);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:20px;z-index:50;animation:fade .18s ease both;backdrop-filter:blur(6px)}
   .lightbox.out{animation:fadeOut .16s ease both}
-  .lightbox video{max-width:100%;max-height:80vh;border-radius:12px;animation:popIn .22s cubic-bezier(.2,.8,.3,1.2) both}
-  .close{position:absolute;top:16px;right:20px;font-size:24px;cursor:pointer;color:#fff;background:0;border:0}
-  .nav{position:absolute;top:50%;transform:translateY(-50%);font-size:34px;line-height:1;cursor:pointer;color:#fff;background:0;border:0;padding:8px 14px;opacity:.7}
+  .lb-stage{width:min(1100px,100%);display:flex;flex-direction:column;gap:10px;animation:popIn .24s cubic-bezier(.2,.8,.3,1.2) both}
+  .lb-stage video.main{width:100%;max-height:66vh;background:#000;border-radius:12px;box-shadow:0 30px 80px -30px rgba(0,0,0,.9)}
+  .lb-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .lb-title{font-size:16px;font-weight:600}
+  .lb-sub{color:var(--dim);font-size:13px}
+  .lb-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .lb-strip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:thin;max-width:100%}
+  .lb-strip img,.lb-strip .ph{width:96px;height:54px;border-radius:7px;object-fit:cover;flex:0 0 auto;
+    cursor:pointer;opacity:.5;border:2px solid transparent;background:#05050b;transition:opacity .15s,border-color .15s;
+    display:flex;align-items:center;justify-content:center;color:var(--faint)}
+  .lb-strip img.cur,.lb-strip .ph.cur{opacity:1;border-color:var(--accent)}
+  .lb-strip img:hover,.lb-strip .ph:hover{opacity:.85}
+  .close{position:absolute;top:16px;right:20px;font-size:24px;cursor:pointer;color:#fff;background:0;border:0;line-height:1;z-index:2}
+  .nav{position:absolute;top:50%;transform:translateY(-50%);font-size:38px;line-height:1;cursor:pointer;
+    color:#fff;background:rgba(0,0,0,.3);border:0;padding:10px 16px;opacity:.65;border-radius:12px;transition:opacity .15s}
   .nav:hover{opacity:1}
-  .nav.prev{left:8px}.nav.next{right:8px}
-  .count{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.6);font-size:13px}
-  .edit{display:flex;gap:6px;padding:6px 10px;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
-  .edit button{background:0;border:0;color:rgba(255,255,255,.45);cursor:pointer;font-size:12px}
+  .nav.prev{left:10px}.nav.next{right:10px}
+  .dots{display:flex;gap:6px;justify-content:center;margin-top:2px}
+  .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25);transition:background .15s,transform .15s}
+  .dot.cur{background:var(--accent);transform:scale(1.25)}
+  a.dl{text-decoration:none}
+
+  /* owner edit */
+  .edit{display:flex;gap:6px;padding:6px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .edit button{background:0;border:0;color:var(--faint);cursor:pointer;font-size:12px}
   .edit button:hover{color:#fff}
-  .empty{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:48px 16px;color:rgba(255,255,255,.4)}
-  .empty svg{width:60px;height:60px;opacity:.5}
+
+  .empty{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:52px 16px;color:var(--dim)}
+  .empty svg{width:62px;height:62px;opacity:.5}
   .empty.load svg{animation:pulse 1.4s ease-in-out infinite}
-  @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:rgba(20,20,32,.96);border:1px solid var(--accent-line);color:var(--fg);
+    padding:10px 16px;border-radius:10px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
   @keyframes fadeOut{from{opacity:1}to{opacity:0}}
-  @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+  @keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
   @keyframes pulse{0%,100%{opacity:.3}50%{opacity:.7}}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head>
 <body>
 <div id="app"></div>
+<div class="toast" id="toast"></div>
 <script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
 <script>
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -79,94 +177,252 @@ function deriveTagChips(clips){
 function reelNext(i, n){ return (i + 1) % n; }
 if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext };
 
+// ---- small view helpers ----
+function fmtDur(s){ if(!s||!isFinite(s)) return ''; s=Math.round(s); const m=Math.floor(s/60); return m+':'+String(s%60).padStart(2,'0'); }
+function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return ''; return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+let toastT=null;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200); }
+
+// Star chip markup. `data-star` lets us refresh every instance of a clip's chip at once.
+function starChip(c, extra){
+  const on = !!c.starred_by_me;
+  return `<button class="star${on?' on':''}${extra?' '+extra:''}" data-star="${esc(c.attachment_id)}" aria-pressed="${on}" title="${on?'Remove your star':'Star this clip'}">
+    <span class="glyph">${on?'★':'☆'}</span><span class="n">${c.stars||0}</span></button>`;
+}
+function refreshStars(c){
+  document.querySelectorAll(`[data-star="${CSS.escape(c.attachment_id)}"]`).forEach(el => {
+    el.classList.toggle('on', !!c.starred_by_me);
+    el.setAttribute('aria-pressed', !!c.starred_by_me);
+    el.querySelector('.glyph').textContent = c.starred_by_me?'★':'☆';
+    el.querySelector('.n').textContent = c.stars||0;
+    el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),180);
+  });
+}
+async function toggleStar(c){
+  // optimistic
+  const prev = { stars:c.stars||0, mine:!!c.starred_by_me };
+  c.starred_by_me = !prev.mine; c.stars = prev.stars + (c.starred_by_me?1:-1);
+  refreshStars(c);
+  try{
+    const r = await Dissent.gallery.star(c.attachment_id);
+    if(r && typeof r.stars==='number'){ c.stars=r.stars; c.starred_by_me=!!r.starred_by_me; refreshStars(c); }
+  }catch(e){ c.stars=prev.stars; c.starred_by_me=prev.mine; refreshStars(c); toast('Could not update star'); console.error(e); }
+}
+function wireStars(root, byId){
+  root.querySelectorAll('.star[data-star]').forEach(el => el.onclick = e => {
+    e.stopPropagation(); e.preventDefault();
+    const c = byId[el.dataset.star]; if(c) toggleStar(c);
+  });
+}
+// Record a clip's real duration from a loaded <video> (backend omits it); refresh pills.
+function noteDuration(c, secs){
+  if(!secs || !isFinite(secs) || c.duration_secs) return;
+  c.duration_secs = secs;
+  document.querySelectorAll(`[data-dur="${CSS.escape(c.attachment_id)}"]`).forEach(el => el.textContent = fmtDur(secs));
+}
+
+// ============ LANDING: Featured + contributors ============
 async function showContributors(){
-  STATE={view:'contributors'};
+  STATE={view:'contributors', fwindow:(STATE&&STATE.fwindow)||'all'};
   app().innerHTML = emptyState('Loading gallery…', true);
   let list=[];
   try { const r = await Dissent.gallery.contributors(); list=(r&&r.contributors)||[]; } catch(e){ console.error(e); }
-  const share = `<div class="row" style="margin-bottom:14px"><button class="btn" id="shareBtn">Share a folder</button></div>`;
+
+  const share = `<div class="row spread" style="margin-bottom:6px"><span></span><button class="btn" id="shareBtn">＋ Share a folder</button></div>`;
   if(!list.length){ app().innerHTML = share + emptyState('No clips shared here yet. Share one of your folders to start the gallery.'); wireShare(); return; }
-  app().innerHTML = share + list.map((c,i) => `
-    <button class="contrib" data-i="${i}" style="animation-delay:${Math.min(i,16)*28}ms">
-      <span class="avatar">${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:esc((c.display_name||'?').slice(0,2).toUpperCase())}</span>
-      <span><span style="font-size:14px">${esc(c.display_name)}</span><br>
-      <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clips</span></span>
-    </button>`).join('');
+
+  app().innerHTML = share +
+    `<div id="featured"></div>` +
+    `<h2 class="sec">Contributors</h2>` +
+    list.map((c,i) => `
+      <button class="contrib" data-i="${i}" style="animation-delay:${Math.min(i,16)*28}ms">
+        <span class="avatar">${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:esc((c.display_name||'?').slice(0,2).toUpperCase())}</span>
+        ${c.latest_thumb_url?`<img class="cposter" src="${esc(c.latest_thumb_url)}" alt="" onerror="this.remove()">`:''}
+        <span style="flex:1"><span style="font-size:14px">${esc(c.display_name)}</span><br>
+        <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
+      </button>`).join('');
   app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
-    const c = list[+el.dataset.i];
-    showClips(c.user_id, c.folder, c.game_name);
+    const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name);
   });
   wireShare();
+  renderFeatured();
 }
 
+async function renderFeatured(){
+  const host = document.getElementById('featured'); if(!host) return;
+  const win = STATE.fwindow || 'all';
+  let clips=[];
+  try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
+  if(!clips.length){ host.innerHTML=''; return; }  // no stars yet → hide the section entirely
+  const byId={}; clips.forEach(c=>byId[c.attachment_id]=c);
+  host.innerHTML =
+    `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured · top rated</h2>
+      <div class="row" style="gap:6px">
+        <button class="chip gold${win==='week'?' active':''}" data-win="week">This week</button>
+        <button class="chip gold${win==='all'?' active':''}" data-win="all">All time</button>
+      </div></div>
+     <div class="frow" style="margin-top:10px" id="frow">` +
+      clips.map((c,i)=>`
+        <div class="fcard" data-idx="${i}">
+          <div class="media">
+            ${c.thumb_url?`<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'▶'}
+            <div class="scrim"></div>
+            <div class="rank ${i<3?'r'+(i+1):''}">${i+1}</div>
+            ${starChip(c)}
+          </div>
+        </div>`).join('') + `</div>`;
+  const frow = document.getElementById('frow');
+  frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx, {title:'Featured'}));
+  wireStars(frow, byId);
+  host.querySelectorAll('.chip[data-win]').forEach(el => el.onclick = () => { STATE.fwindow = el.dataset.win; renderFeatured(); });
+}
+
+// ============ CLIPS: filter bar + grid ============
 async function showClips(userId, folder, game){
-  STATE={view:'clips',userId,folder,game};
+  STATE={view:'clips',userId,folder,game,sort:'newest',featuredOnly:false,tag:null};
   const isOwner = ME && ME.id === userId;
   app().innerHTML = emptyState('Loading clips…', true);
   let clips=[];
   try { const r = await Dissent.gallery.list(userId, folder); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
+  STATE.all = clips;
 
-  app().innerHTML = `<div class="row"><button class="btn" id="back">← Back</button>
-    <span style="font-size:14px">${esc(game||folder)}${isOwner?' <span class="muted">(your gallery — drag to reorder)</span>':''}</span></div>
+  app().innerHTML = `<div class="row spread">
+      <div class="row"><button class="btn ghost" id="back">← Back</button>
+        <span style="font-size:15px;font-weight:600">${esc(game||folder)}</span>
+        ${isOwner?'<span class="muted">your gallery — drag to reorder</span>':''}</div>
+      <button class="btn" id="playAll">▶ Play all</button>
+    </div>
+    <div class="toolbar" id="toolbar"></div>
     <div class="grid" id="grid"></div>`;
   document.getElementById('back').onclick = showContributors;
-
-  const grid = document.getElementById('grid');
-  function renderGrid(){
-    grid.innerHTML = clips.map((c,i)=>card(c,i,isOwner)).join('') || emptyState('No clips.');
-    grid.querySelectorAll('[data-idx]').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx));
-    if(isOwner){ wireEdit(clips, renderGrid); wireDrag(clips, grid, renderGrid); }
-  }
+  document.getElementById('playAll').onclick = () => {
+    const view = currentView(); if(view.length) openLightbox(view, 0, {reel:true, title:esc(game||folder)});
+  };
+  renderToolbar();
   renderGrid();
 }
 
-function card(c, i, isOwner){
-  const poster = c.thumb_url
-    ? `<img class="thumb" data-idx="${i}" src="${esc(c.thumb_url)}" alt="" loading="lazy">`
-    : `<button class="thumb" data-idx="${i}">▶</button>`;
-  const edit = isOwner ? `<div class="edit" data-i="${i}">
-      <button data-act="caption">Caption</button>
-      <button data-act="feature">${c.featured?'Unfeature':'Feature'}</button>
-      <button data-act="hide">Hide</button>
-      <button data-act="delete">Delete</button></div>` : '';
-  return `<div class="card"${isOwner?' draggable="true"':''} data-card="${i}" style="animation-delay:${Math.min(i,20)*30}ms">${poster}<div class="cap">${esc(c.caption||'')}</div>${edit}</div>`;
+function currentView(){
+  let v = STATE.all.slice();
+  if(STATE.featuredOnly) v = v.filter(c=>c.featured);
+  if(STATE.tag) v = v.filter(c=>(c.tags||[]).includes(STATE.tag));
+  return sortClips(v, STATE.sort);
 }
 
-function wireEdit(clips, rerender){
-  app().querySelectorAll('.edit').forEach(box => box.querySelectorAll('button').forEach(b => b.onclick = async (ev) => {
+function renderToolbar(){
+  const bar = document.getElementById('toolbar'); if(!bar) return;
+  const tags = deriveTagChips(STATE.all);
+  bar.innerHTML =
+    `<select class="sort" id="sortSel">
+       <option value="newest">Newest</option>
+       <option value="oldest">Oldest</option>
+       <option value="stars">Most starred</option>
+       <option value="longest">Longest</option>
+     </select>
+     <button class="chip gold${STATE.featuredOnly?' active':''}" id="featToggle">★ Featured</button>
+     <span class="chip static">${esc(STATE.game||STATE.folder)}</span>` +
+     tags.map(t=>`<button class="chip${STATE.tag===t?' active':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('');
+  bar.querySelector('#sortSel').value = STATE.sort;
+  bar.querySelector('#sortSel').onchange = e => { STATE.sort=e.target.value; renderGrid(); };
+  bar.querySelector('#featToggle').onclick = () => { STATE.featuredOnly=!STATE.featuredOnly; renderToolbar(); renderGrid(); };
+  bar.querySelectorAll('.chip[data-tag]').forEach(el => el.onclick = () => { STATE.tag = STATE.tag===el.dataset.tag?null:el.dataset.tag; renderToolbar(); renderGrid(); });
+}
+
+function renderGrid(){
+  const grid = document.getElementById('grid'); if(!grid) return;
+  const isOwner = ME && ME.id === STATE.userId;
+  // Owner reorder only makes sense on the natural (unfiltered, newest) view.
+  const dragOK = isOwner && !STATE.featuredOnly && !STATE.tag;
+  const view = currentView();
+  const byId={}; STATE.all.forEach(c=>byId[c.attachment_id]=c);
+  grid.innerHTML = view.map((c,i)=>card(c,i,dragOK)).join('') || emptyState('No clips match this filter.');
+  grid.querySelectorAll('.media[data-idx]').forEach(el => el.onclick = () => openLightbox(view, +el.dataset.idx, {title:esc(STATE.game||STATE.folder)}));
+  wireStars(grid, byId);
+  wireHover(grid, view);
+  if(isOwner) wireEdit(grid, view);
+  if(dragOK) wireDrag(view, grid);
+}
+
+function card(c, i, dragOK){
+  const media = c.thumb_url
+    ? `<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`
+    : '▶';
+  const dur = c.duration_secs ? fmtDur(c.duration_secs) : '';
+  const isOwner = ME && ME.id === STATE.userId;
+  const edit = isOwner ? `<div class="edit" data-i="${i}">
+      <button data-act="caption">Caption</button>
+      <button data-act="feature">${c.featured?'Unpin':'Pin'}</button>
+      <button data-act="hide">Hide</button>
+      <button data-act="delete">Delete</button></div>` : '';
+  return `<div class="card"${dragOK?' draggable="true"':''} data-card="${i}" style="animation-delay:${Math.min(i,20)*26}ms">
+    <div class="media" data-idx="${i}" data-vid="${esc(c.video_url)}">
+      ${media}<div class="scrim"></div>
+      ${c.featured?'<div class="badge">★ Pinned</div>':''}
+      <span class="pill" data-dur="${esc(c.attachment_id)}">${dur}</span>
+      ${starChip(c)}
+    </div>
+    <div class="cap">${esc(c.caption||'')}</div>${edit}</div>`;
+}
+
+// Silent hover-preview: after a short delay, swap the poster for a muted looping video.
+function wireHover(grid, view){
+  grid.querySelectorAll('.media[data-idx]').forEach(el => {
+    const c = view[+el.dataset.idx]; if(!c || !c.video_url) return;
+    let t=null, vid=null;
+    el.addEventListener('mouseenter', () => {
+      if(window.__dragging) return;
+      t = setTimeout(() => {
+        vid = document.createElement('video');
+        vid.className='hp'; vid.src=c.video_url; vid.muted=true; vid.loop=true; vid.playsInline=true; vid.preload='metadata';
+        vid.addEventListener('loadedmetadata', () => noteDuration(c, vid.duration));
+        el.appendChild(vid);
+        requestAnimationFrame(()=>vid.classList.add('on'));
+        vid.play().catch(()=>{});
+      }, 250);
+    });
+    el.addEventListener('mouseleave', () => {
+      clearTimeout(t);
+      if(vid){ vid.pause(); vid.remove(); vid=null; }
+    });
+  });
+}
+
+function wireEdit(grid, view){
+  grid.querySelectorAll('.edit').forEach(box => box.querySelectorAll('button').forEach(b => b.onclick = async (ev) => {
     ev.stopPropagation();
-    const c = clips[+box.dataset.i], id = c.attachment_id, act = b.dataset.act, folder = STATE.folder;
+    const c = view[+box.dataset.i], id = c.attachment_id, act = b.dataset.act, folder = STATE.folder;
     try {
       if(act==='delete'){ if(!confirm('Delete this clip permanently?')) return; await Dissent.gallery.deleteClip(id); }
       else if(act==='caption'){ const cap = prompt('Caption', c.caption||''); if(cap==null) return; await Dissent.gallery.editClip(id, {caption:cap}, folder); }
       else if(act==='hide'){ await Dissent.gallery.editClip(id, {hidden:true}, folder); }
       else if(act==='feature'){ await Dissent.gallery.editClip(id, {sort_order: c.featured?0:1}, folder); }
       showClips(STATE.userId, folder, STATE.game);
-    } catch(e){ console.error(e); }
+    } catch(e){ console.error(e); toast('Action failed'); }
   }));
 }
 
-// Owner drag-to-reorder. On drop, renumber the whole list to explicit sort_order
-// (1..n) and persist each via editClip. Optimistically re-renders first.
-function wireDrag(clips, grid, rerender){
+// Owner drag-to-reorder. Renumbers to explicit sort_order (1..n) and persists via editClip.
+function wireDrag(view, grid){
   let from = null;
   grid.querySelectorAll('.card[draggable=true]').forEach(cardEl => {
-    cardEl.addEventListener('dragstart', () => { from = +cardEl.dataset.card; cardEl.classList.add('drag'); });
-    cardEl.addEventListener('dragend',   () => { from = null; grid.querySelectorAll('.card').forEach(c=>c.classList.remove('drag','over')); });
+    cardEl.addEventListener('dragstart', () => { from = +cardEl.dataset.card; window.__dragging=true; cardEl.classList.add('drag'); });
+    cardEl.addEventListener('dragend',   () => { from = null; window.__dragging=false; grid.querySelectorAll('.card').forEach(c=>c.classList.remove('drag','over')); });
     cardEl.addEventListener('dragover',  e => { e.preventDefault(); cardEl.classList.add('over'); });
     cardEl.addEventListener('dragleave', () => cardEl.classList.remove('over'));
     cardEl.addEventListener('drop', async e => {
       e.preventDefault();
       const to = +cardEl.dataset.card;
       if(from==null || from===to) return;
-      const [moved] = clips.splice(from, 1);
-      clips.splice(to, 0, moved);
-      rerender();
-      const orders = reorderSortOrders(clips.map(c => c.attachment_id));
+      const [moved] = view.splice(from, 1);
+      view.splice(to, 0, moved);
+      STATE.all = view.slice(); STATE.sort='newest';
+      renderGrid();
+      const orders = reorderSortOrders(view.map(c => c.attachment_id));
       try {
-        await Promise.all(clips.map(c => Dissent.gallery.editClip(c.attachment_id, {sort_order: orders[c.attachment_id]}, STATE.folder)));
-        clips.forEach(c => { c.featured = true; });
-      } catch(err){ console.error(err); }
+        await Promise.all(view.map(c => Dissent.gallery.editClip(c.attachment_id, {sort_order: orders[c.attachment_id]}, STATE.folder)));
+        view.forEach(c => { c.featured = true; });
+        renderGrid();
+      } catch(err){ console.error(err); toast('Reorder failed'); }
     });
   });
 }
@@ -182,26 +438,55 @@ function wireShare(){
   };
 }
 
-// Lightbox with ←/→/Esc navigation and neighbour prefetch.
-function openLightbox(clips, index){
-  let i = index;
+// ============ CINEMATIC LIGHTBOX (+ reel play-all) ============
+function openLightbox(clips, index, opts){
+  opts = opts||{};
+  let i = index, reel = !!opts.reel;
+  const byId={}; clips.forEach(c=>byId[c.attachment_id]=c);
   const box = document.createElement('div'); box.className='lightbox';
   const url = c => c && c.video_url;
+
   function draw(){
     const c = clips[i];
+    const many = clips.length>1;
     box.innerHTML =
       `<button class="close" aria-label="Close">✕</button>` +
-      (clips.length>1 ? `<button class="nav prev" aria-label="Previous">‹</button><button class="nav next" aria-label="Next">›</button>` : '') +
-      `<video src="${esc(url(c))}" controls autoplay></video>` +
-      (clips.length>1 ? `<div class="count">${i+1} / ${clips.length}</div>` : '');
+      (many?`<button class="nav prev" aria-label="Previous">‹</button><button class="nav next" aria-label="Next">›</button>`:'') +
+      `<div class="lb-stage">
+         <video class="main" src="${esc(url(c))}" controls autoplay playsinline></video>
+         <div class="lb-meta">
+           <div>
+             <div class="lb-title">${esc(c.caption || opts.title || 'Clip')}</div>
+             <div class="lb-sub">${[fmtDate(c.created_at), c.duration_secs?fmtDur(c.duration_secs):''].filter(Boolean).join(' · ')}${many?` · ${i+1}/${clips.length}`:''}</div>
+           </div>
+           <div class="lb-actions">
+             ${starChip(c)}
+             <button class="btn ghost" id="lbShare">Share link</button>
+             <a class="btn dl" href="${esc(url(c))}" download>Download</a>
+           </div>
+         </div>` +
+         (many?`<div class="lb-strip">` + clips.map((cc,n)=>
+             cc.thumb_url
+               ? `<img class="${n===i?'cur':''}" data-jump="${n}" src="${esc(cc.thumb_url)}" alt="" onerror="this.outerHTML='<div class=\\'ph${n===i?' cur':''}\\' data-jump=${n}>▶</div>'">`
+               : `<div class="ph ${n===i?'cur':''}" data-jump="${n}">▶</div>`
+           ).join('') + `</div>` : '') +
+         (reel && many?`<div class="dots">`+clips.map((_,n)=>`<span class="dot ${n===i?'cur':''}"></span>`).join('')+`</div>`:'') +
+      `</div>`;
+
     box.querySelector('.close').onclick = close;
     const prev = box.querySelector('.prev'), next = box.querySelector('.next');
     if(prev) prev.onclick = e => { e.stopPropagation(); go(-1); };
     if(next) next.onclick = e => { e.stopPropagation(); go(1); };
+    box.querySelectorAll('[data-jump]').forEach(el => el.onclick = e => { e.stopPropagation(); i=+el.dataset.jump; draw(); });
+    wireStars(box, byId);
+    box.querySelector('#lbShare').onclick = e => { e.stopPropagation(); shareLink(url(c)); };
+
+    const v = box.querySelector('video.main');
+    v.addEventListener('loadedmetadata', () => noteDuration(c, v.duration));
+    if(reel && many) v.addEventListener('ended', () => { i = reelNext(i, clips.length); draw(); });
     prefetch();
   }
   function go(d){ i = (i + d + clips.length) % clips.length; draw(); }
-  // Warm neighbours with a hidden preload video (same media-src → CSP-safe).
   function prefetch(){
     box.querySelectorAll('video.pf').forEach(v=>v.remove());
     [i-1, i+1].forEach(n => {
@@ -218,15 +503,17 @@ function openLightbox(clips, index){
     else if(e.key==='ArrowLeft' && clips.length>1) go(-1);
     else if(e.key==='ArrowRight' && clips.length>1) go(1);
   }
-  function close(){
-    document.removeEventListener('keydown', key);
-    box.classList.add('out');
-    setTimeout(()=>box.remove(), 150);
-  }
+  function close(){ document.removeEventListener('keydown', key); box.classList.add('out'); setTimeout(()=>box.remove(),150); }
   box.onclick = e => { if(e.target===box) close(); };
   document.addEventListener('keydown', key);
   document.body.appendChild(box);
   draw();
+}
+
+function shareLink(u){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(u).then(()=>toast('Link copied to clipboard')).catch(()=>toast('Copy blocked — use Download'));
+  } else { toast('Copy blocked — use Download'); }
 }
 
 async function main(){
