@@ -499,7 +499,7 @@ function renderContribPage(isOwner){
   const stats = contributorStats(clips);
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const heroMedia = hero
-    ? ((!reduce && hero.video_url) ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
+    ? ((!reduce && hero.video_url) ? `<video src="${esc(previewSource(hero, true))}"${hero.thumb_url?` poster="${esc(hero.thumb_url)}"`:''} muted loop playsinline autoplay></video>`
        : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="this.remove()">` : ART))
     : ART;
   const avgStat = stats.avg>0 ? `<div class="st"><b>★ ${stats.avg.toFixed(1)}</b><span>Avg rating</span></div>` : '';
@@ -584,7 +584,11 @@ function wireHover(grid, view){
       if(window.__dragging) return;
       t = setTimeout(() => {
         vid = document.createElement('video');
-        vid.className='hp'; vid.src=c.video_url; vid.muted=true; vid.loop=true; vid.playsInline=true; vid.preload='metadata';
+        vid.className='hp';
+        vid.src = previewSource(c, true);          // small rendition when derived
+        if(c.thumb_url) vid.poster = c.thumb_url;  // paint a frame immediately
+        vid.muted=true; vid.loop=true; vid.playsInline=true;
+        vid.preload='none';                        // metadata IS the moov — never prefetch it
         vid.addEventListener('loadedmetadata', () => noteDuration(c, vid.duration));
         el.appendChild(vid);
         requestAnimationFrame(()=>vid.classList.add('on'));
@@ -664,7 +668,7 @@ function openLightbox(clips, index, opts){
       `<button class="close" aria-label="Close">✕</button>` +
       (many?`<button class="nav prev" aria-label="Previous">‹</button><button class="nav next" aria-label="Next">›</button>`:'') +
       `<div class="lb-stage">
-         <video class="main" src="${esc(url(c))}" controls autoplay playsinline></video>
+         <video class="main" src="${esc(url(c))}"${c.thumb_url?` poster="${esc(c.thumb_url)}"`:''} controls autoplay playsinline></video>
          <div class="lb-meta">
            <div>
              <div class="lb-title">${esc(c.caption || opts.title || 'Clip')}</div>
@@ -704,7 +708,8 @@ function openLightbox(clips, index, opts){
       const c = clips[(n + clips.length) % clips.length];
       if(!c || c===clips[i]) return;
       const v = document.createElement('video');
-      v.className='pf'; v.preload='auto'; v.src=url(c); v.muted=true;
+      // Warm the small rendition, not a full-quality original — this is speculative.
+      v.className='pf'; v.preload='auto'; v.src=previewSource(c, true); v.muted=true;
       v.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none';
       box.appendChild(v);
     });
