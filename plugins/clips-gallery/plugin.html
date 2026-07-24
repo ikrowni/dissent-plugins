@@ -223,7 +223,28 @@ function contributorStats(clips){
   const totalRatings = clips.reduce((s, c) => s + (c.rating_count || 0), 0);
   return { count, avg, totalRatings };
 }
-if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext, topRatedClip, contributorStats };
+/** Top 5 of the ranked featured list — the spotlight rail. `featured` returns up to 12. */
+function spotlightRail(clips) {
+  return (clips || []).slice(0, 5);
+}
+
+/** A quiet week must not gut the landing. When `week` returns nothing, the caller
+ *  refetches `all` once (clips === null signals "go fetch") and relabels the ribbon. */
+function resolveWindow(requested, clips) {
+  if (requested === "week" && (!clips || !clips.length)) {
+    return { window: "all", clips: null, fellBack: true };
+  }
+  return { window: requested, clips: clips || [], fellBack: false };
+}
+
+/** Muted autoplay and hover use the small rendition when it exists; real playback
+ *  (click, lightbox) always uses the full-quality original with audio. */
+function previewSource(clip, muted) {
+  if (!clip) return "";
+  if (muted && clip.preview_url) return clip.preview_url;
+  return clip.video_url || "";
+}
+if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext, topRatedClip, contributorStats, spotlightRail, resolveWindow, previewSource };
 
 // ---- small view helpers ----
 function fmtDur(s){ if(!s||!isFinite(s)) return ''; s=Math.round(s); const m=Math.floor(s/60); return m+':'+String(s%60).padStart(2,'0'); }
