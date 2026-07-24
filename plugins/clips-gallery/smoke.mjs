@@ -120,6 +120,65 @@ const qa = (doc, s) => [...doc.querySelectorAll(s)];
   console.log("smoke: chip switch preserves contributors ok");
 }
 
+// ---- owner can find and use delete on their own gallery ----
+{
+  const deleted = [];
+  const dom = new JSDOM(`<body><div id="app"></div><div class="toast" id="toast"></div></body>`, {
+    url: "https://app.dissent.chat/",
+    pretendToBeVisual: true,
+    runScripts: "dangerously",
+  });
+  const { window } = dom;
+  const errors = [];
+  window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  window.HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
+  window.HTMLMediaElement.prototype.pause = function () {};
+  window.console.error = (...a) => errors.push(a.join(" "));
+  window.confirm = () => true;
+
+  const mine = [
+    { attachment_id: "m1", video_url: "https://x/v1", thumb_url: "https://x/t1", caption: "one", created_at: "2026-07-20", avg_rating: 0, rating_count: 0 },
+    { attachment_id: "m2", video_url: "https://x/v2", thumb_url: "https://x/t2", caption: "two", created_at: "2026-07-21", avg_rating: 0, rating_count: 0 },
+  ];
+  window.Dissent = {
+    init: async () => ({ user: { id: "owner" } }),
+    gallery: {
+      featured: async () => ({ clips: [] }),
+      contributors: async () => ({ contributors: [{ user_id: "owner", display_name: "me", folder: "f", game_name: "RL", clip_count: 2, latest_thumb_url: "" }] }),
+      list: async () => ({ clips: mine }),
+      deleteClip: async id => { deleted.push(id); return {}; },
+    },
+  };
+  const el = window.document.createElement("script");
+  el.textContent = script;
+  window.document.body.appendChild(el);
+  for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 5));
+
+  const doc = window.document;
+  doc.querySelector(".contrib").click();
+  for (let i = 0; i < 25; i++) await new Promise(r => setTimeout(r, 5));
+
+  assert.equal(qa(doc, ".card").length, 2, "own clips rendered");
+  assert.equal(qa(doc, ".card .del").length, 2, "each own card has a quick-delete control");
+  assert.equal(qa(doc, '.edit button[data-act="delete"]').length, 2, "each own card has a Delete action");
+
+  // The grid sorts newest-first, so card 0 is m2 (2026-07-21), not m1. The delete
+  // control must follow the RENDERED order, not the source array.
+  qa(doc, ".card .del")[0].click();
+  for (let i = 0; i < 25; i++) await new Promise(r => setTimeout(r, 5));
+  assert.deepEqual(deleted, ["m2"], "quick-delete deletes the clip it is actually attached to");
+  assert.deepEqual(errors, [], "no console errors");
+  console.log("smoke: owner delete ok");
+}
+
+// ---- non-owners must never see delete ----
+{
+  const { doc } = await render({ weekEmpty: false });
+  // landing shows other people's clips only; no owner controls anywhere
+  assert.equal(qa(doc, ".card .del").length, 0, "no delete control for non-owners");
+  console.log("smoke: non-owner has no delete ok");
+}
+
 // ---- layout rules jsdom cannot compute, asserted against the stylesheet ----
 {
   assert.match(style, /\.landing\{display:grid;grid-template-columns:minmax\(240px,320px\) minmax\(0,1fr\)/,
