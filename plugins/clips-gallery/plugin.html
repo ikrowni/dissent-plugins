@@ -82,21 +82,39 @@
   .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .cposter{width:52px;height:32px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:#05050b}
 
-  /* spotlight stage */
-  .stage{position:relative;border-radius:18px;overflow:hidden;margin:6px 0 18px;
+  /* landing: rail + one player */
+  .landing{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);
+    gap:18px;align-items:start;max-width:1180px;margin:6px 0 18px}
+  @media(max-width:760px){.landing{grid-template-columns:1fr}
+    .landing .rail{order:2}.landing .theater{order:1}}
+  .rail{display:flex;flex-direction:column;gap:6px}
+  .rrow{display:flex;align-items:center;gap:9px;padding:6px;border-radius:10px;
+    background:transparent;border:1px solid transparent;cursor:pointer;width:100%;
+    text-align:left;color:inherit;transition:background .15s,border-color .15s}
+  .rrow:hover{background:rgba(255,255,255,.05)}
+  .rrow.cur{background:rgba(255,207,92,.10);border-color:rgba(255,207,92,.38)}
+  .rrow .n{width:14px;font-size:12px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+  .rrow.cur .n{color:var(--gold)}
+  .rrow .th{width:46px;height:26px;border-radius:5px;object-fit:cover;background:#05050b;flex:0 0 auto}
+  .rrow .nm{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rrow .sc{font-size:11.5px;font-weight:600;color:var(--gold);font-variant-numeric:tabular-nums}
+  .railnote{font-size:11.5px;color:var(--dim);padding:2px 6px 6px}
+  .theater{position:relative;border-radius:18px;overflow:hidden;
     border:1px solid rgba(255,207,92,.28);background:#05050b;
-    box-shadow:0 20px 60px -24px rgba(255,207,92,.35);cursor:pointer;animation:cardIn .4s ease both}
-  .stage video,.stage>img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
-  .stage .glow{position:absolute;inset:0;background:
-    radial-gradient(70% 60% at 50% 110%,rgba(255,207,92,.22),transparent 60%),
-    linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 45%,rgba(0,0,0,.85));pointer-events:none}
-  .stage .ribbon{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:6px;
+    box-shadow:0 20px 60px -24px rgba(255,207,92,.35);animation:cardIn .4s ease both}
+  .theater video,.theater>img{width:100%;aspect-ratio:16/9;max-height:56vh;object-fit:cover;display:block;background:#000}
+  .theater .glow{position:absolute;inset:0;pointer-events:none;background:
+    linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 55%,rgba(0,0,0,.8))}
+  .theater .ribbon{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:6px;
     background:rgba(255,207,92,.16);border:1px solid rgba(255,207,92,.5);color:var(--gold);
     font-size:12px;font-weight:800;letter-spacing:.04em;padding:5px 11px;border-radius:999px;backdrop-filter:blur(4px)}
-  .stage .who{position:absolute;left:16px;bottom:14px;right:16px;display:flex;align-items:center;gap:11px}
-  .stage .who .avatar{width:44px;height:44px;font-size:15px}
-  .stage .who .name{font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.7)}
-  .stage .who .score{margin-left:auto;font-size:13px;font-weight:600;color:#fff;
+  .theater .expand{position:absolute;top:12px;right:12px;z-index:3;background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:9px;padding:5px 9px;font-size:13px;cursor:pointer}
+  /* clears the native control bar so the uploader row is never hidden behind it */
+  .theater .who{position:absolute;left:16px;bottom:52px;right:16px;display:flex;align-items:center;gap:11px;pointer-events:none}
+  .theater .who .avatar{width:40px;height:40px;font-size:14px}
+  .theater .who .name{font-size:17px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+  .theater .who .score{margin-left:auto;font-size:13px;font-weight:600;color:#fff;
     background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);padding:5px 11px;border-radius:999px;backdrop-filter:blur(3px);font-variant-numeric:tabular-nums}
   /* per-contributor page header */
   .cpage{display:flex;gap:16px;align-items:flex-end;margin:6px 0 14px;flex-wrap:wrap}
@@ -113,9 +131,7 @@
   .cstats .st{display:flex;flex-direction:column}
   .cstats .st b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
   .cstats .st span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
-  /* featured section */
-  .frow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:14px;
-    overflow-x:auto;padding:2px 2px 12px;scrollbar-width:thin}
+  /* featured card (used by the per-contributor page) */
   .fcard{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);
     background:var(--panel);cursor:pointer;animation:cardIn .34s ease both;transition:transform .18s,box-shadow .18s,border-color .18s}
   .fcard:hover{transform:translateY(-3px);border-color:rgba(255,207,92,.4);box-shadow:0 12px 30px -12px rgba(255,207,92,.4)}
@@ -223,7 +239,28 @@ function contributorStats(clips){
   const totalRatings = clips.reduce((s, c) => s + (c.rating_count || 0), 0);
   return { count, avg, totalRatings };
 }
-if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext, topRatedClip, contributorStats };
+/** Top 5 of the ranked featured list — the spotlight rail. `featured` returns up to 12. */
+function spotlightRail(clips) {
+  return (clips || []).slice(0, 5);
+}
+
+/** A quiet week must not gut the landing. When `week` returns nothing, the caller
+ *  refetches `all` once (clips === null signals "go fetch") and relabels the ribbon. */
+function resolveWindow(requested, clips) {
+  if (requested === "week" && (!clips || !clips.length)) {
+    return { window: "all", clips: null, fellBack: true };
+  }
+  return { window: requested, clips: clips || [], fellBack: false };
+}
+
+/** Muted autoplay and hover use the small rendition when it exists; real playback
+ *  (click, lightbox) always uses the full-quality original with audio. */
+function previewSource(clip, muted) {
+  if (!clip) return "";
+  if (muted && clip.preview_url) return clip.preview_url;
+  return clip.video_url || "";
+}
+if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext, topRatedClip, contributorStats, spotlightRail, resolveWindow, previewSource };
 
 // ---- small view helpers ----
 function fmtDur(s){ if(!s||!isFinite(s)) return ''; s=Math.round(s); const m=Math.floor(s/60); return m+':'+String(s%60).padStart(2,'0'); }
@@ -303,7 +340,7 @@ function noteDuration(c, secs){
 
 // ============ LANDING: Featured + contributors ============
 async function showContributors(){
-  STATE={view:'contributors', fwindow:(STATE&&STATE.fwindow)||'all'};
+  STATE={view:'contributors', fwindow:(STATE&&STATE.fwindow)||'week'};
   app().innerHTML = emptyState('Loading gallery…', true);
   let list=[];
   try { const r = await Dissent.gallery.contributors(); list=(r&&r.contributors)||[]; } catch(e){ console.error(e); }
@@ -311,16 +348,24 @@ async function showContributors(){
   const share = `<div class="row spread" style="margin-bottom:6px"><span></span><button class="btn" id="shareBtn">＋ Share a folder</button></div>`;
   if(!list.length){ app().innerHTML = share + emptyState('No clips shared here yet. Share one of your folders to start the gallery.'); wireShare(); return; }
 
+  // Landing = one grid: rail on the left (spotlight rows, then contributors), one
+  // player on the right. renderFeatured() only ever rewrites #spotrail and #theater,
+  // so switching the week/all-time chip can't blow away the contributor list.
   app().innerHTML = share +
-    `<div id="featured"></div>` +
-    `<h2 class="sec">Contributors</h2>` +
+    `<div class="landing">
+       <div class="rail">
+         <div id="spotrail"></div>
+         <h2 class="sec">Contributors</h2>` +
     list.map((c,i) => `
       <button class="contrib" data-i="${i}" style="animation-delay:${Math.min(i,16)*28}ms">
         <span class="avatar">${esc((c.display_name||'?').slice(0,2).toUpperCase())}${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:''}</span>
         ${c.latest_thumb_url?`<img class="cposter" src="${esc(c.latest_thumb_url)}" alt="" onerror="this.remove()">`:''}
         <span style="flex:1"><span style="font-size:14px">${esc(c.display_name)}</span><br>
         <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
-      </button>`).join('');
+      </button>`).join('') +
+    `   </div>
+       <div class="theater" id="theater"></div>
+     </div>`;
   app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
     const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name, c.display_name, c.avatar_url);
   });
@@ -329,46 +374,87 @@ async function showContributors(){
 }
 
 async function renderFeatured(){
-  const host = document.getElementById('featured'); if(!host) return;
-  const win = STATE.fwindow || 'all';
+  const host = document.getElementById('spotrail'); if(!host) return;
+  const theater = document.getElementById('theater');
+  let win = STATE.fwindow || 'week';
   let clips=[];
   try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
-  if(!clips.length){ host.innerHTML=''; return; }  // nothing rated yet → hide the section entirely
-  const hero = clips[0], rest = clips.slice(1);
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const heroMedia = (!reduce && hero.video_url)
-    ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
-    : `<img src="${esc(hero.thumb_url||'')}" alt="" onerror="this.remove()">`;
-  const rc = hero.rating_count||0;
+  // A quiet week must not gut the landing: fall back to all-time once, and say so.
+  const rw = resolveWindow(win, clips);
+  const fellBack = rw.fellBack;
+  win = rw.window;
+  if(rw.clips === null){
+    try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); clips=[]; }
+  } else { clips = rw.clips; }
+  if(!clips.length){                       // nothing rated anywhere → rail is contributors only
+    host.innerHTML='';
+    if(theater) theater.remove();
+    return;
+  }
+
+  const rail = spotlightRail(clips);
+  STATE.rail = rail; STATE.railIdx = 0;
   host.innerHTML =
-    `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured</h2>
-      <div class="row" style="gap:6px">
-        <button class="chip gold${win==='week'?' active':''}" data-win="week">This week</button>
-        <button class="chip gold${win==='all'?' active':''}" data-win="all">All time</button>
-      </div></div>
-     <div class="stage" data-hero>
-       ${heroMedia}<div class="glow"></div>
-       <div class="ribbon">★ ${win==='week'?'Clip of the week':'Top rated'}</div>
-       <div class="who">${avatarHTML(hero.display_name, hero.avatar_url)}
-         <span class="name">${esc(hero.display_name||'Unknown')}</span>
-         <span class="score">★ ${(hero.avg_rating||0).toFixed(1)} · ${rc} rating${rc===1?'':'s'}</span>
-       </div>
-     </div>` +
-     (rest.length ? `<div class="frow" id="frow">` +
-      rest.map((c,i)=>`
-        <div class="fcard" data-idx="${i}">
-          <div class="media">
-            ${c.thumb_url?`<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'▶'}
-            <div class="scrim"></div>
-            <div class="rank ${i+2<=3?'r'+(i+2):''}">${i+2}</div>
-            ${ratingWidget(c, false)}
-          </div>
-        </div>`).join('') + `</div>` : '');
-  const hv = host.querySelector('.stage video'); if(hv) hv.play().catch(()=>{});
-  host.querySelector('.stage[data-hero]').onclick = () => openLightbox(clips, 0, {title:'Featured'});
-  const frow = document.getElementById('frow');
-  if(frow) frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx + 1, {title:'Featured'}));
+    `<h2 class="sec" style="margin-bottom:8px">★ Spotlight</h2>
+     <div class="row" style="gap:6px;margin-bottom:8px">
+       <button class="chip gold${STATE.fwindow==='week'?' active':''}" data-win="week">This week</button>
+       <button class="chip gold${STATE.fwindow==='all'?' active':''}" data-win="all">All time</button>
+     </div>
+     ${fellBack?`<div class="railnote">No clips rated this week yet — showing all time.</div>`:''}
+     ${rail.map((c,i)=>`
+       <button class="rrow${i===0?' cur':''}" data-r="${i}">
+         <span class="n">${i+1}</span>
+         ${c.thumb_url?`<img class="th" src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'<span class="th"></span>'}
+         <span class="nm">${esc(c.display_name||'Unknown')}</span>
+         <span class="sc">★ ${(c.avg_rating||0).toFixed(1)}</span>
+       </button>`).join('')}`;
+  renderTheater(0, win, fellBack);
+  host.querySelectorAll('.rrow').forEach(el => el.onclick = () => {
+    const i = +el.dataset.r;
+    host.querySelectorAll('.rrow').forEach(r => r.classList.toggle('cur', +r.dataset.r === i));
+    STATE.railIdx = i;
+    renderTheater(i, win, fellBack);
+  });
   host.querySelectorAll('.chip[data-win]').forEach(el => el.onclick = () => { STATE.fwindow = el.dataset.win; renderFeatured(); });
+}
+
+// One player. Muted autoplay uses the small preview rendition; the first real
+// interaction swaps in the full-quality original so playback keeps quality and audio.
+function renderTheater(i, win, fellBack){
+  const box = document.getElementById('theater'); if(!box) return;
+  const c = (STATE.rail||[])[i]; if(!c) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const poster = c.thumb_url ? ` poster="${esc(c.thumb_url)}"` : '';
+  const media = (!reduce && (c.preview_url || c.video_url))
+    ? `<video src="${esc(previewSource(c, true))}"${poster} muted loop playsinline autoplay controls preload="metadata"></video>`
+    : `<img src="${esc(c.thumb_url||'')}" alt="" onerror="this.remove()">`;
+  const rc = c.rating_count||0;
+  box.innerHTML = media +
+    `<div class="glow"></div>
+     <div class="ribbon">★ ${win==='week'&&!fellBack?'Clip of the week':'Top rated'}</div>
+     <button class="expand" title="Open full size">⛶</button>
+     <div class="who">${avatarHTML(c.display_name, c.avatar_url)}
+       <span class="name">${esc(c.display_name||'Unknown')}</span>
+       <span class="score">★ ${(c.avg_rating||0).toFixed(1)} · ${rc} rating${rc===1?'':'s'}</span>
+     </div>`;
+  const v = box.querySelector('video');
+  if(v){
+    v.play().catch(()=>{});
+    v.addEventListener('loadedmetadata', () => noteDuration(c, v.duration));
+    // Promote the small rendition to the original on the first real interaction.
+    const promote = () => {
+      if(v.dataset.full === '1' || v.muted) return;
+      v.dataset.full = '1';
+      const at = v.currentTime;
+      v.src = previewSource(c, false);
+      v.loop = false;
+      v.addEventListener('loadedmetadata', () => { try { v.currentTime = at; } catch(e){} }, {once:true});
+      v.play().catch(()=>{});
+    };
+    v.addEventListener('volumechange', promote);
+  }
+  const ex = box.querySelector('.expand');
+  if(ex) ex.onclick = (e) => { e.stopPropagation(); openLightbox(STATE.rail, i, {title:'Spotlight'}); };
 }
 
 // ============ CLIPS: filter bar + grid ============
@@ -413,7 +499,7 @@ function renderContribPage(isOwner){
   const stats = contributorStats(clips);
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const heroMedia = hero
-    ? ((!reduce && hero.video_url) ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
+    ? ((!reduce && hero.video_url) ? `<video src="${esc(previewSource(hero, true))}"${hero.thumb_url?` poster="${esc(hero.thumb_url)}"`:''} muted loop playsinline autoplay></video>`
        : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="this.remove()">` : ART))
     : ART;
   const avgStat = stats.avg>0 ? `<div class="st"><b>★ ${stats.avg.toFixed(1)}</b><span>Avg rating</span></div>` : '';
@@ -498,7 +584,11 @@ function wireHover(grid, view){
       if(window.__dragging) return;
       t = setTimeout(() => {
         vid = document.createElement('video');
-        vid.className='hp'; vid.src=c.video_url; vid.muted=true; vid.loop=true; vid.playsInline=true; vid.preload='metadata';
+        vid.className='hp';
+        vid.src = previewSource(c, true);          // small rendition when derived
+        if(c.thumb_url) vid.poster = c.thumb_url;  // paint a frame immediately
+        vid.muted=true; vid.loop=true; vid.playsInline=true;
+        vid.preload='none';                        // metadata IS the moov — never prefetch it
         vid.addEventListener('loadedmetadata', () => noteDuration(c, vid.duration));
         el.appendChild(vid);
         requestAnimationFrame(()=>vid.classList.add('on'));
@@ -578,7 +668,7 @@ function openLightbox(clips, index, opts){
       `<button class="close" aria-label="Close">✕</button>` +
       (many?`<button class="nav prev" aria-label="Previous">‹</button><button class="nav next" aria-label="Next">›</button>`:'') +
       `<div class="lb-stage">
-         <video class="main" src="${esc(url(c))}" controls autoplay playsinline></video>
+         <video class="main" src="${esc(url(c))}"${c.thumb_url?` poster="${esc(c.thumb_url)}"`:''} controls autoplay playsinline></video>
          <div class="lb-meta">
            <div>
              <div class="lb-title">${esc(c.caption || opts.title || 'Clip')}</div>
@@ -618,7 +708,8 @@ function openLightbox(clips, index, opts){
       const c = clips[(n + clips.length) % clips.length];
       if(!c || c===clips[i]) return;
       const v = document.createElement('video');
-      v.className='pf'; v.preload='auto'; v.src=url(c); v.muted=true;
+      // Warm the small rendition, not a full-quality original — this is speculative.
+      v.className='pf'; v.preload='auto'; v.src=previewSource(c, true); v.muted=true;
       v.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none';
       box.appendChild(v);
     });
