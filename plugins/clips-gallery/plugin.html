@@ -57,15 +57,19 @@
     font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;backdrop-filter:blur(4px)}
   .pill{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.62);color:#fff;
     font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;backdrop-filter:blur(2px);font-variant-numeric:tabular-nums}
-  .star{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.55);
-    border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:999px;padding:4px 10px;
-    font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(3px);transition:all .14s;font-variant-numeric:tabular-nums}
-  .star:hover{border-color:rgba(255,207,92,.5)}
-  .star .glyph{color:var(--faint);transition:color .14s,transform .14s}
-  .star.on{border-color:rgba(255,207,92,.5)}
-  .star.on .glyph{color:var(--gold)}
-  .star.pop .glyph{transform:scale(1.35)}
-  .media .star{position:absolute;bottom:8px;left:8px}
+  /* 5-star rating widget */
+  .rating{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 10px;
+    backdrop-filter:blur(3px)}
+  .rating .stars{display:inline-flex;gap:1px}
+  .rating .rs{color:var(--faint);font-size:14px;line-height:1;transition:color .12s,transform .12s;background:0;border:0;padding:0}
+  .rating .rs.fill{color:var(--gold)}
+  .rating.interactive .rs{cursor:pointer}
+  .rating.interactive .rs:hover{transform:scale(1.2)}
+  .rating.mine{border-color:rgba(255,207,92,.5)}
+  .rating .cap{font-size:11px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rating .cap.none{color:var(--dim);font-weight:500}
+  .media .rating{position:absolute;bottom:8px;left:8px}
   .cap{padding:9px 11px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
   .cap:empty{display:none}
 
@@ -165,7 +169,7 @@ function reorderSortOrders(orderedIds){
 function sortClips(clips, mode){
   const c = clips.slice();
   if (mode === "oldest") return c.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  if (mode === "stars") return c.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+  if (mode === "rating") return c.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
   if (mode === "longest") return c.sort((a, b) => (b.duration_secs || 0) - (a.duration_secs || 0));
   return c.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // newest
 }
@@ -183,35 +187,61 @@ function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return ''; return d.t
 let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200); }
 
-// Star chip markup. `data-star` lets us refresh every instance of a clip's chip at once.
-function starChip(c, extra){
-  const on = !!c.starred_by_me;
-  return `<button class="star${on?' on':''}${extra?' '+extra:''}" data-star="${esc(c.attachment_id)}" aria-pressed="${on}" title="${on?'Remove your star':'Star this clip'}">
-    <span class="glyph">${on?'★':'☆'}</span><span class="n">${c.stars||0}</span></button>`;
+// 5-star rating widget. `data-rating="<id>"` lets us refresh every instance (grid + lightbox)
+// of a clip's widget at once. `interactive` false = display-only (Featured, and your own clips).
+function ratingCaption(c){
+  const n = c.rating_count||0;
+  if(!n) return `<span class="cap none">Not yet rated</span>`;
+  return `<span class="cap">${(c.avg_rating||0).toFixed(1)} · ${n} rating${n===1?'':'s'}</span>`;
 }
-function refreshStars(c){
-  document.querySelectorAll(`[data-star="${CSS.escape(c.attachment_id)}"]`).forEach(el => {
-    el.classList.toggle('on', !!c.starred_by_me);
-    el.setAttribute('aria-pressed', !!c.starred_by_me);
-    el.querySelector('.glyph').textContent = c.starred_by_me?'★':'☆';
-    el.querySelector('.n').textContent = c.stars||0;
-    el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),180);
+function starsRow(c, interactive){
+  const filled = Math.round(c.avg_rating||0);
+  let out = '';
+  for(let n=1;n<=5;n++){
+    const f = n<=filled ? ' fill' : '';
+    out += interactive
+      ? `<button class="rs${f}" data-rate="${n}" aria-label="Rate ${n}">★</button>`
+      : `<span class="rs${f}">★</span>`;
+  }
+  return `<span class="stars">${out}</span>`;
+}
+function ratingWidget(c, interactive){
+  const mine = (c.my_rating||0) > 0 ? ' mine' : '';
+  return `<span class="rating${interactive?' interactive':''}${mine}" data-rating="${esc(c.attachment_id)}">${starsRow(c, interactive)}${ratingCaption(c)}</span>`;
+}
+function refreshRating(c){
+  document.querySelectorAll(`[data-rating="${CSS.escape(c.attachment_id)}"]`).forEach(el => {
+    const interactive = el.classList.contains('interactive');
+    el.classList.toggle('mine', (c.my_rating||0) > 0);
+    el.querySelector('.stars').outerHTML = starsRow(c, interactive);
+    // caption is the last child span.cap / .cap.none
+    const cap = el.querySelector('.cap'); if(cap) cap.outerHTML = ratingCaption(c);
+    if(interactive) bindStars(el, c);
   });
 }
-async function toggleStar(c){
-  // optimistic
-  const prev = { stars:c.stars||0, mine:!!c.starred_by_me };
-  c.starred_by_me = !prev.mine; c.stars = prev.stars + (c.starred_by_me?1:-1);
-  refreshStars(c);
+async function applyRating(c, value){
+  const prev = { avg:c.avg_rating||0, mine:c.my_rating||0, count:c.rating_count||0 };
+  // optimistic: only my_rating is known locally (avg depends on everyone) — show my pick immediately.
+  c.my_rating = value === prev.mine ? 0 : value;
+  refreshRating(c);
   try{
-    const r = await Dissent.gallery.star(c.attachment_id);
-    if(r && typeof r.stars==='number'){ c.stars=r.stars; c.starred_by_me=!!r.starred_by_me; refreshStars(c); }
-  }catch(e){ c.stars=prev.stars; c.starred_by_me=prev.mine; refreshStars(c); toast('Could not update star'); console.error(e); }
+    const r = await Dissent.gallery.rate(c.attachment_id, value);
+    if(r && typeof r.avg_rating==='number'){ c.avg_rating=r.avg_rating; c.my_rating=r.my_rating; c.rating_count=r.rating_count; refreshRating(c); }
+  }catch(e){ c.avg_rating=prev.avg; c.my_rating=prev.mine; c.rating_count=prev.count; refreshRating(c); toast('Could not rate'); console.error(e); }
 }
-function wireStars(root, byId){
-  root.querySelectorAll('.star[data-star]').forEach(el => el.onclick = e => {
-    e.stopPropagation(); e.preventDefault();
-    const c = byId[el.dataset.star]; if(c) toggleStar(c);
+// Wire the 5 stars of one widget: hover previews a fill, click sets/clears the rating.
+function bindStars(el, c){
+  const stars = [...el.querySelectorAll('.rs[data-rate]')];
+  const paint = k => stars.forEach((s,i)=> s.classList.toggle('fill', i < k));
+  stars.forEach(s => {
+    s.onmouseover = () => paint(+s.dataset.rate);
+    s.onclick = e => { e.stopPropagation(); e.preventDefault(); applyRating(c, +s.dataset.rate); };
+  });
+  el.onmouseleave = () => paint(Math.round(c.avg_rating||0));
+}
+function wireRating(root, byId){
+  root.querySelectorAll('.rating.interactive[data-rating]').forEach(el => {
+    const c = byId[el.dataset.rating]; if(c) bindStars(el, c);
   });
 }
 // Record a clip's real duration from a loaded <video> (backend omits it); refresh pills.
@@ -253,8 +283,7 @@ async function renderFeatured(){
   const win = STATE.fwindow || 'all';
   let clips=[];
   try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
-  if(!clips.length){ host.innerHTML=''; return; }  // no stars yet → hide the section entirely
-  const byId={}; clips.forEach(c=>byId[c.attachment_id]=c);
+  if(!clips.length){ host.innerHTML=''; return; }  // nothing rated yet → hide the section entirely
   host.innerHTML =
     `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured · top rated</h2>
       <div class="row" style="gap:6px">
@@ -268,12 +297,11 @@ async function renderFeatured(){
             ${c.thumb_url?`<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'▶'}
             <div class="scrim"></div>
             <div class="rank ${i<3?'r'+(i+1):''}">${i+1}</div>
-            ${starChip(c)}
+            ${ratingWidget(c, false)}
           </div>
         </div>`).join('') + `</div>`;
   const frow = document.getElementById('frow');
   frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx, {title:'Featured'}));
-  wireStars(frow, byId);
   host.querySelectorAll('.chip[data-win]').forEach(el => el.onclick = () => { STATE.fwindow = el.dataset.win; renderFeatured(); });
 }
 
@@ -296,7 +324,7 @@ async function showClips(userId, folder, game){
     <div class="grid" id="grid"></div>`;
   document.getElementById('back').onclick = showContributors;
   document.getElementById('playAll').onclick = () => {
-    const view = currentView(); if(view.length) openLightbox(view, 0, {reel:true, title:esc(game||folder)});
+    const view = currentView(); if(view.length) openLightbox(view, 0, {reel:true, title:esc(game||folder), interactive:!isOwner});
   };
   renderToolbar();
   renderGrid();
@@ -316,7 +344,7 @@ function renderToolbar(){
     `<select class="sort" id="sortSel">
        <option value="newest">Newest</option>
        <option value="oldest">Oldest</option>
-       <option value="stars">Most starred</option>
+       <option value="rating">Highest rated</option>
        <option value="longest">Longest</option>
      </select>
      <button class="chip gold${STATE.featuredOnly?' active':''}" id="featToggle">★ Featured</button>
@@ -336,8 +364,8 @@ function renderGrid(){
   const view = currentView();
   const byId={}; STATE.all.forEach(c=>byId[c.attachment_id]=c);
   grid.innerHTML = view.map((c,i)=>card(c,i,dragOK)).join('') || emptyState('No clips match this filter.');
-  grid.querySelectorAll('.media[data-idx]').forEach(el => el.onclick = () => openLightbox(view, +el.dataset.idx, {title:esc(STATE.game||STATE.folder)}));
-  wireStars(grid, byId);
+  grid.querySelectorAll('.media[data-idx]').forEach(el => el.onclick = () => openLightbox(view, +el.dataset.idx, {title:esc(STATE.game||STATE.folder), interactive:!isOwner}));
+  wireRating(grid, byId);
   wireHover(grid, view);
   if(isOwner) wireEdit(grid, view);
   if(dragOK) wireDrag(view, grid);
@@ -359,7 +387,7 @@ function card(c, i, dragOK){
       ${media}<div class="scrim"></div>
       ${c.featured?'<div class="badge">★ Pinned</div>':''}
       <span class="pill" data-dur="${esc(c.attachment_id)}">${dur}</span>
-      ${starChip(c)}
+      ${ratingWidget(c, !isOwner)}
     </div>
     <div class="cap">${esc(c.caption||'')}</div>${edit}</div>`;
 }
@@ -460,7 +488,7 @@ function openLightbox(clips, index, opts){
              <div class="lb-sub">${[fmtDate(c.created_at), c.duration_secs?fmtDur(c.duration_secs):''].filter(Boolean).join(' · ')}${many?` · ${i+1}/${clips.length}`:''}</div>
            </div>
            <div class="lb-actions">
-             ${starChip(c)}
+             ${ratingWidget(c, !!opts.interactive)}
              <button class="btn ghost" id="lbShare">Share link</button>
              <a class="btn dl" href="${esc(url(c))}" download>Download</a>
            </div>
@@ -478,7 +506,7 @@ function openLightbox(clips, index, opts){
     if(prev) prev.onclick = e => { e.stopPropagation(); go(-1); };
     if(next) next.onclick = e => { e.stopPropagation(); go(1); };
     box.querySelectorAll('[data-jump]').forEach(el => el.onclick = e => { e.stopPropagation(); i=+el.dataset.jump; draw(); });
-    wireStars(box, byId);
+    wireRating(box, byId);
     box.querySelector('#lbShare').onclick = e => { e.stopPropagation(); shareLink(url(c)); };
 
     const v = box.querySelector('video.main');
