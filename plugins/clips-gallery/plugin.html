@@ -165,7 +165,7 @@ function reorderSortOrders(orderedIds){
 function sortClips(clips, mode){
   const c = clips.slice();
   if (mode === "oldest") return c.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  if (mode === "stars") return c.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+  if (mode === "rating") return c.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
   if (mode === "longest") return c.sort((a, b) => (b.duration_secs || 0) - (a.duration_secs || 0));
   return c.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // newest
 }
