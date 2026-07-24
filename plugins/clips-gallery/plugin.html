@@ -340,7 +340,7 @@ function noteDuration(c, secs){
 
 // ============ LANDING: Featured + contributors ============
 async function showContributors(){
-  STATE={view:'contributors', fwindow:(STATE&&STATE.fwindow)||'all'};
+  STATE={view:'contributors', fwindow:(STATE&&STATE.fwindow)||'week'};
   app().innerHTML = emptyState('Loading gallery…', true);
   let list=[];
   try { const r = await Dissent.gallery.contributors(); list=(r&&r.contributors)||[]; } catch(e){ console.error(e); }
@@ -348,16 +348,24 @@ async function showContributors(){
   const share = `<div class="row spread" style="margin-bottom:6px"><span></span><button class="btn" id="shareBtn">＋ Share a folder</button></div>`;
   if(!list.length){ app().innerHTML = share + emptyState('No clips shared here yet. Share one of your folders to start the gallery.'); wireShare(); return; }
 
+  // Landing = one grid: rail on the left (spotlight rows, then contributors), one
+  // player on the right. renderFeatured() only ever rewrites #spotrail and #theater,
+  // so switching the week/all-time chip can't blow away the contributor list.
   app().innerHTML = share +
-    `<div id="featured"></div>` +
-    `<h2 class="sec">Contributors</h2>` +
+    `<div class="landing">
+       <div class="rail">
+         <div id="spotrail"></div>
+         <h2 class="sec">Contributors</h2>` +
     list.map((c,i) => `
       <button class="contrib" data-i="${i}" style="animation-delay:${Math.min(i,16)*28}ms">
         <span class="avatar">${esc((c.display_name||'?').slice(0,2).toUpperCase())}${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:''}</span>
         ${c.latest_thumb_url?`<img class="cposter" src="${esc(c.latest_thumb_url)}" alt="" onerror="this.remove()">`:''}
         <span style="flex:1"><span style="font-size:14px">${esc(c.display_name)}</span><br>
         <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
-      </button>`).join('');
+      </button>`).join('') +
+    `   </div>
+       <div class="theater" id="theater"></div>
+     </div>`;
   app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
     const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name, c.display_name, c.avatar_url);
   });
@@ -366,46 +374,87 @@ async function showContributors(){
 }
 
 async function renderFeatured(){
-  const host = document.getElementById('featured'); if(!host) return;
-  const win = STATE.fwindow || 'all';
+  const host = document.getElementById('spotrail'); if(!host) return;
+  const theater = document.getElementById('theater');
+  let win = STATE.fwindow || 'week';
   let clips=[];
   try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
-  if(!clips.length){ host.innerHTML=''; return; }  // nothing rated yet → hide the section entirely
-  const hero = clips[0], rest = clips.slice(1);
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const heroMedia = (!reduce && hero.video_url)
-    ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
-    : `<img src="${esc(hero.thumb_url||'')}" alt="" onerror="this.remove()">`;
-  const rc = hero.rating_count||0;
+  // A quiet week must not gut the landing: fall back to all-time once, and say so.
+  const rw = resolveWindow(win, clips);
+  const fellBack = rw.fellBack;
+  win = rw.window;
+  if(rw.clips === null){
+    try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); clips=[]; }
+  } else { clips = rw.clips; }
+  if(!clips.length){                       // nothing rated anywhere → rail is contributors only
+    host.innerHTML='';
+    if(theater) theater.remove();
+    return;
+  }
+
+  const rail = spotlightRail(clips);
+  STATE.rail = rail; STATE.railIdx = 0;
   host.innerHTML =
-    `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured</h2>
-      <div class="row" style="gap:6px">
-        <button class="chip gold${win==='week'?' active':''}" data-win="week">This week</button>
-        <button class="chip gold${win==='all'?' active':''}" data-win="all">All time</button>
-      </div></div>
-     <div class="stage" data-hero>
-       ${heroMedia}<div class="glow"></div>
-       <div class="ribbon">★ ${win==='week'?'Clip of the week':'Top rated'}</div>
-       <div class="who">${avatarHTML(hero.display_name, hero.avatar_url)}
-         <span class="name">${esc(hero.display_name||'Unknown')}</span>
-         <span class="score">★ ${(hero.avg_rating||0).toFixed(1)} · ${rc} rating${rc===1?'':'s'}</span>
-       </div>
-     </div>` +
-     (rest.length ? `<div class="frow" id="frow">` +
-      rest.map((c,i)=>`
-        <div class="fcard" data-idx="${i}">
-          <div class="media">
-            ${c.thumb_url?`<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'▶'}
-            <div class="scrim"></div>
-            <div class="rank ${i+2<=3?'r'+(i+2):''}">${i+2}</div>
-            ${ratingWidget(c, false)}
-          </div>
-        </div>`).join('') + `</div>` : '');
-  const hv = host.querySelector('.stage video'); if(hv) hv.play().catch(()=>{});
-  host.querySelector('.stage[data-hero]').onclick = () => openLightbox(clips, 0, {title:'Featured'});
-  const frow = document.getElementById('frow');
-  if(frow) frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx + 1, {title:'Featured'}));
+    `<h2 class="sec" style="margin-bottom:8px">★ Spotlight</h2>
+     <div class="row" style="gap:6px;margin-bottom:8px">
+       <button class="chip gold${STATE.fwindow==='week'?' active':''}" data-win="week">This week</button>
+       <button class="chip gold${STATE.fwindow==='all'?' active':''}" data-win="all">All time</button>
+     </div>
+     ${fellBack?`<div class="railnote">No clips rated this week yet — showing all time.</div>`:''}
+     ${rail.map((c,i)=>`
+       <button class="rrow${i===0?' cur':''}" data-r="${i}">
+         <span class="n">${i+1}</span>
+         ${c.thumb_url?`<img class="th" src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'<span class="th"></span>'}
+         <span class="nm">${esc(c.display_name||'Unknown')}</span>
+         <span class="sc">★ ${(c.avg_rating||0).toFixed(1)}</span>
+       </button>`).join('')}`;
+  renderTheater(0, win, fellBack);
+  host.querySelectorAll('.rrow').forEach(el => el.onclick = () => {
+    const i = +el.dataset.r;
+    host.querySelectorAll('.rrow').forEach(r => r.classList.toggle('cur', +r.dataset.r === i));
+    STATE.railIdx = i;
+    renderTheater(i, win, fellBack);
+  });
   host.querySelectorAll('.chip[data-win]').forEach(el => el.onclick = () => { STATE.fwindow = el.dataset.win; renderFeatured(); });
+}
+
+// One player. Muted autoplay uses the small preview rendition; the first real
+// interaction swaps in the full-quality original so playback keeps quality and audio.
+function renderTheater(i, win, fellBack){
+  const box = document.getElementById('theater'); if(!box) return;
+  const c = (STATE.rail||[])[i]; if(!c) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const poster = c.thumb_url ? ` poster="${esc(c.thumb_url)}"` : '';
+  const media = (!reduce && (c.preview_url || c.video_url))
+    ? `<video src="${esc(previewSource(c, true))}"${poster} muted loop playsinline autoplay controls preload="metadata"></video>`
+    : `<img src="${esc(c.thumb_url||'')}" alt="" onerror="this.remove()">`;
+  const rc = c.rating_count||0;
+  box.innerHTML = media +
+    `<div class="glow"></div>
+     <div class="ribbon">★ ${win==='week'&&!fellBack?'Clip of the week':'Top rated'}</div>
+     <button class="expand" title="Open full size">⛶</button>
+     <div class="who">${avatarHTML(c.display_name, c.avatar_url)}
+       <span class="name">${esc(c.display_name||'Unknown')}</span>
+       <span class="score">★ ${(c.avg_rating||0).toFixed(1)} · ${rc} rating${rc===1?'':'s'}</span>
+     </div>`;
+  const v = box.querySelector('video');
+  if(v){
+    v.play().catch(()=>{});
+    v.addEventListener('loadedmetadata', () => noteDuration(c, v.duration));
+    // Promote the small rendition to the original on the first real interaction.
+    const promote = () => {
+      if(v.dataset.full === '1' || v.muted) return;
+      v.dataset.full = '1';
+      const at = v.currentTime;
+      v.src = previewSource(c, false);
+      v.loop = false;
+      v.addEventListener('loadedmetadata', () => { try { v.currentTime = at; } catch(e){} }, {once:true});
+      v.play().catch(()=>{});
+    };
+    v.addEventListener('volumechange', promote);
+  }
+  const ex = box.querySelector('.expand');
+  if(ex) ex.onclick = (e) => { e.stopPropagation(); openLightbox(STATE.rail, i, {title:'Spotlight'}); };
 }
 
 // ============ CLIPS: filter bar + grid ============
