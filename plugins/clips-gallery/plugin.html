@@ -82,6 +82,37 @@
   .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .cposter{width:52px;height:32px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:#05050b}
 
+  /* spotlight stage */
+  .stage{position:relative;border-radius:18px;overflow:hidden;margin:6px 0 18px;
+    border:1px solid rgba(255,207,92,.28);background:#05050b;
+    box-shadow:0 20px 60px -24px rgba(255,207,92,.35);cursor:pointer;animation:cardIn .4s ease both}
+  .stage video,.stage>img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+  .stage .glow{position:absolute;inset:0;background:
+    radial-gradient(70% 60% at 50% 110%,rgba(255,207,92,.22),transparent 60%),
+    linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 45%,rgba(0,0,0,.85));pointer-events:none}
+  .stage .ribbon{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:6px;
+    background:rgba(255,207,92,.16);border:1px solid rgba(255,207,92,.5);color:var(--gold);
+    font-size:12px;font-weight:800;letter-spacing:.04em;padding:5px 11px;border-radius:999px;backdrop-filter:blur(4px)}
+  .stage .who{position:absolute;left:16px;bottom:14px;right:16px;display:flex;align-items:center;gap:11px}
+  .stage .who .avatar{width:44px;height:44px;font-size:15px}
+  .stage .who .name{font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+  .stage .who .score{margin-left:auto;font-size:13px;font-weight:600;color:#fff;
+    background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);padding:5px 11px;border-radius:999px;backdrop-filter:blur(3px);font-variant-numeric:tabular-nums}
+  /* per-contributor page header */
+  .cpage{display:flex;gap:16px;align-items:flex-end;margin:6px 0 14px;flex-wrap:wrap}
+  .cpage .hero{position:relative;flex:1 1 320px;min-width:280px;border-radius:16px;overflow:hidden;
+    border:1px solid var(--accent-line);background:#05050b;cursor:pointer}
+  .cpage .hero video,.cpage .hero img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+  .cpage .hero .glow{position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.8));pointer-events:none}
+  .cpage .side{flex:1 1 220px;display:flex;flex-direction:column;gap:12px}
+  .cpage .idrow{display:flex;align-items:center;gap:11px}
+  .cpage .idrow .avatar{width:46px;height:46px;font-size:16px}
+  .cpage .idrow .nm{font-size:19px;font-weight:700}
+  .cpage .idrow .gm{font-size:13px;color:var(--dim)}
+  .cstats{display:flex;gap:18px;flex-wrap:wrap}
+  .cstats .st{display:flex;flex-direction:column}
+  .cstats .st b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cstats .st span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
   /* featured section */
   .frow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:14px;
     overflow-x:auto;padding:2px 2px 12px;scrollbar-width:thin}
@@ -179,13 +210,32 @@ function deriveTagChips(clips){
   return [...set];
 }
 function reelNext(i, n){ return (i + 1) % n; }
-if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext };
+function topRatedClip(clips){
+  if (!clips || !clips.length) return null;
+  const rated = clips.filter(c => (c.rating_count || 0) > 0);
+  if (rated.length) return rated.reduce((a, b) => (b.avg_rating || 0) > (a.avg_rating || 0) ? b : a);
+  return clips.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+}
+function contributorStats(clips){
+  const count = clips.length;
+  const rated = clips.filter(c => (c.rating_count || 0) > 0);
+  const avg = rated.length ? rated.reduce((s, c) => s + (c.avg_rating || 0), 0) / rated.length : 0;
+  const totalRatings = clips.reduce((s, c) => s + (c.rating_count || 0), 0);
+  return { count, avg, totalRatings };
+}
+if (typeof module !== 'undefined') module.exports = { reorderSortOrders, sortClips, deriveTagChips, reelNext, topRatedClip, contributorStats };
 
 // ---- small view helpers ----
 function fmtDur(s){ if(!s||!isFinite(s)) return ''; s=Math.round(s); const m=Math.floor(s/60); return m+':'+String(s%60).padStart(2,'0'); }
 function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return ''; return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200); }
+
+// Avatar markup: initials base + optional <img> overlay that removes itself on error (so a
+// broken/blocked avatar shows initials, never a blank circle). Shared by rows, stage, page.
+function avatarHTML(name, url){
+  return `<span class="avatar">${esc((name||'?').slice(0,2).toUpperCase())}${url?`<img src="${esc(url)}" alt="" onerror="this.remove()">`:''}</span>`;
+}
 
 // 5-star rating widget. `data-rating="<id>"` lets us refresh every instance (grid + lightbox)
 // of a clip's widget at once. `interactive` false = display-only (Featured, and your own clips).
@@ -272,7 +322,7 @@ async function showContributors(){
         <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
       </button>`).join('');
   app().querySelectorAll('.contrib').forEach(el => el.onclick = () => {
-    const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name);
+    const c = list[+el.dataset.i]; showClips(c.user_id, c.folder, c.game_name, c.display_name, c.avatar_url);
   });
   wireShare();
   renderFeatured();
@@ -284,30 +334,46 @@ async function renderFeatured(){
   let clips=[];
   try { const r = await Dissent.gallery.featured(win); clips=(r&&r.clips)||[]; } catch(e){ console.error(e); }
   if(!clips.length){ host.innerHTML=''; return; }  // nothing rated yet → hide the section entirely
+  const hero = clips[0], rest = clips.slice(1);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const heroMedia = (!reduce && hero.video_url)
+    ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
+    : `<img src="${esc(hero.thumb_url||'')}" alt="" onerror="this.remove()">`;
+  const rc = hero.rating_count||0;
   host.innerHTML =
-    `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured · top rated</h2>
+    `<div class="row spread"><h2 class="sec" style="margin-bottom:0">★ Featured</h2>
       <div class="row" style="gap:6px">
         <button class="chip gold${win==='week'?' active':''}" data-win="week">This week</button>
         <button class="chip gold${win==='all'?' active':''}" data-win="all">All time</button>
       </div></div>
-     <div class="frow" style="margin-top:10px" id="frow">` +
-      clips.map((c,i)=>`
+     <div class="stage" data-hero>
+       ${heroMedia}<div class="glow"></div>
+       <div class="ribbon">★ ${win==='week'?'Clip of the week':'Top rated'}</div>
+       <div class="who">${avatarHTML(hero.display_name, hero.avatar_url)}
+         <span class="name">${esc(hero.display_name||'Unknown')}</span>
+         <span class="score">★ ${(hero.avg_rating||0).toFixed(1)} · ${rc} rating${rc===1?'':'s'}</span>
+       </div>
+     </div>` +
+     (rest.length ? `<div class="frow" id="frow">` +
+      rest.map((c,i)=>`
         <div class="fcard" data-idx="${i}">
           <div class="media">
             ${c.thumb_url?`<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'▶'}
             <div class="scrim"></div>
-            <div class="rank ${i<3?'r'+(i+1):''}">${i+1}</div>
+            <div class="rank ${i+2<=3?'r'+(i+2):''}">${i+2}</div>
             ${ratingWidget(c, false)}
           </div>
-        </div>`).join('') + `</div>`;
+        </div>`).join('') + `</div>` : '');
+  const hv = host.querySelector('.stage video'); if(hv) hv.play().catch(()=>{});
+  host.querySelector('.stage[data-hero]').onclick = () => openLightbox(clips, 0, {title:'Featured'});
   const frow = document.getElementById('frow');
-  frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx, {title:'Featured'}));
+  if(frow) frow.querySelectorAll('.fcard').forEach(el => el.onclick = () => openLightbox(clips, +el.dataset.idx + 1, {title:'Featured'}));
   host.querySelectorAll('.chip[data-win]').forEach(el => el.onclick = () => { STATE.fwindow = el.dataset.win; renderFeatured(); });
 }
 
 // ============ CLIPS: filter bar + grid ============
-async function showClips(userId, folder, game){
-  STATE={view:'clips',userId,folder,game,sort:'newest',featuredOnly:false,tag:null};
+async function showClips(userId, folder, game, name, avatar){
+  STATE={view:'clips',userId,folder,game,cname:name,cavatar:avatar,sort:'newest',featuredOnly:false,tag:null};
   const isOwner = ME && ME.id === userId;
   app().innerHTML = emptyState('Loading clips…', true);
   let clips=[];
@@ -320,8 +386,10 @@ async function showClips(userId, folder, game){
         ${isOwner?'<span class="muted">your gallery — drag to reorder</span>':''}</div>
       <button class="btn" id="playAll">▶ Play all</button>
     </div>
+    <div id="cpage"></div>
     <div class="toolbar" id="toolbar"></div>
     <div class="grid" id="grid"></div>`;
+  renderContribPage(isOwner);
   document.getElementById('back').onclick = showContributors;
   document.getElementById('playAll').onclick = () => {
     const view = currentView(); if(view.length) openLightbox(view, 0, {reel:true, title:esc(game||folder), interactive:!isOwner});
@@ -335,6 +403,35 @@ function currentView(){
   if(STATE.featuredOnly) v = v.filter(c=>c.featured);
   if(STATE.tag) v = v.filter(c=>(c.tags||[]).includes(STATE.tag));
   return sortClips(v, STATE.sort);
+}
+
+// Per-contributor page header: a hero of their #1 all-time clip + identity + stats.
+function renderContribPage(isOwner){
+  const host = document.getElementById('cpage'); if(!host) return;
+  const clips = STATE.all||[];
+  const hero = topRatedClip(clips);
+  const stats = contributorStats(clips);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const heroMedia = hero
+    ? ((!reduce && hero.video_url) ? `<video src="${esc(hero.video_url)}" muted loop playsinline autoplay></video>`
+       : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="this.remove()">` : ART))
+    : ART;
+  const avgStat = stats.avg>0 ? `<div class="st"><b>★ ${stats.avg.toFixed(1)}</b><span>Avg rating</span></div>` : '';
+  host.innerHTML = `<div class="cpage">
+      <div class="hero" data-hero>${heroMedia}<div class="glow"></div></div>
+      <div class="side">
+        <div class="idrow">${avatarHTML(STATE.cname, STATE.cavatar)}
+          <div><div class="nm">${esc(STATE.cname||STATE.game||'Contributor')}</div>
+          <div class="gm">${esc(STATE.game||STATE.folder)}</div></div></div>
+        <div class="cstats">
+          <div class="st"><b>${stats.count}</b><span>Clips</span></div>
+          ${avgStat}
+          <div class="st"><b>${stats.totalRatings}</b><span>Ratings</span></div>
+        </div>
+      </div>
+    </div>`;
+  const hv = host.querySelector('.hero video'); if(hv) hv.play().catch(()=>{});
+  if(hero){ host.querySelector('.hero[data-hero]').onclick = () => openLightbox([hero], 0, {title:esc(STATE.game||STATE.folder), interactive:!isOwner}); }
 }
 
 function renderToolbar(){

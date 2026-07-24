@@ -11,3 +11,16 @@ export function deriveTagChips(clips) {
   return [...set];
 }
 export function reelNext(i, n) { return (i + 1) % n; }
+export function topRatedClip(clips) {
+  if (!clips || !clips.length) return null;
+  const rated = clips.filter(c => (c.rating_count || 0) > 0);
+  if (rated.length) return rated.reduce((a, b) => (b.avg_rating || 0) > (a.avg_rating || 0) ? b : a);
+  return clips.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+}
+export function contributorStats(clips) {
+  const count = clips.length;
+  const rated = clips.filter(c => (c.rating_count || 0) > 0);
+  const avg = rated.length ? rated.reduce((s, c) => s + (c.avg_rating || 0), 0) / rated.length : 0;
+  const totalRatings = clips.reduce((s, c) => s + (c.rating_count || 0), 0);
+  return { count, avg, totalRatings };
+}
