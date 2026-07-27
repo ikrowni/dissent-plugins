@@ -96,6 +96,14 @@
   .rrow .n{width:14px;font-size:12px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
   .rrow.cur .n{color:var(--gold)}
   .rrow .th{width:46px;height:26px;border-radius:5px;object-fit:cover;background:#05050b;flex:0 0 auto}
+  /* A clip whose object is gone. Previously these just vanished (onerror →
+     this.remove()), so a dead clip left an unexplained hole in the grid and a
+     bare 404 in the console. */
+  .cliplost{display:flex;align-items:center;justify-content:center;gap:.4em;width:100%;height:100%;min-height:2em;
+    background:repeating-linear-gradient(45deg,#0b0b14,#0b0b14 8px,#0e0e18 8px,#0e0e18 16px);
+    border:1px dashed rgba(255,255,255,.16);border-radius:8px;color:rgba(255,255,255,.42);
+    font-size:.72rem;letter-spacing:.02em;text-align:center;padding:.4em}
+  .cliplost b{font-weight:600;color:rgba(255,255,255,.55)}
   .rrow .nm{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rrow .sc{font-size:11.5px;font-weight:600;color:var(--gold);font-variant-numeric:tabular-nums}
   .railnote{font-size:11.5px;color:var(--dim);padding:2px 6px 6px}
@@ -281,6 +289,19 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 
 // Avatar markup: initials base + optional <img> overlay that removes itself on error (so a
 // broken/blocked avatar shows initials, never a blank circle). Shared by rows, stage, page.
+// Swap dead clip media for a visible placeholder rather than deleting it.
+// Silent removal made a removed clip indistinguishable from a layout bug, and
+// left only a 404 in the console to explain the gap.
+function clipLost(el){
+  if(!el || !el.parentNode) return;
+  const ph = document.createElement('div');
+  ph.className = 'cliplost ' + (el.className || '');
+  ph.innerHTML = '<b>Clip unavailable</b>';
+  ph.title = 'This clip\u2019s file is no longer in storage.';
+  el.parentNode.replaceChild(ph, el);
+}
+window.clipLost = clipLost;
+
 function avatarHTML(name, url){
   return `<span class="avatar">${esc((name||'?').slice(0,2).toUpperCase())}${url?`<img src="${esc(url)}" alt="" onerror="this.remove()">`:''}</span>`;
 }
@@ -370,7 +391,7 @@ async function showContributors(){
     list.map((c,i) => `
       <button class="contrib" data-i="${i}" style="animation-delay:${Math.min(i,16)*28}ms">
         <span class="avatar">${esc((c.display_name||'?').slice(0,2).toUpperCase())}${c.avatar_url?`<img src="${esc(c.avatar_url)}" alt="" onerror="this.remove()">`:''}</span>
-        ${c.latest_thumb_url?`<img class="cposter" src="${esc(c.latest_thumb_url)}" alt="" onerror="this.remove()">`:''}
+        ${c.latest_thumb_url?`<img class="cposter" src="${esc(c.latest_thumb_url)}" alt="" onerror="clipLost(this)">`:''}
         <span style="flex:1"><span style="font-size:14px">${esc(c.display_name)}</span><br>
         <span class="muted">${esc(c.game_name||c.folder)} · ${c.clip_count} clip${c.clip_count===1?'':'s'}</span></span>
       </button>`).join('') +
@@ -415,7 +436,7 @@ async function renderFeatured(){
      ${rail.map((c,i)=>`
        <button class="rrow${i===0?' cur':''}" data-r="${i}">
          <span class="n">${i+1}</span>
-         ${c.thumb_url?`<img class="th" src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`:'<span class="th"></span>'}
+         ${c.thumb_url?`<img class="th" src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="clipLost(this)">`:'<span class="th"></span>'}
          <span class="nm">${esc(c.display_name||'Unknown')}</span>
          <span class="sc">★ ${(c.avg_rating||0).toFixed(1)}</span>
        </button>`).join('')}`;
@@ -437,8 +458,8 @@ function renderTheater(i, win, fellBack){
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const poster = c.thumb_url ? ` poster="${esc(c.thumb_url)}"` : '';
   const media = (!reduce && (c.preview_url || c.video_url))
-    ? `<video src="${esc(previewSource(c, true))}"${poster} muted loop playsinline autoplay controls preload="metadata"></video>`
-    : `<img src="${esc(c.thumb_url||'')}" alt="" onerror="this.remove()">`;
+    ? `<video src="${esc(previewSource(c, true))}"${poster} muted loop playsinline autoplay controls preload="metadata" onerror="clipLost(this)"></video>`
+    : `<img src="${esc(c.thumb_url||'')}" alt="" onerror="clipLost(this)">`;
   const rc = c.rating_count||0;
   box.innerHTML = media +
     `<div class="glow"></div>
@@ -510,8 +531,8 @@ function renderContribPage(isOwner){
   const stats = contributorStats(clips);
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const heroMedia = hero
-    ? ((!reduce && hero.video_url) ? `<video src="${esc(previewSource(hero, true))}"${hero.thumb_url?` poster="${esc(hero.thumb_url)}"`:''} muted loop playsinline autoplay></video>`
-       : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="this.remove()">` : ART))
+    ? ((!reduce && hero.video_url) ? `<video src="${esc(previewSource(hero, true))}"${hero.thumb_url?` poster="${esc(hero.thumb_url)}"`:''} muted loop playsinline autoplay onerror="clipLost(this)"></video>`
+       : (hero.thumb_url ? `<img src="${esc(hero.thumb_url)}" alt="" onerror="clipLost(this)">` : ART))
     : ART;
   const avgStat = stats.avg>0 ? `<div class="st"><b>★ ${stats.avg.toFixed(1)}</b><span>Avg rating</span></div>` : '';
   host.innerHTML = `<div class="cpage">
@@ -567,7 +588,7 @@ function renderGrid(){
 
 function card(c, i, dragOK){
   const media = c.thumb_url
-    ? `<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="this.remove()">`
+    ? `<img src="${esc(c.thumb_url)}" alt="" loading="lazy" onerror="clipLost(this)">`
     : '▶';
   const dur = c.duration_secs ? fmtDur(c.duration_secs) : '';
   const isOwner = ME && ME.id === STATE.userId;
@@ -693,7 +714,7 @@ function openLightbox(clips, index, opts){
       `<button class="close" aria-label="Close">✕</button>` +
       (many?`<button class="nav prev" aria-label="Previous">‹</button><button class="nav next" aria-label="Next">›</button>`:'') +
       `<div class="lb-stage">
-         <video class="main" src="${esc(url(c))}"${c.thumb_url?` poster="${esc(c.thumb_url)}"`:''} controls autoplay playsinline></video>
+         <video class="main" src="${esc(url(c))}"${c.thumb_url?` poster="${esc(c.thumb_url)}"`:''} controls autoplay playsinline onerror="clipLost(this)"></video>
          <div class="lb-meta">
            <div>
              <div class="lb-title">${esc(c.caption || opts.title || 'Clip')}</div>
