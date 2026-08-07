@@ -170,7 +170,10 @@ export async function deleteCampaign(id) {
   delete serverData.campaigns[id];
   // Persist the removal FIRST. If the later cleanup fails the campaign is still
   // gone from the DM's list rather than reappearing on next load.
-  await saveHubDm(serverData);
+  // allowRemovals: this is the one path that may shrink hub-index — saveHubDm
+  // otherwise refuses, because an empty campaign set is far more often a failed
+  // read than a real deletion.
+  await saveHubDm(serverData, { allowRemovals: true });
 
   // Reclaim the campaign's own storage: its shard key, and any files uploaded
   // under attachContext "campaign:<id>" (map backgrounds, zone audio, portraits).
