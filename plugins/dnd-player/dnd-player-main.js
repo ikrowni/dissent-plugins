@@ -455,8 +455,8 @@ async function onInit(data) {
   if (!myCampaign) myCampaign = campaigns.find(c => (c.members||[]).includes(USER_ID) || c.dmUserId === USER_ID);
   CAMPAIGN_ID = myCampaign?.id ?? null;
   if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<span>Join a campaign via the D&D Hub to use this sidebar.</span>'; return; }
-  const isDMOnly = myCampaign.dmUserId === USER_ID && !(myCampaign.members||[]).includes(USER_ID);
-  if (isDMOnly) { parent.postMessage({ type: 'dissent:slot-action', action: 'hide' }, '*'); return; }
+  // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
+  // character in the campaign is what proves you are playing it; membership does not.
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
   CHAR = userData[CAMPAIGN_ID] ?? null;
   if (!CHAR && USER_ID && CAMPAIGN_ID) {
@@ -470,6 +470,25 @@ async function onInit(data) {
       storageSetCompanion('dnd-hub', 'characters', 'user', userData).catch(() => {});
     }
   }
+
+  // Hide the player sheet from a DM who is only running the game — they use the
+  // D&D Master sidebar instead.
+  //
+  // ⚠️ `members` alone is NOT a sufficient test, and testing it alone was a bug:
+  // nothing ever adds a DM to `campaign.members`. dnd-hub's requestJoin() is the
+  // only writer of that array, and its candidate list excludes campaigns where
+  // `dmUserId === userId`, so the "join" path a DM would need does not exist.
+  // Character creation writes `characterSummaries[userId]` but never `members`.
+  // So a DM who built a character and clicked their own campaign in "My Campaigns"
+  // (enterCampaignAsPlayer) hit isDMOnly === true and this sidebar hid itself
+  // permanently — PluginRuntime treats a role-mismatch hide as final until remount.
+  // The gate the original gesture wanted is "is this person actually playing",
+  // and owning a character in the campaign answers that for DM and player alike.
+  const isDMOnly = myCampaign.dmUserId === USER_ID
+    && !(myCampaign.members || []).includes(USER_ID)
+    && !CHAR;
+  if (isDMOnly) { parent.postMessage({ type: 'dissent:slot-action', action: 'hide' }, '*'); return; }
+
   if (!CHAR) {
     document.getElementById('loading').innerHTML =
       '<div style="text-align:center;padding:16px">' +
