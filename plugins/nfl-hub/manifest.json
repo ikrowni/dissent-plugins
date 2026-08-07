@@ -9,7 +9,7 @@
   "context": ["channel"],
   "url": "https://plugins.dissent.chat/plugins/nfl-hub/plugin.html",
   "declared_permissions": ["fetch:external"],
-  "allowed_fetch_domains": ["api.sleeper.com", "site.api.espn.com", "api.the-odds-api.com"],
+  "allowed_fetch_domains": ["api.sleeper.app", "site.api.espn.com", "api.the-odds-api.com"],
   "config_schema": null,
   "categories": ["sports", "nfl"],
   "sdk_version": "1"
