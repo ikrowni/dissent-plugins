@@ -1,0 +1,13 @@
+{
+  "name": "dissent-plugins",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "vitest": "^3.2.4"
+  }
+}

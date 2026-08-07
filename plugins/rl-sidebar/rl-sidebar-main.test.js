@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+// ^ these modules touch window/document at import time. Added 2026-08-07 when the
+// repo gained a test runner; without it every test here dies on "window is not defined".
 import { describe, it, expect } from 'vitest';
 import { getMemberRankInfo } from './rl-sidebar-main.js';
 
