@@ -1,0 +1,101 @@
+// core/ui.js — shared pure render primitives.
+//
+// Every view composes these and every one returns an HTML STRING, never a node.
+// That keeps views testable by parsing their output, and keeps rendering a single
+// innerHTML write rather than a tree of appendChild calls.
+//
+// Interactivity is delegation-only: primitives emit data-act (and data-* payload)
+// attributes, and core/app.js has the single listener. Inline onclick would work
+// under this CSP, but it forces every handler into module scope and makes the
+// renders untestable.
+
+export function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/** Team logo + abbreviation. The most repeated unit in the plugin. */
+export function chip(side, { clickable = false, size = '', showRecord = true } = {}) {
+  if (!side) return '';
+  const inner = `<img src="${esc(side.logo)}" alt="" loading="lazy">`
+    + `<span class="abbr">${esc(side.abbr)}</span>`
+    + (showRecord && side.record ? `<span class="rec">${esc(side.record)}</span>` : '');
+  const cls = `chip${size ? ` ${size}` : ''}`;
+  if (!clickable) return `<span class="${cls}">${inner}</span>`;
+  return `<button class="${cls} clickable" data-act="team" data-team="${esc(side.abbr)}"`
+    + ` aria-label="${esc(side.fullName ?? side.abbr)}">${inner}</button>`;
+}
+
+export function tile(label, value, { good = false } = {}) {
+  return `<div class="tile"><div class="label">${esc(label)}</div>`
+    + `<div class="value num${good ? ' good' : ''}">${esc(value)}</div></div>`;
+}
+
+export function panel({ title, body, right = '', flush = false, id = '' }) {
+  return `<section class="panel"${id ? ` id="${esc(id)}"` : ''}>`
+    + `<div class="panel-head"><h2>${esc(title)}</h2>`
+    + (right ? `<div class="right">${right}</div>` : '')
+    + `</div><div class="panel-body${flush ? ' flush' : ''}">${body}</div></section>`;
+}
+
+/** Game-state badge. `state` is a Game.state: 'pre' | 'in' | 'post'. */
+export function badge(state, detail = '') {
+  if (state === 'in') {
+    return '<span class="badge live"><span class="live-dot"></span>LIVE</span>';
+  }
+  if (state === 'post') return `<span class="badge final">${esc(detail || 'Final')}</span>`;
+  return `<span class="badge">${esc(detail || 'Scheduled')}</span>`;
+}
+
+export function stateMsg(text, { spinner = false, retry = false } = {}) {
+  return `<div class="state">${spinner ? '<div class="spinner"></div>' : ''}`
+    + `<div>${esc(text)}</div>`
+    + (retry ? '<button class="retry" data-act="retry">Try again</button>' : '')
+    + '</div>';
+}
+
+/**
+ * Inline sparkline. Returns '' for fewer than two usable points rather than a broken
+ * svg with a single coordinate.
+ */
+export function sparkline(values, { w = 120, h = 22, stroke = 'var(--text-3)' } = {}) {
+  // Nullish is dropped BEFORE coercion. Number(null) is 0, so coercing first would
+  // draw a spurious dip to zero for a missing datapoint instead of skipping it.
+  const vals = (values ?? [])
+    .filter((v) => v !== null && v !== undefined && v !== '')
+    .map(Number)
+    .filter(Number.isFinite);
+  if (vals.length < 2) return '';
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  // A flat series has zero span; dividing by it yields NaN coordinates.
+  const span = max - min || 1;
+  const step = w / (vals.length - 1);
+  const pts = vals
+    .map((v, i) => `${Math.round(i * step)},${Math.round(h - ((v - min) / span) * h)}`)
+    .join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">`
+    + `<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.6"/></svg>`;
+}
+
+/** One row of the bidirectional team-stat comparison.
+ *
+ *  Values may be non-numeric ("18:04", "6/9"). The bar widths coerce to a number and
+ *  fall back to 0, while the displayed text keeps the original string — that split is
+ *  what keeps NaN out of the widths. */
+export function cmpRow(label, left, right, leftColor, rightColor) {
+  const n = (v) => Number(String(v ?? '').replace(/[^\d.]/g, '')) || 0;
+  const l = n(left);
+  const r = n(right);
+  const total = l + r;
+  const lp = total ? Math.round((l / total) * 100) : 50;
+  const rp = total ? 100 - lp : 50;
+  return '<div class="cmp-row">'
+    + `<span class="v l num">${esc(left)}</span>`
+    + `<span class="cmp-bar l"><i style="width:${lp}%;background:${esc(leftColor)}"></i></span>`
+    + `<span class="lbl">${esc(label)}</span>`
+    + `<span class="cmp-bar"><i style="width:${rp}%;background:${esc(rightColor)}"></i></span>`
+    + `<span class="v num">${esc(right)}</span>`
+    + '</div>';
+}
