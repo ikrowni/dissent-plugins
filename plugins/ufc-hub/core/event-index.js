@@ -32,26 +32,49 @@ export function normaliseEventName(name) {
     .trim();
 }
 
+/** Events this far apart in time cannot be the same card. */
+const MATCH_WINDOW_MS = 36 * 60 * 60 * 1000;
+
 /**
  * Find the CloudFront candidate for an ESPN event.
  *
- * @param target      { date: 'YYYY-MM-DD', name }
+ * Matching is on the START TIME, not the date string.
+ *
+ * ⚠️ A bare YYYY-MM-DD comparison is WRONG, and live data proves it: DWCS 10.3 is
+ * `2026-08-25T23:00Z` in ESPN and `2026-08-26T00:00Z` in CloudFront — one hour apart, but
+ * straddling midnight UTC, so the date strings disagree and a date-string join drops the
+ * event entirely. An exact date match is still tried first because it is the common case;
+ * anything else falls back to the nearest start time inside a 36-hour window.
+ *
+ * @param target      { date: 'YYYY-MM-DD', startTime?, name }
  * @param candidates  [{ eventId, startTime, name }]
  */
 export function matchEvent(target, candidates) {
   const date = target?.date;
   if (!date || !Array.isArray(candidates) || !candidates.length) return null;
 
+  const pick = (list) => {
+    if (list.length === 1) return list[0];
+    // Only when a window genuinely holds more than one card does the name decide.
+    const want = normaliseEventName(target.name);
+    return list.find((c) => normaliseEventName(c.name) === want) ?? list[0];
+  };
+
   const sameDay = candidates.filter(
     (c) => String(c?.startTime ?? '').slice(0, 10) === date,
   );
-  if (!sameDay.length) return null;
-  // The measured common case: a date identifies an event outright, whatever it is called.
-  if (sameDay.length === 1) return sameDay[0];
+  if (sameDay.length) return pick(sameDay);
 
-  // Only when a day genuinely holds more than one card does the name decide.
-  const want = normaliseEventName(target.name);
-  return sameDay.find((c) => normaliseEventName(c.name) === want) ?? sameDay[0];
+  // Nothing on the exact day — fall back to proximity, which survives the midnight straddle.
+  const t = new Date(target.startTime ?? `${date}T12:00:00Z`).getTime();
+  if (!Number.isFinite(t)) return null;
+
+  const near = candidates
+    .map((c) => ({ c, dt: Math.abs(new Date(c?.startTime ?? 0).getTime() - t) }))
+    .filter((x) => Number.isFinite(x.dt) && x.dt <= MATCH_WINDOW_MS)
+    .sort((a, b) => a.dt - b.dt);
+
+  return near.length ? pick(near.map((x) => x.c)) : null;
 }
 
 /** The event a viewer most likely wants: the next upcoming one, else the most recent. */

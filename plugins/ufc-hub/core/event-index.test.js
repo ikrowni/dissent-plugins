@@ -100,6 +100,28 @@ describe('matchEvent', () => {
     expect(hit.eventId).toBe(901);
   });
 
+  it('matches across a midnight-UTC straddle, where the DATE STRINGS DISAGREE', () => {
+    // Live data, 2026-08-08: ESPN dates DWCS 10.3 as 2026-08-25T23:00Z while CloudFront
+    // stamps it 2026-08-26T00:00Z — one hour apart, opposite sides of midnight UTC. A
+    // bare YYYY-MM-DD join drops this event entirely.
+    const cf = [{ eventId: 1330, startTime: '2026-08-26T00:00Z', name: 'DWCS 10.3' }];
+    const hit = matchEvent(
+      {
+        date: '2026-08-25',
+        startTime: '2026-08-25T23:00Z',
+        name: "Dana White's Contender Series: Season 10, Week 3",
+      },
+      cf,
+    );
+    expect(hit.eventId).toBe(1330);
+  });
+
+  it('does not match an event a week away', () => {
+    const cf = [{ eventId: 1330, startTime: '2026-09-02T00:00Z', name: 'DWCS 10.4' }];
+    expect(matchEvent({ date: '2026-08-25', startTime: '2026-08-25T23:00Z', name: 'x' }, cf))
+      .toBe(null);
+  });
+
   it('returns null when no candidate shares the date', () => {
     expect(matchEvent({ date: '2027-01-01', name: 'x' }, candidates)).toBe(null);
   });
