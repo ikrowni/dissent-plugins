@@ -126,3 +126,24 @@ describe('applyScoreFlip', () => {
     expect(() => applyScoreFlip(document.body, { home: 1 }, { home: 0 })).not.toThrow();
   });
 });
+
+describe('drill-down views', () => {
+  it('clears every nav button on a view with no nav entry', () => {
+    document.body.innerHTML = `<div id="m"></div>
+      <nav><button data-act="nav" data-view="league" aria-current="true">a</button></nav>`;
+    const mount = document.getElementById('m');
+    const views = {
+      league: { render: () => '<p>l</p>' },
+      team: { render: () => '<p>t</p>' },
+    };
+    const router = createRouter({ mount, views, nav: document.querySelector('nav') });
+    router.go('league');
+    router.go('team');
+    // A drill-down has no nav button, so every button must read false rather than
+    // leaving the previous one highlighted.
+    for (const b of document.querySelectorAll('[data-act="nav"]')) {
+      expect(b.getAttribute('aria-current')).toBe('false');
+    }
+    expect(router.current).toBe('team');
+  });
+});

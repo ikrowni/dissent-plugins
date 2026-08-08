@@ -24,9 +24,14 @@
         <span class="title">NFL HUB</span>
         <span class="sub" id="season-label">Loading…</span>
       </div>
+      <!-- Team and player pages are deliberately absent: they are drill-downs reached by
+           clicking a chip, which is how every real sports app works. -->
       <nav id="nav" aria-label="Sections">
         <button data-act="nav" data-view="league" aria-current="true">Around the League</button>
         <button data-act="nav" data-view="game" aria-current="false">Game Center</button>
+        <button data-act="nav" data-view="standings" aria-current="false">Standings</button>
+        <button data-act="nav" data-view="leaders" aria-current="false">Leaders</button>
+        <button data-act="nav" data-view="news" aria-current="false">News &amp; Odds</button>
       </nav>
     </header>
     <main id="main">

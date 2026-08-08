@@ -90,6 +90,9 @@ export const app = {
   seasonType: null,
   week: null,
   gameId: null,
+  // Drill-down selections, set by whichever view emitted the click.
+  teamAbbr: null,
+  athleteId: null,
   router: null,
   scheduler,
   motion,
@@ -149,12 +152,26 @@ async function boot() {
   const mount = document.getElementById('main');
   const nav = document.getElementById('nav');
 
-  const [leagueView, gameView] = await Promise.all([
+  const [
+    leagueView, gameView, standingsView, leadersView, newsView, teamView, playerView,
+  ] = await Promise.all([
     import('../views/league.js'),
     import('../views/game.js'),
+    import('../views/standings.js'),
+    import('../views/leaders.js'),
+    import('../views/news.js'),
+    import('../views/team.js'),
+    import('../views/player.js'),
   ]);
 
-  app.router = createRouter({ mount, nav, views: { league: leagueView, game: gameView } });
+  app.router = createRouter({
+    mount,
+    nav,
+    views: {
+      league: leagueView, game: gameView, standings: standingsView,
+      leaders: leadersView, news: newsView, team: teamView, player: playerView,
+    },
+  });
 
   applyOsMotionPref();
 
