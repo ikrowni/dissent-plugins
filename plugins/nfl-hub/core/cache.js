@@ -80,5 +80,8 @@ export const TTL = {
   TEAM_ROSTER: 3_600_000,
   SLEEPER_LEAGUE: 3_600_000,
   SLEEPER_MATCHUPS: 30_000,
+  // Projections are set before kickoff and barely move in-week, but they are 508 KiB —
+  // the largest single payload the hub fetches. Cache them hard.
+  SLEEPER_PROJECTIONS: 3_600_000,
   ODDS: 600_000,
 };

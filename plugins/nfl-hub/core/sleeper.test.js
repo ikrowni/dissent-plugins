@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { setFetcher, resetFetcher } from './http.js';
 import {
   sleeperUrls, parseState, parseLeague, parseRosters, parseMatchups,
-  parseLeagueUsers, joinMatchups, deepLink, fetchState,
+  parseLeagueUsers, joinMatchups, deepLink, fetchState, parseProjections,
 } from './sleeper.js';
 
 const fixture = (n) =>
@@ -239,5 +239,63 @@ describe('transport wiring', () => {
       body: JSON.stringify({ week: 1, season: '2026', season_type: 'pre' }),
     }));
     await expect(fetchState()).resolves.toMatchObject({ season: 2026, isPreseason: true });
+  });
+});
+
+describe('parseRosters — wave 3 fields', () => {
+  const rosters = parseRosters(fixture('sleeper-rosters.json'));
+
+  it('captures potential points, which is what makes a "left on the bench" callout possible', () => {
+    const r = rosters.find((x) => x.potentialPoints > 0);
+    expect(r).toBeDefined();
+    // ppts is the optimal-lineup ceiling, so it can never be under what was actually scored.
+    expect(r.potentialPoints).toBeGreaterThanOrEqual(r.pointsFor);
+  });
+
+  it('captures waiver state', () => {
+    expect(rosters.every((r) => Number.isFinite(r.waiverBudgetUsed))).toBe(true);
+    expect(rosters.every((r) => Number.isFinite(r.waiverPosition))).toBe(true);
+  });
+
+  it('still parses the fields wave 1 relied on', () => {
+    expect(rosters).toHaveLength(12);
+    expect(rosters[0].rosterId).toBeGreaterThan(0);
+    expect(rosters[0].starters.length).toBeGreaterThan(0);
+  });
+});
+
+describe('parseProjections', () => {
+  const raw = fixture('sleeper-projections-w14.json');
+
+  it('keys by sleeper player id, which is the same key matchups use', () => {
+    const proj = parseProjections(raw);
+    const [id] = Object.keys(proj);
+    expect(String(Number(id))).toBe(id); // numeric-looking sleeper ids
+  });
+
+  it('drops ADP-only stubs — 9 of every 10 records carry no points at all', () => {
+    const proj = parseProjections(raw);
+    expect(Object.keys(proj).length).toBeGreaterThan(500);
+    expect(Object.keys(proj).length).toBeLessThan(Object.keys(raw).length);
+    // Every surviving record must have all three scoring variants as real numbers.
+    for (const v of Object.values(proj)) {
+      expect(Number.isFinite(v.ppr)).toBe(true);
+      expect(Number.isFinite(v.halfPpr)).toBe(true);
+      expect(Number.isFinite(v.std)).toBe(true);
+    }
+  });
+
+  it('survives junk without throwing', () => {
+    expect(parseProjections(null)).toEqual({});
+    expect(parseProjections([])).toEqual({});
+    expect(parseProjections({ 123: null })).toEqual({});
+  });
+});
+
+describe('sleeperUrls.projections', () => {
+  it('uses the /v1/ path form, not the 2 MB query-param form', () => {
+    const u = sleeperUrls.projections(2025, 14);
+    expect(u).toBe('https://api.sleeper.app/v1/projections/nfl/regular/2025/14');
+    expect(u).not.toContain('position[]');
   });
 });

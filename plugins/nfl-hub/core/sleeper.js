@@ -26,10 +26,32 @@ export const sleeperUrls = {
   losersBracket: (leagueId) => `${API}/league/${leagueId}/losers_bracket`,
   drafts: (leagueId) => `${API}/league/${leagueId}/drafts`,
   draftPicks: (draftId) => `${API}/draft/${draftId}/picks`,
+  // UNDOCUMENTED but stable, and on a host already in allowed_fetch_domains. 508 KiB —
+  // ~45% headroom under the 1 MB fetch:external cap — returned as a dict keyed by Sleeper
+  // player_id, which is the same key matchups.starters and players_points use. One fetch
+  // covers every roster in the league and needs no name join.
+  //
+  // NOT the query-param form (/projections/nfl/{season}/{week}?position[]=…): with the six
+  // fantasy positions that is 2.05 MB, twice the cap. Measured 2026-08-08.
+  projections: (season, week) => `${API}/projections/nfl/regular/${season}/${week}`,
   trending: (type = 'add', limit = 25) =>
     `${API}/players/nfl/trending/${type}?limit=${limit}`,
   avatar: (id) => (id ? `${CDN}/avatars/thumbs/${id}` : null),
 };
+
+/** Player headshot. Keyed by Sleeper's own player_id, so unlike the ESPN join this is
+ *  100% coverage with no name matching.
+ *
+ *  ⚠️ ~99 KB per image, and the `thumb/` path returns byte-identical content — measured
+ *  2026-08-08, there is no cheaper variant. A 24-row matchup is therefore ~2.4 MB through
+ *  the node image proxy, which is metered. Always render these `loading="lazy"`; most of
+ *  the lineup is below the fold. This is the first thing to cut if the fantasy section
+ *  shows up in the bandwidth meter.
+ *
+ *  sleepercdn.com is deliberately NOT in allowed_fetch_domains: these load as <img src>
+ *  through the node image proxy (which is allowlist-free), not via fetch:external. */
+export const headshotUrl = (playerId) =>
+  (playerId ? `${CDN}/content/nfl/players/${playerId}.jpg` : null);
 
 /** Sleeper cannot be written to, so every mutating action becomes a handoff. */
 export const deepLink = {
@@ -97,6 +119,12 @@ export function parseRosters(json) {
       // Sleeper splits points across whole and fractional fields.
       pointsFor: Number(`${s.fpts ?? 0}.${s.fpts_decimal ?? 0}`),
       pointsAgainst: Number(`${s.fpts_against ?? 0}.${s.fpts_against_decimal ?? 0}`),
+      // ppts is Sleeper's "potential points": what the roster would have scored with the
+      // optimal lineup. The gap to pointsFor is the points left on the bench, and wave 3B's
+      // luck metric is derived from it. Split across whole/decimal fields like fpts.
+      potentialPoints: Number(`${s.ppts ?? 0}.${s.ppts_decimal ?? 0}`),
+      waiverBudgetUsed: num(s.waiver_budget_used) ?? 0,
+      waiverPosition: num(s.waiver_position) ?? 0,
     };
   });
 }
@@ -123,6 +151,28 @@ export function parseMatchups(json) {
     starters: m.starters ?? [],
     playerPoints: m.players_points ?? {},
   }));
+}
+
+/** Normalise the projection dict, keeping only records that actually carry points.
+ *
+ *  Only ~858 of 9,403 records do; the rest are ADP-only stubs like {"adp_dd_ppr": 1000}.
+ *  Keeping them would hand the UI a projection of `undefined` for most of the league. */
+export function parseProjections(json) {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return {};
+  const out = {};
+  for (const [id, stats] of Object.entries(json)) {
+    if (!stats || typeof stats !== 'object') continue;
+    const ppr = Number(stats.pts_ppr);
+    const half = Number(stats.pts_half_ppr);
+    const std = Number(stats.pts_std);
+    if (!Number.isFinite(ppr) && !Number.isFinite(half) && !Number.isFinite(std)) continue;
+    out[String(id)] = {
+      ppr: Number.isFinite(ppr) ? ppr : 0,
+      halfPpr: Number.isFinite(half) ? half : 0,
+      std: Number.isFinite(std) ? std : 0,
+    };
+  }
+  return out;
 }
 
 /** Pair rosters that share a matchup_id, attaching owner metadata to each side.
@@ -178,5 +228,7 @@ export const fetchLeague = async (id) => parseLeague(await getJson(sleeperUrls.l
 export const fetchRosters = async (id) => parseRosters(await getJson(sleeperUrls.rosters(id)));
 export const fetchLeagueUsers = async (id) => parseLeagueUsers(await getJson(sleeperUrls.leagueUsers(id)));
 export const fetchMatchups = async (id, week) => parseMatchups(await getJson(sleeperUrls.matchups(id, week)));
+export const fetchProjections = async (season, week) =>
+  parseProjections(await getJson(sleeperUrls.projections(season, week)));
 export const fetchTransactions = (id, round) => getJson(sleeperUrls.transactions(id, round));
 export const fetchTrending = (type, limit) => getJson(sleeperUrls.trending(type, limit));
