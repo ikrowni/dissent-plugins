@@ -28,10 +28,16 @@ describe('no dead fetch domain is declared anywhere', () => {
 });
 
 describe('ufc-hub manifest', () => {
-  it('declares only the two live domains', () => {
+  it('declares exactly the three domains it fetches, and no more', () => {
+    // ⚠️ Editing this list changes NOTHING in production on its own.
+    // `allowed_fetch_domains` is enforced from `server_plugins` — the per-install
+    // snapshot — so a new domain also needs a migration for `registry_plugins` and a
+    // second one for live installs. Adding a domain here without those means the
+    // plugin's own fetches are rejected at runtime with no clue why.
     expect(read('./manifest.json').allowed_fetch_domains).toEqual([
-      'site.api.espn.com',
-      'd29dxerjsp82wz.cloudfront.net',
+      'site.api.espn.com',            // month index -> event ids, athletes, flags
+      'd29dxerjsp82wz.cloudfront.net', // the card itself
+      'gamma-api.polymarket.com',      // implied odds
     ]);
   });
 

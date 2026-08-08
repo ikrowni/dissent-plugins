@@ -12,8 +12,8 @@ import {
 import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
 import { imageUrl } from '../../plugin-sdk.js';
+import { pct } from '../core/polymarket.js';
 
-/** Images MUST go through the proxy: the plugin CSP forbids third-party img origins. */
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
  *
@@ -209,7 +209,49 @@ function resultBlock(fight) {
     + '</div>';
 }
 
-export function renderVersus(fight, event, athletes) {
+/**
+ * The market block: what the money thinks, and how it thinks the fight ends.
+ *
+ * Every number here is an implied probability straight from `outcomePrices`, which is
+ * already in [0,1] — it is NOT a decimal odd and must never be inverted. Rendered as a
+ * percentage because that is what it is.
+ */
+function marketBlock(fight, m) {
+  if (!m) return '';
+  const r = m.byFighter?.[fight.red?.fighterId];
+  const b = m.byFighter?.[fight.blue?.fighterId];
+  const row = (label, p) => (p == null ? ''
+    : `<div class="mk-row"><span class="mk-k">${esc(label)}</span>`
+      + `<span class="mk-bar"><i style="width:${esc(pct(p))}%"></i></span>`
+      + `<span class="mk-v num">${esc(pct(p))}%</span></div>`);
+
+  const rounds = m.rounds?.length
+    ? '<div class="mk-rounds">' + m.rounds.map((x) => (
+        `<span class="mk-chip"><b>${esc(x.line)}+</b>`
+        + `<i class="num">${esc(pct(x.over))}%</i></span>`
+      )).join('') + '</div>'
+    : '';
+
+  return '<div class="vs-market"><h4>What the market thinks</h4>'
+    + (r != null && b != null
+      ? `<div class="mk-ml"><span class="mk-name">${esc(fight.red?.lastName ?? '')}</span>`
+        + `<span class="mk-pct num mk-red">${esc(pct(r))}%</span>`
+        + '<span class="mk-track">'
+          + `<i class="mk-red" style="width:${esc(pct(r))}%"></i>`
+          + `<i class="mk-blue" style="width:${esc(100 - pct(r))}%"></i></span>`
+        + `<span class="mk-pct num mk-blue">${esc(pct(b))}%</span>`
+        + `<span class="mk-name">${esc(fight.blue?.lastName ?? '')}</span></div>`
+      : '')
+    + row('Goes to decision', m.distance)
+    + row('Ends by KO/TKO', m.ko)
+    + row('Ends by submission', m.sub)
+    + (rounds ? `<h5>Chance the fight reaches round</h5>${rounds}` : '')
+    + '<p class="vs-note">Implied probability from Polymarket order books '
+    + '&mdash; a live prediction market, not a forecast by this plugin.</p>'
+    + '</div>';
+}
+
+export function renderVersus(fight, event, athletes, market) {
   if (!fight) return '';
   const red = fight.red;
   const blue = fight.blue;
@@ -226,6 +268,7 @@ export function renderVersus(fight, event, athletes) {
     + hero(fight, red, blue, event, athletes)
     + tape(red, blue)
     + chips(fight)
+    + (st === 'post' ? '' : marketBlock(fight, market))
     + (st === 'in' ? liveBlock(fight, event) : '')
     + (st === 'post' && hasResult(fight) ? resultBlock(fight) : '')
     + counts(events, red, blue)

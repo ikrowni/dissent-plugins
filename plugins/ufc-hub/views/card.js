@@ -10,6 +10,7 @@ import { headshotUrl } from '../core/espn-athletes.js';
 import { fightState, hasResult } from '../core/fight-state.js';
 import { renderVersus } from './versus.js';
 import { imageUrl } from '../../plugin-sdk.js';
+import { pct, american } from '../core/polymarket.js';
 
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
@@ -50,7 +51,34 @@ function corner(f, side, fight, athletes) {
     + '</div>';
 }
 
-export function fightRow(fight, event, athletes, openFight) {
+/**
+ * The implied-probability bar.
+ *
+ * ⚠️ Polymarket does NOT price every fight — Johns vs Vazquez had no market on the
+ * measured card — so this renders nothing at all rather than a 50/50 that looks like
+ * data. A missing market is normal, not an error.
+ */
+function oddsBar(fight, odds) {
+  const m = odds?.get(fight.fightId);
+  if (!m) return '';
+  const r = m.byFighter?.[fight.red?.fighterId];
+  const b = m.byFighter?.[fight.blue?.fighterId];
+  if (r == null || b == null) return '';
+  const rp = pct(r);
+  const bp = pct(b);
+  return '<div class="fodds">'
+    + `<span class="fo-side fo-red"><b class="num">${esc(rp)}%</b>`
+      + `<i class="num">${esc(american(r) ?? '')}</i></span>`
+    + '<span class="fo-track">'
+      + `<i class="fo-red" style="width:${esc(rp)}%"></i>`
+      + `<i class="fo-blue" style="width:${esc(100 - rp)}%"></i>`
+    + '</span>'
+    + `<span class="fo-side fo-blue"><b class="num">${esc(bp)}%</b>`
+      + `<i class="num">${esc(american(b) ?? '')}</i></span>`
+    + '</div>';
+}
+
+export function fightRow(fight, event, athletes, openFight, odds) {
   const st = fightState(fight, event);
   const open = openFight != null && openFight === fight.fightId;
   const r = fight.result;
@@ -78,9 +106,10 @@ export function fightRow(fight, event, athletes, openFight) {
       + '</div>'
       + corner(fight.blue, 'blue', fight, athletes)
     + '</div>'
+    + oddsBar(fight, odds)
     + outcome
     + '<span class="chev"></span>'
-    + `<div class="fbody">${open ? renderVersus(fight, event, athletes) : ''}</div>`
+    + `<div class="fbody">${open ? renderVersus(fight, event, athletes, odds?.get(fight.fightId)) : ''}</div>`
     + '</div>';
 }
 
@@ -90,13 +119,14 @@ export function renderPanel(s) {
   if (!event.fights?.length) return stateMsg('No fights on this card yet.');
 
   const athletes = s.athletes ?? new Map();
+  const odds = s.odds ?? new Map();
   const segs = cardSegments(event.fights);
   const body = segs.map((seg) => (
     `<section class="seg"><div class="seg-head"><h3>${esc(seg.label)}</h3>`
     + (seg.broadcaster ? `<span class="seg-bc">${esc(seg.broadcaster)}</span>` : '')
     + (seg.startTime ? `<span class="seg-time">${esc(fmtDateTime(seg.startTime))}</span>` : '')
     + '</div>'
-    + seg.fights.map((f) => fightRow(f, event, athletes, s.openFight)).join('')
+    + seg.fights.map((f) => fightRow(f, event, athletes, s.openFight, odds)).join('')
     + '</section>'
   )).join('');
 

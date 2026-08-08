@@ -14,6 +14,7 @@ import { nearestEvent } from './event-index.js';
 import { CF_URL, resolveCfId } from './ufc-cf-client.js';
 import { parseEvent } from './ufc-cloudfront.js';
 import { athletesForEvent, joinAthletes } from './espn-athletes.js';
+import { cardUrl, joinMarkets } from './polymarket.js';
 
 export const state = {
   index: [],
@@ -21,6 +22,7 @@ export const state = {
   event: null,
   month: null,         // raw ESPN month payload, kept for the athlete join
   athletes: new Map(), // CloudFront fighterId -> { espnId, flag, country }
+  odds: new Map(),     // CloudFront fightId  -> parsed Polymarket markets
   openFight: null,     // fightId of the expanded row, or null
   error: null,
   loading: true,
@@ -38,6 +40,7 @@ export function viewModel(st = state) {
   return {
     event: st.event,
     athletes: st.athletes,
+    odds: st.odds,
     openFight: st.openFight,
   };
 }
@@ -71,6 +74,22 @@ async function loadEvent() {
   state.athletes = state.event
     ? joinAthletes(state.event.fights, athletesForEvent(state.month, state.selected.id))
     : new Map();
+}
+
+/**
+ * Odds are a SEPARATE, NON-BLOCKING load.
+ *
+ * The card must render without them: Polymarket does not price every fight (Johns vs
+ * Vazquez had no market on the measured card), the query is a third-party host that can
+ * be slow, and a failure here must never cost the viewer the fight card itself.
+ */
+async function loadOdds() {
+  const start = state.event?.startTime ?? state.selected?.startTime;
+  const url = start ? cardUrl(start) : null;
+  if (!url || !state.event) { state.odds = new Map(); return; }
+  const raw = await cache.get(url, () => getJson(url),
+    ttlFor(state.event), { staleOnError: true }).catch(() => null);
+  state.odds = Array.isArray(raw) ? joinMarkets(state.event.fights, raw) : new Map();
 }
 
 let booted = false;
@@ -133,6 +152,8 @@ async function boot() {
     await loadIndex();
     await loadEvent();
     state.error = null;
+    paint();                      // the card, before waiting on a third party
+    await loadOdds().catch(() => { state.odds = new Map(); });
   } catch (err) {
     state.error = err?.message ?? 'failed';
   }
