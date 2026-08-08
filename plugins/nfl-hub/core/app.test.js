@@ -147,3 +147,18 @@ describe('drill-down views', () => {
     expect(router.current).toBe('team');
   });
 });
+
+describe('router — fantasy', () => {
+  it('routes to the fantasy view', () => {
+    const mount = document.createElement('div');
+    const nav = document.createElement('nav');
+    const views = {
+      league: { render: () => '<p>l</p>' },
+      fantasy: { render: () => '<p id="f">fantasy</p>' },
+    };
+    const router = createRouter({ mount, views, nav });
+    router.go('fantasy');
+    expect(router.current).toBe('fantasy');
+    expect(mount.querySelector('#f')).toBeTruthy();
+  });
+});

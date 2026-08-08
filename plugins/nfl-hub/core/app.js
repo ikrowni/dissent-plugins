@@ -154,6 +154,7 @@ async function boot() {
 
   const [
     leagueView, gameView, standingsView, leadersView, newsView, teamView, playerView,
+    fantasyView,
   ] = await Promise.all([
     import('../views/league.js'),
     import('../views/game.js'),
@@ -162,6 +163,7 @@ async function boot() {
     import('../views/news.js'),
     import('../views/team.js'),
     import('../views/player.js'),
+    import('../views/fantasy.js'),
   ]);
 
   app.router = createRouter({
@@ -170,6 +172,7 @@ async function boot() {
     views: {
       league: leagueView, game: gameView, standings: standingsView,
       leaders: leadersView, news: newsView, team: teamView, player: playerView,
+      fantasy: fantasyView,
     },
   });
 
