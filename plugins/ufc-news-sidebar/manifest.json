@@ -9,7 +9,7 @@
   "context": ["sidebar"],
   "url": "https://plugins.dissent.chat/plugins/ufc-news-sidebar/plugin.html",
   "declared_permissions": ["fetch:external"],
-  "allowed_fetch_domains": ["site.api.espn.com", "ufcstats.com"],
+  "allowed_fetch_domains": ["site.api.espn.com"],
   "config_schema": null,
   "categories": ["sports", "mma"],
   "sdk_version": "1"

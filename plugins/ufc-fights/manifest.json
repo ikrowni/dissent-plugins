@@ -9,7 +9,7 @@
   "context": ["channel"],
   "url": "https://plugins.dissent.chat/plugins/ufc-fights/plugin.html",
   "declared_permissions": ["fetch:external"],
-  "allowed_fetch_domains": ["site.api.espn.com", "d29dxerjsp82wz.cloudfront.net", "polymarket.com", "gamma-api.polymarket.com", "clob.polymarket.com", "api.the-odds-api.com", "ufcstats.com"],
+  "allowed_fetch_domains": ["site.api.espn.com", "d29dxerjsp82wz.cloudfront.net", "polymarket.com", "gamma-api.polymarket.com", "clob.polymarket.com"],
   "config_schema": null,
   "categories": ["sports", "mma"],
   "sdk_version": "1"

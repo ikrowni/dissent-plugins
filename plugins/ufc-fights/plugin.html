@@ -497,97 +497,7 @@ function scRow(label, rv, bv) {
   return `<div class="sc-row"><div class="sc-val r">${rv}</div><div class="sc-lbl">${label}</div><div class="sc-val b">${bv}</div></div>`;
 }
 
-function scBarRow(label, rv, bv, unit) {
-  // Each bar is proportional within its own track; normalise to max(rv,bv)
-  const rn = parseFloat(rv) || 0;
-  const bn = parseFloat(bv) || 0;
-  const maxV = Math.max(rn, bn, 0.001);
-  const rPct = Math.round((rn / maxV) * 100);
-  const bPct = Math.round((bn / maxV) * 100);
-  const fmt = v => String(v) + (unit || '');
-  return `<div class="sc-row bar">
-    <div class="sc-bar-text">
-      <div class="sc-val r">${fmt(rv)}</div><div class="sc-lbl">${label}</div><div class="sc-val b">${fmt(bv)}</div>
-    </div>
-    <div class="sc-bar-track"><div class="sc-bar-fill-r" style="width:${rPct}%"></div></div>
-    <div class="sc-bar-track"><div class="sc-bar-fill-b" style="width:${bPct}%"></div></div>
-  </div>`;
-}
 
-// ─── ufcstats.com fighter stats ───────────────────────────────────────────────
-const _statsCache = {};  // key → { red: stats, blue: stats } or 'loading'
-
-async function fetchFighterStats(firstName, lastName) {
-  try {
-    // Search by last name
-    const searchResp = await fetchExternal(
-      `http://ufcstats.com/statistics/fighters?action=search&SearchStr=${encodeURIComponent(lastName)}&page=all`
-    );
-    if (searchResp.status !== 200) return null;
-    const html = searchResp.body;
-    // Find matching row: <a href="...">FirstName</a> followed by LastName in the next cell
-    const rowRe = new RegExp(
-      `href="(http://ufcstats\\.com/fighter-details/[^"]+)"[^>]*>\\s*${firstName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*<\\/a>`,
-      'i'
-    );
-    const m = html.match(rowRe);
-    if (!m) return null;
-
-    // Fetch detail page
-    const detailResp = await fetchExternal(m[1]);
-    if (detailResp.status !== 200) return null;
-    const body = detailResp.body;
-
-    const gf = (re) => parseFloat(body.match(re)?.[1] || 0);
-    return {
-      slpm:   gf(/<i[^>]*>\s*SLpM:\s*<\/i>\s*([\d.]+)/i),
-      strAcc: gf(/<i[^>]*>\s*Str\.\s*Acc\.:\s*<\/i>\s*([\d.]+)/i),
-      sapm:   gf(/<i[^>]*>\s*SApM:\s*<\/i>\s*([\d.]+)/i),
-      strDef: gf(/<i[^>]*>\s*Str\.\s*Def:\s*<\/i>\s*([\d.]+)/i),
-      tdAvg:  gf(/<i[^>]*>\s*TD Avg\.:\s*<\/i>\s*([\d.]+)/i),
-      tdAcc:  gf(/<i[^>]*>\s*TD Acc\.:\s*<\/i>\s*([\d.]+)/i),
-      tdDef:  gf(/<i[^>]*>\s*TD Def\.:\s*<\/i>\s*([\d.]+)/i),
-      subAvg: gf(/<i[^>]*>\s*Sub\.\s*Avg\.:\s*<\/i>\s*([\d.]+)/i),
-    };
-  } catch { return null; }
-}
-
-async function loadFighterStats(fight) {
-  const key = slugKey(fight.red.lastName);
-  if (_statsCache[key]) return; // already loaded or loading
-  _statsCache[key] = 'loading';
-
-  const [rStats, bStats] = await Promise.all([
-    fetchFighterStats(fight.red.firstName,  fight.red.lastName),
-    fetchFighterStats(fight.blue.firstName, fight.blue.lastName),
-  ]);
-
-  _statsCache[key] = { red: rStats, blue: bStats };
-
-  const rS = rStats || {};
-  const bS = bStats || {};
-  const na = '—';
-
-  const strikingEl = document.getElementById('stp-striking-' + key);
-  if (strikingEl) {
-    strikingEl.innerHTML = rStats || bStats
-      ? scBarRow('Landed / Min', rS.slpm?.toFixed(2) ?? na, bS.slpm?.toFixed(2) ?? na)
-        + scBarRow('Strike Acc', rS.strAcc ?? na, bS.strAcc ?? na, '%')
-        + scBarRow('Absorbed / Min', rS.sapm?.toFixed(2) ?? na, bS.sapm?.toFixed(2) ?? na)
-        + scBarRow('Defense', rS.strDef ?? na, bS.strDef ?? na, '%')
-      : `<div class="st-loading">No stats available</div>`;
-  }
-
-  const grapplingEl = document.getElementById('stp-grappling-' + key);
-  if (grapplingEl) {
-    grapplingEl.innerHTML = rStats || bStats
-      ? scBarRow('Takedown Avg', rS.tdAvg?.toFixed(2) ?? na, bS.tdAvg?.toFixed(2) ?? na)
-        + scBarRow('TD Accuracy', rS.tdAcc ?? na, bS.tdAcc ?? na, '%')
-        + scBarRow('TD Defense', rS.tdDef ?? na, bS.tdDef ?? na, '%')
-        + scBarRow('Submission Avg', rS.subAvg?.toFixed(2) ?? na, bS.subAvg?.toFixed(2) ?? na)
-      : `<div class="st-loading">No stats available</div>`;
-  }
-}
 
 // ─── Countdown ────────────────────────────────────────────────────────────────
 let _countdownTimer = null;
@@ -746,10 +656,11 @@ function renderFightRow(fight, order, oddsMap) {
           <div id="stp-matchup-cf-${key}"></div>
         </div>
         <div class="st-tab-pane" id="stp-striking-${key}">
-          <div class="st-loading"><div class="st-spin"></div>Loading stats…</div>
+          <div class="st-loading">Striking stats are unavailable — ufcstats.com is behind a
+            bot challenge a server-side proxy cannot pass.</div>
         </div>
         <div class="st-tab-pane" id="stp-grappling-${key}">
-          <div class="st-loading"><div class="st-spin"></div>Loading stats…</div>
+          <div class="st-loading">Grappling stats are unavailable — see Striking.</div>
         </div>
         <div class="st-tab-pane" id="stp-odds-${key}">
           <div class="st-loading">Loading odds…</div>
@@ -773,8 +684,6 @@ function toggleExpand(id) {
       if (fight) {
         // Re-render PM in odds tab if data is ready
         if (_pmData[key]?.conditionId) renderPolymarketSection(fight, key);
-        // Lazy load ufcstats.com data on first expand
-        if (!_statsCache[key]) loadFighterStats(fight);
       }
     }
   }
@@ -1003,7 +912,6 @@ async function enrichInBackground(event, config) {
   // Polymarket runs alongside odds API — whichever has data wins
   try { await enrichWithPolymarket(event); } catch {}
   if (config.odds_api_key) {
-    try { await enrichWithOdds(event, config.odds_api_key); } catch {}
   }
   const note = document.getElementById('data-note');
   if (note) note.textContent = 'Data: ESPN · UFC · Polymarket · Auto-updates hourly';
@@ -1500,43 +1408,6 @@ function renderPolymarketSection(fight, key) {
   statsWrap.innerHTML = html;
 }
 
-async function enrichWithOdds(event, apiKey) {
-  const url = `https://api.the-odds-api.com/v4/sports/mma_mixed_martial_arts/odds?apiKey=${apiKey}&regions=us&markets=h2h&oddsFormat=american`;
-  const data = await fetchExternal(url);
-  if (data.status !== 200) return;
-
-  const oddsEvents = JSON.parse(data.body);
-  const eventDateMs = new Date(event.date).getTime();
-  const oddsMap = {};
-
-  for (const oe of oddsEvents) {
-    if (Math.abs(new Date(oe.commence_time).getTime() - eventDateMs) > 2 * 24 * 60 * 60 * 1000) continue;
-    const bookmaker = oe.bookmakers?.[0];
-    if (!bookmaker) continue;
-    const h2h = bookmaker.markets?.find(m => m.key === 'h2h');
-    if (!h2h) continue;
-    for (const outcome of h2h.outcomes) {
-      oddsMap[outcome.name.toLowerCase()] = outcome.price;
-    }
-  }
-
-  if (!Object.keys(oddsMap).length) return;
-
-  // Inject odds into expanded panels
-  for (const [name, price] of Object.entries(oddsMap)) {
-    const nameParts = name.split(' ');
-    const lastName = nameParts[nameParts.length - 1];
-    const key = slugKey(lastName);
-
-    const redEl  = document.getElementById('odds-red-'  + key);
-    const blueEl = document.getElementById('odds-blue-' + key);
-    if (redEl)  { redEl.textContent  = formatOdds(price); redEl.style.display  = ''; }
-    if (blueEl) { blueEl.textContent = formatOdds(price); blueEl.style.display = ''; }
-  }
-
-  const note = document.querySelector('.data-note');
-  if (note) note.textContent = 'Data: ESPN · UFC CloudFront · The Odds API · Auto-updates hourly';
-}
 
 // ─── SDK init ─────────────────────────────────────────────────────────────────
 async function main() {
