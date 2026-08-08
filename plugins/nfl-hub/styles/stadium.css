@@ -283,3 +283,10 @@ body.reduce-motion .hero-wp { backdrop-filter: none; background: rgba(2,4,8,.92)
 .dr-tab-name { font-weight: 600; font-size: 12.5px; }
 .dr-tab-meta { font-size: 10.5px; color: var(--text-3); }
 .dr-tab-meta b { color: var(--gold); font-weight: 700; }
+.dr-open { appearance: none; font: inherit; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-2);
+  transition: color var(--dur-fast), border-color var(--dur-fast); }
+.dr-open:hover { color: var(--text); border-color: var(--text-3); }
+.dr-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dr-openwrap { display: flex; justify-content: center; padding: 4px 0 12px; }

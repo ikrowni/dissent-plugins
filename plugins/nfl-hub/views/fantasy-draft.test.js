@@ -94,3 +94,32 @@ describe('draft picker', () => {
     expect(html).not.toContain('No draft has been held in this league');
   });
 });
+
+describe('Sleeper handoff', () => {
+  const drafts = [{ draftId: 'a', name: 'Happy Hour', teams: 8, startTime: 2, status: 'pre_draft' }];
+
+  it('offers the handoff on the board, because picks CANNOT be made here', () => {
+    // ⚠️ Sleeper's public API is read-only by their own documentation. Drafting inside
+    // Dissent is not possible at any effort level, so the board must be a route to
+    // Sleeper rather than a dead end.
+    const html = renderPanel({ board, drafts, draftId: 'a', draft: { draftId: 'a' } });
+    expect(html).toContain('data-act="draft-open"');
+  });
+
+  it('offers it on the EMPTY state too, which is when you most want it', () => {
+    const html = renderPanel({ board: null, drafts, draftId: 'a' });
+    expect(html).toContain('data-act="draft-open"');
+  });
+
+  it('says "Make your pick" while a draft is live', () => {
+    const html = renderPanel({
+      board, drafts, draftId: 'a', draft: { draftId: 'a', status: 'drafting' },
+    });
+    expect(html).toContain('Make your pick');
+  });
+
+  it('offers nothing when there is no draft to open', () => {
+    expect(renderPanel({ board: null, drafts: [], draftId: null }))
+      .not.toContain('draft-open');
+  });
+});

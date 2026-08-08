@@ -50,7 +50,12 @@ export function renderPanel(s) {
     const chosen = (s?.drafts ?? []).find((d) => d.draftId === s?.draftId);
     return picker(s) + stateMsg(chosen
       ? `${chosen.name ?? 'This draft'} has no picks yet (${chosen.status ?? 'not started'}).`
-      : 'No draft found for this account yet.');
+      : 'No draft found for this account yet.')
+      // A draft that has not started is exactly when someone wants to go and draft.
+      + (chosen?.draftId
+        ? `<div class="dr-openwrap"><button class="dr-open" data-act="draft-open"`
+          + ` data-draft="${esc(chosen.draftId)}">Open in Sleeper</button></div>`
+        : '');
   }
 
   const head = '<tr><th></th>'
@@ -67,13 +72,23 @@ export function renderPanel(s) {
     + '</tr>'
   )).join('');
 
+  // ⚠️ THE ONLY WAY TO MAKE A PICK. Sleeper's public API is read-only by their own
+  // documentation — "a read-only HTTP API", no token, no write endpoints — so drafting
+  // cannot happen in Dissent at all. Every mutation is a handoff (spec §1.1). The link
+  // existed in core/sleeper.js from wave 3B but was never surfaced here, so the board
+  // was a dead end for anyone whose draft was actually live.
+  const openInSleeper = s.draft?.draftId
+    ? `<button class="dr-open" data-act="draft-open" data-draft="${esc(s.draft.draftId)}">`
+      + `${s.draft.status === 'drafting' ? 'Make your pick' : 'Open'} in Sleeper</button>`
+    : '';
+
   const kicker = s.draft
     ? `${esc(s.draft.season ?? '')} · ${esc(s.draft.type ?? '')} · ${esc(s.draft.rounds ?? '')} rounds`
     : '';
 
   return panel({
     title: 'Draft board',
-    right: `<span class="kicker">${kicker}</span>`,
+    right: `<span class="kicker">${kicker}</span>${openInSleeper}`,
     body: picker(s)
       + `<div class="dr-scroll"><table class="dr-table"><thead>${head}</thead>`
       + `<tbody>${rows}</tbody></table></div>`,

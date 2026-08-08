@@ -546,6 +546,10 @@ export async function enter() {
       app.paint();
       return;
     }
+    if (act === 'draft-open') {
+      window.open(deepLink.draft(null, el.dataset.draft), '_blank', 'noopener');
+      return;
+    }
     if (act === 'sleeper-open') {
       window.open(deepLink.league(state.session.state.leagueId), '_blank', 'noopener');
       return;
