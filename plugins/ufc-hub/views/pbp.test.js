@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { renderPbp, groupRounds } from './pbp.js';
+import { renderPbp, groupRounds, actionLabel } from './pbp.js';
 import { parseEvent } from '../core/ufc-cloudfront.js';
 import { parseTracking } from '../core/fight-timeline.js';
 
@@ -9,6 +9,21 @@ const fx = (n) =>
 
 const final = parseEvent(fx('cf-event-final.json'));
 const events = parseTracking(final.fights[0].tracking);
+
+// Moved here from views/timeline.test.js when views/pbp.js took ownership of the
+// labels, so the tests live with the code they describe.
+describe('actionLabel', () => {
+  it('gives a human label for each tracked action', () => {
+    expect(actionLabel('knockdown')).toBe('Knockdown');
+    expect(actionLabel('takedown')).toBe('Takedown');
+    expect(actionLabel('takedown_attempt')).toBe('Takedown attempt');
+    expect(actionLabel('submission_attempt')).toBe('Submission attempt');
+  });
+
+  it('falls back to a readable form for an unknown action', () => {
+    expect(actionLabel('some_new_thing')).toBe('Some new thing');
+  });
+});
 
 describe('groupRounds', () => {
   it('splits round-less actions into before and after the fight', () => {

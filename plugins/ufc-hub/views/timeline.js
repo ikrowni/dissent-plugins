@@ -4,26 +4,8 @@
 // strike-level data, so the header says "tracked actions" and nothing here may be labelled
 // "significant strikes".
 import { esc, panel, stateMsg } from '../core/ui.js';
-import { actionCounts, timelineRounds } from '../core/fight-timeline.js';
-
-const LABELS = {
-  knockdown: 'Knockdown',
-  takedown: 'Takedown',
-  takedown_attempt: 'Takedown attempt',
-  submission_attempt: 'Submission attempt',
-  reversal: 'Reversal',
-  unofficial_winner_decision: 'Unofficial winner — decision',
-  unofficial_winner_kotko: 'Unofficial winner — KO/TKO',
-  unofficial_winner_submission: 'Unofficial winner — submission',
-  pause_reason_low_blow: 'Paused — low blow',
-  pause_reason_eye_poke: 'Paused — eye poke',
-};
-
-export function actionLabel(type) {
-  if (LABELS[type]) return LABELS[type];
-  const s = String(type ?? '').replace(/_/g, ' ').trim();
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Action';
-}
+import { actionCounts } from '../core/fight-timeline.js';
+import { renderPbp } from './pbp.js';
 
 const nameOf = (id, names) => names?.[id] ?? (id != null ? `Fighter ${id}` : '');
 
@@ -56,19 +38,8 @@ export function renderPanel(s) {
   const events = s?.events ?? [];
   if (!events.length) return stateMsg('No play-by-play for this fight yet.');
 
-  const rounds = timelineRounds(events);
   const body = countsBlock(events, s?.fighterNames)
-    + rounds.map((r) => (
-      `<section class="tl-round"><h4>Round ${esc(r.round)}</h4><ul class="tl-list">`
-      + r.actions.map((a) => (
-        `<li class="tl-item tl-${esc(a.type)}">`
-        + `<span class="tl-clock">${esc(a.clock ?? '')}</span>`
-        + `<span class="tl-label">${esc(actionLabel(a.type))}</span>`
-        + `<span class="tl-who">${esc(nameOf(a.fighterId, s?.fighterNames))}</span>`
-        + '</li>'
-      )).join('')
-      + '</ul></section>'
-    )).join('');
+    + renderPbp(events, s?.fighterNames ?? {});
 
   return panel({ title: 'Play-by-play', body });
 }
