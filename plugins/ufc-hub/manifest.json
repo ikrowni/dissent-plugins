@@ -1,7 +1,7 @@
 {
   "id": "ufc-hub",
   "name": "UFC Hub",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Live UFC fight cards with play-by-play, fighter records and full results.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",

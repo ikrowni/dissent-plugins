@@ -403,3 +403,44 @@
   .fp-last { font-size: 28px; }
   .fp-mug { width: 64px; height: 64px; }
 }
+
+/* ── schedule pager ────────────────────────────────────────────────────────── */
+.sch-pager { display: flex; align-items: center; justify-content: center; gap: 18px;
+  padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.sch-pager h3 { font-family: var(--f-display); font-weight: 800; font-size: 24px;
+  text-transform: uppercase; letter-spacing: .01em; margin: 0; min-width: 210px;
+  text-align: center; }
+.sch-nav { appearance: none; border: 1px solid var(--line-2); background: transparent;
+  color: var(--text-2); font-size: 16px; line-height: 1; width: 34px; height: 34px;
+  border-radius: 50%; cursor: pointer; }
+.sch-nav:hover { color: var(--text); border-color: var(--text-3); }
+.sch-nav:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.sch-list { display: flex; flex-direction: column; }
+.sch-row { display: grid; grid-template-columns: 168px 1fr auto; align-items: center;
+  gap: 14px; width: 100%; text-align: left; appearance: none; background: transparent;
+  border: 0; border-bottom: 1px solid var(--line); color: inherit; font: inherit;
+  padding: 12px 18px; cursor: pointer;
+  transition: background var(--dur-fast); }
+.sch-row:hover { background: var(--panel); }
+.sch-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.sch-row.is-open { background: var(--panel-2); box-shadow: inset 2px 0 0 var(--gold); }
+.sch-when { display: flex; flex-direction: column; gap: 2px; }
+.sch-when b { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sch-phase { font-style: normal; font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; font-weight: 700; align-self: flex-start;
+  padding: 2px 6px; border-radius: 3px; }
+.sch-row.is-past .sch-phase { color: var(--text-3); background: var(--panel-2); }
+.sch-row.is-live .sch-phase { color: #fff; background: var(--live); }
+.sch-row.is-upcoming .sch-phase { color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 14%, transparent); }
+.sch-name { font-family: var(--f-display); font-weight: 700; font-size: 20px;
+  line-height: 1.1; text-transform: uppercase; }
+.sch-row.is-past .sch-name { color: var(--text-2); }
+.sch-meta { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .sch-row { grid-template-columns: 1fr auto; gap: 8px; }
+  .sch-when { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .sch-pager h3 { font-size: 19px; min-width: 0; }
+}

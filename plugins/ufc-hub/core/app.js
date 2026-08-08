@@ -10,6 +10,7 @@ import { store } from './store.js';
 import { stateMsg } from './ui.js';
 import { motion } from './motion.js';
 import { urls, monthKey, parseMonthIndex } from './ufc-espn.js';
+import { shiftMonth, monthOf } from './schedule.js';
 import { nearestEvent } from './event-index.js';
 import { CF_URL, resolveCfId } from './ufc-cf-client.js';
 import { parseEvent } from './ufc-cloudfront.js';
@@ -20,6 +21,9 @@ import { parseEventPage } from './ufc-event-page.js';
 import { parseAthlete } from './ufc-athlete.js';
 
 export const state = {
+  view: 'card',        // 'card' | 'schedule'
+  monthKey: null,      // the month the PAGER is showing
+  months: new Map(),   // monthKey -> raw ESPN payload, for the athlete join
   index: [],
   selected: null,
   event: null,
@@ -48,6 +52,10 @@ export function viewModel(st = state) {
     athletes: st.athletes,
     odds: st.odds,
     artwork: st.artwork,
+    view: st.view,
+    monthKey: st.monthKey,
+    monthEvents: st.index,
+    selectedId: st.selected?.id ?? null,
     openFight: st.openFight,
     fighter: st.fighter,
     fighterLoading: st.fighterLoading,
@@ -61,12 +69,29 @@ export function ttlFor(event) {
   return TTL.EVENT_UPCOMING;
 }
 
+/**
+ * Load ONE month.
+ *
+ * ⚠️ One month at a time, always: `?dates=YYYY` is 2,035,461 bytes, over the 1 MB
+ * fetch:external cap, and fails silently through the proxy. See core/ufc-espn.js.
+ *
+ * The raw payload is kept per month because the ESPN athlete join reads it, and a
+ * viewer browsing March while a card from August is open needs AUGUST's payload — not
+ * whichever month the pager happens to be showing.
+ */
+async function loadMonth(key) {
+  if (state.months.has(key)) return parseMonthIndex(state.months.get(key));
+  const url = urls.month(key);
+  const raw = await cache.get(url, () => getJson(url),
+    TTL.MONTH_INDEX, { staleOnError: true }).catch(() => null);
+  if (raw) state.months.set(key, raw);
+  return raw ? parseMonthIndex(raw) : [];
+}
+
 async function loadIndex() {
   const key = monthKey(new Date());
-  const raw = await cache.get(urls.month(key), () => getJson(urls.month(key)),
-    TTL.MONTH_INDEX, { staleOnError: true }).catch(() => null);
-  state.month = raw ?? null;
-  state.index = raw ? parseMonthIndex(raw) : [];
+  state.monthKey = key;
+  state.index = await loadMonth(key);
   state.selected = nearestEvent(state.index) ?? null;
 }
 
@@ -79,9 +104,12 @@ async function loadEvent() {
   const raw = await cache.get(CF_URL(cfId), () => getJson(CF_URL(cfId)),
     ttlFor(state.event), { staleOnError: true }).catch(() => null);
   state.event = raw ? parseEvent(raw) : null;
-  // Costs no request: the month payload is already in hand.
-  state.athletes = state.event
-    ? joinAthletes(state.event.fights, athletesForEvent(state.month, state.selected.id))
+  // Costs no request: the month payload is already in hand. Keyed by the SELECTED
+  // event's own month, not the pager's — those differ as soon as anyone browses.
+  const mk = monthOf(state.selected.startTime) ?? state.monthKey;
+  const payload = state.months.get(mk) ?? null;
+  state.athletes = state.event && payload
+    ? joinAthletes(state.event.fights, athletesForEvent(payload, state.selected.id))
     : new Map();
 }
 
@@ -122,17 +150,30 @@ async function boot() {
   booted = true;
 
   const mount = document.getElementById('main');
-  const [cardView, fighterView] = await Promise.all([
+  const [cardView, fighterView, scheduleView] = await Promise.all([
     import('../views/card.js'),
     import('../views/fighter.js'),
+    import('../views/schedule.js'),
   ]);
 
   const paint = () => {
     try {
-      mount.innerHTML = state.fighter
-        ? fighterView.renderFighter(state.fighter, state.athletes,
-            { loading: state.fighterLoading })
-        : cardView.renderPanel(viewModel());
+      if (state.fighter) {
+        mount.innerHTML = fighterView.renderFighter(state.fighter, state.athletes,
+          { loading: state.fighterLoading });
+      } else if (state.view === 'schedule') {
+        mount.innerHTML = scheduleView.renderPanel({
+          monthKey: state.monthKey,
+          events: state.index,
+          selectedId: state.selected?.id ?? null,
+          loading: state.indexLoading,
+        });
+      } else {
+        mount.innerHTML = cardView.renderPanel(viewModel());
+      }
+      for (const b of document.querySelectorAll('#nav [data-act="nav"]')) {
+        b.setAttribute('aria-current', String(b.dataset.view === state.view));
+      }
     } catch (err) {
       // A throwing view must never leave an empty pane — that reads as a dead plugin.
       mount.innerHTML = stateMsg('This section could not be displayed.', { retry: true });
@@ -165,6 +206,44 @@ async function boot() {
     paint();
   };
 
+  /** Page the schedule. Each month is fetched once and then served from the map. */
+  const goMonth = async (delta) => {
+    const key = shiftMonth(state.monthKey, Number(delta));
+    if (!key) return;
+    state.monthKey = key;
+    state.indexLoading = true;
+    paint();
+    state.index = await loadMonth(key).catch(() => []);
+    state.indexLoading = false;
+    paint();
+  };
+
+  /**
+   * Choose an event off the schedule.
+   *
+   * Everything downstream keys off state.selected, so this reloads the card, the
+   * athletes, the odds and the artwork for the new event — and drops the previous
+   * event's, which would otherwise be shown against the wrong card.
+   */
+  const pickEvent = async (id) => {
+    const ev = state.index.find((e) => String(e.id) === String(id));
+    if (!ev) return;
+    state.selected = ev;
+    state.view = 'card';
+    state.openFight = null;
+    state.event = null;
+    state.odds = new Map();
+    state.artwork = null;
+    state.athletes = new Map();
+    paint();
+    await loadEvent().catch(() => { state.event = null; });
+    paint();
+    await loadOdds().catch(() => { state.odds = new Map(); });
+    paint();
+    await loadArtwork().catch(() => { state.artwork = null; });
+    paint();
+  };
+
   // Accordion: opening one closes the other, so the panel never becomes a wall of
   // twelve open versus screens.
   const toggleFight = (el) => {
@@ -178,6 +257,9 @@ async function boot() {
     const t = e.target.closest('[data-act]');
     if (!t) return;
     if (t.dataset.act === 'retry') { paint(); return; }
+    if (t.dataset.act === 'nav') { state.view = t.dataset.view; state.fighter = null; paint(); return; }
+    if (t.dataset.act === 'month') { goMonth(t.dataset.delta); return; }
+    if (t.dataset.act === 'pick-event') { pickEvent(t.dataset.event); return; }
     if (t.dataset.act === 'fight') { toggleFight(t); return; }
     // The fighter button is NESTED inside the row, so closest() finds it first and the
     // row never sees the click — which is what makes this route possible at all.
