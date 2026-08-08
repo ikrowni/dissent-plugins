@@ -1,7 +1,7 @@
 {
   "id": "ufc-hub",
   "name": "UFC Hub",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "Live UFC fight cards with play-by-play, fighter records and full results.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -12,15 +12,27 @@
   "url": "https://plugins.dissent.chat/plugins/ufc-hub/plugin.html",
   "declared_permissions": [
     "fetch:external",
-    "storage:user"
+    "storage:user",
+    "storage:local",
+    "wallet"
   ],
   "allowed_fetch_domains": [
     "site.api.espn.com",
     "d29dxerjsp82wz.cloudfront.net",
     "gamma-api.polymarket.com",
-    "www.ufc.com"
+    "www.ufc.com",
+    "clob.polymarket.com"
   ],
-  "config_schema": null,
+  "config_schema": {
+    "betting_mode": {
+      "type": "string",
+      "label": "Betting: 'link' sends users to Polymarket, 'trade' places orders in-app"
+    },
+    "polymarket_venue": {
+      "type": "string",
+      "label": "Polymarket venue: 'global' or 'us' (us is not yet wired for trading)"
+    }
+  },
   "categories": [
     "sports",
     "mma"

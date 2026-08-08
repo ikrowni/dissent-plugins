@@ -12,7 +12,8 @@ import {
 import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
 import { imageUrl } from '../../plugin-sdk.js';
-import { pct, marketUrl } from '../core/polymarket.js';
+import { pct } from '../core/polymarket.js';
+import { canTrade, marketUrl } from '../../polymarket.js';
 
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
@@ -241,7 +242,43 @@ function resultBlock(fight) {
  * already in [0,1] — it is NOT a decimal odd and must never be inverted. Rendered as a
  * percentage because that is what it is.
  */
-function marketBlock(fight, m) {
+/**
+ * The betting surface.
+ *
+ * ⚠️ TWO MODES, AND LINK IS THE DEFAULT. `canTrade` reads the server's own config and
+ * anything other than an explicit 'trade' means link-out — see plugins/polymarket.js.
+ * This function only decides what to DRAW; the refusal that matters lives in
+ * `placeBet`, so a bug here cannot cause an order.
+ */
+function betting(fight, m, cfg) {
+  const url = marketUrl(m.slug, cfg);
+  if (!canTrade(cfg)) {
+    return url
+      ? `<a class="mk-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">`
+        + 'View this market on Polymarket</a>'
+      : '';
+  }
+  const side = (f, idx) => {
+    const p = m.byFighter?.[f?.fighterId];
+    if (!f || p == null) return '';
+    return `<button class="mk-bet" data-act="bet" data-fight="${esc(fight.fightId)}"`
+      + ` data-outcome="${esc(idx)}"`
+      + ` data-label="${esc(f.lastName ?? f.name ?? '')}">`
+      + `<span class="mk-bet-name">${esc(f.lastName ?? f.name)}</span>`
+      + `<span class="mk-bet-odds num">${esc(pct(p))}%</span>`
+      + '</button>';
+  };
+  return '<div class="mk-bet-row">'
+    + side(fight.red, 0) + side(fight.blue, 1)
+    + '</div>'
+    + '<p class="vs-note mk-warn">Places a REAL order on Polymarket with your own '
+    + 'wallet. Your wallet signs it; this server never holds your funds.'
+    + (url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">`
+      + 'Open the market</a>.' : '')
+    + '</p>';
+}
+
+function marketBlock(fight, m, cfg) {
   if (!m) return '';
   const r = m.byFighter?.[fight.red?.fighterId];
   const b = m.byFighter?.[fight.blue?.fighterId];
@@ -250,12 +287,10 @@ function marketBlock(fight, m) {
       + `<span class="mk-bar"><i style="width:${esc(pct(p))}%"></i></span>`
       + `<span class="mk-v num">${esc(pct(p))}%</span></div>`);
 
-  const rounds = m.rounds?.length
-    ? '<div class="mk-rounds">' + m.rounds.map((x) => (
-        `<span class="mk-chip"><b>${esc(x.line)}+</b>`
-        + `<i class="num">${esc(pct(x.over))}%</i></span>`
-      )).join('') + '</div>'
-    : '';
+  // ⚠️ The O/U round markets are DELIBERATELY NOT DRAWN. They are too thin to be
+  // coherent — measured on one card, Over 4.5 rounds priced HIGHER than Over 1.5, which
+  // is impossible — and a reader cannot tell a noisy mid price from a real one. See
+  // core/polymarket.js. They are still parsed; if the books ever get liquid, render them.
 
   return '<div class="vs-market"><h4>What the market thinks</h4>'
     + (r != null && b != null
@@ -270,17 +305,13 @@ function marketBlock(fight, m) {
     + row('Goes to decision', m.distance)
     + row('Ends by KO/TKO', m.ko)
     + row('Ends by submission', m.sub)
-    + (rounds ? `<h5>Chance the fight reaches round</h5>${rounds}` : '')
     + '<p class="vs-note">Implied probability from Polymarket order books '
     + '&mdash; a live prediction market, not a forecast by this plugin.</p>'
-    + (marketUrl(m.slug)
-      ? `<a class="mk-link" href="${esc(marketUrl(m.slug))}"`
-        + ' target="_blank" rel="noopener noreferrer">View this market on Polymarket</a>'
-      : '')
+    + betting(fight, m, cfg)
     + '</div>';
 }
 
-export function renderVersus(fight, event, athletes, market, artwork) {
+export function renderVersus(fight, event, athletes, market, artwork, config) {
   if (!fight) return '';
   const red = fight.red;
   const blue = fight.blue;
@@ -299,7 +330,7 @@ export function renderVersus(fight, event, athletes, market, artwork) {
       : hero(fight, red, blue, event, athletes))
     + tape(red, blue)
     + chips(fight)
-    + (st === 'post' ? '' : marketBlock(fight, market))
+    + (st === 'post' ? '' : marketBlock(fight, market, config))
     + (st === 'in' ? liveBlock(fight, event) : '')
     + (st === 'post' && hasResult(fight) ? resultBlock(fight) : '')
     + counts(events, red, blue)

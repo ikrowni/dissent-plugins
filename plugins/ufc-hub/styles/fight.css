@@ -480,3 +480,21 @@ a.nw-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; 
 .mk-link::after { content: '\2197'; font-size: 12px; }
 .mk-link:hover { color: var(--text); border-color: var(--text-3); }
 .mk-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── betting (trade mode only) ─────────────────────────────────────────────── */
+.mk-bet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.mk-bet { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  appearance: none; font: inherit; cursor: pointer; padding: 11px 14px;
+  border-radius: var(--r-sm); border: 1px solid var(--line-2);
+  background: var(--panel); color: var(--text);
+  transition: border-color var(--dur-fast), background var(--dur-fast); }
+.mk-bet:hover:not(:disabled) { border-color: var(--gold); background: var(--panel-2); }
+.mk-bet:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mk-bet:disabled { opacity: .5; cursor: progress; }
+.mk-bet-name { font-family: var(--f-display); font-weight: 700; font-size: 17px;
+  text-transform: uppercase; }
+.mk-bet-odds { font-weight: 700; color: var(--gold); }
+/* Real money moves here, so the warning is not a footnote. */
+.mk-warn { color: var(--text-2); border-left: 2px solid var(--live);
+  padding-left: 10px; margin-top: 10px; }
+.mk-warn a { color: var(--text); }

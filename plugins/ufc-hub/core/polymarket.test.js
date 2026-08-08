@@ -58,18 +58,51 @@ describe('parseFightMarket', () => {
   const gamrot = card.find((e) => e.slug === 'ufc-mat10-qui2-2026-08-08');
 
   it('reads both fighters and their implied probabilities', () => {
+    // ⚠️ Assert the SHAPE, never the price. These are live market numbers — Gamrot was
+    // 0.445 in the morning and 0.435 by evening — so pinning a value means the test
+    // breaks every time the fixture is refreshed, which trains people to refresh the
+    // expectation rather than read the failure.
     const m = parseFightMarket(gamrot);
     expect(m.names).toEqual(['Mateusz Gamrot', 'Quillan Salkilld']);
-    expect(m.prob['Mateusz Gamrot']).toBeCloseTo(0.445, 3);
-    expect(m.prob['Quillan Salkilld']).toBeCloseTo(0.555, 3);
+    const a = m.prob['Mateusz Gamrot'];
+    const b = m.prob['Quillan Salkilld'];
+    for (const p of [a, b]) {
+      expect(p).toBeGreaterThan(0);
+      expect(p).toBeLessThan(1);
+    }
+    // Two complementary outcomes: the book prices them to about 1.
+    expect(a + b).toBeGreaterThan(0.9);
+    expect(a + b).toBeLessThan(1.1);
   });
 
   it('reads the method and round markets', () => {
     const m = parseFightMarket(gamrot);
-    expect(m.distance).toBeCloseTo(0.41, 2);
-    expect(m.ko).toBeCloseTo(0.32, 2);
-    expect(m.sub).toBeCloseTo(0.265, 3);
+    for (const p of [m.distance, m.ko, m.sub]) {
+      expect(p).toBeGreaterThan(0);
+      expect(p).toBeLessThan(1);
+    }
     expect(m.rounds.map((r) => r.line)).toEqual([0.5, 1.5, 2.5, 3.5, 4.5]);
+    expect(m.rounds.every((r) => 'volume' in r)).toBe(true);
+  });
+
+  it('the round markets are INCOHERENT, which is why no view draws them', () => {
+    // ⚠️ NOT A BUG IN THE PARSER — a fact about the data, pinned so nobody "fixes" the
+    // view by rendering them. P(fight passes round 4) cannot exceed P(passes round 1),
+    // yet these books price exactly that, because they are nearly empty.
+    const m = parseFightMarket(gamrot);
+    const overs = m.rounds.map((r) => r.over);
+    const monotonic = overs.every((v, i) => i === 0 || v <= overs[i - 1]);
+    expect(monotonic).toBe(false);
+    expect(Math.min(...m.rounds.map((r) => r.volume ?? 0))).toBeLessThan(100);
+  });
+
+  it('parses the CLOB token ids an order needs, aligned with the names', () => {
+    // ⚠️ Without these, buildOrderParams throws "no token id" and the bet path can
+    // never place an order. The first version of this parser dropped them silently.
+    const m = parseFightMarket(gamrot);
+    expect(m.clobTokenIds).toHaveLength(2);
+    expect(m.clobTokenIds.every((t) => /^\d{6,}$/.test(t))).toBe(true);
+    expect(m.clobTokenIds).toHaveLength(m.names.length);
   });
 
   it('returns null when there is no moneyline to anchor on', () => {
@@ -100,8 +133,12 @@ describe('joinMarkets', () => {
   it('maps the probability onto the right fighter id', () => {
     const main = cf.fights.find((f) => f.order === 1);
     const m = joined.get(main.fightId);
-    expect(m.byFighter[main.red.fighterId]).toBeCloseTo(0.445, 3);
-    expect(m.byFighter[main.blue.fighterId]).toBeCloseTo(0.555, 3);
+    // Identity, not value: each fighter gets the probability of the outcome NAMED for
+    // them. That is what a mis-map would break, and it survives the market moving.
+    expect(m.byFighter[main.red.fighterId]).toBe(m.prob[m.names[0]]);
+    expect(m.byFighter[main.blue.fighterId]).toBe(m.prob[m.names[1]]);
+    expect(m.names[0]).toContain(main.red.lastName);
+    expect(m.names[1]).toContain(main.blue.lastName);
   });
 
   it('IGNORES a market for a bout that is not on the card', () => {

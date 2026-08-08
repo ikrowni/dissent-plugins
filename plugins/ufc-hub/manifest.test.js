@@ -28,7 +28,7 @@ describe('no dead fetch domain is declared anywhere', () => {
 });
 
 describe('ufc-hub manifest', () => {
-  it('declares exactly the four domains it fetches, and no more', () => {
+  it('declares exactly the five domains it fetches, and no more', () => {
     // ⚠️ Editing this list changes NOTHING in production on its own.
     // `allowed_fetch_domains` is enforced from `server_plugins` — the per-install
     // snapshot — so a new domain also needs a migration for `registry_plugins` and a
@@ -43,6 +43,11 @@ describe('ufc-hub manifest', () => {
       // normalises every URL to www, and the images on those pages go through the
       // image proxy, which is allowlist-free.
       'www.ufc.com',                   // athlete career stats + event artwork
+      // ⚠️ THE CAPABILITY GATE FOR REAL-MONEY ORDERS. Removing this line and running
+      // the matching migration is the HARD off-switch for in-app betting: without the
+      // grant the node rejects the order fetch outright, whatever the plugin's config
+      // says. The config toggle is the convenient switch; this is the real one.
+      'clob.polymarket.com',           // order placement (betting_mode: 'trade' only)
     ]);
   });
 

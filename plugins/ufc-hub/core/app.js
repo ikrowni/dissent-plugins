@@ -22,6 +22,7 @@ import { parseAthlete } from './ufc-athlete.js';
 import {
   parseNews, relevantTo, cardAthleteIds, cardAthleteNames,
 } from './ufc-news.js';
+import { placeBet } from '../../polymarket.js';
 
 export const state = {
   view: 'card',        // 'card' | 'schedule'
@@ -38,6 +39,8 @@ export const state = {
   fighterLoading: false,
   news: [],
   newsLoading: false,
+  config: null,      // per-install config; drives the betting mode
+  betNotice: null,
   openFight: null,     // fightId of the expanded row, or null
   error: null,
   loading: true,
@@ -57,6 +60,7 @@ export function viewModel(st = state) {
     athletes: st.athletes,
     odds: st.odds,
     artwork: st.artwork,
+    config: st.config,
     view: st.view,
     monthKey: st.monthKey,
     monthEvents: st.index,
@@ -272,6 +276,54 @@ async function boot() {
     paint();
   };
 
+  /**
+   * Place a bet.
+   *
+   * ⚠️ This does NOT decide whether betting is allowed — `placeBet` does, and refuses
+   * unless the install is explicitly in trade mode. The check is deliberately not
+   * duplicated here: one choke point, one thing to audit.
+   */
+  const onBet = async (el) => {
+    const fightId = Number(el.dataset.fight);
+    const outcomeIndex = Number(el.dataset.outcome);
+    const label = el.dataset.label ?? '';
+    const m = state.odds.get(fightId);
+    if (!m) return;
+
+    // The amount is the user's, so it is asked for rather than assumed. A prompt is
+    // crude, but a real order must never take a silent default stake.
+    const raw = window.prompt(`Stake on ${label} (USDC.e):`, '');
+    const amount = Number(raw);
+    if (!raw || !Number.isFinite(amount) || amount <= 0) return;
+
+    el.disabled = true;
+    try {
+      const market = {
+        question: m.title,
+        outcomePrices: m.names.map((n) => m.prob[n]),
+        tokens: (m.clobTokenIds ?? []).map((id) => ({ token_id: id })),
+      };
+      const res = await placeBet({
+        market, outcomeIndex, outcomeLabel: label, amount, config: state.config,
+      });
+      state.betNotice = { ok: true, text: `Order placed (${res.orderId}).` };
+    } catch (err) {
+      // NOT_GRANTED means the node refused the host, not the exchange — the capability
+      // layer doing its job. Say so plainly rather than reporting an exchange failure.
+      state.betNotice = {
+        ok: false,
+        text: err?.code === 'NOT_GRANTED'
+          ? 'In-app betting is not enabled on this server.'
+          : err?.code === 'MODE_LINK'
+            ? 'This server sends you to Polymarket instead.'
+            : `Order failed: ${err?.message ?? err}`,
+      };
+    } finally {
+      el.disabled = false;
+      paint();
+    }
+  };
+
   // Accordion: opening one closes the other, so the panel never becomes a wall of
   // twelve open versus screens.
   const toggleFight = (el) => {
@@ -293,6 +345,7 @@ async function boot() {
       return;
     }
     if (t.dataset.act === 'month') { goMonth(t.dataset.delta); return; }
+    if (t.dataset.act === 'bet') { onBet(t); return; }
     if (t.dataset.act === 'pick-event') { pickEvent(t.dataset.event); return; }
     if (t.dataset.act === 'fight') { toggleFight(t); return; }
     // The fighter button is NESTED inside the row, so closest() finds it first and the
@@ -313,6 +366,10 @@ async function boot() {
     e.preventDefault();
     toggleFight(t);
   });
+
+  // The host delivers the server owner's per-install config at init. It decides whether
+  // this install links out or places orders — see plugins/polymarket.js.
+  state.config = getInitContext()?.pluginConfig ?? null;
 
   if (motion.bodyClass) document.body.classList.add(motion.bodyClass);
 

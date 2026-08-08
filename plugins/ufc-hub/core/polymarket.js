@@ -101,7 +101,21 @@ export function parseFightMarket(event) {
     distance: null,  // P(goes to decision)
     ko: null,
     sub: null,
-    rounds: [],      // [{ line, over }]
+    /**
+     * ⚠️ THE ROUND MARKETS ARE TOO THIN TO TRUST AND THE VIEW DOES NOT DRAW THEM.
+     * Measured on the 2026-08-08 main event: Over 0.5 = 0.92, Over 1.5 = 0.50,
+     * Over 2.5 = 0.52, Over 3.5 = 0.565, Over 4.5 = 0.665. A fight cannot be MORE
+     * likely to pass round 4 than round 1 — P(>4.5) <= P(>1.5) by definition. The
+     * prices are incoherent because the books are nearly empty (one had $4.60 of
+     * volume) and a mid price between a wide bid and ask is noise.
+     * Parsed and carried with `volume` so this stays visible; rendering them as a
+     * probability curve would be presenting nonsense as data.
+     */
+    rounds: [],      // [{ line, over, volume }]
+    // ⚠️ The order references a CLOB token id, not a fighter name or an outcome index.
+    // Parsed from the MONEYLINE market only, in the same order as `names`, so
+    // names[i] / prob[names[i]] / clobTokenIds[i] all describe the same outcome.
+    clobTokenIds: [],
     volume: num(event.volume),
   };
 
@@ -116,10 +130,13 @@ export function parseFightMarket(event) {
       out.names = outcomes.slice();
       out.prob[outcomes[0]] = prices[0];
       out.prob[outcomes[1]] = prices[1];
+      out.clobTokenIds = arr(m?.clobTokenIds).map(String);
     } else if (c.kind === 'distance') out.distance = prices[0];
     else if (c.kind === 'ko') out.ko = prices[0];
     else if (c.kind === 'sub') out.sub = prices[0];
-    else if (c.kind === 'rounds') out.rounds.push({ line: c.line, over: prices[0] });
+    else if (c.kind === 'rounds') {
+      out.rounds.push({ line: c.line, over: prices[0], volume: num(m?.volume) });
+    }
   }
   out.rounds.sort((a, b) => a.line - b.line);
   return out.names.length ? out : null;
