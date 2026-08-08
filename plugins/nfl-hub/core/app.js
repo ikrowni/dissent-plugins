@@ -176,11 +176,15 @@ async function boot() {
   scheduler.start();
 }
 
-window.addEventListener('message', (e) => handleSDKMessage(e, (init) => {
-  app.ctx = init.context ?? getInitContext();
-  boot();
-}));
+// Guarded so this module can be imported outside a browser — a unit test importing it
+// for createRouter must not start a bootstrap or attach listeners as a side effect.
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (e) => handleSDKMessage(e, (init) => {
+    app.ctx = init.context ?? getInitContext();
+    boot();
+  }));
 
-// Outside Dissent (a bare browser open) there is no host handshake, so boot anyway
-// after a beat. That is what makes ?replay= usable for development.
-setTimeout(() => { if (!booted) boot(); }, 3000);
+  // Outside Dissent (a bare browser open) there is no host handshake, so boot anyway
+  // after a beat. That is what makes ?replay= usable for development.
+  setTimeout(() => { if (!booted) boot(); }, 3000);
+}
