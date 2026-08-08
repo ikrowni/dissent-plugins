@@ -19,6 +19,9 @@ import { cardUrl, joinMarkets } from './polymarket.js';
 import { athleteUrl, eventPageUrl } from './ufc-links.js';
 import { parseEventPage } from './ufc-event-page.js';
 import { parseAthlete } from './ufc-athlete.js';
+import {
+  parseNews, relevantTo, cardAthleteIds, cardAthleteNames,
+} from './ufc-news.js';
 
 export const state = {
   view: 'card',        // 'card' | 'schedule'
@@ -33,6 +36,8 @@ export const state = {
   artwork: null,       // { art, renders } from the ufc.com event page
   fighter: null,       // the open fighter profile, or null
   fighterLoading: false,
+  news: [],
+  newsLoading: false,
   openFight: null,     // fightId of the expanded row, or null
   error: null,
   loading: true,
@@ -143,6 +148,20 @@ async function loadArtwork() {
   state.artwork = raw ? parseEventPage(raw) : null;
 }
 
+/**
+ * News. Loaded on demand, not at boot: it is the only view nobody has asked for until
+ * they click it, and the card must not wait on it.
+ */
+async function loadNews() {
+  if (state.news.length) return;
+  const url = urls.news(20);
+  state.newsLoading = true;
+  const raw = await cache.get(url, () => getJson(url),
+    TTL.NEWS, { staleOnError: true }).catch(() => null);
+  state.news = raw ? parseNews(raw) : [];
+  state.newsLoading = false;
+}
+
 let booted = false;
 
 async function boot() {
@@ -150,10 +169,11 @@ async function boot() {
   booted = true;
 
   const mount = document.getElementById('main');
-  const [cardView, fighterView, scheduleView] = await Promise.all([
+  const [cardView, fighterView, scheduleView, newsView] = await Promise.all([
     import('../views/card.js'),
     import('../views/fighter.js'),
     import('../views/schedule.js'),
+    import('../views/news.js'),
   ]);
 
   const paint = () => {
@@ -167,6 +187,14 @@ async function boot() {
           events: state.index,
           selectedId: state.selected?.id ?? null,
           loading: state.indexLoading,
+        });
+      } else if (state.view === 'news') {
+        mount.innerHTML = newsView.renderPanel({
+          articles: state.news,
+          cardArticles: relevantTo(state.news, cardAthleteIds(state.athletes)),
+          names: cardAthleteNames(state.event?.fights, state.athletes),
+          eventName: state.event?.name ?? null,
+          loading: state.newsLoading,
         });
       } else {
         mount.innerHTML = cardView.renderPanel(viewModel());
@@ -257,7 +285,13 @@ async function boot() {
     const t = e.target.closest('[data-act]');
     if (!t) return;
     if (t.dataset.act === 'retry') { paint(); return; }
-    if (t.dataset.act === 'nav') { state.view = t.dataset.view; state.fighter = null; paint(); return; }
+    if (t.dataset.act === 'nav') {
+      state.view = t.dataset.view;
+      state.fighter = null;
+      paint();
+      if (state.view === 'news') loadNews().then(paint).catch(() => { state.newsLoading = false; });
+      return;
+    }
     if (t.dataset.act === 'month') { goMonth(t.dataset.delta); return; }
     if (t.dataset.act === 'pick-event') { pickEvent(t.dataset.event); return; }
     if (t.dataset.act === 'fight') { toggleFight(t); return; }
