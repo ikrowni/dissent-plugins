@@ -1,0 +1,84 @@
+/* styles/primetime.css — the workhorse chrome: panels, cards, tables, badges.
+ * Typography-led and restrained, because this is what a user looks at for an hour. */
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--r-lg); overflow: hidden; margin: 14px 20px;
+}
+.panel-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; border-bottom: 1px solid var(--line);
+}
+.panel-head h2 { font-family: var(--f-display); font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+.panel-head .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.panel-body { padding: 14px 16px; }
+.panel-body.flush { padding: 0; }
+
+/* One gold hairline is the only ornament in this layer. */
+.rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,182,18,.5), transparent); }
+
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--text-2);
+  background: transparent; font-family: inherit; cursor: default;
+}
+button.badge { cursor: pointer; }
+button.badge:hover { color: var(--text); border-color: var(--line-2); background: var(--panel); }
+.badge.live { color: #fff; background: rgba(255,45,75,.16); border-color: rgba(255,45,75,.5); }
+.badge.final { color: var(--text-3); }
+.badge.redzone { color: #fff; background: rgba(213,10,10,.22); border-color: rgba(213,10,10,.6); }
+
+.live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--live); margin-right: 6px; vertical-align: middle;
+  animation: livePulse 2s ease-out infinite;
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,45,75,.65); }
+  70%  { box-shadow: 0 0 0 7px rgba(255,45,75,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,45,75,0); }
+}
+
+/* Team chip — logo + abbr, the most repeated unit in the whole plugin. */
+.chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.chip img { width: 24px; height: 24px; flex: 0 0 auto; object-fit: contain; }
+.chip .abbr { font-family: var(--f-display); font-weight: 700; font-size: 13px; letter-spacing: 0.06em; }
+.chip .rec { font-size: 11px; color: var(--text-3); }
+.chip.lg img { width: 34px; height: 34px; }
+.chip.lg .abbr { font-size: 16px; }
+
+button.chip, .clickable { cursor: pointer; background: none; border: none; color: inherit; font: inherit; }
+.clickable:hover .abbr { color: var(--gold); }
+
+/* Stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px;
+  background: var(--line); border-radius: var(--r); overflow: hidden; }
+.tile { background: var(--ink-2); padding: 11px 13px; }
+.tile .label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; }
+.tile .value { font-family: var(--f-display); font-size: 19px; font-weight: 700; margin-top: 4px; }
+.tile .value.good { color: var(--gold); }
+
+/* Tables (standings, box score) */
+table.grid { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.grid th {
+  text-align: right; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+table.grid th:first-child, table.grid td:first-child { text-align: left; }
+table.grid td { padding: 8px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,.045); }
+table.grid tr:last-child td { border-bottom: 0; }
+table.grid tbody tr:hover { background: rgba(255,255,255,.025); }
+
+/* Card entrance — state-change only, never a loop. */
+.enter { animation: enter var(--dur) var(--ease-out) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Score flip, applied by JS when a score actually changes. */
+.flip { animation: flip var(--dur-slow) var(--ease-spring) both; }
+@keyframes flip {
+  0%   { transform: translateY(-38%) scale(1.12); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
