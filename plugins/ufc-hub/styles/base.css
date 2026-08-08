@@ -1,7 +1,11 @@
 /* styles/base.css — design tokens, reset, type scale, layout shell.
  *
  * Paths here resolve relative to THIS FILE, not to the <base href> that governs
- * plugin.html. Hence ../assets/fonts/, not nfl-hub/assets/fonts/. */
+ * plugin.html — so ../assets/fonts/ means plugins/ufc-hub/assets/fonts/.
+ *
+ * ⚠️ This file was copied from nfl-hub, where that directory already existed. It did
+ * not exist here, so the import 404'd in production and every heading fell back to
+ * Arial Narrow. Do not delete plugins/ufc-hub/assets/. */
 @import url('../assets/fonts/barlow-condensed.css');
 
 :root {
