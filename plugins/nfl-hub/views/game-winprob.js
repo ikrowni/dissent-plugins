@@ -3,7 +3,7 @@
 // Inline rather than canvas: it is a single path over at most a few hundred points, it
 // scales without a resize observer, and it needs no animation loop. A canvas here
 // would mean owning a rAF, which the motion budget does not allow for a static chart.
-import { esc, stateMsg } from '../core/ui.js';
+import { esc, stateMsg, legibleColor } from '../core/ui.js';
 import { fmtPct } from '../core/format.js';
 
 const W = 600;
@@ -37,8 +37,10 @@ export function renderWinProb(samples, teams, { scoringSeqs = [] } = {}) {
   const last = list.at(-1);
   const homeAbbr = teams?.home?.abbr ?? 'Home';
   const awayAbbr = teams?.away?.abbr ?? 'Away';
-  const homeCol = teams?.home?.primary ?? '#5b8dd9';
-  const awayCol = teams?.away?.primary ?? '#e0596c';
+  // Lifted for legibility: several team primaries are near-black, and a 2px stroke in
+  // #000000 on a #05070b background is invisible.
+  const homeCol = legibleColor(teams?.home?.primary ?? '#5b8dd9');
+  const awayCol = legibleColor(teams?.away?.primary ?? '#e0596c');
   const step = list.length > 1 ? W / (list.length - 1) : 0;
 
   const marks = (scoringSeqs ?? [])

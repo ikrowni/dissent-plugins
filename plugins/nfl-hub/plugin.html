@@ -7,10 +7,15 @@
        Paths inside a CSS file resolve relative to that CSS file instead. -->
   <base href="https://app.dissent.chat/plugins/">
   <title>NFL Hub</title>
-  <link rel="stylesheet" href="nfl-hub/styles/base.css?v=1">
-  <link rel="stylesheet" href="nfl-hub/styles/primetime.css?v=1">
-  <link rel="stylesheet" href="nfl-hub/styles/stadium.css?v=1">
-  <link rel="stylesheet" href="nfl-hub/styles/controlroom.css?v=1">
+  <!-- No ?v= cache-busters anywhere here. Caddy serves /plugins/** as
+       "no-store, no-cache, must-revalidate", so a buster buys nothing — and on the
+       module script it actively breaks: app.js?v=1 and app.js are two DIFFERENT module
+       instances, so the views (which import ../core/app.js) would get a second, fresh
+       copy with no replay and no context, double-booting the plugin. -->
+  <link rel="stylesheet" href="nfl-hub/styles/base.css">
+  <link rel="stylesheet" href="nfl-hub/styles/primetime.css">
+  <link rel="stylesheet" href="nfl-hub/styles/stadium.css">
+  <link rel="stylesheet" href="nfl-hub/styles/controlroom.css">
 </head>
 <body>
   <div id="app">
@@ -28,6 +33,6 @@
       <div class="state"><div class="spinner"></div><div>Loading NFL Hub…</div></div>
     </main>
   </div>
-  <script type="module" src="nfl-hub/core/app.js?v=1"></script>
+  <script type="module" src="nfl-hub/core/app.js"></script>
 </body>
 </html>

@@ -97,33 +97,46 @@ export const app = {
   onAction: null,
 };
 
-async function applyMotionPref() {
-  // Rehydrate before the first paint, so a reduce-motion user never sees one frame
-  // of the cinematic treatment.
+/** Stamp the class from the OS preference alone. Synchronous, so it lands before the
+ *  first paint and a reduce-motion user never sees one cinematic frame. */
+function applyOsMotionPref() {
+  document.body.classList.toggle('reduce-motion', !motion.enabled);
+}
+
+/** Reconcile the user's stored override. Deliberately NOT awaited before the first
+ *  paint: it is a host round-trip, and blocking the whole hub on it means a slow or
+ *  denied storage capability shows a spinner for the full request timeout. The OS
+ *  preference already covers the common case. */
+async function applyStoredMotionPref() {
   const prefs = await store.getUser(KEY.prefs(), {});
   if (prefs && typeof prefs.reduceMotion === 'boolean') {
     motion.setReduceMotion(prefs.reduceMotion);
+    document.body.classList.toggle('reduce-motion', !motion.enabled);
   }
-  document.body.classList.toggle('reduce-motion', !motion.enabled);
 }
 
 async function applySeasonLabel() {
   // Season/week comes from Sleeper's state endpoint, which is authoritative and tiny.
   // The old plugin hardcoded 2024.
+  const label = document.getElementById('season-label');
   try {
     const { fetchState } = await import('./sleeper.js');
     const st = await fetchState();
-    if (!st) return;
+    if (!st) { if (label) label.textContent = ''; return; }
     app.season = st.season ?? null;
     app.seasonType = st.seasonType ?? null;
     app.week = st.displayWeek ?? st.week ?? null;
-    const label = document.getElementById('season-label');
-    if (label && app.season) {
+    if (label) {
       const kind = st.isPreseason ? 'Preseason' : st.isRegular ? '' : 'Postseason';
-      label.textContent = `${app.season} ${kind} · Week ${app.week}`.replace(/\s+/g, ' ');
+      label.textContent = app.season
+        ? `${app.season} ${kind} · Week ${app.week}`.replace(/\s+/g, ' ')
+        : '';
     }
   } catch {
-    // A failed state lookup must not stop the hub — views fall back to current week.
+    // A failed state lookup must not stop the hub — views fall back to the current
+    // week. Clear the placeholder rather than leaving "Loading…" up forever, which
+    // reads as a hung plugin.
+    if (label) label.textContent = '';
   }
 }
 
@@ -143,14 +156,16 @@ async function boot() {
 
   app.router = createRouter({ mount, nav, views: { league: leagueView, game: gameView } });
 
-  await applyMotionPref();
-  await applySeasonLabel();
+  applyOsMotionPref();
 
+  // Replay first: it is a same-origin fetch of committed fixtures, so it is fast and
+  // it decides which view opens. Host round-trips come after the first paint.
   if (isReplayRequested()) {
     try {
       const { loadReplay } = await import('./replay.js');
       app.replay = await loadReplay(replayFixtureName(), { stepMs: 400 });
-    } catch {
+    } catch (err) {
+      console.error('[nfl-hub] replay load failed:', err);
       app.replay = null;
     }
   }
@@ -174,6 +189,12 @@ async function boot() {
 
   app.router.go(app.replay ? 'game' : 'league');
   scheduler.start();
+
+  // Fire-and-forget, after the first paint. Neither changes layout: one toggles a body
+  // class, the other fills a label. Awaiting them before painting cost ~20s outside
+  // Dissent, and would cost the full request timeout inside it if the host were slow.
+  applyStoredMotionPref().catch(() => {});
+  applySeasonLabel().catch(() => {});
 }
 
 // Guarded so this module can be imported outside a browser — a unit test importing it

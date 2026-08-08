@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg } from './ui.js';
+import {
+  esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg, legibleColor,
+} from './ui.js';
+import { TEAMS } from './config.js';
 import { fmtClock, fmtSpread, fmtPct, fmtRecord, ordinalDown, fmtMoneyline } from './format.js';
 
 const parse = (html) => {
@@ -66,6 +69,47 @@ describe('format', () => {
   });
   it('renders a down with no distance', () => {
     expect(ordinalDown(2, null)).toBe('2nd');
+  });
+});
+
+describe('legibleColor', () => {
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  };
+
+  it('lifts pure black to something visible on a near-black background', () => {
+    const out = legibleColor('#000000');
+    expect(out).not.toBe('#000000');
+    expect(lum(out)).toBeGreaterThanOrEqual(0.22);
+  });
+
+  it('leaves an already-bright colour alone', () => {
+    expect(legibleColor('#ffb612')).toBe('#ffb612');
+  });
+
+  it('makes every one of the 32 team primaries legible', () => {
+    // Raiders and Steelers are #000000, Houston #021018, Chicago #0b1c3a — a 2px
+    // stroke in any of those is invisible on #05070b.
+    for (const t of Object.values(TEAMS)) {
+      expect(lum(legibleColor(t.primary))).toBeGreaterThanOrEqual(0.21);
+    }
+  });
+
+  it('keeps the hue recognisable rather than swapping in a generic accent', () => {
+    // Houston is a very dark navy; lifting it must stay blue-dominant, not go grey.
+    const out = legibleColor('#021018');
+    const [r, , b] = [1, 3, 5].map((i) => parseInt(out.slice(i, i + 2), 16));
+    expect(b).toBeGreaterThan(r);
+  });
+
+  it('passes junk through rather than throwing', () => {
+    expect(legibleColor(null)).toBe('var(--text-2)');
+    expect(legibleColor('nope')).toBe('nope');
+  });
+
+  it('accepts a hex with no leading hash', () => {
+    expect(legibleColor('ffb612')).toBe('#ffb612');
   });
 });
 

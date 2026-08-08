@@ -15,6 +15,32 @@ export function esc(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/**
+ * Lift a colour until it is legible on the hub's near-black background.
+ *
+ * Several NFL primaries are effectively black — Raiders and Steelers are #000000,
+ * Houston is #021018, Chicago #0b1c3a — so tinting a chart line or a piece of text
+ * with a team's own colour can render it invisible. Fills and large blocks are fine
+ * as-is; this is for strokes and small marks.
+ *
+ * Blends toward white until relative luminance clears `min`, which keeps the hue
+ * recognisably the team's rather than swapping in a generic accent.
+ */
+export function legibleColor(hex, min = 0.22) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''));
+  if (!m) return hex ?? 'var(--text-2)';
+  let [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  const lum = () => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  // Bounded loop: each step closes 18% of the gap to white, so ~24 steps saturates.
+  for (let i = 0; i < 24 && lum() < min; i += 1) {
+    r += (255 - r) * 0.18;
+    g += (255 - g) * 0.18;
+    b += (255 - b) * 0.18;
+  }
+  const hx = (v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0');
+  return `#${hx(r)}${hx(g)}${hx(b)}`;
+}
+
 /** Team logo + abbreviation. The most repeated unit in the plugin. */
 export function chip(side, { clickable = false, size = '', showRecord = true } = {}) {
   if (!side) return '';
