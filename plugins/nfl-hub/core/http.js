@@ -9,7 +9,20 @@ export class HttpError extends Error {
   }
 }
 
-/** The host returns { ok, status, body } with body as a STRING, not a Response. */
+/**
+ * The host resolves `fetch:external` with the node's data payload:
+ *
+ *     { status: number, body: string, content_type: string }
+ *
+ * ⚠️ There is NO `ok` field. The provider does `ok(res.data)` (dissent-client
+ * `providers/network.ts`) and the node builds that map in `plugins_fetch.go` — neither
+ * adds one. An earlier version of this file tested `if (!res.ok) throw`, which threw on
+ * every SUCCESSFUL response and made every panel in the plugin read "could not load"
+ * while the node logged nothing but 200s.
+ *
+ * That survived because every test stub and every dev rig hand-wrote an `ok` field,
+ * encoding the assumption instead of the contract. Success is decided by `status`.
+ */
 async function hostFetch(url) {
   return request('fetch:external', { url, method: 'GET' }, 15_000);
 }
@@ -27,7 +40,15 @@ export async function getJson(url) {
   } catch (err) {
     throw new HttpError(`fetch failed: ${err?.message ?? err}`, 0);
   }
-  if (!res?.ok) throw new HttpError(`HTTP ${res?.status ?? 0} for ${url}`, res?.status ?? 0);
+  // Decide on status, which the host actually sends. `ok` is honoured only when it is
+  // explicitly present (some stubs and the SDK's own shape carry it) — never required,
+  // because the real host omits it.
+  const status = Number(res?.status ?? 0);
+  const flag = res?.ok;
+  // An explicit flag wins in BOTH directions when present; otherwise status decides.
+  const succeeded = flag === true
+    || (flag !== false && status >= 200 && status < 300);
+  if (!succeeded) throw new HttpError(`HTTP ${status} for ${url}`, status);
   try {
     return typeof res.body === 'string' ? JSON.parse(res.body) : res.body;
   } catch {
