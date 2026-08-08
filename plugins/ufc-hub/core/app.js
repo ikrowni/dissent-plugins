@@ -5,7 +5,7 @@
 // state helpers here stay unit-testable without pulling in every view.
 import { handleSDKMessage, getInitContext } from '../../plugin-sdk.js';
 import { cache, TTL } from './cache.js';
-import { getJson } from './http.js';
+import { getJson, getText } from './http.js';
 import { store } from './store.js';
 import { stateMsg } from './ui.js';
 import { motion } from './motion.js';
@@ -15,6 +15,9 @@ import { CF_URL, resolveCfId } from './ufc-cf-client.js';
 import { parseEvent } from './ufc-cloudfront.js';
 import { athletesForEvent, joinAthletes } from './espn-athletes.js';
 import { cardUrl, joinMarkets } from './polymarket.js';
+import { athleteUrl, eventPageUrl } from './ufc-links.js';
+import { parseEventPage } from './ufc-event-page.js';
+import { parseAthlete } from './ufc-athlete.js';
 
 export const state = {
   index: [],
@@ -23,6 +26,9 @@ export const state = {
   month: null,         // raw ESPN month payload, kept for the athlete join
   athletes: new Map(), // CloudFront fighterId -> { espnId, flag, country }
   odds: new Map(),     // CloudFront fightId  -> parsed Polymarket markets
+  artwork: null,       // { art, renders } from the ufc.com event page
+  fighter: null,       // the open fighter profile, or null
+  fighterLoading: false,
   openFight: null,     // fightId of the expanded row, or null
   error: null,
   loading: true,
@@ -41,7 +47,10 @@ export function viewModel(st = state) {
     event: st.event,
     athletes: st.athletes,
     odds: st.odds,
+    artwork: st.artwork,
     openFight: st.openFight,
+    fighter: st.fighter,
+    fighterLoading: st.fighterLoading,
   };
 }
 
@@ -92,6 +101,20 @@ async function loadOdds() {
   state.odds = Array.isArray(raw) ? joinMarkets(state.event.fights, raw) : new Map();
 }
 
+/**
+ * ufc.com artwork. Non-blocking, exactly like the odds: this is a scraped HTML page on
+ * a third-party host, and a failure must never cost the viewer the fight card.
+ *
+ * ⚠️ getText, not getJson — this is HTML and getJson throws on the first byte.
+ */
+async function loadArtwork() {
+  const url = state.event ? eventPageUrl(state.event.name, state.event.startTime) : null;
+  if (!url) { state.artwork = null; return; }
+  const raw = await cache.get(url, () => getText(url),
+    TTL.UFC_PAGE, { staleOnError: true }).catch(() => null);
+  state.artwork = raw ? parseEventPage(raw) : null;
+}
+
 let booted = false;
 
 async function boot() {
@@ -99,11 +122,17 @@ async function boot() {
   booted = true;
 
   const mount = document.getElementById('main');
-  const cardView = await import('../views/card.js');
+  const [cardView, fighterView] = await Promise.all([
+    import('../views/card.js'),
+    import('../views/fighter.js'),
+  ]);
 
   const paint = () => {
     try {
-      mount.innerHTML = cardView.renderPanel(viewModel());
+      mount.innerHTML = state.fighter
+        ? fighterView.renderFighter(state.fighter, state.athletes,
+            { loading: state.fighterLoading })
+        : cardView.renderPanel(viewModel());
     } catch (err) {
       // A throwing view must never leave an empty pane — that reads as a dead plugin.
       mount.innerHTML = stateMsg('This section could not be displayed.', { retry: true });
@@ -111,6 +140,29 @@ async function boot() {
     }
     const label = document.getElementById('event-label');
     if (label) label.textContent = state.event?.name ?? '';
+  };
+
+  /** Open a fighter profile. The page is fetched once and cached for six hours. */
+  const openFighter = async (fighterId) => {
+    const f = (state.event?.fights ?? [])
+      .flatMap((x) => x.fighters ?? [])
+      .find((x) => x.fighterId === fighterId);
+    if (!f) return;
+    state.fighter = { fighterId, base: f, stats: null };
+    state.fighterLoading = true;
+    paint();
+
+    const url = athleteUrl(f.ufcLink);
+    const raw = url
+      ? await cache.get(url, () => getText(url), TTL.UFC_PAGE, { staleOnError: true })
+          .catch(() => null)
+      : null;
+    // A viewer can open a second fighter while the first is still in flight; without
+    // this the slower response overwrites whichever profile is on screen.
+    if (state.fighter?.fighterId !== fighterId) return;
+    state.fighter.stats = raw ? parseAthlete(raw) : null;
+    state.fighterLoading = false;
+    paint();
   };
 
   // Accordion: opening one closes the other, so the panel never becomes a wall of
@@ -128,12 +180,13 @@ async function boot() {
     if (t.dataset.act === 'retry') { paint(); return; }
     if (t.dataset.act === 'fight') { toggleFight(t); return; }
     // The fighter button is NESTED inside the row, so closest() finds it first and the
-    // row never sees the click. Fighter pages are wave 2; until they exist, falling
-    // through to the row is the difference between "expands" and "does nothing at all".
+    // row never sees the click — which is what makes this route possible at all.
     if (t.dataset.act === 'fighter') {
-      const row = t.closest('[data-act="fight"]');
-      if (row) toggleFight(row);
+      const id = Number(t.dataset.fighter);
+      if (Number.isFinite(id)) openFighter(id);
+      return;
     }
+    if (t.dataset.act === 'close-fighter') { state.fighter = null; paint(); }
   });
 
   // A row is role="button", so it has to answer the keyboard like one.
@@ -154,6 +207,8 @@ async function boot() {
     state.error = null;
     paint();                      // the card, before waiting on a third party
     await loadOdds().catch(() => { state.odds = new Map(); });
+    paint();
+    await loadArtwork().catch(() => { state.artwork = null; });
   } catch (err) {
     state.error = err?.message ?? 'failed';
   }

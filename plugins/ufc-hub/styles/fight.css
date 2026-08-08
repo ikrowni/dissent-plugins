@@ -328,3 +328,78 @@
   .mk-ml { grid-template-columns: auto 1fr auto; }
   .mk-ml .mk-name { display: none; }
 }
+
+/* ── official artwork hero ─────────────────────────────────────────────────── */
+/* The art is 3:2 of two head-on faces; a wide band shows a slice. 316px at 38% was
+   picked by comparing five crops against the real file — the first that holds both
+   complete faces. */
+.vs-hero-art { height: 316px; }
+.vs-art { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 38%; }
+.vs-artscrim { position: absolute; inset: 0; z-index: 2;
+  background:
+    radial-gradient(46% 68% at 50% 46%, rgba(4,6,10,.66), rgba(4,6,10,.14) 66%, transparent),
+    linear-gradient(180deg, rgba(4,6,10,.55), transparent 26%, transparent 52%, var(--ink) 97%); }
+.vs-hero-art .vs-vs { font-size: 52px; }
+
+/* ── fighter profile ───────────────────────────────────────────────────────── */
+.fp { padding: 4px 0 24px; }
+.fp-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 0 18px 16px; border-bottom: 1px solid var(--line); }
+.fp-back { appearance: none; border: 1px solid var(--line-2); background: transparent;
+  color: var(--text-2); font: inherit; font-size: 11.5px; padding: 6px 12px;
+  border-radius: 999px; cursor: pointer; flex: 0 0 auto; }
+.fp-back:hover { color: var(--text); border-color: var(--text-3); }
+.fp-back:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.fp-mug { position: relative; width: 84px; height: 84px; border-radius: 50%;
+  overflow: hidden; background: var(--panel-2);
+  box-shadow: inset 0 0 0 2px var(--line-2); flex: 0 0 auto; }
+.fp-mug img { position: absolute; left: 50%; top: 8%; width: 112%;
+  transform: translateX(-50%); }
+.fp-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fp-first { font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; }
+.fp-last { font-family: var(--f-display); font-weight: 800; font-size: 38px;
+  line-height: .95; text-transform: uppercase; margin: 0; }
+.fp-nick { font-size: 12px; color: var(--text-3); font-style: italic; }
+.fp-rec { display: flex; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--text-2); }
+
+.fp-bio { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 2px 18px; padding: 16px 18px; }
+.fp-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0;
+  border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.fp-k { color: var(--text-3); }
+.fp-v { color: var(--text); font-weight: 600; }
+
+.fp-career { padding: 8px 18px 0; }
+.fp-career h4 { font-size: 11px; letter-spacing: .19em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; text-align: center; margin: 16px 0 14px; }
+.fp-career h5 { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; margin: 18px 0 8px; }
+.fp-donuts { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.fp-donut { display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 12px 22px; }
+.fp-pct { font-family: var(--f-display); font-weight: 800; font-size: 34px;
+  line-height: 1; color: var(--gold); }
+.fp-dl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; }
+.fp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px; margin-top: 14px; }
+.fp-stat { display: flex; flex-direction: column; gap: 2px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; }
+.fp-sv { font-family: var(--f-display); font-weight: 700; font-size: 22px; line-height: 1; }
+.fp-sk { font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; }
+.fp-bars { display: flex; flex-direction: column; gap: 4px; }
+.fp-bar { display: flex; justify-content: space-between; font-size: 12.5px;
+  padding: 6px 0; border-bottom: 1px solid var(--line); }
+.fp-bk { color: var(--text-2); }
+.fp-bv { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .vs-hero-art { height: 210px; }
+  .fp-last { font-size: 28px; }
+  .fp-mug { width: 64px; height: 64px; }
+}

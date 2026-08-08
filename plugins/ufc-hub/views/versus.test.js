@@ -102,3 +102,38 @@ describe('renderVersus', () => {
     expect(() => renderVersus(null, null, new Map())).not.toThrow();
   });
 });
+
+describe('official artwork', () => {
+  const art = { art: 'https://ufc.com/x-EVENT-ART.jpg',
+    renders: { GAMROTMATEUSZ: { url: 'https://ufc.com/GAMROT_MATEUSZ_L_08-08.png', side: 'L' } } };
+
+  it('uses the official art on the MAIN EVENT', () => {
+    const main = upcoming.fights.find((f) => f.order === 1);
+    const html = renderVersus(main, upcoming, athletes, null, art);
+    expect(html).toContain('vs-hero-art');
+    expect(html).toContain(encodeURIComponent('x-EVENT-ART.jpg'));
+  });
+
+  it('does NOT use it on an undercard bout', () => {
+    // ⚠️ There is one piece of art per EVENT and it shows the headliner. On any other
+    // fight it is a picture of two people who are not fighting.
+    const under = upcoming.fights.find((f) => f.order !== 1);
+    const html = renderVersus(under, upcoming, athletes, null, art);
+    expect(html).not.toContain('vs-hero-art');
+    expect(html).toContain('vs-hero');       // composed hero instead
+  });
+
+  it('falls back to the composed hero when artwork is unavailable', () => {
+    const main = upcoming.fights.find((f) => f.order === 1);
+    const html = renderVersus(main, upcoming, athletes, null, null);
+    expect(html).not.toContain('vs-hero-art');
+    expect(html).toContain('vs-hero');
+  });
+
+  it('routes the artwork through the image proxy', () => {
+    const main = upcoming.fights.find((f) => f.order === 1);
+    const html = renderVersus(main, upcoming, athletes, null, art);
+    expect(html).toContain('/api/v1/plugins/image?url=');
+    expect(html).not.toContain('src="https://ufc.com');
+  });
+});

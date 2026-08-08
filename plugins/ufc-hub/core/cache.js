@@ -75,6 +75,9 @@ export const TTL = {
   EVENT_UPCOMING: 900_000,
   // A month of the schedule changes only when UFC announces or moves a card.
   MONTH_INDEX: 3_600_000,
+  // A ufc.com page is HTML we scrape, so it is both expensive and fragile. Cache it
+  // hard: artwork does not change during an event, and career stats change once a fight.
+  UFC_PAGE: 21_600_000,
   NEWS: 600_000,
   ODDS: 600_000,
 };

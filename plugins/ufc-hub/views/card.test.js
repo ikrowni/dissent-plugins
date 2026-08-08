@@ -142,3 +142,24 @@ describe('renderPanel', () => {
     expect(renderPanel({ event: { ...upcoming, fights: [] } })).toContain('No fights');
   });
 });
+
+describe('artwork threading', () => {
+  const art = { art: 'https://ufc.com/x-EVENT-ART.jpg', renders: {} };
+
+  it('passes artwork through to the expanded main event', () => {
+    // ⚠️ renderVersus takes artwork as its FIFTH argument. card.js called it with four
+    // for one commit, so the art loaded, parsed, reached the view model — and was
+    // silently dropped at the last hop.
+    const main = upcoming.fights.find((f) => f.order === 1);
+    const html = renderPanel({ event: upcoming, athletes: none, odds: new Map(),
+      artwork: art, openFight: main.fightId });
+    expect(html).toContain('vs-hero-art');
+  });
+
+  it('renders without artwork', () => {
+    const main = upcoming.fights.find((f) => f.order === 1);
+    const html = renderPanel({ event: upcoming, athletes: none, openFight: main.fightId });
+    expect(html).not.toContain('vs-hero-art');
+    expect(html).toContain('vs-hero');
+  });
+});

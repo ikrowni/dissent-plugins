@@ -59,6 +59,31 @@ function hero(fight, red, blue, event, athletes) {
 }
 
 /**
+ * Hero variant A: the official UFC event art.
+ *
+ * The art carries NO typography, so the type layer is ours. Cover-cropping a 3:2 image
+ * into a wide band shows only a slice — 316px at `center 38%` was chosen by comparing
+ * five crops against the real file, and is the first that holds both complete faces.
+ *
+ * ⚠️ ONE PIECE OF ART EXISTS PER EVENT and it depicts the HEADLINER. renderVersus uses
+ * this only on FightOrder 1; on any other bout it is a picture of two people who are
+ * not fighting.
+ */
+function heroArt(fight, red, blue, event, artUrl) {
+  return '<div class="vs-hero vs-hero-art">'
+    + `<img class="vs-art" src="${esc(imageUrl(artUrl))}" alt="Official UFC event art">`
+    + '<div class="vs-artscrim"></div>'
+    + '<div class="vs-plate">'
+      + `<span class="vs-event">${esc(event?.name ?? '')}</span>`
+      + '<span class="vs-vs">VS</span>'
+      + `<span class="vs-wc">${esc(fight.weightClass ?? '')}</span>`
+      + `<span class="vs-rules">${esc(fight.ruleSet ?? '')}</span>`
+    + '</div>'
+    + nameplate(red, 'red', null) + nameplate(blue, 'blue', null)
+    + '</div>';
+}
+
+/**
  * One row of the tale of the tape.
  *
  * ⚠️ THE BAR IS PROPORTIONAL TO THE VALUE, FROM ZERO. Do not "improve" it by
@@ -251,7 +276,7 @@ function marketBlock(fight, m) {
     + '</div>';
 }
 
-export function renderVersus(fight, event, athletes, market) {
+export function renderVersus(fight, event, athletes, market, artwork) {
   if (!fight) return '';
   const red = fight.red;
   const blue = fight.blue;
@@ -265,7 +290,9 @@ export function renderVersus(fight, event, athletes, market) {
   if (blue?.fighterId != null) corners[blue.fighterId] = 'blue';
 
   return '<div class="vs">'
-    + hero(fight, red, blue, event, athletes)
+    + (artwork?.art && fight.order === 1
+      ? heroArt(fight, red, blue, event, artwork.art)
+      : hero(fight, red, blue, event, athletes))
     + tape(red, blue)
     + chips(fight)
     + (st === 'post' ? '' : marketBlock(fight, market))

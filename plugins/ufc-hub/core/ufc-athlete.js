@@ -65,12 +65,14 @@ export function parseAthlete(htmlText) {
   // A `([^<]*?)\s*</div>` match therefore cannot reach the closing tag and DROPS both
   // percentage stats — Sig. Str. Defense and Takedown Defense — leaving 6 of 8. The
   // optional group below is what admits them.
-  const group = /c-stat-compare__group[^"]*"[^>]*>\s*<div class="c-stat-compare__number">\s*([^<]*?)\s*(?:<div class="c-stat-compare__percent">%<\/div>)?\s*<\/div>\s*<div class="c-stat-compare__label">\s*([^<]*?)\s*<\/div>/g;
+  const group = /c-stat-compare__group[^"]*"[^>]*>\s*<div class="c-stat-compare__number">\s*([^<]*?)\s*(<div class="c-stat-compare__percent">%<\/div>)?\s*<\/div>\s*<div class="c-stat-compare__label">\s*([^<]*?)\s*<\/div>/g;
   let m;
   while ((m = group.exec(s)) !== null) {
-    const label = clean(m[2]);
-    const value = clean(m[1]);
-    if (label && value) out.stats[label] = value;
+    const label = clean(m[3]);
+    // The percent sign lives in that nested div, so a stat whose group carried one is
+    // a percentage and renders as "60%", not a bare "60".
+    const value = clean(m[1]) + (m[2] ? '%' : '');
+    if (label && clean(m[1])) out.stats[label] = value;
   }
 
   // The accuracy donuts carry their value in the SVG <title>, which is far more stable

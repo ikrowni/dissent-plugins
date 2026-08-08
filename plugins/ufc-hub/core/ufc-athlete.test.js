@@ -21,6 +21,7 @@ describe('parseAthlete', () => {
     expect(gamrot.stats['Takedown avg']).toBe('5.22');
     expect(gamrot.stats['Submission avg']).toBe('0.19');
     expect(gamrot.stats['Knockdown Avg']).toBe('0.10');
+    expect(gamrot.stats['Sig. Str. Landed']).not.toContain('%');
     expect(gamrot.stats['Average fight time']).toBe('11:56');
   });
 
@@ -31,8 +32,10 @@ describe('parseAthlete', () => {
     // — so a `([^<]*?)\s*</div>` match cannot reach the closing tag and silently
     // drops both defence stats, leaving 6 of 8. The first version of this parser did
     // exactly that and the suite was green.
-    expect(gamrot.stats['Sig. Str. Defense']).toBe('60');
-    expect(gamrot.stats['Takedown Defense']).toBe('83');
+    // ⚠️ And they are PERCENTAGES. The % lives in that same nested div, so dropping it
+    // renders "Sig. Str. Defense 60" — which reads as a count, not 60%.
+    expect(gamrot.stats['Sig. Str. Defense']).toBe('60%');
+    expect(gamrot.stats['Takedown Defense']).toBe('83%');
     expect(Object.keys(gamrot.stats)).toHaveLength(8);
     expect(Object.keys(lemos.stats)).toHaveLength(8);
   });

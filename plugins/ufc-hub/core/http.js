@@ -33,7 +33,8 @@ let fetcher = hostFetch;
 export function setFetcher(fn) { fetcher = fn; }
 export function resetFetcher() { fetcher = hostFetch; }
 
-export async function getJson(url) {
+/** Fetch and check the status. Shared so getJson and getText cannot disagree. */
+async function fetchOk(url) {
   let res;
   try {
     res = await fetcher(url);
@@ -49,6 +50,20 @@ export async function getJson(url) {
   const succeeded = flag === true
     || (flag !== false && status >= 200 && status < 300);
   if (!succeeded) throw new HttpError(`HTTP ${status} for ${url}`, status);
+  return res;
+}
+
+/**
+ * Same transport and the same success rule as getJson, for endpoints that answer HTML.
+ * ufc.com pages are scraped, not parsed as JSON — getJson would throw on the first byte.
+ */
+export async function getText(url) {
+  const res = await fetchOk(url);
+  return typeof res?.body === 'string' ? res.body : String(res?.body ?? '');
+}
+
+export async function getJson(url) {
+  const res = await fetchOk(url);
   try {
     return typeof res.body === 'string' ? JSON.parse(res.body) : res.body;
   } catch {

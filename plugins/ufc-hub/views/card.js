@@ -78,7 +78,7 @@ function oddsBar(fight, odds) {
     + '</div>';
 }
 
-export function fightRow(fight, event, athletes, openFight, odds) {
+export function fightRow(fight, event, athletes, openFight, odds, artwork) {
   const st = fightState(fight, event);
   const open = openFight != null && openFight === fight.fightId;
   const r = fight.result;
@@ -109,7 +109,7 @@ export function fightRow(fight, event, athletes, openFight, odds) {
     + oddsBar(fight, odds)
     + outcome
     + '<span class="chev"></span>'
-    + `<div class="fbody">${open ? renderVersus(fight, event, athletes, odds?.get(fight.fightId)) : ''}</div>`
+    + `<div class="fbody">${open ? renderVersus(fight, event, athletes, odds?.get(fight.fightId), artwork) : ''}</div>`
     + '</div>';
 }
 
@@ -120,13 +120,14 @@ export function renderPanel(s) {
 
   const athletes = s.athletes ?? new Map();
   const odds = s.odds ?? new Map();
+  const artwork = s.artwork ?? null;
   const segs = cardSegments(event.fights);
   const body = segs.map((seg) => (
     `<section class="seg"><div class="seg-head"><h3>${esc(seg.label)}</h3>`
     + (seg.broadcaster ? `<span class="seg-bc">${esc(seg.broadcaster)}</span>` : '')
     + (seg.startTime ? `<span class="seg-time">${esc(fmtDateTime(seg.startTime))}</span>` : '')
     + '</div>'
-    + seg.fights.map((f) => fightRow(f, event, athletes, s.openFight, odds)).join('')
+    + seg.fights.map((f) => fightRow(f, event, athletes, s.openFight, odds, artwork)).join('')
     + '</section>'
   )).join('');
 
