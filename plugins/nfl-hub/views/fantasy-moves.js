@@ -4,6 +4,7 @@
 // that renders those identically to completed ones tells members that players joined
 // rosters they never joined, so `succeeded` drives both the styling and the wording.
 import { esc, panel, stateMsg } from '../core/ui.js';
+import { deepLink } from '../core/sleeper.js';
 
 const playerName = (id, names) => names?.[id] ?? `Player ${id}`;
 const teamName = (id, teams) => teams?.[id] ?? `Roster ${id}`;
@@ -43,9 +44,34 @@ function item(t, s) {
     + '</li>';
 }
 
+/**
+ * Handoffs for the two things this tab shows the RESULTS of but cannot do.
+ *
+ * ⚠️ Sleeper's public API is read-only by their own documentation — no token, no write
+ * endpoints — so a trade or a waiver claim cannot be made here at any effort level. This
+ * tab is a history; without these it is a history with no way to add to it.
+ *
+ * `deepLink.trade` and `deepLink.players` existed in core/sleeper.js and were covered by
+ * tests, but no view ever rendered them — the same dead end `deepLink.draft` had.
+ */
+function handoffs(leagueId) {
+  if (!leagueId) return '';
+  return '<div class="mv-actions">'
+    + `<a class="mv-open" href="${esc(deepLink.trade(leagueId))}"`
+    + ' target="_blank" rel="noopener noreferrer">Propose a trade in Sleeper &#8599;</a>'
+    + `<a class="mv-open" href="${esc(deepLink.players(leagueId))}"`
+    + ' target="_blank" rel="noopener noreferrer">Add or drop in Sleeper &#8599;</a>'
+    + '</div>';
+}
+
 export function renderPanel(s) {
   const weeks = s?.moves ?? [];
-  if (!weeks.length) return stateMsg('No transactions in this league yet.');
+  const leagueId = s?.session?.leagueId ?? null;
+  // Even with no history the handoffs belong here — a quiet league is exactly when
+  // someone wants to make the first move.
+  if (!weeks.length) {
+    return stateMsg('No transactions in this league yet.') + handoffs(leagueId);
+  }
 
   const body = weeks.map((w) => (
     `<section class="mv-week"><h3>Week ${esc(w.week)}</h3>`
@@ -56,6 +82,6 @@ export function renderPanel(s) {
   return panel({
     title: 'Transactions',
     right: `<span class="kicker">${esc(total)} moves</span>`,
-    body,
+    body: handoffs(leagueId) + body,
   });
 }

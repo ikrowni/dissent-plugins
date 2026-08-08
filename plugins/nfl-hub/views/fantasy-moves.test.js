@@ -71,3 +71,29 @@ describe('renderPanel', () => {
     expect(renderPanel({ moves: [] })).toContain('No transactions');
   });
 });
+
+describe('Sleeper handoffs', () => {
+  const s = (over = {}) => ({ moves: [], session: { leagueId: 'L1' }, ...over });
+
+  it('offers trade and add/drop, which this tab shows the RESULTS of but cannot do', () => {
+    // ⚠️ Sleeper's API is read-only. deepLink.trade and deepLink.players existed and
+    // were tested but no view rendered them — the same dead end deepLink.draft had.
+    const html = renderPanel(s());
+    expect(html).toContain('sleeper.com/leagues/L1/trade');
+    expect(html).toContain('sleeper.com/leagues/L1/players');
+  });
+
+  it('offers them on the EMPTY state too — a quiet league is when you act', () => {
+    const html = renderPanel(s({ moves: [] }));
+    expect(html).toContain('No transactions in this league yet');
+    expect(html).toContain('mv-actions');
+  });
+
+  it('opens them safely in a new tab', () => {
+    expect(renderPanel(s())).toContain('rel="noopener noreferrer"');
+  });
+
+  it('offers nothing without a league rather than linking to a broken url', () => {
+    expect(renderPanel(s({ session: null }))).not.toContain('mv-actions');
+  });
+});
