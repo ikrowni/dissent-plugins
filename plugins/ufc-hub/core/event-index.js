@@ -77,16 +77,51 @@ export function matchEvent(target, candidates) {
   return near.length ? pick(near.map((x) => x.c)) : null;
 }
 
-/** The event a viewer most likely wants: the next upcoming one, else the most recent. */
+/**
+ * A UFC card runs about six hours from the first prelim to the final bell.
+ *
+ * Deliberately clock-based rather than reading ESPN's `state`/`completed`: the month
+ * index is cached for an hour (TTL.MONTH_INDEX), so its status can lag the fight by
+ * up to that long — which is exactly the window this needs to be right in.
+ */
+export const CARD_RUNTIME_MS = 6 * 60 * 60 * 1000;
+
+/** How long a finished card stays selected before the next one takes over. */
+export const RESULTS_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The event a viewer most likely wants.
+ *
+ * ⚠️ THIS IS NOT "the next event". It used to be, and that made the live and final
+ * states unreachable: an event stopped being "upcoming" the instant its first prelim
+ * began, so at 21:01 on a fight night the hub showed a card three days away. Measured
+ * against the real August index 2026-08-08.
+ *
+ * A card now HOLDS the view from its start time until its results have been readable
+ * for a day — but never past the next card's start, or the hub would sit on a stale
+ * card while a new one is live.
+ */
 export function nearestEvent(index, now = new Date()) {
-  const list = (index ?? []).filter((e) => e?.date);
+  const list = (index ?? [])
+    .filter((e) => e?.date)
+    .map((e) => ({ e, t: new Date(e.startTime ?? e.date).getTime() }))
+    .filter((x) => Number.isFinite(x.t))
+    .sort((a, b) => a.t - b.t);
   if (!list.length) return null;
-  const t = now.getTime();
-  const upcoming = list
-    .filter((e) => new Date(e.startTime ?? e.date).getTime() >= t)
-    .sort((a, b) => new Date(a.startTime ?? a.date) - new Date(b.startTime ?? b.date));
-  if (upcoming.length) return upcoming[0];
-  return list
-    .slice()
-    .sort((a, b) => new Date(b.startTime ?? b.date) - new Date(a.startTime ?? a.date))[0];
+
+  const t0 = now.getTime();
+
+  // Hold windows cannot overlap, because each is capped at the next card's start.
+  for (let i = 0; i < list.length; i += 1) {
+    if (t0 < list[i].t) break;
+    const nextStart = list[i + 1]?.t ?? Infinity;
+    const holdUntil = Math.min(
+      list[i].t + CARD_RUNTIME_MS + RESULTS_GRACE_MS,
+      nextStart,
+    );
+    if (t0 < holdUntil) return list[i].e;
+  }
+
+  const upcoming = list.find((x) => x.t >= t0);
+  return upcoming ? upcoming.e : list[list.length - 1].e;
 }

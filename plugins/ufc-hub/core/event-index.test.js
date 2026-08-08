@@ -146,4 +146,33 @@ describe('nearestEvent', () => {
   it('returns null for an empty index', () => {
     expect(nearestEvent([], new Date())).toBe(null);
   });
+
+  it('holds the card once it has started, instead of jumping to the next one', () => {
+    // The Aug 8 card starts 21:00Z. One minute in, the old code returned the
+    // Aug 11 DWCS event, which made the live state unreachable.
+    const hit = nearestEvent(index, new Date('2026-08-08T21:01:00Z'));
+    expect(hit.date).toBe('2026-08-08');
+  });
+
+  it('still holds the card mid main-card', () => {
+    const hit = nearestEvent(index, new Date('2026-08-09T01:30:00Z'));
+    expect(hit.date).toBe('2026-08-08');
+  });
+
+  it('holds a finished card long enough to read the results', () => {
+    const hit = nearestEvent(index, new Date('2026-08-09T18:00:00Z'));
+    expect(hit.date).toBe('2026-08-08');
+  });
+
+  it('moves on once the results have had their day', () => {
+    const hit = nearestEvent(index, new Date('2026-08-10T12:00:00Z'));
+    expect(hit.date).toBe('2026-08-11');
+  });
+
+  it('never holds a card past the next card start time', () => {
+    // Aug 15 21:00Z + runtime + grace would reach past Aug 18 23:00Z, so the
+    // hold has to be truncated or the hub would sit on a stale card.
+    const hit = nearestEvent(index, new Date('2026-08-19T00:00:00Z'));
+    expect(hit.date).toBe('2026-08-18');
+  });
 });

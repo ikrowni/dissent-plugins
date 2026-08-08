@@ -14,12 +14,16 @@ import { nearestEvent } from './event-index.js';
 import { CF_URL, resolveCfId } from './ufc-cf-client.js';
 import { parseEvent } from './ufc-cloudfront.js';
 import { parseTracking } from './fight-timeline.js';
+import { athletesForEvent, joinAthletes } from './espn-athletes.js';
 
 export const state = {
   view: 'card',
   index: [],
   selected: null,
   event: null,
+  month: null,         // raw ESPN month payload, kept for the athlete join
+  athletes: new Map(), // CloudFront fighterId -> { espnId, flag, country }
+  openFight: null,     // fightId of the expanded row, or null
   error: null,
   loading: true,
 };
@@ -52,6 +56,8 @@ export function viewModel(st = state) {
   const fight = focusFight(st.event);
   return {
     event: st.event,
+    athletes: st.athletes,
+    openFight: st.openFight,
     events: fight ? parseTracking(fight.tracking) : [],
     fighterNames: fighterNames(st.event),
   };
@@ -68,19 +74,24 @@ async function loadIndex() {
   const key = monthKey(new Date());
   const raw = await cache.get(urls.month(key), () => getJson(urls.month(key)),
     TTL.MONTH_INDEX, { staleOnError: true }).catch(() => null);
+  state.month = raw ?? null;
   state.index = raw ? parseMonthIndex(raw) : [];
   state.selected = nearestEvent(state.index) ?? null;
 }
 
 async function loadEvent() {
-  if (!state.selected) { state.event = null; return; }
+  if (!state.selected) { state.event = null; state.athletes = new Map(); return; }
   const cfId = await resolveCfId(state.selected, { store }).catch(() => null);
-  if (!cfId) { state.event = null; return; }
+  if (!cfId) { state.event = null; state.athletes = new Map(); return; }
   // TTL is read from the PREVIOUS state so a card that has gone live starts polling
   // without waiting a full idle interval for the next load to notice.
   const raw = await cache.get(CF_URL(cfId), () => getJson(CF_URL(cfId)),
     ttlFor(state.event), { staleOnError: true }).catch(() => null);
   state.event = raw ? parseEvent(raw) : null;
+  // Costs no request: the month payload is already in hand.
+  state.athletes = state.event
+    ? joinAthletes(state.event.fights, athletesForEvent(state.month, state.selected.id))
+    : new Map();
 }
 
 let booted = false;
@@ -112,12 +123,37 @@ async function boot() {
     if (label) label.textContent = state.event?.name ?? '';
   };
 
+  // Accordion: opening one closes the other, so the panel never becomes a wall of
+  // twelve open versus screens.
+  const toggleFight = (el) => {
+    const id = Number(el.dataset.fight);
+    state.openFight = state.openFight === id ? null : id;
+    paint();
+  };
+
   // One delegated listener for the whole plugin.
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-act]');
     if (!t) return;
     if (t.dataset.act === 'nav') { state.view = t.dataset.view; paint(); return; }
-    if (t.dataset.act === 'retry') { paint(); }
+    if (t.dataset.act === 'retry') { paint(); return; }
+    if (t.dataset.act === 'fight') { toggleFight(t); return; }
+    // The fighter button is NESTED inside the row, so closest() finds it first and the
+    // row never sees the click. Fighter pages are wave 2; until they exist, falling
+    // through to the row is the difference between "expands" and "does nothing at all".
+    if (t.dataset.act === 'fighter') {
+      const row = t.closest('[data-act="fight"]');
+      if (row) toggleFight(row);
+    }
+  });
+
+  // A row is role="button", so it has to answer the keyboard like one.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const t = e.target.closest('[data-act="fight"]');
+    if (!t) return;
+    e.preventDefault();
+    toggleFight(t);
   });
 
   if (motion.bodyClass) document.body.classList.add(motion.bodyClass);
