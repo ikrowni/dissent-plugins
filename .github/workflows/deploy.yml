@@ -10,6 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Until 2026-08-07 this repo had no runner, so rl-hub's four test files had
+      # never executed. Deploys gate on them now.
+      - name: Unit tests
+        run: npm ci && npm test
+
       - name: Validate all manifests
         run: |
           errors=0

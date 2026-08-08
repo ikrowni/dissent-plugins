@@ -1,0 +1,117 @@
+/* styles/stadium.css — the cinematic layer, applied ONLY to hero surfaces (the
+ * Game Center scorebug and the Around-the-League hero).
+ *
+ * This is the expensive layer and the one that needs measuring. Two elements are
+ * deliberately the only continuously-compositing things in the whole plugin:
+ *   .sweep          — a translating gradient, GPU-composited via transform
+ *   .hero-wp        — a backdrop-filter, which re-blurs whenever anything behind it moves
+ * Both are neutralised by body.reduce-motion, and .sweep is the first thing to cut if
+ * the WebView2 measurement comes back bad. */
+
+.hero { position: relative; overflow: hidden; height: 300px; background: #04060a; }
+
+/* Duotone halves meeting on an angled seam. clip-path is cheap; the gradients are
+ * painted once and never animate. */
+.hero-half { position: absolute; top: 0; bottom: 0; width: 62%; }
+.hero-half.l { left: 0;  clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%); }
+.hero-half.r { right: 0; clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%); }
+
+.hero-mark {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 290px;
+  opacity: 0.12; filter: grayscale(1) contrast(1.4); pointer-events: none;
+}
+.hero-mark.l { left: -70px; }
+.hero-mark.r { right: -70px; }
+
+.hero-lights {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(60% 90% at 50% -12%, rgba(255,255,255,.28), transparent 70%);
+}
+
+.hero-seam {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 3px;
+  transform: translateX(-50%) skewX(-16deg);
+  background: linear-gradient(180deg, transparent, var(--gold), transparent);
+  opacity: 0.85; pointer-events: none;
+}
+
+.sweep {
+  position: absolute; top: -30%; bottom: -30%; width: 180px; left: -220px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  pointer-events: none; will-change: transform;
+  animation: sweep 5.5s var(--ease-out) infinite;
+}
+@keyframes sweep {
+  0%        { transform: translateX(0) skewX(-16deg); }
+  55%, 100% { transform: translateX(calc(100vw + 400px)) skewX(-16deg); }
+}
+
+.hero-fg {
+  position: relative; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 0 28px 42px;
+}
+.hero-banner {
+  font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; font-weight: 700;
+  color: rgba(255,255,255,.78); margin-bottom: 14px; text-align: center;
+}
+.hero-row { display: flex; align-items: center; gap: 34px; }
+.hero-side { text-align: center; width: 200px; }
+.hero-side img {
+  width: 74px; height: 74px; filter: drop-shadow(0 10px 26px rgba(0,0,0,.85));
+  animation: heroLogo var(--dur-slow) var(--ease-spring) both;
+}
+@keyframes heroLogo { from { transform: scale(.62); opacity: 0; } to { transform: none; opacity: 1; } }
+.hero-side .abbr {
+  font-family: var(--f-display); font-size: 15px; font-weight: 800; letter-spacing: 0.2em;
+  margin-top: 6px; text-shadow: 0 2px 10px rgba(0,0,0,.8);
+}
+.hero-side .rec { font-size: 11px; color: rgba(255,255,255,.6); }
+
+.hero-mid { text-align: center; min-width: 220px; }
+.hero-q {
+  font-family: var(--f-display); font-size: 13px; font-weight: 800; letter-spacing: 0.2em;
+  color: var(--gold); text-shadow: 0 2px 8px rgba(0,0,0,.9);
+}
+.hero-scores { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 2px; }
+.hero-score {
+  font-family: var(--f-display); font-size: 88px; font-weight: 800; line-height: .86;
+  letter-spacing: -0.05em; text-shadow: 0 8px 34px rgba(0,0,0,.9);
+}
+.hero-score.trail { opacity: 0.45; }
+.hero-pos {
+  margin-top: 10px; font-size: 11px; letter-spacing: 0.1em; color: rgba(255,255,255,.85);
+  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
+  padding: 5px 13px; border-radius: 999px; display: inline-block;
+}
+
+/* Win-probability bar pinned to the hero foot. The ONLY backdrop-filter in the
+ * plugin — it re-blurs whenever anything behind it moves, so it stays alone. */
+.hero-wp {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 40px;
+  display: flex; align-items: center; gap: 14px; padding: 0 20px;
+  background: rgba(2,4,8,.72); backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+.hero-wp .lbl {
+  font-size: 9.5px; letter-spacing: 0.17em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 700; white-space: nowrap;
+}
+.hero-wp .bar { flex: 1; height: 7px; border-radius: 999px; overflow: hidden; display: flex; }
+.hero-wp .bar i { display: block; transition: width var(--dur-slow) var(--ease-out); }
+.hero-wp .pct {
+  font-family: var(--f-display); font-size: 14px; font-weight: 800; width: 46px; text-align: right;
+}
+
+body.reduce-motion .hero-wp { backdrop-filter: none; background: rgba(2,4,8,.92); }
+
+/* Rotation dots */
+.hero-dots {
+  position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px;
+}
+.hero-dots button {
+  appearance: none; border: 0; padding: 0; cursor: pointer;
+  width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.3);
+  transition: background var(--dur-fast), width var(--dur-fast);
+}
+.hero-dots button[aria-current='true'] { background: var(--gold); width: 18px; border-radius: 999px; }

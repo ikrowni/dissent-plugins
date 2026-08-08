@@ -1,0 +1,100 @@
+/* styles/controlroom.css — dense, labelled data modules. Monospace figures,
+ * minimal chrome, information per pixel. Effectively free to run: nothing here
+ * animates except row hover. */
+
+.mod { border: 1px solid var(--line); border-radius: var(--r); background: var(--ink-2); overflow: hidden; }
+.mod-head { display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); }
+.mod-head .t { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 700; }
+.mod-head .v { margin-left: auto; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-3); }
+.mod-body { padding: 11px 12px; }
+
+/* ── Drive chart: one block per possession ──────────────────────────────────── */
+.drives { display: flex; gap: 3px; }
+.drives button {
+  flex: 1; min-width: 0; height: 22px; border: 0; padding: 0; cursor: pointer;
+  border-radius: 2px; background: #232936;
+  transition: transform var(--dur-fast), filter var(--dur-fast);
+}
+.drives button:hover { transform: translateY(-2px); filter: brightness(1.3); }
+.drives button[aria-current='true'] { outline: 1px solid var(--gold); outline-offset: 1px; }
+.drives button.td { background: var(--gold); }
+.drives button.fg { background: #8a6d1f; }
+.drives button.punt { background: #2f6f4f; }
+.drives button.turnover { background: #7a2430; }
+.drives button.end { background: #3a4152; }
+
+.drive-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 9px;
+  font-size: 10px; color: var(--text-3); }
+.drive-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+/* Keyed on the same class the block uses, so a colour can never drift between
+ * chart and legend. */
+.drive-legend i.td { background: var(--gold); }
+.drive-legend i.fg { background: #8a6d1f; }
+.drive-legend i.punt { background: #2f6f4f; }
+.drive-legend i.turnover { background: #7a2430; }
+.drive-legend i.end { background: #3a4152; }
+
+/* ── Play-by-play ───────────────────────────────────────────────────────────── */
+.pbp { font-family: var(--f-mono); font-size: 10.5px; line-height: 1.7; color: #b3bccd;
+  max-height: 320px; overflow-y: auto; }
+.pbp .row { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.035); display: flex; gap: 9px; }
+.pbp .row:last-child { border-bottom: 0; }
+.pbp .tk { color: var(--text-3); white-space: nowrap; flex: 0 0 auto; }
+.pbp .row.score { color: var(--text); }
+.pbp .row.score .txt { font-weight: 700; }
+.pbp .row.score .tk { color: var(--gold); }
+.pbp .row.turnover .txt { color: #e0596c; }
+.pbp .tag { font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--gold); border: 1px solid rgba(255,182,18,.4); border-radius: 3px;
+  padding: 0 4px; flex: 0 0 auto; align-self: center; }
+
+/* ── Team stat comparison: bidirectional bars ───────────────────────────────── */
+.cmp { display: grid; gap: 9px; }
+.cmp-row { display: grid; grid-template-columns: 52px 1fr 96px 1fr 52px; align-items: center;
+  gap: 8px; font-size: 12px; }
+.cmp-row .lbl { text-align: center; font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.cmp-row .v { font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+.cmp-row .v.l { text-align: right; }
+.cmp-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.07);
+  overflow: hidden; display: flex; }
+.cmp-bar.l { justify-content: flex-end; }
+.cmp-bar i { display: block; height: 100%; transition: width var(--dur) var(--ease-out); }
+
+/* ── Sparkline + scoreboard rows ────────────────────────────────────────────── */
+.sb-row { display: flex; align-items: center; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,.045); }
+.sb-row:last-child { border-bottom: 0; }
+.sb-row .sc { font-family: var(--f-display); font-size: 19px; font-weight: 800;
+  width: 34px; text-align: right; }
+.sb-row .sc.lead { color: var(--text); }
+.sb-row .sc.trail { color: var(--text-3); }
+.spark { flex: 1; height: 22px; min-width: 40px; }
+.sb-meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-3);
+  width: 74px; text-align: right; margin-left: auto; }
+
+/* Live game card gets a gold-to-red accent rail. */
+.game-card { border: 1px solid var(--line); border-radius: var(--r); background: var(--ink-2);
+  padding: 10px 13px; position: relative; overflow: hidden; width: 100%;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast); }
+.game-card:hover { border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.game-card.live { border-color: rgba(255,182,18,.28); }
+.game-card.live::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, var(--gold), var(--nfl-red));
+}
+.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px; padding: 14px 16px; }
+
+/* ── Replay bar (development / demo only) ───────────────────────────────────── */
+.replay-bar { display: flex; align-items: center; gap: 8px; margin: 10px 20px 0;
+  padding: 8px 12px; border: 1px dashed var(--line-2); border-radius: var(--r);
+  background: rgba(255,182,18,.05); }
+.replay-bar button { appearance: none; border: 1px solid var(--line-2); background: transparent;
+  color: var(--text); font: inherit; font-size: 11px; padding: 4px 10px;
+  border-radius: var(--r-sm); cursor: pointer; }
+.replay-bar button:hover { background: var(--panel); }
+.replay-bar input[type="range"] { flex: 1; accent-color: var(--gold); }

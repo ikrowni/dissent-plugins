@@ -1,0 +1,98 @@
+// views/game-scorebug.js — the Stadium hero scorebug.
+//
+// The single most expensive surface in the plugin, and the one the whole cinematic
+// direction rests on. Everything here is painted once per render; the only moving
+// parts are the CSS sweep (omitted from the markup entirely under reduce-motion, so
+// it cannot composite at all) and the width transition on the win-probability bar.
+import { esc } from '../core/ui.js';
+import { fmtClock, ordinalDown, fmtPct } from '../core/format.js';
+import { motion } from '../core/motion.js';
+
+/** Latest win-probability split. The series is oldest-first, so take the last. */
+export function wpSplit(winProb) {
+  const last = (winProb ?? []).at(-1);
+  if (!last) return null;
+  return { home: Math.round(last.homePct), away: Math.round(last.awayPct) };
+}
+
+function half(side, which) {
+  const c = side?.primary ?? '#12161f';
+  const dir = which === 'l' ? '105deg' : '255deg';
+  const fade = which === 'l' ? 'rgba(0,16,48,.25)' : 'rgba(48,0,8,.25)';
+  return `<div class="hero-half ${which}" `
+    + `style="background:linear-gradient(${dir},${esc(c)} 0%,${fade} 82%)"></div>`;
+}
+
+function side(s, label) {
+  return '<div class="hero-side">'
+    + `<img src="${esc(s?.logo)}" alt="${esc(s?.fullName ?? label)}">`
+    + `<div class="abbr">${esc(s?.abbr ?? label)}</div>`
+    + (s?.record ? `<div class="rec">${esc(s.record)}</div>` : '')
+    + '</div>';
+}
+
+export function renderHero(game, {
+  winProb = null,
+  siblings = null,
+  // Named `motion` by the caller; aliased because the imported motion module is
+  // already in scope here.
+  motion: motionOverride = null,
+} = {}) {
+  if (!game) return '';
+  const g = game;
+  const allowMotion = motionOverride === null ? motion.enabled : motionOverride;
+
+  const preGame = g.state === 'pre';
+  const homeLead = (g.home?.score ?? 0) >= (g.away?.score ?? 0);
+  const banner = [g.timeslot, g.broadcast, g.venue].filter(Boolean).map(esc).join(' · ');
+  const wp = wpSplit(winProb);
+
+  const clockText = preGame
+    ? 'Kickoff'
+    : (fmtClock(g.period, g.clock) || 'Final');
+
+  const dots = (siblings ?? []).length > 1
+    ? `<div class="hero-dots">${siblings.map((s) => (
+      `<button data-act="hero-dot" data-game="${esc(s.id)}"`
+      + ` aria-current="${String(String(s.id) === String(g.id))}"`
+      + ` aria-label="Show game ${esc(s.id)}"></button>`
+    )).join('')}</div>`
+    : '';
+
+  return '<div class="hero">'
+    + half(g.away, 'l') + half(g.home, 'r')
+    + `<img class="hero-mark l" src="${esc(g.away?.logo)}" alt="" aria-hidden="true">`
+    + `<img class="hero-mark r" src="${esc(g.home?.logo)}" alt="" aria-hidden="true">`
+    + '<div class="hero-lights"></div><div class="hero-seam"></div>'
+    + (allowMotion ? '<div class="sweep"></div>' : '')
+    + '<div class="hero-fg">'
+      + (banner ? `<div class="hero-banner">${banner}</div>` : '')
+      + '<div class="hero-row">'
+        + side(g.away, 'AWAY')
+        + '<div class="hero-mid">'
+          + `<div class="hero-q">${esc(clockText)}</div>`
+          + '<div class="hero-scores">'
+            + `<span class="hero-score num${!preGame && homeLead ? ' trail' : ''}"`
+              + ` data-score="away">${esc(g.away?.score ?? 0)}</span>`
+            + `<span class="hero-score num${!preGame && !homeLead ? ' trail' : ''}"`
+              + ` data-score="home">${esc(g.home?.score ?? 0)}</span>`
+          + '</div>'
+          + (g.down && g.possessionAbbr
+            ? `<div class="hero-pos">${esc(ordinalDown(g.down, g.distance))}`
+              + ` · ${esc(g.possessionAbbr)} ball</div>`
+            : '')
+        + '</div>'
+        + side(g.home, 'HOME')
+      + '</div>'
+    + '</div>'
+    + dots
+    + (wp
+      ? '<div class="hero-wp"><span class="lbl">Win probability</span>'
+        + '<span class="bar">'
+          + `<i style="width:${wp.away}%;background:${esc(g.away?.primary ?? '#888')}"></i>`
+          + `<i style="width:${wp.home}%;background:${esc(g.home?.primary ?? '#555')}"></i>`
+        + '</span>'
+        + `<span class="pct num">${esc(fmtPct(Math.max(wp.home, wp.away)))}</span></div>`
+      : '')
+    + '</div>';
+}
