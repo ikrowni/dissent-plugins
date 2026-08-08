@@ -13,6 +13,17 @@ const WEB2 = 'https://site.web.api.espn.com/apis/v2/sports/football/nfl';
 const WEB3 = 'https://site.web.api.espn.com/apis/site/v3/sports/football/nfl';
 const WEB  = 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl';
 
+// Wave 3A. It is 2026 preseason week 1, so there is no live fantasy football — the same
+// problem the replay harness solved for game center. Fixtures come from a COMPLETED 2025
+// league so matchups carry real points, real bench/starter splits and a real bracket.
+//
+// Sunday Funday, verified public 2026-08-08: 12 teams, status "complete", PPR (rec 1.0),
+// playoffs from week 15, and a SUPER_FLEX roster slot — the shape most likely to break
+// naive slot labelling, which is why this league and not a vanilla one.
+const SLEEPER = 'https://api.sleeper.app/v1';
+const LEAGUE = '1182033380414181376';
+const FWEEK = 14; // last regular-season week: full lineups, no playoff byes
+
 const TARGETS = {
   'scoreboard-2025-wk1.json': `${SITE}/scoreboard?dates=2025&seasontype=2&week=1`,
   'scoreboard-current.json':  `${SITE}/scoreboard`,
@@ -67,6 +78,26 @@ const TARGETS = {
   'team-roster-phi.json':     `${SITE}/teams/21?enable=roster`,
   'athlete-overview.json':    `${WEB}/athletes/3139477/overview`,
   'sleeper-state.json':       'https://api.sleeper.app/v1/state/nfl',
+
+  // ── Wave 3A: the fantasy league ──────────────────────────────────────────────
+  'sleeper-league.json':       `${SLEEPER}/league/${LEAGUE}`,
+  'sleeper-rosters.json':      `${SLEEPER}/league/${LEAGUE}/rosters`,
+  'sleeper-users.json':        `${SLEEPER}/league/${LEAGUE}/users`,
+  'sleeper-matchups-w14.json': `${SLEEPER}/league/${LEAGUE}/matchups/${FWEEK}`,
+
+  // Sleeper's projections are UNDOCUMENTED but live on api.sleeper.app, which is already
+  // in allowed_fetch_domains — so "actual vs projected" costs no migration.
+  //
+  // This is the /v1/ form: 545 KB (45% headroom under the 1 MB fetch:external cap), a dict
+  // keyed by Sleeper player_id, carrying pts_ppr / pts_half_ppr / pts_std. That key is
+  // exactly what matchups.starters and matchups.players_points use, so projections need no
+  // name join and ONE fetch covers every roster in the league.
+  //
+  // NOT the query-param form. Measured 2026-08-08:
+  //   /projections/nfl/2025/14?season_type=regular&position[]=QB…&position[]=DEF  = 2.05 MB
+  // twice the cap, and a fifth over-cap endpoint after the four found in waves 1A and 2.
+  // One position alone (QB) is 217 KB. The narrower-looking URL is the unusable one.
+  'sleeper-projections-w14.json': `${SLEEPER}/projections/nfl/regular/2025/${FWEEK}`,
 };
 
 await mkdir(OUT, { recursive: true });
