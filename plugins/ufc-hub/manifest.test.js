@@ -28,7 +28,7 @@ describe('no dead fetch domain is declared anywhere', () => {
 });
 
 describe('ufc-hub manifest', () => {
-  it('declares exactly the three domains it fetches, and no more', () => {
+  it('declares exactly the four domains it fetches, and no more', () => {
     // ⚠️ Editing this list changes NOTHING in production on its own.
     // `allowed_fetch_domains` is enforced from `server_plugins` — the per-install
     // snapshot — so a new domain also needs a migration for `registry_plugins` and a
@@ -38,6 +38,11 @@ describe('ufc-hub manifest', () => {
       'site.api.espn.com',            // month index -> event ids, athletes, flags
       'd29dxerjsp82wz.cloudfront.net', // the card itself
       'gamma-api.polymarket.com',      // implied odds
+      // ⚠️ www ONLY. hostAllowed is an EXACT match applied to every redirect hop, so
+      // this does not admit `ufc.com` — and does not need to: core/ufc-links.js
+      // normalises every URL to www, and the images on those pages go through the
+      // image proxy, which is allowlist-free.
+      'www.ufc.com',                   // athlete career stats + event artwork
     ]);
   });
 
