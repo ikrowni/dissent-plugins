@@ -9,6 +9,9 @@
 // reads the generated static index instead. The trending endpoint is fine — it is a
 // small, explicitly limited list.
 import { getJson } from './http.js';
+import { parseTransactions } from './sleeper-league.js';
+import { parseDrafts, parseDraftPicks } from './sleeper-draft.js';
+import { parseBracket } from './sleeper-bracket.js';
 
 const API = 'https://api.sleeper.app/v1';
 const CDN = 'https://sleepercdn.com';
@@ -60,6 +63,7 @@ export const deepLink = {
   matchup: (leagueId, week) => `https://sleeper.com/leagues/${leagueId}/matchup/${week}`,
   players: (leagueId) => `https://sleeper.com/leagues/${leagueId}/players`,
   trade: (leagueId) => `https://sleeper.com/leagues/${leagueId}/trade`,
+  draft: (leagueId, draftId) => `https://sleeper.com/draft/nfl/${draftId}`,
 };
 
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
@@ -232,3 +236,21 @@ export const fetchProjections = async (season, week) =>
   parseProjections(await getJson(sleeperUrls.projections(season, week)));
 export const fetchTransactions = (id, round) => getJson(sleeperUrls.transactions(id, round));
 export const fetchTrending = (type, limit) => getJson(sleeperUrls.trending(type, limit));
+
+// ── Wave 3B ──────────────────────────────────────────────────────────────────
+// `transactions/{leg}` is per-WEEK, not per-season: leg 1..17 maps to the week. Week 1
+// is the outlier at 64.7 KB (initial free agency); later weeks are 1–5 KB.
+export const fetchTransactionsParsed = async (leagueId, week) =>
+  parseTransactions(await getJson(sleeperUrls.transactions(leagueId, week)));
+
+export const fetchDrafts = async (leagueId) =>
+  parseDrafts(await getJson(sleeperUrls.drafts(leagueId)));
+
+export const fetchDraftPicks = async (draftId) =>
+  parseDraftPicks(await getJson(sleeperUrls.draftPicks(draftId)));
+
+export const fetchWinnersBracket = async (leagueId) =>
+  parseBracket(await getJson(sleeperUrls.winnersBracket(leagueId)));
+
+export const fetchLosersBracket = async (leagueId) =>
+  parseBracket(await getJson(sleeperUrls.losersBracket(leagueId)));

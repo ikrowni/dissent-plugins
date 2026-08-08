@@ -99,3 +99,13 @@ describe('createStore', () => {
     expect(get.mock.invocationCallOrder[0]).toBeLessThan(set.mock.invocationCallOrder[0]);
   });
 });
+
+describe('KEY.playoffOdds', () => {
+  it('shards by league, season and week so a stale sim is never shown', () => {
+    expect(KEY.playoffOdds('123', 2025, 14)).toBe('odds:123:2025:w14');
+  });
+
+  it('differs across weeks', () => {
+    expect(KEY.playoffOdds('123', 2025, 14)).not.toBe(KEY.playoffOdds('123', 2025, 15));
+  });
+});

@@ -105,3 +105,18 @@ describe('TTL', () => {
     expect(TTL.GAME_FINAL).toBeGreaterThanOrEqual(3_600_000);
   });
 });
+
+describe('wave 3B TTLs', () => {
+  it('caches a completed week far longer than a live one', () => {
+    expect(TTL.SLEEPER_WEEK_FINAL).toBeGreaterThan(TTL.SLEEPER_MATCHUPS);
+  });
+
+  it('caches a completed draft and a bracket for at least an hour', () => {
+    expect(TTL.SLEEPER_DRAFT).toBeGreaterThanOrEqual(3_600_000);
+    expect(TTL.SLEEPER_BRACKET).toBeGreaterThanOrEqual(3_600_000);
+  });
+
+  it('refreshes transactions faster than league metadata', () => {
+    expect(TTL.SLEEPER_TRANSACTIONS).toBeLessThan(TTL.SLEEPER_LEAGUE);
+  });
+});

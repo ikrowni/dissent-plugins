@@ -83,5 +83,11 @@ export const TTL = {
   // Projections are set before kickoff and barely move in-week, but they are 508 KiB —
   // the largest single payload the hub fetches. Cache them hard.
   SLEEPER_PROJECTIONS: 3_600_000,
+  // A completed week's scores are immutable, and all-play needs every week back to 1 —
+  // without this the power tab refetches the whole season on every visit.
+  SLEEPER_WEEK_FINAL: 21_600_000,
+  SLEEPER_TRANSACTIONS: 300_000,
+  SLEEPER_DRAFT: 21_600_000,
+  SLEEPER_BRACKET: 3_600_000,
   ODDS: 600_000,
 };

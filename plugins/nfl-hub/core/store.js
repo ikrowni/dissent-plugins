@@ -15,6 +15,9 @@ export const KEY = {
   tradeBlock: (season) => `tradeblock:${season}`,
   bets: (season) => `bets:${season}`,
   awards: (season) => `awards:${season}`,
+  // Derived, not authored — sharded by week so a settled sim is never shown against a
+  // schedule that has since moved on.
+  playoffOdds: (leagueId, season, week) => `odds:${leagueId}:${season}:w${week}`,
   prefs: () => 'prefs',
 };
 
