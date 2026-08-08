@@ -15,7 +15,7 @@ const DEAD = [
 describe('no dead fetch domain is declared anywhere', () => {
   for (const p of [
     './manifest.json',
-    '../ufc-fights/manifest.json',
+    // ../ufc-fights was retired 2026-08-08 (migration 173) — ufc-hub replaced it.
     '../ufc-news-sidebar/manifest.json',
   ]) {
     it(`${p} declares no dead domain`, () => {
