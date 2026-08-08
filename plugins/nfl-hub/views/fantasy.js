@@ -1,0 +1,327 @@
+// views/fantasy.js — Fantasy Command: the section shell, onboarding, and sub-tab routing.
+//
+// The sub-views (matchup, matchups, roster) are separate modules; this one owns which is
+// showing and renders their HTML into its own body. Onboarding lives here because it is the
+// gate: nothing else in the section can render without a league and a roster.
+import { esc, panel, stateMsg } from '../core/ui.js';
+import { cache, TTL } from '../core/cache.js';
+import { createSession, suggestRoster } from '../core/fantasy-session.js';
+import { players } from '../core/players.js';
+import { buildNflContext } from '../core/fantasy-nfl.js';
+import { parseScoreboard } from '../core/espn-game.js';
+import { urls, fetchScoreboard } from '../core/espn-client.js';
+import {
+  sleeperUrls, fetchUser, fetchUserLeagues, fetchLeague, fetchRosters, fetchLeagueUsers,
+  fetchMatchups, fetchProjections, joinMatchups, parseLeague, deepLink,
+} from '../core/sleeper.js';
+import { request, getIdentity } from '../../plugin-sdk.js';
+
+const TABS = [
+  ['matchup', 'My Matchup'],
+  ['matchups', 'All Matchups'],
+  ['roster', 'My Roster'],
+];
+
+export function renderTabs(active) {
+  return `<div class="subnav" role="tablist">${TABS.map(([id, label]) => (
+    `<button data-act="fantasy-tab" data-tab="${esc(id)}" role="tab"`
+    + ` aria-current="${String(id === active)}">${esc(label)}</button>`
+  )).join('')}</div>`;
+}
+
+export function renderOnboarding(s) {
+  const err = s?.error ? `<div class="onb-error" role="alert">${esc(s.error)}</div>` : '';
+
+  if (s?.step === 'league') {
+    return panel({
+      title: 'Pick your league',
+      body: err + '<div class="onb-list">' + (s.leagues ?? []).map((l) => (
+        `<button class="onb-item" data-act="pick-league" data-league="${esc(l.id)}">`
+        + `<span class="onb-name">${esc(l.name)}</span>`
+        + `<span class="onb-meta">${esc(l.teams)} teams · ${esc(l.scoringType ?? '')}</span>`
+        + '</button>'
+      )).join('') + '</div>',
+    });
+  }
+
+  if (s?.step === 'roster') {
+    const choices = s.rosterChoices ?? [];
+    return panel({
+      title: 'Which team is yours?',
+      right: '<span class="kicker">matched against this server’s members</span>',
+      body: err + '<div class="onb-list">' + choices.map((c) => (
+        `<button class="onb-item${c.suggested ? ' suggested' : ''}" data-act="pick-roster"`
+        + ` data-roster="${esc(c.rosterId)}" aria-pressed="${String(!!c.suggested)}">`
+        + `<span class="onb-name">${esc(c.teamName)}</span>`
+        + `<span class="onb-meta">${esc(c.displayName ?? '')}`
+        + (c.suggested ? ' · <b>likely you</b>' : '') + '</span>'
+        + '</button>'
+      )).join('') + '</div>',
+    });
+  }
+
+  // step === 'username'
+  return panel({
+    title: 'Connect your Sleeper league',
+    body: err
+      + '<p class="onb-copy">Sleeper has no login for apps, so tell us who you are once. '
+      + 'Nothing is sent anywhere but Sleeper, and only you can see your pick.</p>'
+      + '<div class="onb-form">'
+        + '<input data-act="sleeper-username" type="text" autocomplete="off" spellcheck="false"'
+        + ' placeholder="Your Sleeper username" aria-label="Sleeper username">'
+        + '<button class="retry" data-act="sleeper-lookup">Find my leagues</button>'
+      + '</div>'
+      // Spec §4.4: a league id can also be entered directly. Someone who already knows it
+      // should not have to remember a username to get past this screen.
+      + '<div class="onb-form onb-alt">'
+        + '<input data-act="sleeper-leagueid" type="text" autocomplete="off" spellcheck="false"'
+        + ' placeholder="…or paste a league ID" aria-label="Sleeper league ID">'
+        + '<button class="retry" data-act="sleeper-use-league">Use this league</button>'
+      + '</div>',
+  });
+}
+
+export function renderFantasy(s) {
+  if (!s?.session || s.session.step !== 'ready') {
+    const os = s?.session ?? { step: 'username' };
+    return '<div class="fantasy-wrap">'
+      + renderOnboarding({ ...os, rosterChoices: s?.rosterChoices ?? os.rosterChoices })
+      + '</div>';
+  }
+  if (s.loading) return stateMsg('Loading your league…', { spinner: true });
+  if (s.error) return stateMsg('Could not load this league.', { retry: true });
+
+  return '<div class="fantasy-wrap">'
+    + '<div class="fantasy-head">'
+      + renderTabs(s.tab)
+      + '<button class="badge" data-act="fantasy-reset">Change league</button>'
+    + '</div>'
+    + (s.body ?? '')
+    + '</div>';
+}
+
+// ── State and loading ────────────────────────────────────────────────────────
+
+const state = {
+  session: null, loading: false, error: null, tab: 'matchup', body: '',
+  league: null, rosters: [], users: {}, matchups: [], projections: {}, joined: [],
+  rosterChoices: [], week: null, season: null, playerIndex: null, nfl: null,
+};
+
+export function render() { return renderFantasy(state); }
+
+/** The host exposes members:list under the members:read permission, but plugin-sdk.js has
+ *  no wrapper for it — and adding one to the shared SDK for a single plugin would be a core
+ *  file changed for a plugin-specific reason. The generic request() reaches it directly.
+ *  Failure is non-fatal: without members the roster list simply has no suggestion. */
+async function fetchMembers() {
+  try {
+    const r = await request('members:list', {});
+    return r?.members ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadLeague(leagueId, week) {
+  const season = state.season ?? new Date().getFullYear();
+  const [league, rosters, users, matchups, projections] = await Promise.all([
+    cache.get(sleeperUrls.league(leagueId), () => fetchLeague(leagueId),
+      TTL.SLEEPER_LEAGUE, { staleOnError: true }).catch(() => null),
+    cache.get(sleeperUrls.rosters(leagueId), () => fetchRosters(leagueId),
+      TTL.SLEEPER_LEAGUE, { staleOnError: true }).catch(() => []),
+    cache.get(sleeperUrls.leagueUsers(leagueId), () => fetchLeagueUsers(leagueId),
+      TTL.SLEEPER_LEAGUE, { staleOnError: true }).catch(() => ({})),
+    cache.get(sleeperUrls.matchups(leagueId, week), () => fetchMatchups(leagueId, week),
+      TTL.SLEEPER_MATCHUPS, { staleOnError: true }).catch(() => []),
+    // Projections are the one optional payload: 508 KiB, and every view degrades to
+    // actual-only without them. Never let them fail the whole section.
+    cache.get(sleeperUrls.projections(season, week), () => fetchProjections(season, week),
+      TTL.SLEEPER_PROJECTIONS, { staleOnError: true }).catch(() => ({})),
+  ]);
+
+  state.league = league;
+  state.rosters = rosters;
+  state.users = users;
+  state.matchups = matchups;
+  state.projections = projections;
+  state.joined = joinMatchups(matchups, rosters, users);
+}
+
+/** The live-NFL half of the section: the player index (Sleeper id → name/team/ESPN id) and
+ *  this week's slate. Both are optional — the section renders without either, just with
+ *  less context, which is the graceful-degradation rule in spec §6.3. */
+async function loadNfl() {
+  const [, sb] = await Promise.all([
+    players.load().catch(() => false),
+    cache.get(urls.scoreboard({}), () => fetchScoreboard({}),
+      TTL.SCOREBOARD_IDLE, { staleOnError: true }).catch(() => null),
+  ]);
+  state.playerIndex = players.isReady ? players : null;
+  const games = sb ? parseScoreboard(sb).games : [];
+  // Injuries ride along with the roster payloads team pages already fetch; wave 3A wires
+  // the slate and leaves the injury map empty rather than adding 32 fetches for it.
+  state.nfl = buildNflContext(games, []);
+}
+
+/** Build the roster picker, with the viewer's likely team pre-selected. */
+async function buildRosterChoices() {
+  const [identity] = await Promise.all([
+    getIdentity().catch(() => null),
+    // Fetched for the spec's "matched against server members" promise. The suggestion
+    // itself keys off identity; members is what makes that permission meaningful and is
+    // where a future multi-member mapping will read from.
+    fetchMembers(),
+  ]);
+  const me = identity
+    ? { username: identity.username, displayName: identity.display_name ?? identity.displayName }
+    : null;
+  const guess = suggestRoster(me, state.users, state.rosters);
+  state.rosterChoices = state.rosters.map((r) => {
+    const u = r.ownerId ? state.users[r.ownerId] : null;
+    return {
+      rosterId: r.rosterId,
+      teamName: u?.teamName ?? `Roster ${r.rosterId}`,
+      displayName: u?.displayName ?? null,
+      suggested: guess?.rosterId === r.rosterId,
+    };
+  });
+}
+
+async function renderBody() {
+  const mod = state.tab === 'matchups'
+    ? await import('./fantasy-matchups.js')
+    : state.tab === 'roster'
+      ? await import('./fantasy-roster.js')
+      : await import('./fantasy-matchup.js');
+  try {
+    state.body = mod.renderPanel(state);
+  } catch (err) {
+    // A throwing sub-view must not blank the section — the tabs stay usable.
+    console.error(`[nfl-hub] fantasy/${state.tab} render failed:`, err);
+    state.body = stateMsg('This tab could not be displayed.', { retry: true });
+  }
+}
+
+async function refreshAll(app) {
+  state.loading = true;
+  app.router.refresh();
+  try {
+    await Promise.all([
+      loadLeague(state.session.state.leagueId, state.week),
+      loadNfl(),
+    ]);
+    state.error = null;
+  } catch (err) {
+    state.error = err?.message ?? 'failed';
+  }
+  state.loading = false;
+  await renderBody();
+  app.router.refresh();
+}
+
+async function toRosterStep(app, leagueId) {
+  state.loading = true;
+  app.router.refresh();
+  await loadLeague(leagueId, state.week);
+  await buildRosterChoices();
+  state.loading = false;
+  app.router.refresh();
+}
+
+export async function enter() {
+  const { app } = await import('../core/app.js');
+  state.week = app.week ?? 1;
+  state.season = app.season ?? new Date().getFullYear();
+
+  if (!state.session) {
+    state.session = createSession({
+      configLeagueId: app.ctx?.config?.sleeper_league_id ?? null,
+    });
+    await state.session.load();
+  }
+
+  app.onAction = async (act, el) => {
+    if (act === 'fantasy-tab') {
+      state.tab = el.dataset.tab;
+      await renderBody();
+      app.router.refresh();
+      return;
+    }
+    if (act === 'fantasy-reset') {
+      await state.session.reset();
+      state.rosterChoices = [];
+      app.router.refresh();
+      return;
+    }
+    if (act === 'sleeper-lookup') {
+      const input = document.querySelector('[data-act="sleeper-username"]');
+      const name = String(input?.value ?? '').trim();
+      if (!name) return;
+      state.session.state.error = null;
+      try {
+        const u = await fetchUser(name);
+        if (!u?.user_id) {
+          state.session.state.error = `No Sleeper user called “${name}”.`;
+          app.router.refresh();
+          return;
+        }
+        const raw = await fetchUserLeagues(u.user_id, state.season);
+        state.session.setLeagues(name, u.user_id, (raw ?? []).map(parseLeague).filter(Boolean));
+      } catch {
+        state.session.state.error = 'Could not reach Sleeper. Try again.';
+      }
+      app.router.refresh();
+      return;
+    }
+    if (act === 'sleeper-use-league') {
+      const input = document.querySelector('[data-act="sleeper-leagueid"]');
+      const id = String(input?.value ?? '').trim();
+      // Sleeper league ids are numeric strings; rejecting junk here is cheaper than a
+      // fetch that 404s and leaves the user staring at a generic error.
+      if (!/^\d{6,}$/.test(id)) {
+        state.session.state.error = 'That does not look like a Sleeper league ID.';
+        app.router.refresh();
+        return;
+      }
+      state.session.selectLeague(id);
+      await toRosterStep(app, id);
+      if (!state.league) {
+        state.session.state.error = 'No league with that ID.';
+        state.session.state.step = 'username';
+        app.router.refresh();
+      }
+      return;
+    }
+    if (act === 'pick-league') {
+      state.session.selectLeague(el.dataset.league);
+      await toRosterStep(app, el.dataset.league);
+      return;
+    }
+    if (act === 'pick-roster') {
+      await state.session.choose({
+        leagueId: state.session.state.leagueId, rosterId: el.dataset.roster,
+      });
+      await refreshAll(app);
+      return;
+    }
+    if (act === 'sleeper-open') {
+      window.open(deepLink.league(state.session.state.leagueId), '_blank', 'noopener');
+      return;
+    }
+    if (act === 'player') { app.athleteId = el.dataset.player; app.router.go('player'); return; }
+    if (act === 'team') { app.teamAbbr = el.dataset.team; app.router.go('team'); }
+  };
+
+  // A league configured server-wide still needs the roster picker populated before the
+  // user can answer "which team is yours".
+  if (state.session.state.step === 'roster' && !state.rosterChoices.length) {
+    await toRosterStep(app, state.session.state.leagueId);
+    return;
+  }
+
+  if (state.session.state.step === 'ready') await refreshAll(app);
+  else app.router.refresh();
+}
+
+export function leave() { state.body = ''; }
