@@ -266,3 +266,20 @@ body.reduce-motion .hero-wp { backdrop-filter: none; background: rgba(2,4,8,.92)
 .opp-tough { color: var(--loss); }
 .opp-soft { color: var(--win); }
 .opp-none, .opp-bye { color: var(--text-3); }
+
+/* ── draft picker ──────────────────────────────────────────────────────────── */
+/* Exists because an account has more than one draft and the tab used to show whichever
+   came first. Mocks are labelled: this account has two drafts both named "Happy Hour",
+   one real and one mock, so an unlabelled list reads as duplicates. */
+.dr-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.dr-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  appearance: none; font: inherit; cursor: pointer; text-align: left;
+  padding: 7px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--panel); color: var(--text-2);
+  transition: border-color var(--dur-fast), color var(--dur-fast); }
+.dr-tab:hover { color: var(--text); border-color: var(--line-2); }
+.dr-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dr-tab.is-on { color: var(--text); border-color: var(--gold); background: var(--panel-2); }
+.dr-tab-name { font-weight: 600; font-size: 12.5px; }
+.dr-tab-meta { font-size: 10.5px; color: var(--text-3); }
+.dr-tab-meta b { color: var(--gold); font-weight: 700; }

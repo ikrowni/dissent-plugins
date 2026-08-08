@@ -16,9 +16,42 @@ function cell(p) {
     + '</td>';
 }
 
+/**
+ * The draft picker.
+ *
+ * Exists because a viewer has more than one draft and the hub used to show whichever
+ * came first. Mocks are labelled: they sit behind leagues the user's league list does
+ * not return, so without a label the list reads as duplicates of the same league name —
+ * this account genuinely has two drafts both called "Happy Hour", one real and one mock.
+ */
+function picker(s) {
+  const drafts = s?.drafts ?? [];
+  if (drafts.length < 2) return '';
+  return `<div class="dr-picker">${drafts.map((d) => {
+    const on = d.draftId === s.draftId;
+    const when = d.startTime ? new Date(d.startTime).toLocaleDateString() : '';
+    return `<button class="dr-tab${on ? ' is-on' : ''}" data-act="draft-pick"`
+      + ` data-draft="${esc(d.draftId)}">`
+      + `<span class="dr-tab-name">${esc(d.name ?? d.draftId)}</span>`
+      + `<span class="dr-tab-meta">${esc(when)}`
+      + (d.teams ? ` · ${esc(d.teams)} teams` : '')
+      + (d.isMock ? ' · <b>Mock</b>' : '')
+      + (d.status && d.status !== 'complete' ? ` · ${esc(d.status)}` : '')
+      + '</span></button>';
+  }).join('')}</div>`;
+}
+
 export function renderPanel(s) {
   const board = s?.board;
-  if (!board?.rounds?.length) return stateMsg('No draft has been held in this league yet.');
+  if (!board?.rounds?.length) {
+    // ⚠️ Say WHICH draft is empty. "No draft in this league" was wrong and confusing
+    // once mocks are listed — the tab may be showing a pre-draft league while three
+    // completed mocks sit in the picker right above the message.
+    const chosen = (s?.drafts ?? []).find((d) => d.draftId === s?.draftId);
+    return picker(s) + stateMsg(chosen
+      ? `${chosen.name ?? 'This draft'} has no picks yet (${chosen.status ?? 'not started'}).`
+      : 'No draft found for this account yet.');
+  }
 
   const head = '<tr><th></th>'
     + board.slots.map((slot) => {
@@ -41,7 +74,8 @@ export function renderPanel(s) {
   return panel({
     title: 'Draft board',
     right: `<span class="kicker">${kicker}</span>`,
-    body: `<div class="dr-scroll"><table class="dr-table"><thead>${head}</thead>`
+    body: picker(s)
+      + `<div class="dr-scroll"><table class="dr-table"><thead>${head}</thead>`
       + `<tbody>${rows}</tbody></table></div>`,
   });
 }

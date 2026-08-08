@@ -26,7 +26,39 @@ export function parseDrafts(json) {
     // `draft_order` is user_id -> slot. Kept for labelling; the board itself derives
     // slot -> roster from the picks, which needs no extra fetch.
     draftOrder: d?.draft_order ?? {},
+    // metadata.name is the league/draft name a human recognises — "Happy Hour", "Test
+    // League". Without it a picker reads as a list of 19-digit ids.
+    name: d?.metadata?.name ?? null,
+    // ⚠️ Sleeper flags SOME mocks as `metadata.type === 'league_mock'` and leaves others
+    // null. Measured on one account: of three drafts whose leagues are not in the user's
+    // league list, only ONE carried the flag. So this label is a hint, never the test
+    // for "can the hub reach this by league" — `mergeDrafts` uses the league list itself.
+    isMock: d?.metadata?.type === 'league_mock',
   }));
+}
+
+/**
+ * Every draft a user can see, from both sources, newest first.
+ *
+ * WHY BOTH. `/league/{id}/drafts` finds a league's drafts but never a mock's, because a
+ * mock's league is absent from `/user/{id}/leagues/nfl/{season}`. `/user/{id}/drafts/...`
+ * finds mocks but is season-scoped. Merging is what makes every draft reachable.
+ *
+ * De-duplicated on draftId, because a league draft appears in both lists.
+ */
+export function mergeDrafts(userDrafts, leagueDrafts, leagueIds = []) {
+  const known = new Set((leagueIds ?? []).map(String));
+  const byId = new Map();
+  for (const d of [...(leagueDrafts ?? []), ...(userDrafts ?? [])]) {
+    if (!d?.draftId || byId.has(d.draftId)) continue;
+    byId.set(d.draftId, {
+      ...d,
+      // The honest discriminator: a draft is only reachable through league selection if
+      // its league is one the user's league list actually returns.
+      viaLeague: d.leagueId != null && known.has(String(d.leagueId)),
+    });
+  }
+  return [...byId.values()].sort((a, b) => (b.startTime ?? 0) - (a.startTime ?? 0));
 }
 
 export function parseDraftPicks(json) {

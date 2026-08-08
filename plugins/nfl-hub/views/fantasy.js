@@ -14,13 +14,13 @@ import { strengthFromStandings } from '../core/opponent-strength.js';
 import {
   sleeperUrls, fetchUser, fetchUserLeagues, fetchLeague, fetchRosters, fetchLeagueUsers,
   fetchMatchups, fetchProjections, joinMatchups, parseLeague, deepLink,
-  fetchTransactionsParsed, fetchDrafts, fetchDraftPicks,
+  fetchTransactionsParsed, fetchDrafts, fetchUserDrafts, fetchDraftPicks,
   fetchWinnersBracket, fetchLosersBracket,
 } from '../core/sleeper.js';
 import { store, KEY } from '../core/store.js';
 import { groupByWeek } from '../core/sleeper-league.js';
 import { weeklyScores, powerRankings } from '../core/power.js';
-import { draftBoard } from '../core/sleeper-draft.js';
+import { draftBoard, mergeDrafts } from '../core/sleeper-draft.js';
 import { bracketRounds } from '../core/sleeper-bracket.js';
 import { remainingGames, simulate } from '../core/playoff-odds.js';
 import { request, getIdentity } from '../../plugin-sdk.js';
@@ -125,7 +125,7 @@ const state = {
   session: null, loading: false, error: null, tab: 'matchup', body: '',
   league: null, rosters: [], users: {}, matchups: [], projections: {}, joined: [],
   rosterChoices: [], week: null, season: null, playerIndex: null, nfl: null,
-  power: [], moves: [], board: null, draft: null,
+  power: [], moves: [], board: null, draft: null, drafts: [], draftId: null,
   bracketRounds: [], bracketKind: 'winners', odds: null,
   rosterNames: {}, rosterOwner: {}, playerNames: {}, strength: {},
 };
@@ -323,13 +323,47 @@ async function loadMoves(leagueId, week, back = 4) {
   state.playerNames = names;
 }
 
+/**
+ * Every draft this user can see — league drafts AND mocks.
+ *
+ * ⚠️ TWO SOURCES, ON PURPOSE. This used to read `/league/{id}/drafts` alone and take
+ * `drafts[0]`, which had two consequences on a live account (measured 2026-08-08):
+ *
+ *   - MOCKS WERE INVISIBLE. A mock draft sits behind a league that
+ *     `/user/{id}/leagues/nfl/{season}` does not return, so a by-league lookup can never
+ *     reach one. That account had 4 drafts and 1 listable league: 3 were unreachable.
+ *   - `drafts[0]` silently discarded every draft after the first, so a league with a
+ *     redraft and a rookie draft only ever showed one of them.
+ *
+ * The user endpoint is season-scoped and the league endpoint is not, so both are kept
+ * and merged. A failure of either leaves the other's results rather than emptying the tab.
+ */
 async function loadDraft(leagueId) {
-  const drafts = await cache.get(sleeperUrls.drafts(leagueId), () => fetchDrafts(leagueId),
-    TTL.SLEEPER_DRAFT, { staleOnError: true }).catch(() => []);
-  state.draft = drafts[0] ?? null;
-  if (!state.draft) { state.board = null; return; }
-  const picks = await cache.get(sleeperUrls.draftPicks(state.draft.draftId),
-    () => fetchDraftPicks(state.draft.draftId), TTL.SLEEPER_DRAFT, { staleOnError: true })
+  const { userId, leagues } = state.session.state;
+  const season = state.season ?? new Date().getUTCFullYear();
+
+  const [userDrafts, leagueDrafts] = await Promise.all([
+    userId
+      ? cache.get(sleeperUrls.userDrafts(userId, season), () => fetchUserDrafts(userId, season),
+        TTL.SLEEPER_DRAFT, { staleOnError: true }).catch(() => [])
+      : Promise.resolve([]),
+    leagueId
+      ? cache.get(sleeperUrls.drafts(leagueId), () => fetchDrafts(leagueId),
+        TTL.SLEEPER_DRAFT, { staleOnError: true }).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+
+  state.drafts = mergeDrafts(userDrafts, leagueDrafts,
+    (leagues ?? []).map((l) => l.leagueId ?? l.league_id));
+
+  // Keep the viewer's choice across a refresh; otherwise open the most recent.
+  const chosen = state.drafts.find((d) => d.draftId === state.draftId) ?? state.drafts[0] ?? null;
+  state.draft = chosen;
+  state.draftId = chosen?.draftId ?? null;
+  if (!chosen) { state.board = null; return; }
+
+  const picks = await cache.get(sleeperUrls.draftPicks(chosen.draftId),
+    () => fetchDraftPicks(chosen.draftId), TTL.SLEEPER_DRAFT, { staleOnError: true })
     .catch(() => []);
   state.board = draftBoard(picks);
 }
@@ -503,6 +537,13 @@ export async function enter() {
         leagueId: state.session.state.leagueId, rosterId: el.dataset.roster,
       });
       await refreshAll(app);
+      return;
+    }
+    if (act === 'draft-pick') {
+      // Remember the choice so a refresh does not silently snap back to the newest.
+      state.draftId = el.dataset.draft;
+      await loadDraft(state.session.state.leagueId);
+      app.paint();
       return;
     }
     if (act === 'sleeper-open') {

@@ -28,6 +28,11 @@ export const sleeperUrls = {
   winnersBracket: (leagueId) => `${API}/league/${leagueId}/winners_bracket`,
   losersBracket: (leagueId) => `${API}/league/${leagueId}/losers_bracket`,
   drafts: (leagueId) => `${API}/league/${leagueId}/drafts`,
+  // ⚠️ THE ONLY ENDPOINT THAT RETURNS MOCK DRAFTS. A mock sits behind a league that
+  // `/user/{id}/leagues/nfl/{season}` does NOT return, so a drafts-by-league lookup can
+  // never reach one. Measured on a live account 2026-08-08: 4 drafts here, 1 league
+  // there — three drafts were invisible to the hub entirely.
+  userDrafts: (userId, season) => `${API}/user/${userId}/drafts/nfl/${season}`,
   draftPicks: (draftId) => `${API}/draft/${draftId}/picks`,
   // UNDOCUMENTED but stable, and on a host already in allowed_fetch_domains. 508 KiB —
   // ~45% headroom under the 1 MB fetch:external cap — returned as a dict keyed by Sleeper
@@ -242,6 +247,9 @@ export const fetchTrending = (type, limit) => getJson(sleeperUrls.trending(type,
 // is the outlier at 64.7 KB (initial free agency); later weeks are 1–5 KB.
 export const fetchTransactionsParsed = async (leagueId, week) =>
   parseTransactions(await getJson(sleeperUrls.transactions(leagueId, week)));
+
+export const fetchUserDrafts = async (userId, season) =>
+  parseDrafts(await getJson(sleeperUrls.userDrafts(userId, season)));
 
 export const fetchDrafts = async (leagueId) =>
   parseDrafts(await getJson(sleeperUrls.drafts(leagueId)));

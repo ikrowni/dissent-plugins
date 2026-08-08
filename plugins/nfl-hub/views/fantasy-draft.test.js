@@ -51,3 +51,46 @@ describe('renderPanel', () => {
       .toContain('No draft');
   });
 });
+
+describe('draft picker', () => {
+  const drafts = [
+    { draftId: 'a', name: 'Happy Hour', teams: 8, startTime: 2, isMock: false, status: 'complete' },
+    { draftId: 'b', name: 'Happy Hour', teams: 8, startTime: 1, isMock: true, status: 'complete' },
+  ];
+
+  it('is hidden when there is only one draft', () => {
+    const html = renderPanel({ board, drafts: [drafts[0]], draftId: 'a' });
+    expect(html).not.toContain('dr-picker');
+  });
+
+  it('lists every draft once there is a choice', () => {
+    const html = renderPanel({ board, drafts, draftId: 'a' });
+    expect(html.match(/data-act="draft-pick"/g)).toHaveLength(2);
+  });
+
+  it('LABELS the mock, because the names collide', () => {
+    // ⚠️ This account genuinely has two drafts both called "Happy Hour" — one real, one
+    // mock. Without the label the picker shows two identical buttons.
+    const html = renderPanel({ board, drafts, draftId: 'a' });
+    expect(html).toContain('Mock');
+  });
+
+  it('marks which draft is open', () => {
+    const html = renderPanel({ board, drafts, draftId: 'b' });
+    expect(html.match(/dr-tab is-on/g)).toHaveLength(1);
+  });
+
+  it('keeps the picker visible when the chosen draft has no picks', () => {
+    // ⚠️ Otherwise a pre-draft league hides the picker and the completed mocks in it —
+    // which is exactly what "my mock draft is not showing" looked like.
+    const html = renderPanel({ board: null, drafts, draftId: 'a' });
+    expect(html).toContain('dr-picker');
+    expect(html).toContain('Happy Hour');
+  });
+
+  it('names the empty draft rather than blaming the league', () => {
+    const html = renderPanel({ board: null, drafts, draftId: 'a' });
+    expect(html).toContain('Happy Hour');
+    expect(html).not.toContain('No draft has been held in this league');
+  });
+});
