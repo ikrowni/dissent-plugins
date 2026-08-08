@@ -129,3 +129,36 @@ describe('viewModel — the shape contract renders depend on', () => {
     expect(viewModel({ session: null }).session).toBe(null);
   });
 });
+
+describe('wave 3B tabs', () => {
+  it('offers the four league tabs', async () => {
+    const mod = await import('./fantasy.js');
+    const ids = mod.TABS.map(([id]) => id);
+    expect(ids).toContain('power');
+    expect(ids).toContain('moves');
+    expect(ids).toContain('draft');
+    expect(ids).toContain('bracket');
+  });
+
+  it('keeps the wave 3A tabs first, so the default view does not move', async () => {
+    const mod = await import('./fantasy.js');
+    expect(mod.TABS.slice(0, 3).map(([id]) => id)).toEqual(['matchup', 'matchups', 'roster']);
+  });
+
+  it('hides the bracket tab until a bracket exists', async () => {
+    const mod = await import('./fantasy.js');
+    expect(mod.visibleTabs({ bracketRounds: [] }).map(([id]) => id)).not.toContain('bracket');
+    expect(mod.visibleTabs({ bracketRounds: [{ round: 1, matches: [] }] })
+      .map(([id]) => id)).toContain('bracket');
+  });
+
+  it('passes the new slices through viewModel', async () => {
+    const mod = await import('./fantasy.js');
+    const vm = mod.viewModel({
+      session: { state: { step: 'ready' } },
+      power: [{ rosterId: 1 }], moves: [], board: null, bracketRounds: [], odds: null,
+    });
+    expect(vm.power).toEqual([{ rosterId: 1 }]);
+    expect(vm.session).toEqual({ step: 'ready' });
+  });
+});

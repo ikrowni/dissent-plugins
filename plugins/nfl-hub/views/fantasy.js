@@ -13,17 +13,35 @@ import { urls, fetchScoreboard } from '../core/espn-client.js';
 import {
   sleeperUrls, fetchUser, fetchUserLeagues, fetchLeague, fetchRosters, fetchLeagueUsers,
   fetchMatchups, fetchProjections, joinMatchups, parseLeague, deepLink,
+  fetchTransactionsParsed, fetchDrafts, fetchDraftPicks,
+  fetchWinnersBracket, fetchLosersBracket,
 } from '../core/sleeper.js';
+import { store, KEY } from '../core/store.js';
+import { groupByWeek } from '../core/sleeper-league.js';
+import { weeklyScores, powerRankings } from '../core/power.js';
+import { draftBoard } from '../core/sleeper-draft.js';
+import { bracketRounds } from '../core/sleeper-bracket.js';
+import { remainingGames, simulate } from '../core/playoff-odds.js';
 import { request, getIdentity } from '../../plugin-sdk.js';
 
-const TABS = [
+export const TABS = [
   ['matchup', 'My Matchup'],
   ['matchups', 'All Matchups'],
   ['roster', 'My Roster'],
+  ['power', 'Power'],
+  ['moves', 'Moves'],
+  ['draft', 'Draft'],
+  ['bracket', 'Bracket'],
 ];
 
-export function renderTabs(active) {
-  return `<div class="subnav" role="tablist">${TABS.map(([id, label]) => (
+/** The bracket only exists in the postseason — an empty tab reads as a broken one. */
+export function visibleTabs(s) {
+  const hasBracket = (s?.bracketRounds ?? []).length > 0;
+  return TABS.filter(([id]) => id !== 'bracket' || hasBracket);
+}
+
+export function renderTabs(active, s) {
+  return `<div class="subnav" role="tablist">${visibleTabs(s).map(([id, label]) => (
     `<button data-act="fantasy-tab" data-tab="${esc(id)}" role="tab"`
     + ` aria-current="${String(id === active)}">${esc(label)}</button>`
   )).join('')}</div>`;
@@ -93,7 +111,7 @@ export function renderFantasy(s) {
 
   return '<div class="fantasy-wrap">'
     + '<div class="fantasy-head">'
-      + renderTabs(s.tab)
+      + renderTabs(s.tab, s)
       + '<button class="badge" data-act="fantasy-reset">Change league</button>'
     + '</div>'
     + (s.body ?? '')
@@ -106,6 +124,9 @@ const state = {
   session: null, loading: false, error: null, tab: 'matchup', body: '',
   league: null, rosters: [], users: {}, matchups: [], projections: {}, joined: [],
   rosterChoices: [], week: null, season: null, playerIndex: null, nfl: null,
+  power: [], moves: [], board: null, draft: null,
+  bracketRounds: [], bracketKind: 'winners', odds: null,
+  rosterNames: {}, rosterOwner: {}, playerNames: {},
 };
 
 /**
@@ -159,6 +180,7 @@ async function loadLeague(leagueId, week) {
   state.matchups = matchups;
   state.projections = projections;
   state.joined = joinMatchups(matchups, rosters, users);
+  indexRosters();
 }
 
 /** The live-NFL half of the section: the player index (Sleeper id → name/team/ESPN id) and
@@ -202,11 +224,15 @@ async function buildRosterChoices() {
 }
 
 async function renderBody() {
-  const mod = state.tab === 'matchups'
-    ? await import('./fantasy-matchups.js')
-    : state.tab === 'roster'
-      ? await import('./fantasy-roster.js')
-      : await import('./fantasy-matchup.js');
+  const MODS = {
+    matchups: () => import('./fantasy-matchups.js'),
+    roster: () => import('./fantasy-roster.js'),
+    power: () => import('./fantasy-power.js'),
+    moves: () => import('./fantasy-moves.js'),
+    draft: () => import('./fantasy-draft.js'),
+    bracket: () => import('./fantasy-bracket.js'),
+  };
+  const mod = await (MODS[state.tab] ?? (() => import('./fantasy-matchup.js')))();
   try {
     state.body = mod.renderPanel(viewModel());
   } catch (err) {
@@ -216,14 +242,161 @@ async function renderBody() {
   }
 }
 
+/** Roster id -> team name, and roster id -> owner id. Both views need the mapping. */
+function indexRosters() {
+  state.rosterOwner = {};
+  state.rosterNames = {};
+  for (const r of state.rosters ?? []) {
+    state.rosterOwner[r.rosterId] = r.ownerId;
+    state.rosterNames[r.rosterId] = state.users?.[r.ownerId]?.teamName ?? `Roster ${r.rosterId}`;
+  }
+}
+
+/**
+ * Every week's matchups from week 1 through the end of the regular season.
+ *
+ * All-play cannot be derived from season totals, so the PAST weeks are all needed; the
+ * playoff sim needs the FUTURE ones, which Sleeper returns pre-paired with zeroed points.
+ * `weeklyScores` drops the zeroed weeks, so fetching past the current week costs the power
+ * table nothing.
+ *
+ * Three TTLs, because the three kinds of week are not equally volatile: a completed week
+ * is immutable (6h), the current week is live (30s), and a future week's pairing only
+ * changes if the commissioner edits the schedule (1h). Seventeen weeks is ~180 KB total,
+ * and cache.get coalesces the fan-out.
+ */
+async function loadWeeks(leagueId, currentWeek, throughWeek) {
+  const weeks = [];
+  for (let w = 1; w <= throughWeek; w += 1) {
+    const ttl = w < currentWeek ? TTL.SLEEPER_WEEK_FINAL
+      : w === currentWeek ? TTL.SLEEPER_MATCHUPS
+        : TTL.SLEEPER_LEAGUE;
+    weeks.push(
+      cache.get(sleeperUrls.matchups(leagueId, w), () => fetchMatchups(leagueId, w), ttl,
+        { staleOnError: true })
+        .then((matchups) => ({ week: w, matchups }))
+        .catch(() => ({ week: w, matchups: [] })),
+    );
+  }
+  return Promise.all(weeks);
+}
+
+async function loadPower(leagueId, week) {
+  // Through the last regular-season week — week `start` is already the postseason, whose
+  // matchups the seeding sim must not treat as regular-season games.
+  const start = state.league?.playoffWeekStart ?? 15;
+  const weeks = await loadWeeks(leagueId, week, Math.max(week, start - 1));
+  const scored = weeklyScores(weeks);
+  state.power = powerRankings(state.rosters, scored);
+  return { weeks, scored };
+}
+
+/** Recent weeks only. A full-season feed is 17 requests for a list nobody scrolls. */
+async function loadMoves(leagueId, week, back = 4) {
+  const first = Math.max(1, week - back + 1);
+  const legs = [];
+  for (let w = first; w <= week; w += 1) {
+    legs.push(
+      cache.get(`tx:${leagueId}:${w}`, () => fetchTransactionsParsed(leagueId, w),
+        TTL.SLEEPER_TRANSACTIONS, { staleOnError: true }).catch(() => []),
+    );
+  }
+  const feed = (await Promise.all(legs)).flat();
+  state.moves = groupByWeek(feed);
+
+  // The feed carries player IDs only. Without this the whole list reads "Player 11600",
+  // which the view treats as its unknown-player fallback, not as a rendered name.
+  const names = {};
+  for (const t of feed) {
+    const ids = [
+      ...t.transfers.map((x) => x.playerId),
+      ...t.adds.map((x) => x.playerId),
+      ...t.drops.map((x) => x.playerId),
+    ];
+    for (const id of ids) {
+      if (names[id]) continue;
+      const p = state.playerIndex?.get(id);
+      if (p?.name) names[id] = p.name;
+    }
+  }
+  state.playerNames = names;
+}
+
+async function loadDraft(leagueId) {
+  const drafts = await cache.get(sleeperUrls.drafts(leagueId), () => fetchDrafts(leagueId),
+    TTL.SLEEPER_DRAFT, { staleOnError: true }).catch(() => []);
+  state.draft = drafts[0] ?? null;
+  if (!state.draft) { state.board = null; return; }
+  const picks = await cache.get(sleeperUrls.draftPicks(state.draft.draftId),
+    () => fetchDraftPicks(state.draft.draftId), TTL.SLEEPER_DRAFT, { staleOnError: true })
+    .catch(() => []);
+  state.board = draftBoard(picks);
+}
+
+async function loadBracket(leagueId) {
+  const fetcher = state.bracketKind === 'losers' ? fetchLosersBracket : fetchWinnersBracket;
+  const url = state.bracketKind === 'losers'
+    ? sleeperUrls.losersBracket(leagueId) : sleeperUrls.winnersBracket(leagueId);
+  const raw = await cache.get(url, () => fetcher(leagueId), TTL.SLEEPER_BRACKET,
+    { staleOnError: true }).catch(() => []);
+  state.bracketRounds = bracketRounds(raw);
+}
+
+/**
+ * Playoff odds, cached to storage so re-opening the tab does not re-run 5,000 seasons.
+ *
+ * Fire-and-forget: the power tab renders immediately with "Simulating…" and repaints when
+ * this resolves. A failed storage read only costs a recompute.
+ */
+async function loadOdds(leagueId, week, scored, weeks) {
+  const key = KEY.playoffOdds(leagueId, state.season, week);
+  const cached = await store.getUser(key, null);
+  if (cached) { state.odds = cached; return; }
+
+  const start = state.league?.playoffWeekStart ?? 15;
+  const future = weeks.filter((w) => w.week > week && w.week < start);
+  const rows = await simulate({
+    rosters: state.rosters,
+    scored,
+    remaining: remainingGames(future),
+    playoffTeams: state.league?.playoffTeams ?? 6,
+  });
+  state.odds = Object.fromEntries(rows.map((r) => [r.rosterId, r.odds]));
+  await store.setUser(key, state.odds);
+}
+
+/**
+ * The data only the ACTIVE tab needs.
+ *
+ * Called both from refreshAll and from the tab-switch handler — a tab switch does not
+ * re-run refreshAll, so without this second call the wave 3B tabs would render their empty
+ * state forever. Each loader already catches to a neutral value, so a failure here leaves
+ * one tab empty rather than blanking the section (spec §6.3).
+ */
+async function loadTab(app, leagueId, week) {
+  if (state.tab === 'power') {
+    const { weeks, scored } = await loadPower(leagueId, week);
+    loadOdds(leagueId, week, scored, weeks).then(() => app.router?.refresh()).catch(() => {});
+  } else if (state.tab === 'moves') {
+    await loadMoves(leagueId, week);
+  } else if (state.tab === 'draft') {
+    await loadDraft(leagueId);
+  }
+}
+
 async function refreshAll(app) {
+  const leagueId = state.session.state.leagueId;
   state.loading = true;
   app.router.refresh();
   try {
     await Promise.all([
-      loadLeague(state.session.state.leagueId, state.week),
+      loadLeague(leagueId, state.week),
       loadNfl(),
     ]);
+    // Unconditional: visibleTabs needs to know whether a bracket exists before it can
+    // decide to show the tab at all, so this cannot wait for the tab to be selected.
+    await loadBracket(leagueId).catch(() => {});
+    await loadTab(app, leagueId, state.week);
     state.error = null;
   } catch (err) {
     state.error = err?.message ?? 'failed';
@@ -257,6 +430,8 @@ export async function enter() {
   app.onAction = async (act, el) => {
     if (act === 'fantasy-tab') {
       state.tab = el.dataset.tab;
+      const leagueId = state.session?.state?.leagueId;
+      if (leagueId) await loadTab(app, leagueId, state.week).catch(() => {});
       await renderBody();
       app.router.refresh();
       return;
