@@ -13,11 +13,9 @@ import { urls, monthKey, parseMonthIndex } from './ufc-espn.js';
 import { nearestEvent } from './event-index.js';
 import { CF_URL, resolveCfId } from './ufc-cf-client.js';
 import { parseEvent } from './ufc-cloudfront.js';
-import { parseTracking } from './fight-timeline.js';
 import { athletesForEvent, joinAthletes } from './espn-athletes.js';
 
 export const state = {
-  view: 'card',
   index: [],
   selected: null,
   event: null,
@@ -29,37 +27,18 @@ export const state = {
 };
 
 /**
- * The fight the play-by-play should show.
+ * The view model every render receives.
  *
- * During a live card that is whatever `LiveFightId` points at; otherwise the main event,
- * which is FightOrder 1.
+ * There is no longer a separate play-by-play TAB: each fight carries its own feed
+ * inside its versus screen, which is where a reader is already looking when they want
+ * it. The tab showed only one fight's feed — whichever `LiveFightId` pointed at, else
+ * the main event — so on a card of twelve it was eleven-twelfths useless.
  */
-export function focusFight(event) {
-  const fights = event?.fights ?? [];
-  if (!fights.length) return null;
-  return fights.find((f) => f.fightId === event.liveFightId)
-    ?? fights.find((f) => f.order === 1)
-    ?? fights[0];
-}
-
-/** Fighter id -> name, across the whole card, for the timeline's labels. */
-export function fighterNames(event) {
-  const names = {};
-  for (const f of event?.fights ?? []) {
-    for (const x of f.fighters ?? []) if (x.fighterId != null) names[x.fighterId] = x.name;
-  }
-  return names;
-}
-
-/** The view model every render receives. */
 export function viewModel(st = state) {
-  const fight = focusFight(st.event);
   return {
     event: st.event,
     athletes: st.athletes,
     openFight: st.openFight,
-    events: fight ? parseTracking(fight.tracking) : [],
-    fighterNames: fighterNames(st.event),
   };
 }
 
@@ -101,23 +80,15 @@ async function boot() {
   booted = true;
 
   const mount = document.getElementById('main');
-  const nav = document.getElementById('nav');
-  const [cardView, timelineView] = await Promise.all([
-    import('../views/card.js'),
-    import('../views/timeline.js'),
-  ]);
-  const views = { card: cardView, timeline: timelineView };
+  const cardView = await import('../views/card.js');
 
   const paint = () => {
     try {
-      mount.innerHTML = views[state.view].renderPanel(viewModel());
+      mount.innerHTML = cardView.renderPanel(viewModel());
     } catch (err) {
       // A throwing view must never leave an empty pane — that reads as a dead plugin.
       mount.innerHTML = stateMsg('This section could not be displayed.', { retry: true });
-      console.error(`[ufc-hub] ${state.view} render failed:`, err);
-    }
-    for (const b of nav?.querySelectorAll('[data-act="nav"]') ?? []) {
-      b.setAttribute('aria-current', String(b.dataset.view === state.view));
+      console.error('[ufc-hub] card render failed:', err);
     }
     const label = document.getElementById('event-label');
     if (label) label.textContent = state.event?.name ?? '';
@@ -135,7 +106,6 @@ async function boot() {
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-act]');
     if (!t) return;
-    if (t.dataset.act === 'nav') { state.view = t.dataset.view; paint(); return; }
     if (t.dataset.act === 'retry') { paint(); return; }
     if (t.dataset.act === 'fight') { toggleFight(t); return; }
     // The fighter button is NESTED inside the row, so closest() finds it first and the

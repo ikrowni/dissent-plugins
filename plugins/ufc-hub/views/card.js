@@ -9,11 +9,17 @@ import { fmtRecord, fmtDateTime } from '../core/format.js';
 import { headshotUrl } from '../core/espn-athletes.js';
 import { fightState, hasResult } from '../core/fight-state.js';
 import { renderVersus } from './versus.js';
+import { imageUrl } from '../../plugin-sdk.js';
 
-const proxied = (url) => (
-  url && typeof globalThis.Dissent?.imageUrl === 'function'
-    ? globalThis.Dissent.imageUrl(url) : url
-);
+/** Images MUST go through the node proxy: the plugin CSP is
+ *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
+ *
+ *  ⚠️ There is NO `window.Dissent` in this plugin's world — plugin-sdk.js is an ES
+ *  module and `imageUrl` is one of its exports. An earlier version of this file
+ *  probed `globalThis.Dissent?.imageUrl`, found nothing, and fell through to the raw
+ *  espncdn URL, which the CSP then blocked: every headshot and flag rendered empty in
+ *  production while the tests stayed green, because they asserted on the raw URL
+ *  substring that survives in both forms. */
 
 function corner(f, side, fight, athletes) {
   if (!f) return '<div class="corner"><span class="fname">TBD</span></div>';
@@ -24,10 +30,10 @@ function corner(f, side, fight, athletes) {
   const meta = athletes?.get(f.fighterId);
   const url = headshotUrl(meta?.espnId);
   const mug = url
-    ? `<span class="mug"><img src="${esc(proxied(url))}" alt="" loading="lazy"></span>`
+    ? `<span class="mug"><img src="${esc(imageUrl(url))}" alt="" loading="lazy"></span>`
     : '<span class="mug is-empty"></span>';
   const flag = meta?.flag
-    ? `<img class="flag" src="${esc(proxied(meta.flag))}" alt="${esc(meta.country ?? '')}">`
+    ? `<img class="flag" src="${esc(imageUrl(meta.flag))}" alt="${esc(meta.country ?? '')}">`
     : '';
 
   // ⚠️ The FIRST NAME IS NOT DECORATION. This card carries both Ty Miller and Juliana

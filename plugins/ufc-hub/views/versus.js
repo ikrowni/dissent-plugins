@@ -11,17 +11,23 @@ import {
 } from '../core/fight-state.js';
 import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
+import { imageUrl } from '../../plugin-sdk.js';
 
 /** Images MUST go through the proxy: the plugin CSP forbids third-party img origins. */
-const proxied = (url) => (
-  url && typeof globalThis.Dissent?.imageUrl === 'function'
-    ? globalThis.Dissent.imageUrl(url) : url
-);
+/** Images MUST go through the node proxy: the plugin CSP is
+ *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
+ *
+ *  ⚠️ There is NO `window.Dissent` in this plugin's world — plugin-sdk.js is an ES
+ *  module and `imageUrl` is one of its exports. An earlier version of this file
+ *  probed `globalThis.Dissent?.imageUrl`, found nothing, and fell through to the raw
+ *  espncdn URL, which the CSP then blocked: every headshot and flag rendered empty in
+ *  production while the tests stayed green, because they asserted on the raw URL
+ *  substring that survives in both forms. */
 
 function nameplate(f, side, meta) {
   if (!f) return '';
   const flag = meta?.flag
-    ? `<img class="vs-flag" src="${esc(proxied(meta.flag))}" alt="${esc(meta.country ?? '')}">`
+    ? `<img class="vs-flag" src="${esc(imageUrl(meta.flag))}" alt="${esc(meta.country ?? '')}">`
     : '';
   return `<div class="vs-name vs-${esc(side)}">`
     + `<span class="vs-first">${esc(f.firstName ?? '')}</span>`
@@ -33,7 +39,7 @@ function nameplate(f, side, meta) {
 function cutout(f, side, meta) {
   const url = headshotUrl(meta?.espnId);
   if (!url) return '';
-  return `<img class="vs-cut vs-cut-${esc(side)}" src="${esc(proxied(url))}" alt="">`;
+  return `<img class="vs-cut vs-cut-${esc(side)}" src="${esc(imageUrl(url))}" alt="">`;
 }
 
 function hero(fight, red, blue, event, athletes) {
@@ -55,27 +61,41 @@ function hero(fight, red, blue, event, athletes) {
 /**
  * One row of the tale of the tape.
  *
- * ⚠️ The bar FLOORS at 55%, it is not proportional to zero. Reach differs by a few
- * inches at most, and a zero-based bar renders 76" and 70.5" as two indistinguishable
- * full-width strips. The number beside it carries the data; the bar carries the
- * comparison, and it has to be able to show one.
+ * ⚠️ THE BAR IS PROPORTIONAL TO THE VALUE, FROM ZERO. Do not "improve" it by
+ * stretching the range.
+ *
+ * The first version floored the shorter bar at 55% and gave the longer one 100%, on
+ * the theory that a zero-based bar could not show a few inches of reach. It could not
+ * — but the cure was worse: 71" against 75" is a 5% difference and it drew one bar at
+ * half and the other full, which reads as nearly double. The owner caught it on sight.
+ * A chart that exaggerates to be readable is not readable, it is wrong.
+ *
+ * So the bars are honest and therefore nearly equal — which is the truth about two
+ * fighters in the same division — and the ADVANTAGE CHIP carries the precision. The
+ * chip is the thing a reader actually wants: not "how long is 75 inches" but "who is
+ * longer, and by how much".
  */
-export function tapeRow(label, a, b, fmt) {
+const inchDelta = (n) => `+${Number.isInteger(n) ? n : n.toFixed(1)}"`;
+
+export function tapeRow(label, a, b, fmt, deltaFmt = inchDelta) {
   const av = Number(a) || 0;
   const bv = Number(b) || 0;
   const hi = Math.max(av, bv);
-  const lo = Math.min(av, bv);
-  const scale = (v) => (hi === lo ? 100 : 55 + 45 * ((v - lo) / (hi - lo)));
+  const width = (v) => (hi > 0 ? (v / hi) * 100 : 0);
+  const diff = Math.abs(av - bv);
+  const chip = diff > 0 ? `<span class="vs-adv">${esc(deltaFmt(diff))}</span>` : '';
+
+  const side = (cls, val, v, lead) => '<div class="vs-side vs-' + cls + '">'
+    + `<span class="vs-val num">${esc(fmt(val))}</span>`
+    + `<span class="vs-bar${lead ? ' is-lead' : ''}">`
+      + `<i style="width:${width(v).toFixed(1)}%"></i></span>`
+    + (lead ? chip : '')
+    + '</div>';
+
   return '<div class="vs-row">'
-    + '<div class="vs-side vs-red">'
-      + `<span class="vs-val num">${esc(fmt(a))}</span>`
-      + `<span class="vs-bar"><i style="width:${scale(av).toFixed(1)}%"></i></span>`
-    + '</div>'
+    + side('red', a, av, av > bv)
     + `<div class="vs-label">${esc(label)}</div>`
-    + '<div class="vs-side vs-blue">'
-      + `<span class="vs-val num">${esc(fmt(b))}</span>`
-      + `<span class="vs-bar"><i style="width:${scale(bv).toFixed(1)}%"></i></span>`
-    + '</div>'
+    + side('blue', b, bv, bv > av)
     + '</div>';
 }
 

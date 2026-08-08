@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseEvent } from './ufc-cloudfront.js';
-import { parseTracking, actionCounts, timelineRounds, isSignificant } from './fight-timeline.js';
+import { parseTracking, actionCounts, isSignificant } from './fight-timeline.js';
 
 const fx = (n) =>
   JSON.parse(readFileSync(new URL(`../tests/fixtures/${n}`, import.meta.url), 'utf8'));
@@ -84,24 +84,5 @@ describe('actionCounts', () => {
 
   it('returns {} for no actions', () => {
     expect(actionCounts([])).toEqual({});
-  });
-});
-
-describe('timelineRounds', () => {
-  it('groups significant actions into rounds, in order', () => {
-    const rounds = timelineRounds(events);
-    expect(rounds.length).toBeGreaterThan(0);
-    expect(rounds.map((r) => r.round)).toEqual([...rounds.map((r) => r.round)].sort((a, b) => a - b));
-  });
-
-  it('drops bookkeeping actions from the rendered timeline', () => {
-    const rounds = timelineRounds(events);
-    const types = rounds.flatMap((r) => r.actions.map((a) => a.type));
-    expect(types).not.toContain('walkout');
-    expect(types).not.toContain('tale_of_the_tape');
-  });
-
-  it('returns [] for no actions', () => {
-    expect(timelineRounds([])).toEqual([]);
   });
 });

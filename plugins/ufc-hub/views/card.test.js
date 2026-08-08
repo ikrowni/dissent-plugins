@@ -55,16 +55,31 @@ describe('fightRow', () => {
     expect(html).toContain('&lt;img');
   });
 
-  it('renders a headshot mug when the athlete join has the fighter', () => {
+  it('routes the headshot through the node image proxy', () => {
+    // ⚠️ THIS IS THE ASSERTION THAT MATTERS, and its absence shipped a broken build.
+    // The raw espncdn URL appears in BOTH the proxied and unproxied output, so
+    // asserting on it passes even when the plugin CSP is blocking every image. Assert
+    // on the proxy path instead.
     const athletes = new Map([[upcoming.fights[0].red.fighterId, { espnId: '3068125' }]]);
     const html = fightRow(upcoming.fights[0], upcoming, athletes);
-    expect(html).toContain('mma/players/full/3068125.png');
+    expect(html).toContain('/api/v1/plugins/image?url=');
+    expect(html).toContain(encodeURIComponent(
+      'https://a.espncdn.com/i/headshots/mma/players/full/3068125.png'));
+    expect(html).not.toContain('src="https://a.espncdn.com');
+  });
+
+  it('routes the country flag through the proxy too', () => {
+    const athletes = new Map([[upcoming.fights[0].red.fighterId,
+      { espnId: '1', flag: 'https://a.espncdn.com/i/teamlogos/countries/500/pol.png' }]]);
+    const html = fightRow(upcoming.fights[0], upcoming, athletes);
+    expect(html).not.toContain('src="https://a.espncdn.com');
+    expect(html).toContain(encodeURIComponent('countries/500/pol.png'));
   });
 
   it('renders without a mug when the join is empty', () => {
     const html = fightRow(upcoming.fights[0], upcoming, none);
     expect(html).toContain('fight-row');
-    expect(html).not.toContain('mma/players/full/');
+    expect(html).not.toContain('/api/v1/plugins/image');
   });
 
   it('marks a fight collapsed by default and carries its id', () => {

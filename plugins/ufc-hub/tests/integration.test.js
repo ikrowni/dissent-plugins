@@ -24,9 +24,12 @@ describe('card rendered with the real join', () => {
     // Distinct, not just present: a last-name-only join would give the two Millers
     // the same image and a count of 24 non-unique URLs would still look correct.
     const html = renderPanel({ event, athletes });
-    const mugs = html.match(/mma\/players\/full\/\d+\.png/g) ?? [];
+    // Matched through the PROXY path. Counting raw espncdn URLs passes even when
+    // every one of them is being blocked by the plugin CSP in production.
+    const mugs = html.match(/\/api\/v1\/plugins\/image\?url=[^"]*headshots[^"]*/g) ?? [];
     expect(mugs).toHaveLength(24);
     expect(new Set(mugs).size).toBe(24);
+    expect(html).not.toContain('src="https://a.espncdn.com');
   });
 
   it('gives all 24 fighters a country flag', () => {

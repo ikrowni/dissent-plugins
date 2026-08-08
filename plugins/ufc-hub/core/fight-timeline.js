@@ -69,17 +69,3 @@ export function actionCounts(events) {
   }
   return out;
 }
-
-/** Significant actions bucketed by round, ascending, for the rendered timeline. */
-export function timelineRounds(events) {
-  const byRound = new Map();
-  for (const e of events ?? []) {
-    if (!isSignificant(e.type)) continue;
-    const r = e.round ?? 0;
-    if (!byRound.has(r)) byRound.set(r, []);
-    byRound.get(r).push(e);
-  }
-  return [...byRound.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([round, actions]) => ({ round, actions }));
-}

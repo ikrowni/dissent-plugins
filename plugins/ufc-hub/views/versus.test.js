@@ -23,13 +23,33 @@ describe('tapeRow', () => {
     expect(red).toBe(blue);
   });
 
-  it('floors the shorter bar so a small gap is still visible', () => {
-    // Reach differs by inches. A bar proportional to zero renders 76" and 70.5" as
-    // two near-identical full-width strips, which shows the reader nothing.
-    const html = tapeRow('Reach', 76, 70.5, (v) => `${v}"`);
-    const widths = [...html.matchAll(/width:([\d.]+)%/g)].map((m) => Number(m[1]));
-    expect(Math.min(...widths)).toBeGreaterThanOrEqual(50);
-    expect(Math.min(...widths)).toBeLessThan(100);
+  it('keeps the bar PROPORTIONAL — it must not exaggerate a small gap', () => {
+    // ⚠️ REGRESSION GUARD. A previous version floored the shorter bar at 55%, so 71"
+    // against 75" — a 5% difference — drew one bar at half and the other full, which
+    // reads as nearly double. The bar must stay proportional to the value.
+    const html = tapeRow('Reach', 75, 71, (v) => `${v}"`);
+    const [red, blue] = [...html.matchAll(/width:([\d.]+)%/g)].map((m) => Number(m[1]));
+    expect(red).toBe(100);
+    expect(blue).toBeCloseTo(94.7, 0);
+  });
+
+  it('carries the gap in an advantage chip, on the longer side only', () => {
+    const html = tapeRow('Reach', 75, 71, (v) => `${v}"`);
+    expect(html).toContain('+4&quot;');   // esc() escapes the inch mark
+    expect((html.match(/vs-adv/g) ?? [])).toHaveLength(1);
+    // The chip belongs to the fighter who actually has the advantage.
+    const redIdx = html.indexOf('vs-red');
+    const blueIdx = html.indexOf('vs-blue');
+    expect(html.indexOf('vs-adv')).toBeGreaterThan(redIdx);
+    expect(html.indexOf('vs-adv')).toBeLessThan(blueIdx);
+  });
+
+  it('shows no advantage chip when the two are equal', () => {
+    expect(tapeRow('Reach', 76, 76, (v) => `${v}"`)).not.toContain('vs-adv');
+  });
+
+  it('renders a fractional gap without a misleading rounding', () => {
+    expect(tapeRow('Reach', 76, 70.5, (v) => `${v}"`)).toContain('+5.5&quot;');
   });
 });
 
@@ -63,18 +83,19 @@ describe('renderVersus', () => {
     expect(html.toLowerCase()).not.toContain('significant strikes');
   });
 
-  it('renders a headshot when the join has the fighter', () => {
+  it('routes the cutout through the node image proxy', () => {
+    // The raw URL survives in both the proxied and unproxied output, so asserting on
+    // it cannot tell a working build from one the CSP is blocking.
     const withCut = new Map([[upcoming.fights[0].red.fighterId, { espnId: '3068125' }]]);
     const html = renderVersus(upcoming.fights[0], upcoming, withCut);
-    expect(html).toContain('mma/players/full/3068125.png');
+    expect(html).toContain('/api/v1/plugins/image?url=');
+    expect(html).not.toContain('src="https://a.espncdn.com');
   });
 
   it('renders without headshots when the athlete join is empty', () => {
     const html = renderVersus(upcoming.fights[0], upcoming, new Map());
     expect(html).toContain('Tale of the tape');
-    // Asserting on the URL, not the class: `class="vs-cut vs-cut-red"` never matches
-    // a `<img class="vs-cut"` substring, so that assertion would pass either way.
-    expect(html).not.toContain('mma/players/full/');
+    expect(html).not.toContain('/api/v1/plugins/image');
   });
 
   it('never throws on nothing', () => {

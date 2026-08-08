@@ -139,6 +139,15 @@
   color-mix(in srgb, var(--ufc-red) 25%, transparent), var(--ufc-red)); }
 .vs-side.vs-blue .vs-bar i { background: linear-gradient(90deg,
   var(--ufc-blue), color-mix(in srgb, var(--ufc-blue) 25%, transparent)); }
+/* The bars are proportional and therefore nearly equal, which is the truth about two
+   fighters in the same division. This chip carries the gap the bars deliberately do
+   not exaggerate — see tapeRow() in views/versus.js. */
+.vs-adv { flex: 0 0 auto; font-size: 10.5px; font-weight: 700; line-height: 1;
+  padding: 3px 6px; border-radius: 3px; font-variant-numeric: tabular-nums; }
+.vs-side.vs-red .vs-adv { color: var(--ufc-red);
+  background: color-mix(in srgb, var(--ufc-red) 16%, transparent); }
+.vs-side.vs-blue .vs-adv { color: var(--ufc-blue);
+  background: color-mix(in srgb, var(--ufc-blue) 16%, transparent); }
 
 /* ── chips, live bar, result ───────────────────────────────────────────────── */
 .vs-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 18px 18px;
