@@ -6,6 +6,17 @@ import { esc, panel, stateMsg } from '../core/ui.js';
 import { scoringKey, buildLineup, benchPoints } from '../core/fantasy.js';
 import { gameContext } from '../core/fantasy-nfl.js';
 import { deepLink } from '../core/sleeper.js';
+import { opponentStrengthFor } from '../core/opponent-strength.js';
+
+/** ⚠️ "Strength", never "difficulty" — this is total points allowed, not per-position.
+ *  See core/opponent-strength.js for why no per-position source exists. */
+export function oppCell(row, s) {
+  const o = opponentStrengthFor(row, s?.nfl, s?.strength);
+  if (o.bye) return '<span class="opp opp-bye">BYE</span>';
+  if (!o.opponentAbbr || o.rank == null) return '<span class="opp opp-none">—</span>';
+  return `<span class="opp opp-${esc(o.tier)}">`
+    + `${esc(o.opponentAbbr)} <em>#${esc(o.rank)}</em></span>`;
+}
 
 /**
  * Problems worth interrupting someone about, for one starter.
@@ -80,6 +91,8 @@ export function renderPanel(s) {
       + name
       + `<span class="froster-meta">${esc([r.position, r.teamAbbr].filter(Boolean).join(' · '))}`
         + ` · ${esc(gameContext(r, nfl))}</span>`
+      + '<span class="froster-opp" title="Opp strength — team-level, not per-position">'
+        + `${oppCell(r, s)}</span>`
       + `<span class="froster-pts num">${esc(pts(r.actual))}</span>`
       + `<span class="froster-proj num">proj ${esc(pts(r.projected))}</span>`
       + warnBadges(warns, leagueId, rosterId)

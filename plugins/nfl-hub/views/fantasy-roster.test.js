@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { warningsFor, renderPanel } from './fantasy-roster.js';
+import { warningsFor, renderPanel, oppCell } from './fantasy-roster.js';
 
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
@@ -85,5 +85,48 @@ describe('renderPanel', () => {
   it('prompts rather than throwing when the roster is unknown', () => {
     const d = parse(renderPanel({ ...base, session: { rosterId: 999, leagueId: '55' } }));
     expect(d.querySelector('.froster-row')).toBe(null);
+  });
+});
+
+describe('oppCell', () => {
+  const nfl = { games: { TB: { opponentAbbr: 'DAL', state: 'pre' } }, byeTeams: [], injuries: {} };
+  const strength = { DAL: { rank: 3, pointsAgainst: 180 } };
+
+  it('shows the opponent and its defensive rank', () => {
+    const html = oppCell(row(), { nfl, strength });
+    expect(html).toContain('DAL');
+    expect(html).toContain('#3');
+  });
+
+  it('marks a top-third defense as a tough draw', () => {
+    expect(oppCell(row(), { nfl, strength })).toContain('opp-tough');
+  });
+
+  it('marks a bottom-third defense as soft', () => {
+    expect(oppCell(row(), { nfl, strength: { DAL: { rank: 30, pointsAgainst: 400 } } }))
+      .toContain('opp-soft');
+  });
+
+  it('shows a bye instead of inventing an opponent', () => {
+    const html = oppCell(row(), { nfl: { games: {}, byeTeams: ['TB'], injuries: {} }, strength });
+    expect(html).toContain('BYE');
+  });
+
+  it('renders a dash when the strength table has not loaded', () => {
+    expect(oppCell(row(), { nfl, strength: {} })).toContain('opp-none');
+  });
+
+  it('renders a dash for a player with no team', () => {
+    expect(oppCell(row({ teamAbbr: '' }), { nfl, strength })).toContain('opp-none');
+  });
+});
+
+describe('the opponent column is labelled honestly', () => {
+  // Read through Vite's ?raw rather than readFileSync: this file runs under jsdom, where
+  // import.meta.url is an http: URL and node:fs refuses it.
+  it('says strength, never difficulty — it is not per-position', async () => {
+    const { default: src } = await import('./fantasy-roster.js?raw');
+    expect(src).toMatch(/Opp strength/);
+    expect(src).not.toMatch(/Opp difficulty/);
   });
 });

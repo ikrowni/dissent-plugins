@@ -9,7 +9,8 @@ import { createSession, suggestRoster } from '../core/fantasy-session.js';
 import { players } from '../core/players.js';
 import { buildNflContext } from '../core/fantasy-nfl.js';
 import { parseScoreboard } from '../core/espn-game.js';
-import { urls, fetchScoreboard } from '../core/espn-client.js';
+import { urls, fetchScoreboard, fetchStandings } from '../core/espn-client.js';
+import { strengthFromStandings } from '../core/opponent-strength.js';
 import {
   sleeperUrls, fetchUser, fetchUserLeagues, fetchLeague, fetchRosters, fetchLeagueUsers,
   fetchMatchups, fetchProjections, joinMatchups, parseLeague, deepLink,
@@ -126,7 +127,7 @@ const state = {
   rosterChoices: [], week: null, season: null, playerIndex: null, nfl: null,
   power: [], moves: [], board: null, draft: null,
   bracketRounds: [], bracketKind: 'winners', odds: null,
-  rosterNames: {}, rosterOwner: {}, playerNames: {},
+  rosterNames: {}, rosterOwner: {}, playerNames: {}, strength: {},
 };
 
 /**
@@ -374,6 +375,17 @@ async function loadOdds(leagueId, week, scored, weeks) {
  * one tab empty rather than blanking the section (spec §6.3).
  */
 async function loadTab(app, leagueId, week) {
+  if (state.tab === 'roster') {
+    // Cache the RAW standings payload under exactly the key views/standings.js uses, so
+    // the two sections share one request. Parsing happens after the cache, never inside
+    // it — caching the parsed table here would hand the Standings view the wrong shape
+    // the next time it reads this key.
+    const season = state.season ?? new Date().getFullYear();
+    const raw = await cache.get(urls.standings(season), () => fetchStandings(season),
+      TTL.STANDINGS, { staleOnError: true }).catch(() => null);
+    state.strength = raw ? strengthFromStandings(raw) : {};
+    return;
+  }
   if (state.tab === 'power') {
     const { weeks, scored } = await loadPower(leagueId, week);
     loadOdds(leagueId, week, scored, weeks).then(() => app.router?.refresh()).catch(() => {});
