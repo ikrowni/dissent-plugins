@@ -1,0 +1,57 @@
+/* ── UFC hub: card + timeline ─────────────────────────────────────────────── */
+/* Tokens are those base.css defines: --line --live --loss --win --gold --panel
+   --panel-2 --r --r-sm --r-lg --text --text-2 --text-3 --ink --ink-2 --line-2.
+   Do NOT use --nfl-blue/--nfl-red: they are NFL leftovers in the copied base. */
+
+.seg { margin-bottom: 18px; }
+.seg-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; }
+.seg-head h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  margin: 0; color: var(--text); }
+.seg-bc, .seg-time { font-size: 11px; color: var(--text-3); }
+
+.fight-row { border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 10px 12px; margin-bottom: 8px; }
+.fight-row.is-live { border-color: var(--live); }
+.fmeta { display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+.fwc { font-weight: 600; color: var(--text-2); }
+.fcorners { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 10px; margin-top: 6px; }
+.corner { display: flex; flex-direction: column; gap: 2px; }
+.corner-blue { text-align: right; align-items: flex-end; }
+.fname { background: none; border: 0; padding: 0; font: inherit; font-weight: 700;
+  color: var(--text); cursor: pointer; text-align: inherit; }
+.corner.is-win .fname { color: var(--win); }
+.fnick, .frec { font-size: 11px; color: var(--text-3); }
+.fvs { font-size: 11px; color: var(--text-3); }
+.fresult, .fref { margin-top: 6px; font-size: 11px; color: var(--text-2); }
+.fotn { color: var(--gold); font-weight: 700; }
+
+/* Entry animation is ONE-SHOT, never a loop, and never behind a backdrop-filter panel.
+   core/motion.js owns the only continuous loop in this plugin — see its header for the
+   three GPU incidents that rule came from. */
+.fight-row { animation: fight-in var(--dur, .28s) var(--ease-out, ease-out) both; }
+@keyframes fight-in { from { opacity: 0; transform: translateY(6px); } }
+.reduce-motion .fight-row { animation: none; }
+
+.tl-counts { margin-bottom: 12px; }
+.tl-counts table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tl-counts th, .tl-counts td { padding: 4px 6px; text-align: left; }
+.tl-counts th { color: var(--text-3); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .04em; }
+.tl-counts .num { font-variant-numeric: tabular-nums; }
+.tl-note { font-size: 11px; color: var(--text-3); margin: 6px 0 0; }
+.tl-round { margin-top: 14px; }
+.tl-round h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-3); margin: 0 0 6px; }
+.tl-list { list-style: none; margin: 0; padding: 0; }
+.tl-item { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: 8px;
+  padding: 4px 6px; border-radius: var(--r-sm); font-size: 12px; }
+.tl-item:nth-child(even) { background: var(--panel-2); }
+.tl-clock { font-variant-numeric: tabular-nums; color: var(--text-3); }
+.tl-who { color: var(--text-2); }
+.tl-knockdown .tl-label { color: var(--loss); font-weight: 700; }
+.tl-takedown .tl-label { font-weight: 600; }
+.tl-unofficial_winner_kotko .tl-label,
+.tl-unofficial_winner_submission .tl-label,
+.tl-unofficial_winner_decision .tl-label { color: var(--gold); font-weight: 700; }

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <!-- Governs every relative path in this FILE, so they start with ufc-hub/.
+       Paths inside a CSS file resolve relative to that CSS file instead. -->
+  <base href="https://app.dissent.chat/plugins/">
+  <title>UFC Hub</title>
+  <!-- No ?v= cache-busters. Caddy serves /plugins/** as no-store, so a buster buys
+       nothing — and on the module script it actively breaks: app.js?v=1 and app.js are
+       two DIFFERENT module instances, so the views would get a second, fresh copy and
+       double-boot the plugin. -->
+  <link rel="stylesheet" href="ufc-hub/styles/base.css">
+  <link rel="stylesheet" href="ufc-hub/styles/fight.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div id="brand">
+        <span class="title">UFC HUB</span>
+        <span class="sub" id="event-label">Loading…</span>
+      </div>
+      <nav id="nav" aria-label="Sections">
+        <button data-act="nav" data-view="card" aria-current="true">Fight Card</button>
+        <button data-act="nav" data-view="timeline" aria-current="false">Play-by-play</button>
+      </nav>
+    </header>
+    <main id="main">
+      <div class="state"><div class="spinner"></div><div>Loading UFC Hub…</div></div>
+    </main>
+  </div>
+  <script type="module" src="ufc-hub/core/app.js"></script>
+</body>
+</html>
