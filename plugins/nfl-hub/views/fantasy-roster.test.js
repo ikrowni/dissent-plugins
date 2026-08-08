@@ -47,7 +47,7 @@ describe('warningsFor', () => {
 describe('renderPanel', () => {
   const base = {
     week: 14,
-    session: { state: { rosterId: 1, leagueId: '55' } },
+    session: { rosterId: 1, leagueId: '55' },
     league: { starterSlots: ['QB', 'RB'], scoringType: 'PPR' },
     joined: [{ matchupId: 1, margin: 0, leaderRosterId: 1,
       home: { rosterId: 1, teamName: 'Mine', points: 30, starters: ['1', '2'], playerPoints: { 1: 18.2 } },
@@ -83,7 +83,7 @@ describe('renderPanel', () => {
   });
 
   it('prompts rather than throwing when the roster is unknown', () => {
-    const d = parse(renderPanel({ ...base, session: { state: { rosterId: 999, leagueId: '55' } } }));
+    const d = parse(renderPanel({ ...base, session: { rosterId: 999, leagueId: '55' } }));
     expect(d.querySelector('.froster-row')).toBe(null);
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { renderFantasy, renderOnboarding, renderTabs } from './fantasy.js';
+import { renderFantasy, renderOnboarding, renderTabs, viewModel } from './fantasy.js';
 
 const parse = (html) => {
   const d = document.createElement('div');
@@ -102,5 +102,30 @@ describe('renderFantasy', () => {
   it('offers a way out of a wrong league instead of trapping the user', () => {
     const d = parse(renderFantasy({ session: { step: 'ready' }, loading: false, tab: 'matchup', body: '' }));
     expect(d.querySelector('[data-act="fantasy-reset"]')).toBeTruthy();
+  });
+});
+
+describe('viewModel — the shape contract renders depend on', () => {
+  it('flattens the real createSession object, not just a plain double', async () => {
+    // The regression this pins: renders read `s.session.step`, but state.session is the
+    // createSession OBJECT ({ state, load, choose, … }) whose own `step` is undefined.
+    // Twelve green tests missed it because they passed { step: 'username' } directly.
+    const { createSession } = await import('../core/fantasy-session.js');
+    const session = createSession({
+      store: { getUser: async (k, fb) => fb, setUser: async () => true },
+    });
+    await session.load();
+    session.selectLeague('123');
+
+    const vm = viewModel({ session, rosterChoices: [], tab: 'matchup' });
+    expect(vm.session.step).toBe('roster');
+    expect(vm.session.leagueId).toBe('123');
+    // And the flattened model must actually drive the right screen.
+    const d = parse(renderFantasy({ ...vm, loading: false }));
+    expect(d.textContent).toMatch(/which team is yours/i);
+  });
+
+  it('tolerates a session that has not been created yet', () => {
+    expect(viewModel({ session: null }).session).toBe(null);
   });
 });

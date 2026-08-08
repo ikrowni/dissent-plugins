@@ -78,7 +78,7 @@ function scorebug(m, meT, oppT, wp) {
 }
 
 export function renderPanel(s) {
-  const rosterId = Number(s?.session?.state?.rosterId ?? 0);
+  const rosterId = Number(s?.session?.rosterId ?? 0);
   const m = findMyMatchup(s?.joined, rosterId);
   if (!m) {
     return stateMsg('No matchup found for your team this week. '
@@ -104,7 +104,7 @@ export function renderPanel(s) {
       + slots.map((slot, i) => lineupRow(mineRows[i], theirRows[i], slot, s)).join('')
     + '</div>';
 
-  const leagueId = s?.session?.state?.leagueId;
+  const leagueId = s?.session?.leagueId;
   // Sleeper is read-only (spec §1.1) — a lineup change is a handoff, never an edit here.
   const right = leagueId
     ? '<a class="badge" target="_blank" rel="noopener noreferrer"'

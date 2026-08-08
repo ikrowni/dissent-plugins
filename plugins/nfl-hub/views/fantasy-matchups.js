@@ -48,7 +48,7 @@ export function renderPanel(s) {
   const list = s?.joined ?? [];
   if (!list.length) return stateMsg('No matchups for this week yet.');
 
-  const mine = Number(s?.session?.state?.rosterId ?? 0);
+  const mine = Number(s?.session?.rosterId ?? 0);
   const close = closestGame(list);
   const blow = biggestBlowout(list);
 

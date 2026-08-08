@@ -22,7 +22,7 @@ const joined = joinMatchups(matchups, rosters, users);
 
 const base = {
   league, rosters, users, projections, joined, week: 14,
-  session: { state: { rosterId: joined[0].home.rosterId, leagueId: '1182033380414181376' } },
+  session: { rosterId: joined[0].home.rosterId, leagueId: '1182033380414181376' },
 };
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
@@ -72,7 +72,7 @@ describe('renderPanel', () => {
   });
 
   it('prompts onboarding rather than erroring when the roster is not in this league', () => {
-    const d = parse(renderPanel({ ...base, session: { state: { rosterId: 9999 } } }));
+    const d = parse(renderPanel({ ...base, session: { rosterId: 9999 } }));
     expect(d.textContent).toMatch(/matchup/i);
     expect(d.querySelector('.flineup-row')).toBe(null);
   });

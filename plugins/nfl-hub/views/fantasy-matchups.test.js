@@ -19,7 +19,7 @@ const projections = parseProjections(fx('sleeper-projections-w14.json'));
 
 const base = {
   league, rosters, users, projections, joined, week: 14,
-  session: { state: { rosterId: joined[0].home.rosterId, leagueId: '1' } },
+  session: { rosterId: joined[0].home.rosterId, leagueId: '1' },
 };
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 

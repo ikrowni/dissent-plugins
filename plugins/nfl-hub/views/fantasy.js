@@ -108,7 +108,20 @@ const state = {
   rosterChoices: [], week: null, season: null, playerIndex: null, nfl: null,
 };
 
-export function render() { return renderFantasy(state); }
+/**
+ * The shape every render receives.
+ *
+ * `state.session` is the createSession() OBJECT ({ state, load, choose, … }); renders want
+ * its plain state. Flattening it here — once, in one place — is what keeps a render from
+ * having to know the difference. Reading `s.session.step` off the session object instead
+ * silently yields undefined, which pins onboarding to its first screen forever; that bug
+ * shipped past twelve green tests because they passed a plain object as the double.
+ */
+export function viewModel(st = state) {
+  return { ...st, session: st.session?.state ?? null };
+}
+
+export function render() { return renderFantasy(viewModel()); }
 
 /** The host exposes members:list under the members:read permission, but plugin-sdk.js has
  *  no wrapper for it — and adding one to the shared SDK for a single plugin would be a core
@@ -195,7 +208,7 @@ async function renderBody() {
       ? await import('./fantasy-roster.js')
       : await import('./fantasy-matchup.js');
   try {
-    state.body = mod.renderPanel(state);
+    state.body = mod.renderPanel(viewModel());
   } catch (err) {
     // A throwing sub-view must not blank the section — the tabs stay usable.
     console.error(`[nfl-hub] fantasy/${state.tab} render failed:`, err);

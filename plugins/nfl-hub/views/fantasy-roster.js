@@ -46,8 +46,8 @@ function warnBadges(warns, leagueId, rosterId) {
 }
 
 export function renderPanel(s) {
-  const rosterId = Number(s?.session?.state?.rosterId ?? 0);
-  const leagueId = s?.session?.state?.leagueId ?? null;
+  const rosterId = Number(s?.session?.rosterId ?? 0);
+  const leagueId = s?.session?.leagueId ?? null;
   const roster = (s?.rosters ?? []).find((r) => r.rosterId === rosterId) ?? null;
   const side = (s?.joined ?? [])
     .flatMap((m) => [m.home, m.away])
