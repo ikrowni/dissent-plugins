@@ -473,3 +473,10 @@ a.nw-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; 
   .nw-img { width: 84px; height: 47px; }
 }
 .nw-who { color: var(--gold); font-weight: 600; }
+.mk-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+  font-size: 11.5px; font-weight: 600; color: var(--text-2); text-decoration: none;
+  border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 13px;
+  transition: color var(--dur-fast), border-color var(--dur-fast); }
+.mk-link::after { content: '\2197'; font-size: 12px; }
+.mk-link:hover { color: var(--text); border-color: var(--text-3); }
+.mk-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

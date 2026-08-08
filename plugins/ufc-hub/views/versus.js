@@ -12,7 +12,7 @@ import {
 import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
 import { imageUrl } from '../../plugin-sdk.js';
-import { pct } from '../core/polymarket.js';
+import { pct, marketUrl } from '../core/polymarket.js';
 
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
@@ -273,6 +273,10 @@ function marketBlock(fight, m) {
     + (rounds ? `<h5>Chance the fight reaches round</h5>${rounds}` : '')
     + '<p class="vs-note">Implied probability from Polymarket order books '
     + '&mdash; a live prediction market, not a forecast by this plugin.</p>'
+    + (marketUrl(m.slug)
+      ? `<a class="mk-link" href="${esc(marketUrl(m.slug))}"`
+        + ' target="_blank" rel="noopener noreferrer">View this market on Polymarket</a>'
+      : '')
     + '</div>';
 }
 

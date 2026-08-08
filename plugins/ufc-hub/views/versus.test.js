@@ -137,3 +137,26 @@ describe('official artwork', () => {
     expect(html).not.toContain('src="https://ufc.com');
   });
 });
+
+describe('market link', () => {
+  const market = { slug: 'ufc-x-2026-08-08', names: ['A', 'B'], prob: {},
+    byFighter: {}, rounds: [], distance: null, ko: null, sub: null };
+
+  it('offers the market page, opened safely', () => {
+    const f = upcoming.fights[0];
+    const html = renderVersus(f, upcoming, athletes, market);
+    expect(html).toContain('polymarket.com/event/ufc-x-2026-08-08');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it('adds no referral parameter to the outbound link', () => {
+    const f = upcoming.fights[0];
+    const html = renderVersus(f, upcoming, athletes, market);
+    expect(html).not.toMatch(/polymarket\.com\/event\/[^"]*[?&]/);
+  });
+
+  it('shows no link when there is no market', () => {
+    const f = upcoming.fights[0];
+    expect(renderVersus(f, upcoming, athletes, null)).not.toContain('mk-link');
+  });
+});

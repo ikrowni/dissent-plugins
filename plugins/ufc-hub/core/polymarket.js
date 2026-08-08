@@ -166,6 +166,28 @@ export function joinMarkets(fights, events) {
   return out;
 }
 
+/**
+ * The market's own page.
+ *
+ * ⚠️ DELIBERATELY BARE — no referral code, no affiliate parameter, no UTM.
+ *
+ * That is a compliance choice, not an oversight. The NFA treats "solicitation of
+ * customers ... for referral to a futures commission merchant ... particularly when
+ * compensated on a per-trade basis or by referral fee" as introducing-broker activity
+ * requiring registration. An uncompensated informational link is a materially different
+ * thing from a monetised referral, and this plugin stays on the former side of that line.
+ * Anyone adding a referral parameter here is changing the plugin's regulatory posture,
+ * not its styling.
+ *
+ * The canonical host is used because it is the one whose slug we hold and whose page
+ * title was verified to match the fight. Polymarket enforces its own jurisdictional
+ * access at their end; this plugin routes no orders and holds no funds.
+ */
+export function marketUrl(slug) {
+  const s = String(slug ?? '').trim();
+  return s ? `https://polymarket.com/event/${encodeURIComponent(s)}` : null;
+}
+
 /** A probability as a whole-number percentage, or null. */
 export function pct(p) {
   return p == null || !Number.isFinite(p) ? null : Math.round(p * 100);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  cardUrl, cardWindow, classify, parseFightMarket, joinMarkets, pct, american,
+  cardUrl, cardWindow, classify, parseFightMarket, joinMarkets, pct, american, marketUrl,
 } from './polymarket.js';
 import { parseEvent } from './ufc-cloudfront.js';
 
@@ -144,5 +144,29 @@ describe('pct / american', () => {
     expect(american(0)).toBe(null);
     expect(american(1)).toBe(null);
     expect(american(null)).toBe(null);
+  });
+});
+
+describe('marketUrl', () => {
+  it('builds the market page url from the slug', () => {
+    expect(marketUrl('ufc-mat10-qui2-2026-08-08'))
+      .toBe('https://polymarket.com/event/ufc-mat10-qui2-2026-08-08');
+  });
+
+  it('carries NO referral or affiliate parameter', () => {
+    // ⚠️ COMPLIANCE GUARD, not a style rule. The NFA treats referral of customers to an
+    // FCM "when compensated on a per-trade basis or by referral fee" as
+    // introducing-broker activity requiring registration. An uncompensated link is a
+    // materially different thing. Adding a ref/utm/affiliate param here changes this
+    // plugin's regulatory posture — if that is ever wanted, it is a decision to take
+    // deliberately and with advice, not a tweak to slip past a test.
+    const u = marketUrl('ufc-mat10-qui2-2026-08-08');
+    expect(u).not.toMatch(/[?&](ref|referral|affiliate|aff|utm_|via|r)=/i);
+    expect(u.split('?')).toHaveLength(1);
+  });
+
+  it('is null without a slug rather than linking to the homepage', () => {
+    expect(marketUrl(null)).toBe(null);
+    expect(marketUrl('')).toBe(null);
   });
 });
