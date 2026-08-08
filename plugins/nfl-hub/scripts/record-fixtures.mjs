@@ -10,6 +10,8 @@ const GAME = '401772510'; // DAL @ PHI, 2025 wk1 — 171 plays, 16 drives, 164 w
 const CORE = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const WEB2 = 'https://site.web.api.espn.com/apis/v2/sports/football/nfl';
+const WEB3 = 'https://site.web.api.espn.com/apis/site/v3/sports/football/nfl';
+const WEB  = 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl';
 
 const TARGETS = {
   'scoreboard-2025-wk1.json': `${SITE}/scoreboard?dates=2025&seasontype=2&week=1`,
@@ -33,7 +35,25 @@ const TARGETS = {
   'standings.json':           `${WEB2}/standings?season=2025&level=3`,
   'teams.json':               `${SITE}/teams`,
   'news.json':                `${SITE}/news?limit=25`,
-  'leaders.json':             `${CORE}/leaders`,
+  // NOT ${CORE}/leaders. That one references every athlete as a bare $ref, so a
+  // leaders board would need 250 extra fetches to learn any names. The apis/site/v3
+  // variant inlines the athlete (id, displayName, jersey, headshot, position).
+  //
+  // limit is load-bearing: the payload scales linearly and the unlimited response is
+  // 2.44 MB against the 1 MB fetch:external cap. Measured 2026-08-08 —
+  // limit=4 is 980 KB (only 7% headroom, one added ESPN field breaks it),
+  // limit=3 is 737 KB (30% headroom). Take limit=3: 16 categories x top 3 = 48 leaders.
+  'leaders.json':             `${WEB3}/leaders?limit=3`,
+
+  // Wave 2. The athlete endpoint WITHOUT /overview is the one carrying bio fields —
+  // jersey, displayHeight, displayWeight, age, college. /overview has no athlete key
+  // at all (see espn-league.js parseAthlete).
+  'athlete-bio.json':         `${WEB}/athletes/3139477`,
+  'team-schedule-phi.json':   `${SITE}/teams/21/schedule`,
+  // positions is a DICT keyed by position slug (lde, nt, rde…), not an array, and each
+  // athlete is a $ref. The id in that $ref path resolves against team-roster-phi.json,
+  // which is already fetched for team pages — so depth charts cost no extra requests.
+  'depthchart-phi.json':      `${CORE}/seasons/2025/teams/21/depthcharts`,
 
   // Injuries come from these two, NOT from the league-wide /injuries endpoint.
   // Measured 2026-08-07: ${SITE}/injuries is 8.95 MB on the wire, nine times over the
@@ -45,7 +65,7 @@ const TARGETS = {
   // both teams (free — Game Center fetches summary anyway), and the team page with
   // ?enable=roster is 365 KB with an injuries array on each athlete.
   'team-roster-phi.json':     `${SITE}/teams/21?enable=roster`,
-  'athlete-overview.json':    'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/overview',
+  'athlete-overview.json':    `${WEB}/athletes/3139477/overview`,
   'sleeper-state.json':       'https://api.sleeper.app/v1/state/nfl',
 };
 
