@@ -9,6 +9,7 @@ const SITE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const CORE = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
 const WEB  = 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl';
 const WEB2 = 'https://site.web.api.espn.com/apis/v2/sports/football/nfl';
+const WEB3 = 'https://site.web.api.espn.com/apis/site/v3/sports/football/nfl';
 const CDN  = 'https://a.espncdn.com';
 
 /** ESPN's game endpoints repeat the event id as the competition id. */
@@ -49,8 +50,22 @@ export const urls = {
   teamRoster: (teamId) => `${SITE}/teams/${teamId}?enable=roster`,
 
   depthChart: (teamId, season) => `${CORE}/seasons/${season}/teams/${teamId}/depthcharts`,
-  leaders: () => `${CORE}/leaders`,
+
+  /** Leaders with the athlete INLINED. Not sports.core.api's /leaders, which returns a
+   *  bare $ref per athlete — ~250 extra fetches to learn any names.
+   *
+   *  limit is load-bearing and 3 is deliberate: the payload scales linearly and
+   *  unlimited it is 2.44 MB against the 1 MB fetch:external cap. Measured 2026-08-08 —
+   *  limit=4 is 980 KB (7% headroom, one added ESPN field breaks it silently), limit=3
+   *  is 737 KB (30% headroom). Do not raise this without re-measuring. */
+  leaders: (limit = 3) => `${WEB3}/leaders?limit=${limit}`,
+
+  /** Season stats, game log, fantasy ranks and news. Carries NO bio — see athleteBio. */
   athlete: (athleteId) => `${WEB}/athletes/${athleteId}/overview`,
+
+  /** Bio fields — jersey, height, weight, age, college. The /overview variant has no
+   *  athlete key at all, so a player page needs BOTH: bio here, stats there. */
+  athleteBio: (athleteId) => `${WEB}/athletes/${athleteId}`,
 
   /** Headshots MUST go through the combiner resizer: the raw asset is ~230 KB and the
    *  resized one ~28 KB. Wrap the result in imageUrl() before assigning to img.src —
@@ -67,8 +82,9 @@ export const fetchProbabilities = (id) => getJson(urls.probabilities(id));
 export const fetchOdds = (id) => getJson(urls.odds(id));
 export const fetchStandings = (season) => getJson(urls.standings(season));
 export const fetchNews = (limit) => getJson(urls.news(limit));
-export const fetchLeaders = () => getJson(urls.leaders());
+export const fetchLeaders = (limit) => getJson(urls.leaders(limit));
 export const fetchAthlete = (id) => getJson(urls.athlete(id));
+export const fetchAthleteBio = (id) => getJson(urls.athleteBio(id));
 export const fetchTeamSchedule = (id) => getJson(urls.teamSchedule(id));
 export const fetchTeamRoster = (id) => getJson(urls.teamRoster(id));
 export const fetchDepthChart = (id, season) => getJson(urls.depthChart(id, season));

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   parseStandings, parseInjuries, parseRosterInjuries, parseNews, parseOdds, parseAthlete,
+  parseLeaders, parseAthleteBio,
 } from './espn-league.js';
 
 const fixture = (n) =>
@@ -189,5 +190,73 @@ describe('parseAthlete', () => {
   it('returns null for junk', () => {
     expect(parseAthlete(null)).toBeNull();
     expect(parseAthlete('nope')).toBeNull();
+  });
+});
+
+describe('parseLeaders', () => {
+  const raw = fixture('leaders.json');
+
+  it('returns categories with inline athletes from the real fixture', () => {
+    const out = parseLeaders(raw);
+    expect(out.length).toBeGreaterThan(5);
+    for (const c of out) {
+      expect(typeof c.label).toBe('string');
+      expect(c.leaders.length).toBeGreaterThan(0);
+      for (const l of c.leaders) {
+        expect(typeof l.name).toBe('string');
+        expect(l.name.length).toBeGreaterThan(0);
+        expect(l.athleteId === null || typeof l.athleteId === 'number').toBe(true);
+      }
+    }
+  });
+
+  it('keeps the display value as ESPN formatted it', () => {
+    expect(typeof parseLeaders(raw)[0].leaders[0].value).toBe('string');
+  });
+
+  it('routes headshots through the combiner, never the raw path', () => {
+    const all = parseLeaders(raw).flatMap((c) => c.leaders).filter((l) => l.headshot);
+    expect(all.length).toBeGreaterThan(0);
+    for (const l of all) {
+      expect(l.headshot).toContain('combiner');
+      expect(l.headshot).not.toMatch(/^https:\/\/a\.espncdn\.com\/i\/headshots/);
+    }
+  });
+
+  it('resolves a team abbreviation where one is present', () => {
+    const all = parseLeaders(raw).flatMap((c) => c.leaders);
+    expect(all.some((l) => l.teamAbbr !== null)).toBe(true);
+  });
+
+  it('returns an empty array rather than throwing on junk', () => {
+    expect(parseLeaders(null)).toEqual([]);
+    expect(parseLeaders({})).toEqual([]);
+  });
+});
+
+describe('parseAthleteBio', () => {
+  const raw = fixture('athlete-bio.json');
+
+  it('extracts the bio the overview endpoint lacks', () => {
+    const b = parseAthleteBio(raw);
+    expect(b.name).toBe('Patrick Mahomes');
+    expect(b.jersey).toBe('15');
+    expect(b.height).toMatch(/\d/);
+    expect(b.weight).toMatch(/\d/);
+    expect(typeof b.age).toBe('number');
+    expect(b.college).toBe('Texas Tech');
+    expect(b.position).toBe('QB');
+    expect(b.teamAbbr).toBe('KC');
+  });
+
+  it('points the headshot through the combiner, never the raw path', () => {
+    const b = parseAthleteBio(raw);
+    expect(b.headshot).toContain('combiner');
+    expect(b.headshot).not.toMatch(/^https:\/\/a\.espncdn\.com\/i\/headshots/);
+  });
+
+  it('returns null for junk', () => {
+    expect(parseAthleteBio(null)).toBeNull();
+    expect(parseAthleteBio({})).toBeNull();
   });
 });

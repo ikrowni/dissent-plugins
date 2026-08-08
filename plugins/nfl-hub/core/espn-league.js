@@ -4,6 +4,7 @@
 // returns an empty/null value rather than throwing. A panel that throws blanks its
 // parent (the bug fixed in dissent-plugins 79bd3d2).
 import { teamByAbbr, logoPath } from './config.js';
+import { urls } from './espn-client.js';
 
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
 const stat = (stats, name) => (stats ?? []).find((s) => s.name === name);
@@ -180,5 +181,60 @@ export function parseAthlete(json) {
         published: json.rotowire.published ?? null,
       }
       : null,
+  };
+}
+
+/** Leaders, flattened to { key, label, leaders: [{ athleteId, name, teamAbbr, value, headshot }] }.
+ *
+ *  Reads the apis/site/v3 payload, whose athletes are inlined. sports.core.api's
+ *  /leaders gives a bare $ref per athlete instead — ~250 extra fetches to learn any
+ *  names. The categories array sits under a different key depending on the response
+ *  wrapper, so look in both places. */
+export function parseLeaders(json) {
+  const cats = json?.leaders?.categories ?? json?.categories ?? [];
+  const out = [];
+  for (const c of cats) {
+    const leaders = (c.leaders ?? []).map((l) => {
+      const a = l.athlete ?? {};
+      const id = num(a.id);
+      return {
+        athleteId: id,
+        name: a.displayName ?? a.fullName ?? 'Unknown',
+        position: a.position?.abbreviation ?? null,
+        teamAbbr: l.team?.abbreviation ?? a.team?.abbreviation ?? null,
+        value: l.displayValue ?? String(l.value ?? ''),
+        headshot: id ? urls.headshot(id, 100) : null,
+      };
+    }).filter((l) => l.name !== 'Unknown');
+    if (leaders.length) {
+      out.push({
+        key: c.name ?? '',
+        label: c.displayName ?? c.shortDisplayName ?? c.name ?? '',
+        leaders,
+      });
+    }
+  }
+  return out;
+}
+
+/** Bio from the athlete endpoint WITHOUT /overview — the only one carrying these fields.
+ *  A player page pairs this with parseAthlete() for stats, fantasy ranks and news. */
+export function parseAthleteBio(json) {
+  const a = json?.athlete;
+  if (!a || typeof a !== 'object') return null;
+  const id = num(a.id);
+  return {
+    id,
+    name: a.displayName ?? a.fullName ?? null,
+    jersey: a.jersey ?? null,
+    position: a.position?.abbreviation ?? null,
+    teamAbbr: a.team?.abbreviation ?? null,
+    teamName: a.team?.displayName ?? null,
+    height: a.displayHeight ?? null,
+    weight: a.displayWeight ?? null,
+    age: num(a.age),
+    college: a.college?.shortName ?? a.college?.name ?? null,
+    experience: num(a.experience?.years),
+    headshot: id ? urls.headshot(id, 200) : null,
   };
 }
