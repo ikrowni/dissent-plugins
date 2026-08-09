@@ -98,6 +98,15 @@ const TARGETS = {
   // twice the cap, and a fifth over-cap endpoint after the four found in waves 1A and 2.
   // One position alone (QB) is 217 KB. The narrower-looking URL is the unusable one.
   'sleeper-projections-w14.json': `${SLEEPER}/projections/nfl/regular/2025/${FWEEK}`,
+
+  // ACTUAL stats, same shape as projections but with what really happened.
+  //
+  // ⚠️ A NATIVE LEAGUE CANNOT USE pts_ppr / pts_std / pts_half_ppr. Those are
+  // Sleeper's scoring applied for us; a league with custom scoring settings needs
+  // the RAW fields (pass_yd, rec, fgm_50p, rush_td…) and must total them itself.
+  // Measured 2026-08-09: 570 KB, 2,312 players, raw fields present. That is the
+  // fact the whole native-scoring design depends on.
+  'sleeper-stats-w14.json': `${SLEEPER}/stats/nfl/regular/2025/${FWEEK}`,
 };
 
 await mkdir(OUT, { recursive: true });
