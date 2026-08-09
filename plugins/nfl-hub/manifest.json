@@ -34,5 +34,11 @@
     "nfl",
     "fantasy"
   ],
+  "server_module": {
+    "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module.wasm",
+    "sha256": "5240762ab07a7947e0e4588c233d2d0341b79da62ff861bc8fce919dbc131c4f",
+    "size": 2413262,
+    "signature": "506923fc0b644cb8ecaef7f2b671eb8c9f6a14039bc64d8703165c7287ec9a744acd0bc9867ee21b735f10729f6fa32501009bf472f052306968d3ac8aebff03"
+  },
   "sdk_version": "1"
 }
