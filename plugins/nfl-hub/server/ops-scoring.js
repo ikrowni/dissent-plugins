@@ -17,6 +17,7 @@ import { scoreStatLine } from "../core/league/scoring.js";
 import { splitRosterPositions } from "../core/league/slots.js";
 import { weeklyPoints } from "../core/league/lineup.js";
 import { buildStandings, seedTeams } from "../core/league/schedule.js";
+import { shouldAdvance } from "../core/league/season-clock.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -240,4 +241,60 @@ export function getStandings({ payload }) {
     // risk disagreeing about the cut.
     standings: seedTeams(table),
   };
+}
+
+const STATE_URL = "https://api.sleeper.app/v1/state/nfl";
+
+/** The NFL's own idea of where the season is. ~200 bytes. */
+export function nflState() {
+  return fetchJSON({ url: STATE_URL });
+}
+
+/**
+ * Advance a league to the NFL's current week, if that is due.
+ *
+ * ⚠️ WITHOUT THIS NOTHING ADVANCES. `currentWeek` was set only by a commissioner,
+ * so a league whose commissioner went quiet simply stopped scoring — silently,
+ * because a tick with no current week skips scoring rather than failing.
+ *
+ * ⚠️ SCORE THE OUTGOING WEEK ONE LAST TIME BEFORE MOVING ON. Scoring runs on a
+ * 5-minute tick, so the last score written for a week is whatever the games
+ * looked like at that moment. Advancing without a final pass freezes a week
+ * mid-Sunday and that becomes the permanent result.
+ *
+ * Guards, all of which have bitten something similar before:
+ *   - the league's season must MATCH the live one, or a league replaying 2025
+ *     would be dragged to whatever week 2026 is in
+ *   - only during the regular season or postseason; preseason week 1 is not
+ *     week 1
+ *   - forward only
+ *   - a commissioner can switch it off to hold or replay a week
+ */
+export function advanceWeekIfDue(lg, state) {
+  const meta = read(KEY.meta(lg), null);
+  // ⚠️ THE DECISION LIVES IN core/league/season-clock.js, not here. It is pure
+  // logic with five silent failure modes, and this file cannot be unit-tested —
+  // duplicating the rules here is how the two would drift.
+  const verdict = shouldAdvance(meta, state);
+  if (!verdict.advance) return { skipped: verdict.reason };
+
+  const live = verdict.to;
+  const current = Number(meta.currentWeek ?? 0);
+
+  // Final pass on the week being left behind, so its result is not frozen
+  // mid-game by whichever tick happened to run last.
+  let finalized = null;
+  if (current >= 1) {
+    try {
+      finalized = runScoring(lg, meta.season, current);
+    } catch (err) {
+      // A failed final score must not block the season from moving on — the week
+      // keeps whatever score it had, and that is visible, whereas a stuck league
+      // is not.
+      finalized = { error: String(err.message ?? err) };
+    }
+  }
+
+  mutate(KEY.meta(lg), (m) => ({ ...m, currentWeek: live }), meta);
+  return { advanced: { from: current || null, to: live }, finalized };
 }

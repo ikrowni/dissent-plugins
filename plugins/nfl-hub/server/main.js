@@ -27,11 +27,11 @@ import {
 } from "./ops-transactions.js";
 import {
   refreshPositions, scoreWeekForLeague, getScores, setCurrentWeek,
-  runScoring, positionsAreStale, getStandings,
+  runScoring, positionsAreStale, getStandings, advanceWeekIfDue, nflState,
 } from "./ops-scoring.js";
 import { startPlayoffs, getPlayoffs, resolveBracketsFor } from "./ops-playoffs.js";
 
-const MODULE_VERSION = "0.6.0";
+const MODULE_VERSION = "0.7.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -127,7 +127,29 @@ function runScheduledTick(p) {
       results.push({ task: "positions", error: String(err.message ?? err) });
     }
   }
+  // ⚠️ ONCE PER TICK, not once per league. It is the same answer for every
+  // league on the install, and the daily fetch allowance is finite.
+  let state = null;
+  if (leagues.length > 0) {
+    try {
+      state = nflState();
+    } catch (err) {
+      log(`tick: could not read the NFL state: ${err.message}`);
+    }
+  }
+
   for (const leagueId of leagues) {
+    // Advance BEFORE reading the week, so a league that just rolled over scores
+    // its new week on this tick rather than the next one.
+    if (state) {
+      try {
+        const adv = advanceWeekIfDue(leagueId, state);
+        if (adv.advanced) results.push({ leagueId, task: "week", result: adv });
+      } catch (err) {
+        log(`tick week advance failed for ${leagueId}: ${err.message}`);
+      }
+    }
+
     const meta = storage.get(`fl:${leagueId}:meta`);
     if (!meta) continue;
     const season = meta.season;
