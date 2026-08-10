@@ -10,6 +10,7 @@ import {
 import { normalizeSettings, validateSettings } from "../core/league/settings.js";
 import { splitRosterPositions, validateLineup } from "../core/league/slots.js";
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
+import { positionMap } from "./ops-scoring.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -181,8 +182,18 @@ export function setLineup({ p, payload }) {
     if (id && id !== "0" && !held.has(id)) refuse(`player ${id} is not on team ${teamId}`);
   }
 
-  const positions = payload?.positions ?? {};
-  const check = validateLineup(lineup, starters, (id) => positions[id] ?? null);
+  // ⚠️ POSITIONS COME FROM THE CACHED INDEX, NEVER FROM THE PAYLOAD. Taking them
+  // from the caller let a manager declare their QB an RB and start him in an RB
+  // slot — the client supplies the payload, so it can say anything.
+  //
+  // An empty map means the index has not been fetched yet. Validating against
+  // nothing would silently accept every lineup, so it refuses instead: a lineup
+  // that cannot be checked must not be recorded as checked.
+  const positions = positionMap();
+  if (Object.keys(positions).length === 0) {
+    refuse("player positions are not loaded yet — try again shortly");
+  }
+  const check = validateLineup(lineup, starters, (id) => positions[String(id)] ?? null);
   if (!check.valid) refuse(check.errors.join("; "));
 
   writeUncontended(KEY.lineup(lg, season, week, teamId), { lineup, setAt: Date.now(), setBy: p.userId });

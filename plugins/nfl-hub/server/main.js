@@ -24,8 +24,12 @@ import {
   submitClaim, cancelClaim, listClaims, runWaivers,
   proposeLeagueTrade, respondToTrade, commissionerTrade, listTrades, settleTrades,
 } from "./ops-transactions.js";
+import {
+  refreshPositions, scoreWeekForLeague, getScores, setCurrentWeek,
+  runScoring, positionsAreStale,
+} from "./ops-scoring.js";
 
-const MODULE_VERSION = "0.2.0";
+const MODULE_VERSION = "0.3.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -80,9 +84,15 @@ const OPS = {
   "trade:commissioner": commissionerTrade,
   "trade:list": listTrades,
 
+  // Scoring
+  "scores:get": getScores,
+  "league:week": setCurrentWeek,
+  "positions:refresh": refreshPositions,
+
   // Scheduled only — these refuse a user-triggered run themselves, in auth.js.
   "tick:waivers": runWaivers,
   "tick:trades": settleTrades,
+  "tick:scores": scoreWeekForLeague,
 };
 
 /**
@@ -97,6 +107,19 @@ const OPS = {
 function runScheduledTick(p) {
   const leagues = storage.get("fl:index") ?? [];
   const results = [];
+
+  // Positions first: everything that validates or scores a lineup depends on
+  // them, and a week-old map is fine — positions change on signings, not hourly.
+  // Refreshed before the leagues so the very first tick of a new install has
+  // them, rather than skipping a week.
+  if (leagues.length > 0 && positionsAreStale()) {
+    try {
+      results.push({ task: "positions", result: refreshPositions({ p, payload: {} }) });
+    } catch (err) {
+      log(`tick positions failed: ${err.message}`);
+      results.push({ task: "positions", error: String(err.message ?? err) });
+    }
+  }
   for (const leagueId of leagues) {
     const meta = storage.get(`fl:${leagueId}:meta`);
     if (!meta) continue;
@@ -106,8 +129,12 @@ function runScheduledTick(p) {
     for (const [name, fn, payload] of [
       ["trades", settleTrades, { leagueId }],
       ["waivers", runWaivers, { leagueId, season, week }],
+      // ⚠️ Scoring is called through runScoring, not the op, because the op
+      // requires a scheduled principal and re-checking it here would be a second
+      // definition of the same rule.
+      ["scores", () => runScoring(leagueId, season, week), null],
     ]) {
-      if (name === "waivers" && !week) continue;
+      if ((name === "waivers" || name === "scores") && !week) continue;
       try {
         results.push({ leagueId, task: name, result: fn({ p, payload }) });
       } catch (err) {
