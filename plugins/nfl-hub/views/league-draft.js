@@ -15,6 +15,7 @@ import {
   renderBoard, renderOnTheClock, renderRosterProgress,
 } from './draft-board.js';
 import { getIndex } from '../core/player-index.js';
+import { playerChip } from '../core/player-visuals.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft,
 } from '../core/league-api.js';
@@ -124,6 +125,31 @@ function completePane(d) {
        </button>`
     : ''}`,
   });
+}
+
+/**
+ * Search-and-pick, now with portraits.
+ *
+ * ⚠️ THE LIST EXCLUDES PLAYERS ALREADY DRAFTED. Offering one produces a refusal
+ * on every click, and the manager cannot tell whether they mistyped or somebody
+ * beat them to him — which, on a live clock, is the worst possible ambiguity.
+ */
+function pickForm() {
+  const rows = state.results.map((p) => {
+    const rec = getIndex()?.[String(p.id)] ?? { n: p.name, p: p.position, t: p.team };
+    return `<div class="db-pool-row">
+      ${playerChip(rec, { size: 34, compact: true })}
+      <button class="btn primary db-take" data-act="draft-pick-player" data-player="${esc(p.id)}"
+              ${state.busy ? 'disabled' : ''}>Draft</button>
+    </div>`;
+  }).join('');
+
+  return `
+    <input class="db-search" type="search" data-act="draft-search" placeholder="Search players…"
+           value="${esc(state.query)}" autocomplete="off" ${state.busy ? 'disabled' : ''}>
+    ${state.query.trim().length < 2
+    ? '<p class="muted">Type at least two letters to find a player.</p>'
+    : (rows ? `<div class="db-pool">${rows}</div>` : '<p class="muted">No available player matches that.</p>')}`;
 }
 
 /**
