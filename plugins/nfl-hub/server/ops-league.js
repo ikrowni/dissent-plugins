@@ -10,6 +10,7 @@ import {
 import { normalizeSettings, validateSettings } from "../core/league/settings.js";
 import { splitRosterPositions, validateLineup } from "../core/league/slots.js";
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
+import { generateRegularSeason } from "../core/league/schedule.js";
 import { positionMap } from "./ops-scoring.js";
 
 const refuse = (msg) => { throw new Error(msg); };
@@ -307,4 +308,71 @@ function requireLeagueId(payload) {
   const lg = String(payload?.leagueId ?? "");
   if (!lg) refuse("leagueId required");
   return lg;
+}
+
+/**
+ * Generate and store the regular-season schedule.
+ *
+ * ⚠️ REGENERATING MID-SEASON REWRITES HISTORY. The generator is deterministic
+ * for a given team list, but the team list changes as people join — so a
+ * regenerate after week 3 can hand a team different opponents for weeks it has
+ * already played, and every standings and tiebreak computed from those results
+ * becomes wrong. It is therefore refused once any week has been scored, unless
+ * the commissioner explicitly forces it.
+ *
+ * ⚠️ THE TEAM ORDER IS FROZEN INTO THE STORED SCHEDULE. Deriving it later from
+ * whatever `teams` happens to contain would silently produce a different
+ * schedule the moment somebody joins — which is exactly why this is stored
+ * rather than recomputed on read.
+ */
+export function generateSchedule({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const err = requireCommissioner(p, meta);
+  if (err) refuse(err);
+
+  const season = Number(payload?.season ?? meta.season);
+  const teamIds = Object.keys(teams);
+  if (teamIds.length < 2) refuse('a schedule needs at least two teams');
+
+  const existing = read(KEY.schedule(lg, season), null);
+  if (existing && !payload?.force) {
+    const scored = (existing.weeks ?? []).some((w) => read(KEY.scores(lg, season, w.week), null));
+    if (scored) {
+      refuse('this season already has scored weeks — regenerating would change opponents for games already played. Pass force to override.');
+    }
+  }
+
+  const startWeek = meta.settings?.startWeek ?? 1;
+  const weeks = Math.max(1, (meta.settings?.playoffWeekStart ?? 15) - startWeek);
+  const generated = generateRegularSeason(teamIds, weeks, { startWeek });
+
+  const record = {
+    season,
+    startWeek,
+    // The exact order the schedule was built from, kept so a later reader can
+    // see WHY the pairings are what they are.
+    teamIds,
+    generatedAt: Date.now(),
+    generatedBy: p.userId,
+    weeks: generated,
+  };
+  mutate(KEY.schedule(lg, season), () => record, null);
+  return { season, weeks: generated.length, teams: teamIds.length };
+}
+
+/**
+ * The stored schedule, or null.
+ *
+ * ⚠️ RETURNS NULL RATHER THAN GENERATING ONE. A read that quietly created a
+ * schedule would let any member fix the season's pairings by opening a tab, and
+ * would do it with whatever team list happened to exist at that moment.
+ */
+export function getSchedule({ payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const season = Number(payload?.season ?? meta.season);
+  return read(KEY.schedule(lg, season), null);
 }

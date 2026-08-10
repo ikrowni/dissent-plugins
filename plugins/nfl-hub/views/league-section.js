@@ -117,6 +117,9 @@ export async function onAction(act, target) {
     case 'matchup-retry':
       matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
       return;
+    case 'matchup-generate':
+      matchup.generate(app);
+      return;
     case 'matchup-expand':
       matchup.expand(app, target.dataset.team);
       return;

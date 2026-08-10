@@ -3,6 +3,7 @@ import { pairingsFor, render, expand, reset, _state } from './league-matchup.js'
 import { setIndex } from '../core/player-index.js';
 
 const league = (teamIds, over = {}) => ({
+  isCommissioner: true,
   teams: Object.fromEntries(teamIds.map((id) => [id, { id, name: `Team ${id.toUpperCase()}` }])),
   myTeams: ['t1'],
   season: 2025,
@@ -15,44 +16,55 @@ beforeEach(() => {
   setIndex({ p1: { n: 'Pat One', p: 'QB', t: 'KC' } });
 });
 
+// A stored schedule record, the shape schedule:generate writes.
+const scheduleRecord = (weeks) => ({
+  season: 2025, startWeek: 1, teamIds: ['t1', 't2'], generatedAt: 1, weeks,
+});
+
 describe('pairingsFor', () => {
-  it('pairs every team exactly once in a week', () => {
-    const pairs = pairingsFor(league(['t1', 't2', 't3', 't4']), 1);
-    const involved = pairs.flatMap((m) => [m.home, m.away]).filter(Boolean);
-    expect(new Set(involved).size).toBe(4);
-    expect(pairs).toHaveLength(2);
+  const stored = scheduleRecord([
+    { week: 1, matchups: [{ home: 't1', away: 't2', bye: false }] },
+    { week: 2, matchups: [{ home: 't2', away: 't1', bye: false }] },
+    { week: 3, matchups: [{ home: 't1', away: null, bye: true }] },
+  ]);
+
+  it('reads the week straight out of the stored schedule', () => {
+    expect(pairingsFor(stored, 1)).toEqual([{ home: 't1', away: 't2', bye: false }]);
+    expect(pairingsFor(stored, 2)).toEqual([{ home: 't2', away: 't1', bye: false }]);
   });
 
-  it('gives different pairings in different weeks', () => {
-    const lg = league(['t1', 't2', 't3', 't4']);
-    const sig = (w) => pairingsFor(lg, w).map((m) => [m.home, m.away].sort().join('-')).sort().join('|');
-    expect(sig(1)).not.toBe(sig(2));
+  it('accepts a week given as a string, since it arrives from the DOM', () => {
+    expect(pairingsFor(stored, '1')).toHaveLength(1);
   });
 
-  // ⚠️ Derived from the SAME pure function the server would use, so this must be
-  // stable — two managers computing different opponents is worse than no view.
-  it('is deterministic across calls', () => {
-    const lg = league(['t1', 't2', 't3', 't4']);
-    expect(pairingsFor(lg, 3)).toEqual(pairingsFor(lg, 3));
-  });
-
-  it('produces a bye for an odd number of teams', () => {
-    const pairs = pairingsFor(league(['t1', 't2', 't3']), 1);
-    expect(pairs.filter((m) => m.bye)).toHaveLength(1);
-  });
-
-  it('returns nothing for a league too small or a missing week', () => {
-    expect(pairingsFor(league(['t1']), 1)).toEqual([]);
-    expect(pairingsFor(league(['t1', 't2']), null)).toEqual([]);
+  // ⚠️ NEVER computed here. Inventing pairings would put a second answer to
+  // "who plays whom" in circulation, and the two only diverge once somebody
+  // joins — long after anyone would think to look.
+  it('returns nothing rather than deriving when there is no schedule', () => {
     expect(pairingsFor(null, 1)).toEqual([]);
+    expect(pairingsFor(undefined, 1)).toEqual([]);
+    expect(pairingsFor(stored, null)).toEqual([]);
+  });
+
+  it('returns nothing for a week outside the schedule', () => {
+    expect(pairingsFor(stored, 99)).toEqual([]);
+  });
+
+  it('carries a bye through as a bye', () => {
+    expect(pairingsFor(stored, 3)[0].bye).toBe(true);
   });
 });
 
 describe('render', () => {
+  const twoTeamWeek3 = scheduleRecord([
+    { week: 3, matchups: [{ home: 't1', away: 't2', bye: false }] },
+  ]);
+
   const setup = (over = {}) => {
     Object.assign(_state, {
       leagueId: 'lg', league: league(['t1', 't2']), week: 3, loaded: true,
-      error: null, expanded: null, scores: null, ...over,
+      error: null, expanded: null, scores: null, busy: false,
+      schedule: twoTeamWeek3, ...over,
     });
   };
 
@@ -89,8 +101,34 @@ describe('render', () => {
   });
 
   it('renders a bye as a bye rather than half a card', () => {
-    setup({ league: league(['t1', 't2', 't3']) });
+    setup({
+      league: league(['t1', 't2', 't3']),
+      schedule: scheduleRecord([{ week: 3, matchups: [{ home: 't3', away: null, bye: true }] }]),
+    });
     expect(render()).toContain('bye');
+  });
+
+  // ⚠️ No schedule is a NORMAL state, not an error — and only a commissioner is
+  // offered the fix, because only a commissioner can perform it.
+  it('offers a commissioner the generate button when no schedule exists', () => {
+    setup({ schedule: null });
+    const html = render();
+    expect(html).toContain('No schedule has been generated');
+    expect(html).toContain('matchup-generate');
+  });
+
+  it('tells a non-commissioner who to ask, without a button they cannot use', () => {
+    const lg = league(['t1', 't2']);
+    lg.isCommissioner = false;
+    setup({ schedule: null, league: lg });
+    const html = render();
+    expect(html).toContain('commissioner needs to generate');
+    expect(html).not.toContain('matchup-generate');
+  });
+
+  it('says a week is outside the schedule rather than showing nothing', () => {
+    setup({ week: 9 });
+    expect(render()).toContain('not in the schedule');
   });
 
   it('expands a lineup on demand, with player names', () => {

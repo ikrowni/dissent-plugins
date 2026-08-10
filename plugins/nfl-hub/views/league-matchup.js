@@ -1,18 +1,17 @@
 // views/league-matchup.js — head-to-head for the week.
 //
-// ⚠️ THE PAIRINGS ARE DERIVED ON THE CLIENT, and that is a temporary shape worth
-// naming. The module does not generate or store a schedule yet, so this calls the
-// SAME pure `generateRegularSeason` the server would — deterministic from the
-// team list, so both halves agree by construction.
+// ⚠️ THE PAIRINGS COME FROM THE SERVER'S STORED SCHEDULE. They used to be derived
+// here from the same pure generator, which agreed by construction — right up
+// until a team joined, because the generator's input is the team list. A late
+// joiner would have silently changed who played whom in weeks already played,
+// and every standing computed from those results with it.
 //
-// It stops being safe the moment a schedule is persisted or a commissioner can
-// edit one: two sources of truth for "who plays whom" is exactly the kind of
-// disagreement nobody notices until a playoff seed is wrong. When a schedule op
-// lands, this must read it rather than recompute it.
+// So there is now ONE source of truth: `schedule:generate` freezes the team
+// order into a stored record, and this view reads it. A league with no schedule
+// says so rather than inventing one.
 
 import { esc, panel, stateMsg } from '../core/ui.js';
-import { getScores } from '../core/league-api.js';
-import { generateRegularSeason } from '../core/league/schedule.js';
+import { getScores, getSchedule, generateSchedule } from '../core/league-api.js';
 import { loadIndex, playerLabel } from '../core/player-index.js';
 import { describe } from './league-home.js';
 
@@ -21,33 +20,31 @@ const state = {
   league: null,
   week: null,
   scores: null,
+  schedule: null,  // the stored record, or null when none has been generated
   loaded: false,
   error: null,
-  expanded: null, // teamId whose lineup is open
+  busy: false,
+  expanded: null,  // teamId whose lineup is open
 };
 
 export function reset() {
   Object.assign(state, {
-    leagueId: null, league: null, week: null, scores: null,
-    loaded: false, error: null, expanded: null,
+    leagueId: null, league: null, week: null, scores: null, schedule: null,
+    loaded: false, error: null, busy: false, expanded: null,
   });
 }
 
 /**
- * The week's pairings.
+ * The week's pairings, read from the stored schedule.
  *
- * Team order comes from the league's own team map, which is insertion-ordered by
- * join. That is stable for a given league, which is what makes the derivation
- * reproducible.
+ * ⚠️ NEVER COMPUTED HERE. An absent schedule returns nothing and the view says
+ * so — inventing pairings would put a second answer to "who plays whom" in
+ * circulation, and the two only diverge once somebody joins, which is long after
+ * anyone would think to look.
  */
-export function pairingsFor(league, week) {
-  const teamIds = Object.keys(league?.teams ?? {});
-  if (teamIds.length < 2 || !week) return [];
-  const startWeek = league?.settings?.startWeek ?? 1;
-  const playoffStart = league?.settings?.playoffWeekStart ?? 15;
-  const weeks = Math.max(1, playoffStart - startWeek);
-  const schedule = generateRegularSeason(teamIds, weeks, { startWeek });
-  return schedule.find((w) => w.week === Number(week))?.matchups ?? [];
+export function pairingsFor(schedule, week) {
+  if (!schedule || !week) return [];
+  return (schedule.weeks ?? []).find((w) => w.week === Number(week))?.matchups ?? [];
 }
 
 export function render() {
@@ -66,9 +63,25 @@ export function render() {
     });
   }
 
-  const pairs = pairingsFor(state.league, state.week);
+  if (!state.schedule) {
+    return panel({
+      title: 'Matchups',
+      body: `<p class="muted">No schedule has been generated for this season yet.</p>
+        ${state.league?.isCommissioner
+    ? `<button class="btn primary" data-act="matchup-generate" ${state.busy ? 'disabled' : ''}>
+         ${state.busy ? 'Generating…' : 'Generate schedule'}
+       </button>`
+    : '<p class="muted">A commissioner needs to generate it.</p>'}`,
+    });
+  }
+
+  const pairs = pairingsFor(state.schedule, state.week);
   if (pairs.length === 0) {
-    return panel({ title: 'Matchups', body: '<p class="muted">Not enough teams for a matchup yet.</p>' });
+    return panel({
+      title: 'Matchups',
+      body: `<p class="muted">Week ${esc(String(state.week))} is not in the schedule
+             (weeks ${esc(String(state.schedule.startWeek))}–${esc(String(state.schedule.startWeek + (state.schedule.weeks?.length ?? 0) - 1))}).</p>`,
+    });
   }
 
   return panel({
@@ -144,8 +157,9 @@ export async function load(app, { leagueId, league, week }) {
   app?.router?.refresh();
   try {
     await loadIndex();
-    // Scores are optional: a week that has not been scored yet shows dashes
-    // rather than an error, because "not scored yet" is a normal state.
+    // Both are optional: a season with no schedule, and a week nobody has
+    // scored, are normal states rather than failures.
+    state.schedule = await getSchedule(leagueId, league?.season).catch(() => null);
     state.scores = week
       ? await getScores(leagueId, league?.season, week).catch(() => null)
       : null;
@@ -153,6 +167,22 @@ export async function load(app, { leagueId, league, week }) {
     state.error = describe(err);
   } finally {
     state.loaded = true;
+    app?.router?.refresh();
+  }
+}
+
+/** Commissioner: create the season's schedule. */
+export async function generate(app) {
+  state.busy = true;
+  state.error = null;
+  app?.router?.refresh();
+  try {
+    await generateSchedule(state.leagueId, { season: state.league?.season });
+    state.schedule = await getSchedule(state.leagueId, state.league?.season);
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
     app?.router?.refresh();
   }
 }

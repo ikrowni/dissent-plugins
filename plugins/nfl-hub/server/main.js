@@ -15,6 +15,7 @@ import { storage } from "./sdk/server-sdk.js";
 import {
   createLeague, listLeagues, getLeague, joinLeague, updateSettings,
   setLineup, getLineup, addFreeAgent, dropFreeAgent, movePlayer,
+  generateSchedule, getSchedule,
 } from "./ops-league.js";
 import {
   createLeagueDraft, startLeagueDraft, getDraft, makeDraftPick,
@@ -29,7 +30,7 @@ import {
   runScoring, positionsAreStale,
 } from "./ops-scoring.js";
 
-const MODULE_VERSION = "0.3.0";
+const MODULE_VERSION = "0.4.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -56,6 +57,8 @@ const OPS = {
   "league:get": getLeague,
   "league:join": joinLeague,
   "league:settings": updateSettings,
+  "schedule:generate": generateSchedule,
+  "schedule:get": getSchedule,
 
   // Rosters and lineups
   "lineup:set": setLineup,

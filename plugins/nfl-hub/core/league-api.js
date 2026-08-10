@@ -26,6 +26,16 @@ export const updateSettings = (leagueId, settings) =>
 export const setCurrentWeek = (leagueId, week) =>
   call('league:week', { leagueId, week });
 
+// ── Schedule ─────────────────────────────────────────────────────────────────
+//
+// ⚠️ The schedule is STORED, not derived. It used to be recomputed in the
+// browser from the same pure generator, which agreed by construction — until a
+// team joined, at which point the client and a future server copy would silently
+// disagree about who played whom in weeks already played.
+export const getSchedule = (leagueId, season) => call('schedule:get', { leagueId, season });
+export const generateSchedule = (leagueId, opts = {}) =>
+  call('schedule:generate', { leagueId, ...opts });
+
 // ── Rosters and lineups ──────────────────────────────────────────────────────
 export const setLineup = (leagueId, teamId, week, lineup) =>
   call('lineup:set', { leagueId, teamId, week, lineup });
