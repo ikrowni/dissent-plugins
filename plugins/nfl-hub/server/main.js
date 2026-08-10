@@ -29,8 +29,9 @@ import {
   refreshPositions, scoreWeekForLeague, getScores, setCurrentWeek,
   runScoring, positionsAreStale, getStandings,
 } from "./ops-scoring.js";
+import { startPlayoffs, getPlayoffs, resolveBracketsFor } from "./ops-playoffs.js";
 
-const MODULE_VERSION = "0.5.0";
+const MODULE_VERSION = "0.6.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -90,6 +91,8 @@ const OPS = {
   // Scoring
   "scores:get": getScores,
   "standings:get": getStandings,
+  "playoffs:start": startPlayoffs,
+  "playoffs:get": getPlayoffs,
   "league:week": setCurrentWeek,
   "positions:refresh": refreshPositions,
 
@@ -137,6 +140,9 @@ function runScheduledTick(p) {
       // requires a scheduled principal and re-checking it here would be a second
       // definition of the same rule.
       ["scores", () => runScoring(leagueId, season, week), null],
+      // After scoring, not before: a round is decided by the week that was just
+      // scored, so advancing first would always be one tick behind.
+      ["playoffs", () => resolveBracketsFor(leagueId, season), null],
     ]) {
       if ((name === "waivers" || name === "scores") && !week) continue;
       try {

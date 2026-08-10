@@ -165,3 +165,113 @@ describe('render', () => {
     expect(html).toContain('&lt;img');
   });
 });
+
+describe('playoff bracket', () => {
+  const seedRow = (id, seed) => ({ teamId: id, seed });
+  const bracket = (over = {}) => ({
+    season: 2025, playoffWeekStart: 15, reseed: true,
+    seeds: [seedRow('t1', 1), seedRow('t2', 2)],
+    byes: [],
+    champion: null,
+    isCommissioner: true,
+    rounds: [{ round: 1, week: 15, games: [{ home: seedRow('t1', 1), away: seedRow('t2', 2), winner: null }] }],
+    ...over,
+  });
+
+  const setup = (over = {}) => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: league(['t1', 't2']), week: 15, loaded: true,
+      error: null, expanded: null, scores: null, busy: false,
+      schedule: null, bracket: null, ...over,
+    });
+  };
+
+  // ⚠️ From playoffWeekStart onward the bracket replaces the regular pairing —
+  // showing a regular-season opponent in a playoff week names a team they are
+  // not playing.
+  it('takes over from the regular season in a playoff week', () => {
+    setup({ bracket: bracket() });
+    const html = render();
+    expect(html).toContain('Playoffs');
+    expect(html).not.toContain('Week 15</span>'); // not the regular matchup header
+  });
+
+  it('offers a commissioner the seed button before the bracket exists', () => {
+    setup({ bracket: null });
+    const html = render();
+    expect(html).toContain('has not been seeded');
+    expect(html).toContain('matchup-start-playoffs');
+  });
+
+  it('tells a non-commissioner who to ask', () => {
+    const lg = league(['t1', 't2']);
+    lg.isCommissioner = false;
+    setup({ bracket: null, league: lg });
+    const html = render();
+    expect(html).toContain('commissioner needs to seed');
+    expect(html).not.toContain('matchup-start-playoffs');
+  });
+
+  // ⚠️ "Round 2 of 3" says nothing; "Semi-final" says exactly where you are.
+  it('names rounds from the end', () => {
+    setup({
+      bracket: bracket({
+        rounds: [
+          { round: 1, week: 15, games: [{ home: seedRow('t3', 3), away: seedRow('t4', 4), winner: null }] },
+          { round: 2, week: 16, games: [{ home: seedRow('t1', 1), away: seedRow('t2', 2), winner: null }] },
+          { round: 3, week: 17, games: [{ home: seedRow('t1', 1), away: seedRow('t2', 2), winner: null }] },
+        ],
+      }),
+    });
+    const html = render();
+    expect(html).toContain('Quarter-final');
+    expect(html).toContain('Semi-final');
+    expect(html).toContain('Final');
+  });
+
+  it('shows a single round as the Final', () => {
+    setup({ bracket: bracket() });
+    expect(render()).toContain('Final');
+  });
+
+  it('marks the winner of a decided game', () => {
+    setup({
+      bracket: bracket({
+        rounds: [{ round: 1, week: 15, games: [{ home: seedRow('t1', 1), away: seedRow('t2', 2), winner: seedRow('t1', 1) }] }],
+      }),
+    });
+    expect(render()).toContain('winning');
+  });
+
+  it('announces a champion', () => {
+    setup({ bracket: bracket({ champion: seedRow('t1', 1) }) });
+    const html = render();
+    expect(html).toContain('🏆');
+    expect(html).toContain('wins the league');
+  });
+
+  it('names the bye teams', () => {
+    setup({ bracket: bracket({ byes: [seedRow('t1', 1)] }) });
+    expect(render()).toContain('Bye:');
+  });
+
+  // A fantasy week genuinely can tie, and leaving it undecided would stall the
+  // bracket forever — so the tiebreak is shown rather than hidden.
+  it('says when a game was decided on seed', () => {
+    setup({
+      bracket: bracket({
+        rounds: [{ round: 1, week: 15, games: [{ home: seedRow('t1', 1), away: seedRow('t2', 2), winner: seedRow('t1', 1), tie: true }] }],
+      }),
+    });
+    expect(render()).toContain('higher seed advances');
+  });
+
+  it('escapes team names in the bracket too', () => {
+    const lg = league(['t1', 't2']);
+    lg.teams.t1.name = '<img src=x onerror=alert(1)>';
+    setup({ league: lg, bracket: bracket() });
+    const html = render();
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;img');
+  });
+});

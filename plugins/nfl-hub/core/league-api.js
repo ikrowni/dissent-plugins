@@ -86,6 +86,15 @@ export const getScores = (leagueId, season, week) =>
 export const getStandings = (leagueId, season) =>
   call('standings:get', { leagueId, season });
 
+// ── Playoffs ─────────────────────────────────────────────────────────────────
+//
+// ⚠️ getPlayoffs ADVANCES the bracket as a side effect: a round is decided when
+// its week is scored, and reading is what resolves that. Same shape as the draft
+// clock, and the reason the view polls rather than caching.
+export const getPlayoffs = (leagueId, season) => call('playoffs:get', { leagueId, season });
+export const startPlayoffs = (leagueId, opts = {}) =>
+  call('playoffs:start', { leagueId, ...opts });
+
 // ── UI-only helpers ──────────────────────────────────────────────────────────
 
 /** Does this user manage that team? Mirrors the module; never trusted by it. */

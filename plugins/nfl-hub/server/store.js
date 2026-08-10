@@ -30,6 +30,7 @@ export const KEY = {
   tradeIndex: (lg) => `fl:${lg}:trades`,
   lineup: (lg, season, week, team) => `fl:${lg}:lineup:${season}:w${week}:${team}`,
   scores: (lg, season, week) => `fl:${lg}:scores:${season}:w${week}`,
+  bracket: (lg, season) => `fl:${lg}:bracket:${season}`,
   audit: (lg, chunk) => `fl:${lg}:audit:${chunk}`,
 };
 
@@ -40,7 +41,7 @@ export const KEY = {
  * question someone answers wrongly at 1am, and `set` on a contended key loses
  * updates silently — no error, no trace, just a claim that vanishes.
  */
-export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex"];
+export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex", "bracket"];
 
 /** Read a value, or a fallback when unset. */
 export function read(key, fallback = null) {
