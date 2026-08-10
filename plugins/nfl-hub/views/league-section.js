@@ -170,6 +170,15 @@ export async function onAction(act, target) {
       home.open(app, target.dataset.league);
       return;
 
+    // ⚠️ Reuses the hub's EXISTING player page rather than a second card. It is
+    // keyed on an ESPN athlete id, which the index now carries for ~95% of
+    // active players — before that enrichment this route was unreachable from
+    // any fantasy surface.
+    case 'player-open':
+      app.athleteId = target.dataset.espn;
+      app.router.go('player');
+      return;
+
     case 'league-start-season':
       home.setWeek(app, target.dataset.week);
       return;

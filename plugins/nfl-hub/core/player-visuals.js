@@ -4,15 +4,16 @@
 // name and picture a player identically. A player who looks like two different
 // people across two tabs is a bug nobody files and everybody notices.
 //
-// ⚠️ A HEADSHOT IS A BONUS, NOT THE DESIGN. Only **19% of active players** carry
-// an ESPN id in the index (394 of 1977, measured 2026-08-10) — the rest have no
-// portrait available at any price. A headshot-first layout is therefore broken
-// for four players in five, which is exactly the sort of thing that looks
-// wonderful in a screenshot of Patrick Mahomes and awful in practice.
+// ⚠️ A HEADSHOT IS STILL A BONUS, NOT THE DESIGN. It used to be far worse —
+// Sleeper carries an ESPN id for only ~23% of active players, so a headshot-first
+// layout was broken for four in five. build-player-index.mjs now fills the gaps
+// from ESPN's own rosters and coverage is ~95%, but the remaining 5% are real
+// people who will appear on real rosters.
 //
-// So the reliable visual is the one every active player has: their TEAM, as a
-// colour and a logo, plus a monogram. The portrait upgrades it when it exists
-// and nothing shifts when it does not — same box, same size, no layout jump.
+// So the reliable visual stays the one EVERY active player has: their team, as a
+// colour and a logo, plus a monogram. The portrait upgrades it when it exists and
+// nothing shifts when it does not — same box, same size, no layout jump. Do not
+// let the good coverage tempt this into assuming a portrait exists.
 
 import { esc, legibleColor } from './ui.js';
 import { TEAMS, logoPath, normalizeAbbr } from './config.js';
@@ -111,7 +112,13 @@ export function positionPill(pos) {
  */
 export function playerChip(player, { size = 40, sub = null, compact = false } = {}) {
   if (!player) return '<span class="pv-chip pv-chip-unknown">—</span>';
-  return `<span class="pv-chip${compact ? ' compact' : ''}">
+  // ⚠️ CLICKABLE ONLY WITH AN ESPN ID, because the player page is keyed on one.
+  // A chip that looks tappable and does nothing is worse than a plain one, and
+  // ~5% of active players still have no id at all.
+  const open = player.e
+    ? ` role="button" tabindex="0" data-act="player-open" data-espn="${esc(String(player.e))}"`
+    : '';
+  return `<span class="pv-chip${compact ? ' compact' : ''}${player.e ? ' pv-open' : ''}"${open}>
     ${avatar(player, { size })}
     <span class="pv-id">
       <span class="pv-name">${esc(player.n ?? 'Unknown')}</span>

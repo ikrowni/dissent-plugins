@@ -124,3 +124,25 @@ describe('playerNote', () => {
   it('names the club', () => expect(playerNote(mahomes)).toBe('Kansas City Chiefs'));
   it('calls a teamless player a free agent', () => expect(playerNote(freeAgent)).toBe('Free agent'));
 });
+
+describe('opening the player page', () => {
+  // ⚠️ The hub's player page is keyed on an ESPN athlete id. A chip that looks
+  // tappable and does nothing is worse than a plain one.
+  it('is clickable when the player has an ESPN id', () => {
+    const html = playerChip(mahomes);
+    expect(html).toContain('data-act="player-open"');
+    expect(html).toContain('data-espn="3139477"');
+    expect(html).toContain('role="button"');
+  });
+
+  it('is NOT clickable without one', () => {
+    const html = playerChip(noShot);
+    expect(html).not.toContain('data-act="player-open"');
+    expect(html).not.toContain('role="button"');
+  });
+
+  it('is reachable by keyboard when it is clickable', () => {
+    expect(playerChip(mahomes)).toContain('tabindex="0"');
+    expect(playerChip(noShot)).not.toContain('tabindex');
+  });
+});

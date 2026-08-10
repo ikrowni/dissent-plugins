@@ -408,3 +408,9 @@ h4 {
 /* The story of the week gets the colour — it is the one people repeat. */
 .rc-item.unlucky .rc-label { color: var(--loss); }
 .rc-item.unlucky .rc-value b { color: var(--loss); }
+
+/* A chip that opens the player page says so on hover; one without an id does
+ * not pretend to. */
+.pv-chip.pv-open { cursor: pointer; border-radius: var(--r-sm); }
+.pv-chip.pv-open:hover .pv-name { color: var(--gold); }
+.pv-chip.pv-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
