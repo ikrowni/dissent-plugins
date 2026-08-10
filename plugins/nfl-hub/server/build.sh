@@ -55,16 +55,24 @@ else
   EJS="$TOOLS/ejs"
 fi
 
-# Stage the sources with the canonical SDK alongside, so main.js's
-# `./sdk/server-sdk.js` import resolves without vendoring anything.
-mkdir -p "$BUILD/sdk"
-cp "$SDK" "$BUILD/sdk/server-sdk.js"
-cp main.js "$BUILD/main.js"
-cp -r ../core "$BUILD/core" 2>/dev/null || true
+# Stage sources preserving the REAL directory shape: server/ beside core/.
+#
+# ⚠️ THE LAYOUT MATTERS. ops-*.js import "../core/league/*.js", so flattening
+# main.js into the build root would put those imports outside it and esbuild
+# would fail — or worse, resolve something unexpected. Staging server/ and core/
+# as siblings makes every relative path mean what it means in the repo.
+#
+# The SDK is copied from dissent-core rather than vendored, because that copy is
+# canonical and lives beside the Go host functions it wraps so the two cannot
+# drift.
+mkdir -p "$BUILD/server/sdk" "$BUILD/core"
+cp "$SDK" "$BUILD/server/sdk/server-sdk.js"
+cp ./*.js "$BUILD/server/"
+cp -r ../core/league "$BUILD/core/league"
 
 # ⚠️ BUNDLE FIRST. extism-js does not resolve imports; feeding it a file with an
 # `import` fails at build time with an unhelpful message.
-npx --yes esbuild "$BUILD/main.js" --bundle --format=cjs --platform=neutral \
+npx --yes esbuild "$BUILD/server/main.js" --bundle --format=cjs --platform=neutral \
   --outfile="$BUILD/bundled.js" >/dev/null
 
 "$EJS" "$BUILD/bundled.js" -i module.d.ts -o module.wasm

@@ -13,6 +13,7 @@ declare module "main" {
 declare module "extism:host" {
   interface user {
     host_log(ptr: I64): I64;
+    host_caller(ptr: I64): I64;
     host_secret_get(ptr: I64): I64;
     host_storage_get(ptr: I64): I64;
     host_storage_set(ptr: I64): I64;

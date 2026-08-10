@@ -1,0 +1,248 @@
+// server/ops-draft.js — the draft, and its deadline-on-read clock.
+//
+// ⚠️ EVERY READ OF THE BOARD RESOLVES LAPSED PICKS FIRST. That is the whole
+// clock mechanism: the node's scheduler floor is five minutes and cannot drive a
+// 90-second timer, so a lapsed pick is auto-drafted by whoever next looks, with
+// the scheduled tick as a backstop for when nobody is looking. A lapse is
+// therefore RECORDED late but TIMED correctly.
+//
+// ⚠️ RESOLUTION HAPPENS INSIDE THE SWAP. Resolving before the swap would let two
+// simultaneous board loads both auto-draft the same lapsed pick to different
+// players, and the loser's write would silently vanish.
+
+import { KEY, read, mutate, loadLeague } from "./store.js";
+import { requireCommissioner, requireTeamControl, isCommissioner } from "./auth.js";
+import {
+  createDraft, startDraft, makePick, resolveExpired, currentPick,
+  pauseDraft, resumeDraft, bestAvailable, draftedRosters, DRAFT_STATUS,
+} from "../core/league/draft.js";
+import { DRAFT_TYPE } from "../core/league/draft-order.js";
+
+const refuse = (msg) => { throw new Error(msg); };
+
+/**
+ * Autodraft: a team's own queue first, then the league's ranking.
+ *
+ * ⚠️ Must be free of side effects — `resolveExpired` calls it repeatedly while
+ * cascading through several lapsed picks, and `swap` may replay the whole thing
+ * on a conflict.
+ */
+function autoPicker(queues, ranking) {
+  return (draft, pick) => {
+    const queue = queues?.[pick.owner] ?? [];
+    const fromQueue = bestAvailable(draft, queue);
+    return fromQueue ?? bestAvailable(draft, ranking);
+  };
+}
+
+/** Commissioner: set the draft up. */
+export function createLeagueDraft({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const err = requireCommissioner(p, meta);
+  if (err) refuse(err);
+
+  const order = Array.isArray(payload?.draftOrder) && payload.draftOrder.length
+    ? payload.draftOrder.map(String)
+    : Object.keys(teams);
+  if (order.length === 0) refuse("the league has no teams to draft");
+
+  const type = payload?.type === DRAFT_TYPE.LINEAR ? DRAFT_TYPE.LINEAR : DRAFT_TYPE.SNAKE;
+  const rounds = Number(payload?.rounds ?? meta.settings?.draftRounds ?? 15);
+  const pickTimerSeconds = Number(payload?.pickTimerSeconds ?? meta.settings?.pickTimerSeconds ?? 90);
+
+  const assets = read(KEY.assets(lg), { pickOwnership: [] });
+  const draft = createDraft({
+    draftOrder: order,
+    rounds,
+    type,
+    tradedPicks: assets.pickOwnership ?? [],
+    pickTimerSeconds,
+    season: meta.season,
+  });
+
+  mutate(KEY.draft(lg), () => draft, null);
+  return { status: draft.status, picks: draft.order.length, rounds, type };
+}
+
+/** Commissioner: start the clock. */
+export function startLeagueDraft({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const err = requireCommissioner(p, meta);
+  if (err) refuse(err);
+
+  let out = null;
+  mutate(KEY.draft(lg), (d) => {
+    if (!d) refuse("no draft has been created");
+    const res = startDraft(d, Date.now());
+    if (!res.ok) refuse(res.error);
+    out = { status: res.draft.status, pickEndsAt: res.draft.pickEndsAt };
+    return res.draft;
+  }, null);
+  return out;
+}
+
+/**
+ * The board — and the clock tick.
+ *
+ * Reading is a mutation here, which looks odd and is deliberate: this is the
+ * mechanism that makes a 90-second timer work under a five-minute scheduler.
+ */
+export function getDraft({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const queues = read(KEY.meta(lg), {})?.draftQueues ?? {};
+  const ranking = payload?.ranking ?? [];
+  let view = null;
+
+  mutate(KEY.draft(lg), (d) => {
+    if (!d) refuse("no draft has been created");
+    const res = resolveExpired(d, Date.now(), autoPicker(queues, ranking));
+    view = draftView(res.draft, meta, p);
+    view.autoPicked = res.made.map((m) => ({ overall: m.overall, teamId: m.owner, playerId: m.playerId }));
+    return res.draft;
+  }, null);
+
+  return view;
+}
+
+/**
+ * Make a pick.
+ *
+ * ⚠️ Lapsed picks are resolved BEFORE this pick is applied, in the same swap. A
+ * manager who arrives after their clock expired must not be able to pick as
+ * though it had not — the auto-pick already happened, they simply had not seen
+ * it yet.
+ */
+export function makeDraftPick({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamControl(p, teams, meta, teamId);
+  if (err) refuse(err);
+
+  const playerId = payload?.playerId;
+  if (playerId === null || playerId === undefined || playerId === "") refuse("playerId required");
+
+  const queues = meta.draftQueues ?? {};
+  const ranking = payload?.ranking ?? [];
+  let out = null;
+
+  mutate(KEY.draft(lg), (d) => {
+    if (!d) refuse("no draft has been created");
+    const now = Date.now();
+    const resolved = resolveExpired(d, now, autoPicker(queues, ranking));
+    const res = makePick(resolved.draft, teamId, playerId, now);
+    if (!res.ok) refuse(res.error);
+    out = {
+      overall: currentPick(resolved.draft)?.overall ?? null,
+      playerId: String(playerId),
+      autoPicked: resolved.made.length,
+      status: res.draft.status,
+      pickEndsAt: res.draft.pickEndsAt,
+    };
+    return res.draft;
+  }, null);
+
+  return out;
+}
+
+/** A manager's autodraft queue, stored on the league meta. */
+export function setDraftQueue({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamControl(p, teams, meta, teamId);
+  if (err) refuse(err);
+
+  const queue = (payload?.queue ?? []).map(String);
+  mutate(KEY.meta(lg), (m) => ({
+    ...m,
+    draftQueues: { ...(m.draftQueues ?? {}), [teamId]: queue },
+  }), meta);
+  return { teamId, queued: queue.length };
+}
+
+/** Commissioner: pause or resume. */
+export function setDraftPaused({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const err = requireCommissioner(p, meta);
+  if (err) refuse(err);
+
+  const paused = Boolean(payload?.paused);
+  let out = null;
+  mutate(KEY.draft(lg), (d) => {
+    if (!d) refuse("no draft has been created");
+    const res = paused ? pauseDraft(d) : resumeDraft(d, Date.now());
+    if (!res.ok) refuse(res.error);
+    out = { status: res.draft.status, pickEndsAt: res.draft.pickEndsAt };
+    return res.draft;
+  }, null);
+  return out;
+}
+
+/**
+ * Materialise the draft into rosters once it completes.
+ *
+ * ⚠️ TWO KEYS, SO IT CANNOT BE ATOMIC — and it does not need to be, because it
+ * is idempotent and only runs on a COMPLETE draft, whose picks can no longer
+ * change. Running it twice produces the same rosters.
+ */
+export function finalizeDraft({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const err = requireCommissioner(p, meta);
+  if (err) refuse(err);
+
+  const draft = read(KEY.draft(lg), null);
+  if (!draft) refuse("no draft has been created");
+  if (draft.status !== DRAFT_STATUS.COMPLETE) refuse(`draft is ${draft.status}, not complete`);
+
+  const drafted = draftedRosters(draft, Object.keys(teams));
+  mutate(KEY.assets(lg), (a) => {
+    const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
+    const rosters = { ...assets.rosters };
+    for (const [teamId, roster] of Object.entries(drafted)) {
+      const existing = rosters[teamId] ?? { players: [], ir: [], taxi: [] };
+      // Union rather than overwrite: a keeper league already has players here.
+      const players = [...new Set([...existing.players, ...roster.players])];
+      rosters[teamId] = { ...existing, players };
+    }
+    return { ...assets, rosters };
+  }, null);
+
+  return { finalized: true, teams: Object.keys(drafted).length };
+}
+
+function draftView(draft, meta, p) {
+  const onClock = currentPick(draft);
+  return {
+    status: draft.status,
+    type: draft.type,
+    rounds: draft.rounds,
+    pickTimerSeconds: draft.pickTimerSeconds,
+    pickEndsAt: draft.pickEndsAt,
+    msRemaining: draft.pickEndsAt ? Math.max(0, draft.pickEndsAt - Date.now()) : null,
+    onClock: onClock ? { overall: onClock.overall, round: onClock.round, teamId: onClock.owner } : null,
+    picks: draft.picks,
+    order: draft.order,
+    isCommissioner: isCommissioner(meta, p.userId),
+  };
+}
+
+function requireLeagueId(payload) {
+  const lg = String(payload?.leagueId ?? "");
+  if (!lg) refuse("leagueId required");
+  return lg;
+}
