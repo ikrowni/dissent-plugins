@@ -12,6 +12,10 @@
 
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
+  renderBoard, renderOnTheClock, renderRosterProgress,
+} from './draft-board.js';
+import { getIndex } from '../core/player-index.js';
+import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel } from '../core/player-index.js';
@@ -103,10 +107,17 @@ function prePane(d) {
 }
 
 function completePane(d) {
+  const playerOf = (id) => getIndex()?.[String(id)] ?? null;
   return panel({
     title: 'Draft complete',
     body: `
-      ${picksTable(d)}
+      ${renderOnTheClock({ onClock: null, complete: true })}
+      ${renderBoard({
+    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+    teamLabel: (t) => teamName(t),
+    isMine: (t) => String(t) === String(state.teamId),
+    playerOf,
+  })}
       ${d.isCommissioner
     ? `<button class="btn primary" data-act="draft-finalize" ${state.busy ? 'disabled' : ''}>
          Move picks onto rosters
@@ -115,72 +126,78 @@ function completePane(d) {
   });
 }
 
+/**
+ * The column order of the board: round one, left to right.
+ *
+ * ⚠️ Derived from the ORDER, not from the league's team map. The board's columns
+ * are draft slots, and a league's teams are stored in join order — using the
+ * latter puts every manager in the wrong column on a board that otherwise looks
+ * perfectly plausible.
+ */
+function boardTeamIds(d) {
+  return (d.order ?? [])
+    .filter((p) => p.round === 1)
+    .sort((a, b) => a.pickInRound - b.pickInRound)
+    .map((p) => String(p.owner));
+}
+
+/**
+ * The module's `onClock` is `{ overall, round, teamId }` — it carries NO `owner`
+ * and NO `pickInRound`, which the shared board needs.
+ *
+ * ⚠️ NORMALISE, NEVER ASSUME. Passing the raw payload straight through leaves
+ * `owner` undefined, and the board then quietly reports that nobody is on the
+ * clock while every other part of the screen says somebody is.
+ */
+function normalizeClock(d) {
+  if (!d.onClock) return null;
+  const full = (d.order ?? []).find((p) => p.overall === d.onClock.overall);
+  return full ?? { ...d.onClock, owner: d.onClock.teamId, pickInRound: d.onClock.overall };
+}
+
 function livePane(d) {
-  const onClock = d.onClock;
-  const mine = onClock && String(onClock.teamId) === String(state.teamId);
+  const clock = normalizeClock(d);
+  const mine = clock && String(clock.owner) === String(state.teamId);
   const remaining = state.localDeadline === null ? null : state.localDeadline - Date.now();
+  const playerOf = (id) => getIndex()?.[String(id)] ?? null;
+  const owned = Object.values(d.picks ?? {})
+    .filter((p) => String(p.teamId) === String(state.teamId))
+    .map((p) => ({ id: String(p.playerId), pos: String(playerOf(p.playerId)?.p ?? '').toUpperCase() }));
+  const slots = state.league?.settings?.rosterPositions?.filter((x) => x !== 'BN' && x !== 'IR' && x !== 'TAXI') ?? [];
 
   return panel({
     title: 'Draft',
     right: `<span class="clock ${remaining !== null && remaining < 15000 ? 'urgent' : ''}">${formatClock(remaining)}</span>`,
     body: `
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
-      <p>
-        ${onClock
-    ? `Round ${onClock.round}, pick ${onClock.overall} — <strong>${esc(teamName(onClock.teamId))}</strong>
-           ${mine ? '<span class="you">it is your pick</span>' : ''}`
-    : 'Waiting…'}
-      </p>
-      ${mine ? pickForm() : ''}
-      ${d.isCommissioner ? `
-        <div class="row-actions">
-          <button class="btn tiny" data-act="draft-pause" data-paused="${d.status === 'paused'}">
-            ${d.status === 'paused' ? 'Resume' : 'Pause'}
-          </button>
-        </div>` : ''}
-      ${picksTable(d)}`,
+      ${renderOnTheClock({
+    onClock: clock,
+    teamLabel: (t) => teamName(t),
+    isMine: (t) => String(t) === String(state.teamId),
+  })}
+      <div class="mock-cols">
+        <div class="mock-pool-col">
+          ${mine ? pickForm() : '<p class="muted">Waiting on the manager who is up.</p>'}
+        </div>
+        <div class="mock-side">
+          <h4>Your roster</h4>
+          ${renderRosterProgress({ slots, owned, playerOf })}
+          ${d.isCommissioner ? `
+            <div class="row-actions">
+              <button class="btn" data-act="draft-pause" data-paused="${d.status === 'paused'}">
+                ${d.status === 'paused' ? 'Resume draft' : 'Pause draft'}
+              </button>
+            </div>` : ''}
+        </div>
+      </div>
+      <h4>Board</h4>
+      ${renderBoard({
+    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+    teamLabel: (t) => teamName(t),
+    isMine: (t) => String(t) === String(state.teamId),
+    onClock: clock, playerOf,
+  })}`,
   });
-}
-
-/**
- * Search-and-pick.
- *
- * ⚠️ THE LIST EXCLUDES PLAYERS ALREADY DRAFTED. Offering one produces a refusal
- * on every click, and the manager cannot tell whether they mistyped or somebody
- * beat them to him — which, on a live clock, is the worst possible ambiguity.
- */
-function pickForm() {
-  const rows = state.results.map((p) => `
-    <button class="row-btn pick" data-act="draft-pick-player" data-player="${esc(p.id)}"
-            ${state.busy ? 'disabled' : ''}>
-      <span class="row-main">${esc(p.name)}</span>
-      <span class="muted">${esc(p.position)}${p.team ? ` · ${esc(p.team)}` : ''}</span>
-    </button>`).join('');
-
-  return `
-    <div class="pick-box">
-      <input type="search" data-act="draft-search" placeholder="Search players…"
-             value="${esc(state.query)}" autocomplete="off" ${state.busy ? 'disabled' : ''}>
-      ${state.query.trim().length < 2
-    ? '<p class="muted">Type at least two letters.</p>'
-    : (rows || '<p class="muted">No available player matches that.</p>')}
-    </div>`;
-}
-
-function picksTable(d) {
-  const made = Object.entries(d.picks ?? {})
-    .sort((a, b) => Number(a[0]) - Number(b[0]));
-  if (made.length === 0) return '<p class="muted">No picks yet.</p>';
-  return `<table class="tbl">
-    <thead><tr><th>#</th><th>Team</th><th>Player</th><th></th></tr></thead>
-    <tbody>${made.map(([overall, p]) => `
-      <tr>
-        <td class="num">${esc(overall)}</td>
-        <td>${esc(teamName(p.teamId))}</td>
-        <td>${esc(playerLabel(p.playerId))}</td>
-        <td class="muted">${p.auto ? 'auto' : ''}</td>
-      </tr>`).join('')}</tbody>
-  </table>`;
 }
 
 function teamName(teamId) {

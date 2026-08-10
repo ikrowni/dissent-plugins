@@ -149,3 +149,169 @@ h4 {
   letter-spacing: 0.03em; color: var(--text-2);
   margin: 16px 0 6px; text-transform: uppercase;
 }
+
+/* ═══ DRAFT BOARD ══════════════════════════════════════════════════════════
+ *
+ * ⚠️ THE BOARD IS THE PRODUCT. A fantasy draft is the one moment the whole
+ * league is in the room at once; a list of text rows does not carry it. Rounds
+ * run down, teams run across, every pick is coloured by position — which is the
+ * only way to see the shape of a roster, or a run on running backs, at a glance.
+ */
+
+.db-scroll { overflow-x: auto; padding-bottom: 6px; }
+/* ⚠️ Fixed column width, not 1fr. Auto columns resize as names arrive, so the
+ * board visibly reflows on every pick — in a live draft that is nauseating. */
+.db { display: grid; grid-template-columns: 34px repeat(var(--db-cols), 116px); gap: 3px; min-width: min-content; }
+.db-row { display: contents; }
+
+.db-rd {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-display); font-size: 12px; font-weight: 700;
+  color: var(--text-3); background: var(--ink-2); border-radius: var(--r-sm);
+}
+.db-th {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-3); padding: 6px 8px; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--ink-2); border-radius: var(--r-sm);
+}
+.db-th.mine { color: var(--gold); }
+
+.db-cell {
+  position: relative; min-height: 46px; padding: 6px 8px;
+  border-radius: var(--r-sm); background: rgba(255,255,255,0.022);
+  border: 1px solid transparent; overflow: hidden;
+}
+.db-empty, .db-cell:not(.db-made) { display: flex; flex-direction: column; justify-content: center; }
+.db-no { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); opacity: 0.5; }
+.db-mine { background: rgba(255,182,18,0.05); }
+
+/* A made pick: the position colour is the whole point of the cell. */
+.db-made { border-left: 3px solid var(--db-pos, var(--text-3)); background: var(--ink-2); }
+.db-name {
+  display: block; font-size: 11.5px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.db-sub { display: block; font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-3); margin-top: 2px; }
+.db-auto {
+  position: absolute; top: 4px; right: 5px; font-size: 8px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3); opacity: 0.7;
+}
+
+/* ⚠️ The pick that just landed animates ONCE, from the position colour. A board
+ * where everything moves is noise; a board where the new thing moves is a
+ * broadcast graphic. */
+.db-made { animation: dbLand var(--dur) var(--ease-spring) both; }
+@keyframes dbLand {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.db-live { border-color: var(--gold); background: rgba(255,182,18,0.08); }
+.db-clocktag {
+  display: block; margin-top: 3px; font-size: 8.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 700; color: var(--gold);
+}
+/* Breathing, not blinking — a pulse you can sit next to for three hours. */
+.db-live::after {
+  content: ''; position: absolute; inset: 0; border-radius: var(--r-sm);
+  box-shadow: 0 0 0 0 rgba(255,182,18,0.5); animation: dbPulse 2.4s var(--ease-out) infinite;
+  pointer-events: none;
+}
+@keyframes dbPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,182,18,0.45); }
+  70%  { box-shadow: 0 0 0 8px rgba(255,182,18,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,182,18,0); }
+}
+
+/* ── On the clock ─────────────────────────────────────────────────────────── */
+.db-clock {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+  margin: 10px 0 14px; padding: 12px 15px; border-radius: var(--r);
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  border: 1px solid var(--line);
+}
+.db-clock.is-me { border-color: rgba(255,182,18,0.45); background: linear-gradient(90deg, rgba(255,182,18,0.14), rgba(255,182,18,0.02)); }
+.db-clock-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--text-3); }
+.db-clock.is-me .db-clock-label { color: var(--gold); }
+.db-clock-team { font-family: var(--f-display); font-size: 21px; font-weight: 700; color: var(--text); }
+.db-clock-pick { font-size: 11.5px; color: var(--text-3); margin-left: auto; }
+.db-clock-done { border-color: rgba(79,158,127,0.4); background: rgba(79,158,127,0.1); }
+.db-clock-done .db-clock-label { color: var(--win); }
+
+/* ── Filters, search, pool ────────────────────────────────────────────────── */
+.db-filters { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.db-filter {
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text-3);
+}
+.db-filter:hover { color: var(--text); }
+.db-filter.on { background: var(--db-pos, var(--gold)); border-color: transparent; color: #05070b; }
+.db-filter-n { opacity: 0.65; font-weight: 600; }
+
+.db-search {
+  width: 100%; font: inherit; font-size: 13px; padding: 8px 12px;
+  border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+}
+.db-search:focus { outline: none; border-color: var(--gold); }
+
+.db-pool { display: flex; flex-direction: column; }
+.db-pool-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.db-pool-row:hover { background: rgba(255,255,255,0.025); }
+.db-rank { font-family: var(--f-mono); font-size: 11px; color: var(--text-3); min-width: 26px; text-align: right; }
+.db-take { margin-left: auto; flex-shrink: 0; }
+
+/* ── Roster progress ──────────────────────────────────────────────────────── */
+.db-roster { display: flex; flex-direction: column; gap: 3px; }
+.db-slot {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+  border-radius: var(--r-sm); background: rgba(255,255,255,0.02);
+}
+/* ⚠️ An EMPTY slot is the most useful thing on a draft screen. Dimming the
+ * filled ones would hide exactly what a manager is scanning for. */
+.db-slot.filled { background: var(--ink-2); }
+.db-slot-tag {
+  min-width: 38px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--db-pos, var(--text-3)); text-transform: uppercase;
+}
+.db-slot-name { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-slot-empty { font-size: 12px; color: var(--text-3); opacity: 0.5; }
+.db-bench { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 6px; padding: 5px 8px; }
+
+/* ── Mock draft layout ────────────────────────────────────────────────────── */
+.mock-setup { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
+.mock-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(200px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mock-cols { grid-template-columns: 1fr; } }
+.mock-pool-col { min-width: 0; }
+.mock-side { min-width: 0; }
+
+/* ═══ PLAYER VISUALS ═══════════════════════════════════════════════════════ */
+.pv-chip { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.pv-avatar {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--pv-ring, var(--line-2));
+}
+.pv-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+/* ⚠️ The monogram sits UNDER the portrait, not instead of it. When a headshot
+ * 404s the img removes itself and this is already in place — no gap, no reflow,
+ * no second request. Four active players in five never get a portrait at all. */
+.pv-mono { font-family: var(--f-display); font-size: 0.82em; font-weight: 700; letter-spacing: 0.02em; }
+.pv-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pv-name { font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-meta { display: flex; align-items: center; gap: 6px; }
+.pv-sub { font-size: 10.5px; color: var(--text-3); }
+.pv-chip.compact .pv-name { font-size: 12px; }
+
+.pv-pos {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.08em; padding: 2px 6px;
+  border-radius: 4px; color: var(--pv-pos, var(--text-3));
+  background: color-mix(in srgb, var(--pv-pos, #888) 16%, transparent);
+}
+.pv-team { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-3); letter-spacing: 0.05em; }
+.pv-team img { width: 13px; height: 13px; object-fit: contain; }
+.pv-team-none { opacity: 0.6; }

@@ -17,6 +17,7 @@ import * as draft from './league-draft.js';
 import * as matchup from './league-matchup.js';
 import * as moves from './league-moves.js';
 import * as coowners from './league-coowners.js';
+import * as mock from './league-mock.js';
 
 const TABS = [
   ['home', 'League'],
@@ -24,6 +25,10 @@ const TABS = [
   ['roster', 'My Roster'],
   ['moves', 'Moves'],
   ['draft', 'Draft'],
+  // ⚠️ Reachable WITHOUT a league. A mock is the one part of this section
+  // somebody can use before they have joined anything, and it is the best
+  // advertisement the rest of it has.
+  ['mock', 'Mock Draft'],
 ];
 
 const state = { tab: 'home' };
@@ -40,7 +45,8 @@ export function render() {
     : state.tab === 'draft' ? draft.render()
       : state.tab === 'matchup' ? matchup.render()
         : state.tab === 'moves' ? moves.render()
-          : home.render() + coOwnersPanel();
+          : state.tab === 'mock' ? mock.render()
+            : home.render() + coOwnersPanel();
   return `${tabsHtml()}<div class="section-body">${body}</div>`;
 }
 
@@ -80,6 +86,7 @@ export async function enter() {
   // A stale notice or a half-finished ask from a previous visit must not greet
   // the next one.
   coowners.reset();
+  mock.reset();
   home.load(app);
 }
 
@@ -129,6 +136,29 @@ export async function onAction(act, target) {
       } else if (state.tab === 'moves') {
         moves.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
       }
+      return;
+
+    // ── Mock draft (no league, no server) ──
+    case 'mock-set':
+      mock.setField(app, target.dataset.field, target.value);
+      return;
+    case 'mock-start':
+      mock.start(app);
+      return;
+    case 'mock-reset':
+      mock.restart(app);
+      return;
+    case 'mock-sim':
+      mock.simulate(app);
+      return;
+    case 'mock-search':
+      mock.search(app, target.value, target.selectionStart);
+      return;
+    case 'draft-filter':
+      mock.setFilter(app, target.dataset.filter);
+      return;
+    case 'draft-take':
+      mock.take(app, target.dataset.player);
       return;
 
     case 'league-retry':
