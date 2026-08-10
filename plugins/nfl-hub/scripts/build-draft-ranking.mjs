@@ -30,6 +30,23 @@ const FANTASY = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
 // Deep enough for a 12-team, 16-round draft (192 picks) with real margin.
 const DEPTH = 400;
 
+/**
+ * ⚠️ RANK BY VALUE OVER REPLACEMENT, NEVER BY RAW POINTS.
+ *
+ * Quarterbacks outscore everyone — so a raw-points ranking put FIVE of them in
+ * the first twelve picks, which is not what a fantasy draft looks like and made
+ * the board read as broken. What matters is not what a player scores, it is how
+ * much more they score than the player you could have had instead at the same
+ * position.
+ *
+ * The baseline is the last starter a 12-team league would roster at each
+ * position: 12 quarterbacks, 24 running backs (two starters each), 36 receivers,
+ * 12 tight ends. Subtracting that replacement level is what pushes the elite
+ * running backs and receivers up where they belong and lets the twelfth-best
+ * quarterback fall to where he is actually worth taking.
+ */
+const REPLACEMENT_RANK = { QB: 12, RB: 24, WR: 36, TE: 12, K: 12, DEF: 12 };
+
 const SCORING = [['ppr', 'pts_ppr'], ['half', 'pts_half_ppr'], ['std', 'pts_std']];
 
 const stats = await (await fetch(`https://api.sleeper.app/v1/stats/nfl/regular/${season}`)).json();
@@ -50,9 +67,28 @@ for (const [key, field] of SCORING) {
     if (!p || !FANTASY.has(String(p.p ?? '').toUpperCase())) continue;
     rows.push([id, pts]);
   }
-  rows.sort((a, b) => b[1] - a[1]);
-  out[key] = rows.slice(0, DEPTH).map(([id]) => id);
-  console.log(`  ${key.padEnd(4)} ${out[key].length} players`);
+  // Replacement level per position, from that position's own sorted points.
+  const byPos = {};
+  for (const [id, pts] of rows) {
+    const pos = String(index[id].p).toUpperCase();
+    (byPos[pos] ??= []).push(pts);
+  }
+  const baseline = {};
+  for (const [pos, pts] of Object.entries(byPos)) {
+    pts.sort((a, b) => b - a);
+    const n = REPLACEMENT_RANK[pos] ?? 12;
+    // Short of a full baseline, the last real player is the best answer there is.
+    baseline[pos] = pts[Math.min(n, pts.length) - 1] ?? 0;
+  }
+
+  const vor = rows.map(([id, pts]) => {
+    const pos = String(index[id].p).toUpperCase();
+    return [id, pts - (baseline[pos] ?? 0)];
+  });
+  vor.sort((a, b) => b[1] - a[1]);
+  out[key] = vor.slice(0, DEPTH).map(([id]) => id);
+  const top = out[key].slice(0, 12).map((id) => String(index[id].p).toUpperCase());
+  console.log(`  ${key.padEnd(4)} ${out[key].length} players · first round: ${top.join(' ')}`);
 }
 
 const path = join(HERE, '..', 'assets', 'draft-ranking.json');

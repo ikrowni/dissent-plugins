@@ -139,3 +139,15 @@ describe('failure', () => {
     expect(html).toContain('mock-reset');
   });
 });
+
+describe('the rank shown in the pool', () => {
+  // ⚠️ It is the ORIGINAL ranking position, not the index in what is left.
+  // Renumbering from 1 on every pick hides the only thing the number is for:
+  // how far a player has slid past where they were supposed to go.
+  it('keeps a player’s original rank after others are taken', () => {
+    _state.mock = startedMock({ slot: 12 }); // eleven bots have already picked
+    const html = render();
+    const firstRank = Number(html.match(/db-rank">(\d+)</)[1]);
+    expect(firstRank).toBeGreaterThan(1);
+  });
+});

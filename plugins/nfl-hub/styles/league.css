@@ -161,7 +161,7 @@ h4 {
 .db-scroll { overflow-x: auto; padding-bottom: 6px; }
 /* ⚠️ Fixed column width, not 1fr. Auto columns resize as names arrive, so the
  * board visibly reflows on every pick — in a live draft that is nauseating. */
-.db { display: grid; grid-template-columns: 34px repeat(var(--db-cols), 116px); gap: 3px; min-width: min-content; }
+.db { display: grid; grid-template-columns: 32px repeat(var(--db-cols), 132px); gap: 3px; min-width: min-content; }
 .db-row { display: contents; }
 
 .db-rd {
@@ -178,7 +178,7 @@ h4 {
 .db-th.mine { color: var(--gold); }
 
 .db-cell {
-  position: relative; min-height: 46px; padding: 6px 8px;
+  position: relative; min-height: 50px; padding: 6px 8px;
   border-radius: var(--r-sm); background: rgba(255,255,255,0.022);
   border: 1px solid transparent; overflow: hidden;
 }
@@ -189,8 +189,11 @@ h4 {
 /* A made pick: the position colour is the whole point of the cell. */
 .db-made { border-left: 3px solid var(--db-pos, var(--text-3)); background: var(--ink-2); }
 .db-name {
-  display: block; font-size: 11.5px; font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: block; font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.25;
+  /* Two lines before truncating: "Christian McCaffrey" fits, and a board of
+   * ellipses is a board you cannot read at a glance. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .db-sub { display: block; font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-3); margin-top: 2px; }
 .db-auto {

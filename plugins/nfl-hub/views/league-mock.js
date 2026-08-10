@@ -108,7 +108,11 @@ function boardPane() {
   const teamLabel = (t) => (t === m.myTeam ? 'You' : `Team ${String(t).replace('m', '')}`);
   const isMine = (t) => t === m.myTeam;
 
-  const all = availableIn(m).map((e, i) => ({ ...e, rank: i + 1 }));
+  // ⚠️ THE ORIGINAL RANK, not the position in the remaining pool. Renumbering
+  // the available list from 1 on every pick hides the only thing the number is
+  // for — how far a player has slid past where they were supposed to go.
+  const rankOf = new Map(m.ranking.map((id, i) => [id, i + 1]));
+  const all = availableIn(m).map((e) => ({ ...e, rank: rankOf.get(e.id) }));
   const q = state.query.trim().toLowerCase();
   const shown = all.filter((e) => matchesFilter(e.pos, state.filter)
     && (!q || String(playerOf(e.id)?.n ?? '').toLowerCase().includes(q)));
