@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   slotAccepts, eligiblePositions, splitRosterPositions, validateLineup,
-  NON_SCORING_SLOTS, KNOWN_SLOTS,
+  NON_SCORING_SLOTS, KNOWN_SLOTS, irEligible, IR_ELIGIBLE_STATUSES,
 } from './slots.js';
 
 const fx = (n) => JSON.parse(readFileSync(new URL(`../../tests/fixtures/${n}`, import.meta.url), 'utf8'));
@@ -137,5 +137,60 @@ describe('validateLineup', () => {
     const illegal = Array(starters.length).fill(null);
     illegal[10] = 'p5'; // FLEX
     expect(validateLineup(illegal, starters, positionOf).valid).toBe(false);
+  });
+});
+
+describe('irEligible', () => {
+  // ⚠️ IR accepts any POSITION — it is storage — but not any PLAYER. These are
+  // two different questions and `slotAccepts` deliberately answers only the
+  // first.
+  it('is separate from slotAccepts, which takes anybody', () => {
+    expect(slotAccepts('IR', 'QB')).toBe(true);
+    expect(irEligible(null)).toBe(false);
+  });
+
+  it('accepts the season-length reserve designations', () => {
+    for (const s of ['IR', 'PUP', 'NFI', 'NA', 'COV', 'DNR', 'SUS']) {
+      expect(irEligible(s)).toBe(true);
+    }
+  });
+
+  // ⚠️ THE RULE THAT MATTERS. Out and Doubtful are week-to-week game statuses,
+  // and letting them onto IR hands every manager a free extra bench spot every
+  // Sunday — IR does not count against the roster limit.
+  it('refuses week-to-week game statuses', () => {
+    for (const s of ['Out', 'Doubtful', 'Questionable', 'Probable']) {
+      expect(irEligible(s)).toBe(false);
+    }
+  });
+
+  it('refuses a healthy player', () => {
+    expect(irEligible(null)).toBe(false);
+    expect(irEligible(undefined)).toBe(false);
+    expect(irEligible('')).toBe(false);
+    expect(irEligible('   ')).toBe(false);
+  });
+
+  // Sleeper writes "Sus", not "SUS".
+  it('ignores case and surrounding space in the designation', () => {
+    expect(irEligible('Sus')).toBe(true);
+    expect(irEligible(' ir ')).toBe(true);
+    expect(irEligible('Pup')).toBe(true);
+  });
+
+  it('lets a league widen the set', () => {
+    expect(irEligible('Out')).toBe(false);
+    expect(irEligible('Out', { allowed: ['IR', 'Out'] })).toBe(true);
+  });
+
+  // An empty override is a misconfiguration, not an instruction to allow
+  // everybody onto IR.
+  it('falls back to the default set rather than allowing anyone', () => {
+    expect(irEligible('Out', { allowed: [] })).toBe(false);
+    expect(irEligible('IR', { allowed: [] })).toBe(true);
+  });
+
+  it('narrows as well as widens', () => {
+    expect(irEligible('SUS', { allowed: ['IR'] })).toBe(false);
   });
 });

@@ -154,11 +154,19 @@ export async function onAction(act, target) {
     case 'mock-search':
       mock.search(app, target.value, target.selectionStart);
       return;
+    // ⚠️ SHARED ACTION NAMES, TWO BOARDS. `views/draft-board.js` renders the pool
+    // and the filter row for BOTH the live draft and the mock, so these arrive
+    // from whichever is on screen and the tab is the only thing that says which.
+    // Routing them straight to the mock — as they were, back when only the mock
+    // had a pool — made the live board's Draft buttons silently pick in a mock
+    // that was not running.
     case 'draft-filter':
-      mock.setFilter(app, target.dataset.filter);
+      if (state.tab === 'draft') draft.setFilter(app, target.dataset.filter);
+      else mock.setFilter(app, target.dataset.filter);
       return;
     case 'draft-take':
-      mock.take(app, target.dataset.player);
+      if (state.tab === 'draft') draft.pick(app, target.dataset.player);
+      else mock.take(app, target.dataset.player);
       return;
 
     case 'league-retry':
@@ -293,7 +301,7 @@ export async function onAction(act, target) {
       });
       return;
     case 'roster-slot':
-      roster.setSlot(target.dataset.index, target.value);
+      roster.setSlot(app, target.dataset.index, target.value);
       return;
     case 'roster-save':
       roster.save(app);

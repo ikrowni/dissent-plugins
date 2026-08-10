@@ -9,7 +9,7 @@ import { esc, panel, stateMsg } from '../core/ui.js';
 import { playerChip, positionColor } from '../core/player-visuals.js';
 import { getIndex } from '../core/player-index.js';
 import { setLineup, getLineup, dropPlayer, movePlayer } from '../core/league-api.js';
-import { splitRosterPositions, slotAccepts } from '../core/league/slots.js';
+import { splitRosterPositions, slotAccepts, irEligible } from '../core/league/slots.js';
 import { describe } from './league-home.js';
 
 const state = {
@@ -44,7 +44,7 @@ export function render() {
     return panel({ title: 'My Roster', body: '<p class="muted">You do not have a team in this league yet.</p>' });
   }
 
-  const { starters } = splitRosterPositions(state.league?.settings?.rosterPositions);
+  const { starters, ir: irSlots } = splitRosterPositions(state.league?.settings?.rosterPositions);
   const roster = state.league?.assets?.rosters?.[state.teamId] ?? { players: [], ir: [], taxi: [] };
   const started = new Set(state.lineup.filter(Boolean).map(String));
   const bench = (roster.players ?? []).map(String).filter((id) => !started.has(id));
@@ -65,8 +65,7 @@ export function render() {
           <tbody>${bench.map((id) => benchRow(id)).join('')}</tbody>
         </table>`}
 
-      ${(roster.ir ?? []).length ? `<h4>Injured reserve</h4>
-        <table class="tbl"><tbody>${roster.ir.map((id) => benchRow(id, 'ir')).join('')}</tbody></table>` : ''}
+      ${irSection(roster, irSlots)}
 
       <div class="row-actions">
         <button class="btn primary" data-act="roster-save" ${state.busy ? 'disabled' : ''}>
@@ -76,6 +75,57 @@ export function render() {
       </div>`,
   });
 }
+
+/**
+ * Injured reserve — the slots, not just the occupants.
+ *
+ * ⚠️ THE EMPTY SLOTS ARE THE POINT. This used to render nothing at all until
+ * somebody was already on IR, so a manager could not see that the league HAD an
+ * IR slot, let alone that one was free. An empty roster spot you cannot see is
+ * an empty roster spot you never use.
+ *
+ * ⚠️ There is no picker here on purpose. A player reaches IR from the bench, and
+ * only if he carries a reserve designation — see `irWatchlist`.
+ */
+function irSection(roster, irSlots) {
+  if (!irSlots) return '';
+  const held = (roster.ir ?? []).map(String);
+  const empty = Math.max(0, irSlots - held.length);
+
+  const rows = [
+    ...held.map((id) => benchRow(id, 'ir')),
+    ...Array.from({ length: empty }, () => `<tr class="ir-empty">
+      <td><span class="db-slot-empty">Empty IR slot</span></td>
+      <td class="num"></td>
+    </tr>`),
+  ].join('');
+
+  return `<h4>Injured reserve <span class="muted">${held.length} / ${irSlots}</span></h4>
+    <table class="tbl"><tbody>${rows}</tbody></table>
+    ${watchlistNote(roster)}`;
+}
+
+/**
+ * Who on this roster could actually go on IR.
+ *
+ * ⚠️ THE LIST EXISTS SO THE RULE IS NOT A MYSTERY. The IR button is hidden for
+ * everybody else, and a hidden button with no explanation reads as a broken
+ * screen — the manager cannot tell whether the feature is missing or the player
+ * is ineligible.
+ */
+function watchlistNote(roster) {
+  const eligible = (roster.players ?? []).map(String).filter((id) => irEligible(injuryOf(id)));
+  if (eligible.length === 0) {
+    return `<p class="tiny">Nobody on your roster is IR-eligible. A player has to carry a
+      season-length reserve designation — ${esc(IR_LABEL)} — before he can be placed here.
+      Out and Doubtful are week-to-week and do not qualify.</p>`;
+  }
+  return `<p class="tiny">IR watchlist: ${eligible
+    .map((id) => `${esc(playerLabel(id))} <b>${esc(injuryOf(id))}</b>`)
+    .join(', ')}. Move one across with the IR button on the bench.</p>`;
+}
+
+const IR_LABEL = 'IR, PUP, NFI, NA, COV, DNR or suspended';
 
 /**
  * One starting slot, with a picker of the players eligible for it.
@@ -106,13 +156,29 @@ function slotRow(slot, index, current, bench) {
   </tr>`;
 }
 
+/**
+ * One held player, on the bench or on IR.
+ *
+ * ⚠️ THE IR BUTTON IS GATED ON THE DESIGNATION, NOT JUST HIDDEN WHEN FULL. IR is
+ * a roster spot that does not count against the roster limit, so letting a
+ * healthy player sit there is a free extra bench spot for whoever thinks to try
+ * it. The module refuses it too — this only stops the manager from finding out
+ * the hard way.
+ */
 function benchRow(id, where = 'bench') {
   const p = getIndex()?.[String(id)] ?? null;
+  const status = injuryOf(id);
+  const canIR = where === 'bench' && irEligible(status);
+
   return `<tr>
-    <td>${p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(id))}</td>
+    <td>
+      ${p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(id))}
+      ${status ? `<span class="inj-tag" title="Injury designation">${esc(status)}</span>` : ''}
+    </td>
     <td class="num">
       ${where === 'bench'
-    ? `<button class="btn tiny" data-act="roster-ir" data-player="${esc(id)}">IR</button>`
+    ? `<button class="btn tiny" data-act="roster-ir" data-player="${esc(id)}"
+               ${canIR ? '' : 'disabled title="Only a player carrying a season-length reserve designation may be placed on IR"'}>IR</button>`
     : `<button class="btn tiny" data-act="roster-activate" data-player="${esc(id)}">Activate</button>`}
       <button class="btn tiny danger" data-act="roster-drop" data-player="${esc(id)}">Drop</button>
     </td>
@@ -137,6 +203,19 @@ function playerLabel(id) {
 
 function positionOf(id) {
   return index?.[String(id)]?.p ?? null;
+}
+
+/**
+ * A player's injury designation, or null when healthy.
+ *
+ * ⚠️ AS FRESH AS THE INDEX, AND NO FRESHER. `i` is written by
+ * `scripts/build-player-index.mjs` from Sleeper's player database, so it is a
+ * committed snapshot rather than a live feed — regenerate the asset in-season or
+ * a player who has just been placed on IR will not be IR-eligible here yet. The
+ * module reads the same asset, so the two never disagree.
+ */
+function injuryOf(id) {
+  return index?.[String(id)]?.i ?? null;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -166,17 +245,28 @@ export async function load(app, { leagueId, league, teamId, week }) {
   }
 }
 
-/** A slot changed. Kept in state rather than saved, so one save is one request. */
-export function setSlot(index_, playerId) {
+/**
+ * A slot changed. Kept in state rather than saved, so one save is one request.
+ *
+ * ⚠️ THE REPAINT IS PART OF THE RULE, NOT A NICETY. Every other slot's dropdown
+ * is built from the BENCH, which is "held, minus whoever is already starting" —
+ * so the lists are only correct as of the last render. Without repainting, a
+ * player you just started stayed listed in all eleven other slots and could be
+ * picked again; the state deduped it silently underneath, so the screen showed
+ * one lineup and the save sent a different one.
+ */
+export function setSlot(app, index_, playerId) {
   const i = Number(index_);
   if (!Number.isInteger(i) || i < 0 || i >= state.lineup.length) return;
   const id = playerId ? String(playerId) : null;
-  // Starting someone already in another slot moves them, rather than cloning.
+
   if (id) {
+    // Starting someone already in another slot MOVES them, rather than cloning.
     const existing = state.lineup.indexOf(id);
     if (existing !== -1 && existing !== i) state.lineup[existing] = null;
   }
   state.lineup[i] = id;
+  app?.router?.refresh();
 }
 
 export async function save(app) {

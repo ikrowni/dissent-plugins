@@ -40,6 +40,16 @@ for (const [id, p] of Object.entries(all)) {
     p: pos,
     t: p.team ?? null,
     e: p.espn_id ? Number(p.espn_id) : null,
+    // ⚠️ `i` IS LOAD-BEARING, NOT DECORATION. It is the only injury designation
+    // anywhere in the native league, and it is what decides whether a player may
+    // be placed on IR — on the client AND in the signed module, which reads this
+    // same asset. A stale asset means a player placed on IR yesterday is not yet
+    // IR-eligible here, so REGENERATE THIS WEEKLY IN SEASON.
+    //
+    // Omitted entirely when healthy: ~95% of records carry no designation, and a
+    // null on every one of them costs more than the field is worth across 5,000
+    // players in a file that ships to every viewer.
+    ...(p.injury_status ? { i: String(p.injury_status) } : {}),
   };
 }
 

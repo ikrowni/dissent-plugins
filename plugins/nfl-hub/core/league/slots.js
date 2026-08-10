@@ -46,8 +46,8 @@ export const KNOWN_SLOTS = Object.freeze([...Object.keys(ELIGIBILITY), ...NON_SC
  *
  * Bench, IR and taxi accept anyone — they are storage, not lineup positions.
  * Eligibility to *hold* a player there is separate from eligibility to *place*
- * one there: see `irEligible` for the injury-designation rules, which are a
- * league setting rather than a property of the slot.
+ * one there: see `irEligible` above for the injury-designation rules, which are
+ * a league setting rather than a property of the slot.
  */
 export function slotAccepts(slot, position) {
   if (!slot || !position) return false;
@@ -57,6 +57,37 @@ export function slotAccepts(slot, position) {
   // a league's roster_positions silently create a slot that takes any player.
   if (!allowed) return false;
   return allowed.includes(position);
+}
+
+/**
+ * The injury designations that qualify a player for an IR slot.
+ *
+ * ⚠️ "OUT" AND "DOUBTFUL" ARE DELIBERATELY ABSENT. They are week-to-week game
+ * statuses, and a league that let them onto IR would hand every manager a free
+ * extra roster spot every Sunday — which is not a cosmetic difference, it is a
+ * competitive one. These are the season-length reserve designations only.
+ *
+ * Sleeper's `injury_status` spellings, upper-cased: IR, PUP, NFI, NA (not
+ * active), COV (covid list), DNR (did not report), SUS (suspended).
+ */
+export const IR_ELIGIBLE_STATUSES = Object.freeze(['IR', 'PUP', 'NFI', 'NA', 'COV', 'DNR', 'SUS']);
+
+/**
+ * May a player carrying this injury designation be PLACED on IR?
+ *
+ * ⚠️ SEPARATE FROM `slotAccepts`. IR accepts any position — it is storage — but
+ * not any player. Holding a player there and being allowed to put them there are
+ * different questions, and conflating them is how a healthy stud ends up parked
+ * on IR to free a bench spot.
+ *
+ * `status` is null for a healthy player, which is the common case and is a
+ * refusal, not an error. A league may widen the set via `settings.irStatuses`.
+ */
+export function irEligible(status, { allowed = IR_ELIGIBLE_STATUSES } = {}) {
+  const s = String(status ?? '').trim().toUpperCase();
+  if (!s) return false;
+  const list = Array.isArray(allowed) && allowed.length ? allowed : IR_ELIGIBLE_STATUSES;
+  return list.some((a) => String(a).trim().toUpperCase() === s);
 }
 
 /** The positions a slot accepts, or [] for an unknown slot. */

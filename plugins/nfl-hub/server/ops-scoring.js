@@ -47,18 +47,42 @@ export function refreshPositions({ p, payload }) {
 
   const index = fetchJSON({ url: INDEX_URL });
   const map = {};
+  // ⚠️ Injuries ride along on the SAME fetch. IR eligibility needs a designation
+  // per player, and the alternative — a second feed — would be another 300 KB
+  // against the install's daily allowance for data already in this response.
+  // Only the designated are stored; ~95% of players carry nothing.
+  const injuries = {};
   for (const [id, rec] of Object.entries(index ?? {})) {
     if (rec?.p) map[id] = rec.p;
+    if (rec?.i) injuries[id] = String(rec.i);
   }
   if (Object.keys(map).length === 0) refuse("player index returned no positions");
 
-  writeUncontended(POSITIONS_KEY, { map, refreshedAt: Date.now(), count: Object.keys(map).length });
-  return { positions: Object.keys(map).length };
+  writeUncontended(POSITIONS_KEY, {
+    map, injuries, refreshedAt: Date.now(), count: Object.keys(map).length,
+  });
+  return { positions: Object.keys(map).length, injuries: Object.keys(injuries).length };
 }
 
 /** The cached map, or an empty one. Never fetches — scoring must not block on it. */
 export function positionMap() {
   return read(POSITIONS_KEY, { map: {} }).map ?? {};
+}
+
+/**
+ * Injury designations, or NULL when this install has never cached any.
+ *
+ * ⚠️ NULL AND `{}` MEAN DIFFERENT THINGS, and conflating them breaks IR either
+ * way. A record written before injuries were cached has no `injuries` key at
+ * all — reading that as "nobody is injured" would refuse EVERY IR move until the
+ * next weekly refresh. An empty object written BY a refresh genuinely means
+ * nobody in the league is designated. So: null disables the check, `{}` enforces
+ * it.
+ */
+export function injuryMap() {
+  const rec = read(POSITIONS_KEY, null);
+  if (!rec || !rec.injuries) return null;
+  return rec.injuries;
 }
 
 /**

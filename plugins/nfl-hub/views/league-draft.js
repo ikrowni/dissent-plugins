@@ -9,20 +9,52 @@
 // server-side, which is the whole deadline-on-read design: the node's scheduler
 // floor is five minutes and cannot drive a 90-second timer, so the board being
 // open is what keeps a live draft moving.
+//
+// ⚠️ TICKING AND POLLING ARE TWO DIFFERENT TIMERS, AND ONLY ONE OF THEM PAINTS.
+// They used to be one 3-second interval that re-rendered the whole view, which
+// made the clock jump three seconds at a time, wiped the search box mid-word on
+// every tick, and reset the scroll position of the board. The tick now writes
+// one text node and touches nothing else; a full re-render happens only when the
+// draft ACTUALLY CHANGED — a pick, a status change, somebody new on the clock.
 
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
-  renderBoard, renderOnTheClock, renderRosterProgress,
+  renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
 } from './draft-board.js';
 import { getIndex } from '../core/player-index.js';
-import { playerChip } from '../core/player-visuals.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft,
 } from '../core/league-api.js';
-import { loadIndex, searchPlayers, playerLabel } from '../core/player-index.js';
+import { loadIndex, searchPlayers } from '../core/player-index.js';
+import { loadRanking, rankingFor } from '../core/draft-ranking.js';
+import {
+  availablePool, filterPool, poolCounts, matchesFilter,
+} from '../core/league/draft-pool.js';
 import { describe } from './league-home.js';
 
+/** How often the board is re-read from the module. */
 const POLL_MS = 3000;
+
+/**
+ * How often the digits are repainted.
+ *
+ * ⚠️ FASTER THAN ONE SECOND, ON PURPOSE. A 1000 ms interval drifts against the
+ * wall clock, so the display skips a second every so often — the exact stutter
+ * this was reported as. Sampling four times a second and writing only when the
+ * rendered string changed costs one string compare and makes every second land.
+ */
+const TICK_MS = 250;
+
+/**
+ * A draft that is not running still has to notice when it starts.
+ *
+ * ⚠️ Polled SLOWER, not never. The old code kept the interval alive on a `pre`
+ * draft but never re-read it, so a manager waiting for the commissioner to start
+ * sat on "waiting for the commissioner" forever while the draft ran without
+ * them. Every 5th poll is ~15 s, which is responsive enough for a lobby and
+ * cheap against the install's daily invocation allowance.
+ */
+const IDLE_POLL_EVERY = 5;
 
 const state = {
   leagueId: null,
@@ -32,9 +64,11 @@ const state = {
   error: null,
   busy: false,
   notice: null,
-  localDeadline: null, // epoch ms, refreshed from the server on every poll
+  localDeadline: null,    // epoch ms, refreshed from the server on every poll
+  frozenRemaining: null,  // ms banked while paused — see the clock note below
+  ranking: [],
+  filter: 'ALL',
   query: '',
-  results: [],
   // ⚠️ "No draft yet" is a STATE, not an error. The module refuses `draft:get`
   // for a league that has never created one, and rendering that refusal as an
   // error pane left a commissioner staring at "Try again" — a button that could
@@ -42,14 +76,17 @@ const state = {
   noDraft: false,
 };
 
-let timer = null;
+let pollTimer = null;
+let tickTimer = null;
+let idleTicks = 0;
+let lastClockText = null;
 
 export function reset() {
   stopPolling();
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
-    error: null, busy: false, notice: null, localDeadline: null, query: '', results: [],
-    noDraft: false,
+    error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
+    ranking: [], filter: 'ALL', query: '', noDraft: false,
   });
 }
 
@@ -128,28 +165,53 @@ function completePane(d) {
 }
 
 /**
- * Search-and-pick, now with portraits.
+ * The pool of players still on the board.
  *
- * ⚠️ THE LIST EXCLUDES PLAYERS ALREADY DRAFTED. Offering one produces a refusal
- * on every click, and the manager cannot tell whether they mistyped or somebody
- * beat them to him — which, on a live clock, is the worst possible ambiguity.
+ * ⚠️ THIS LIST IS THE DRAFT BOARD'S WHOLE JOB, and it used to be a search box
+ * with nothing in it — you could only draft somebody whose name you had already
+ * thought of, and the list stayed empty until you typed two letters. It is now
+ * populated from the ranking, ordered best-first, with a tab per position so
+ * "who is the best receiver left" is one click rather than a memory test.
+ *
+ * ⚠️ SHOWN WHETHER OR NOT IT IS YOUR TURN. Only the Draft buttons are gated. A
+ * board you cannot look at until you are on the clock gives you ninety seconds
+ * to do all of your thinking.
  */
-function pickForm() {
-  const rows = state.results.map((p) => {
-    const rec = getIndex()?.[String(p.id)] ?? { n: p.name, p: p.position, t: p.team };
-    return `<div class="db-pool-row">
-      ${playerChip(rec, { size: 34, compact: true })}
-      <button class="btn primary db-take" data-act="draft-pick-player" data-player="${esc(p.id)}"
-              ${state.busy ? 'disabled' : ''}>Draft</button>
-    </div>`;
-  }).join('');
+function pickPool(mine) {
+  const nameOf = (id) => getIndex()?.[String(id)]?.n ?? '';
+  const positionOf = (id) => getIndex()?.[String(id)]?.p ?? null;
+  const playerOf = (id) => getIndex()?.[String(id)] ?? null;
+
+  const pool = availablePool({ ranking: state.ranking, taken: takenIds(), positionOf });
+  const counts = poolCounts(pool);
+  const ranked = pool.length > 0;
+
+  // ⚠️ A MISSING RANKING MUST NOT MEAN A DRAFT NOBODY CAN MAKE A PICK IN. The
+  // ranking is a static asset and it can fail to load; before the pool existed
+  // this screen was search-only, so falling back to exactly that keeps a live
+  // draft playable on the one day the CDN misbehaves. It is a degraded mode and
+  // it says so — an unranked list with no explanation would read as the feature
+  // being broken rather than the data being missing.
+  const shown = ranked
+    ? filterPool(pool, { filter: state.filter, query: state.query, nameOf })
+    : searchPlayers(state.query, { taken: takenIds(), limit: 25 })
+      .map((p) => ({ id: p.id, pos: String(p.position ?? '').toUpperCase() }))
+      .filter((e) => matchesFilter(e.pos, state.filter));
+
+  const empty = state.query.trim()
+    ? 'Nobody available matches that.'
+    : 'Nobody left at that position.';
 
   return `
     <input class="db-search" type="search" data-act="draft-search" placeholder="Search players…"
-           value="${esc(state.query)}" autocomplete="off" ${state.busy ? 'disabled' : ''}>
-    ${state.query.trim().length < 2
-    ? '<p class="muted">Type at least two letters to find a player.</p>'
-    : (rows ? `<div class="db-pool">${rows}</div>` : '<p class="muted">No available player matches that.</p>')}`;
+           value="${esc(state.query)}" autocomplete="off">
+    ${renderFilters(state.filter, ranked ? counts : {})}
+    ${ranked || state.query.trim().length >= 2
+    ? renderPool({ available: shown, playerOf, canPick: mine && !state.busy, emptyText: empty })
+    : `<p class="muted">The ranked player pool could not be loaded, so the board is falling
+       back to search — type at least two letters to find a player.
+       <button class="btn tiny" data-act="draft-retry">Try loading it again</button></p>`}
+    ${mine ? '' : '<p class="tiny">Waiting on the manager who is up — you can still look around.</p>'}`;
 }
 
 /**
@@ -183,19 +245,20 @@ function normalizeClock(d) {
 
 function livePane(d) {
   const clock = normalizeClock(d);
-  const mine = clock && String(clock.owner) === String(state.teamId);
-  const remaining = state.localDeadline === null ? null : state.localDeadline - Date.now();
+  const mine = Boolean(clock) && String(clock.owner) === String(state.teamId);
   const playerOf = (id) => getIndex()?.[String(id)] ?? null;
   const owned = Object.values(d.picks ?? {})
     .filter((p) => String(p.teamId) === String(state.teamId))
     .map((p) => ({ id: String(p.playerId), pos: String(playerOf(p.playerId)?.p ?? '').toUpperCase() }));
   const slots = state.league?.settings?.rosterPositions?.filter((x) => x !== 'BN' && x !== 'IR' && x !== 'TAXI') ?? [];
+  const paused = d.status === 'paused';
 
   return panel({
     title: 'Draft',
-    right: `<span class="clock ${remaining !== null && remaining < 15000 ? 'urgent' : ''}">${formatClock(remaining)}</span>`,
+    right: `<span class="clock${paused ? ' paused' : ''}" data-draft-clock>${esc(clockText())}</span>`,
     body: `
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
+      ${paused ? '<p class="notice">The draft is paused. The clock resumes where it stopped.</p>' : ''}
       ${renderOnTheClock({
     onClock: clock,
     teamLabel: (t) => teamName(t),
@@ -203,15 +266,15 @@ function livePane(d) {
   })}
       <div class="mock-cols">
         <div class="mock-pool-col">
-          ${mine ? pickForm() : '<p class="muted">Waiting on the manager who is up.</p>'}
+          ${pickPool(mine && !paused)}
         </div>
         <div class="mock-side">
           <h4>Your roster</h4>
           ${renderRosterProgress({ slots, owned, playerOf })}
           ${d.isCommissioner ? `
             <div class="row-actions">
-              <button class="btn" data-act="draft-pause" data-paused="${d.status === 'paused'}">
-                ${d.status === 'paused' ? 'Resume draft' : 'Pause draft'}
+              <button class="btn" data-act="draft-pause" data-paused="${paused}">
+                ${paused ? 'Resume draft' : 'Pause draft'}
               </button>
             </div>` : ''}
         </div>
@@ -230,36 +293,125 @@ function teamName(teamId) {
   return state.league?.teams?.[String(teamId)]?.name ?? String(teamId);
 }
 
+// ── The clock ────────────────────────────────────────────────────────────────
+
+/**
+ * Milliseconds left on the current pick.
+ *
+ * ⚠️ A PAUSED CLOCK DOES NOT COUNT DOWN. While paused the module reports the
+ * banked remainder and no deadline, so the display holds still — counting down
+ * against a deadline that is not running is how a paused draft appears to expire.
+ */
+export function remainingMs() {
+  if (state.frozenRemaining !== null) return state.frozenRemaining;
+  if (state.localDeadline === null) return null;
+  return Math.max(0, state.localDeadline - Date.now());
+}
+
+function clockText() {
+  return formatClock(remainingMs());
+}
+
+/**
+ * Repaint the clock alone.
+ *
+ * ⚠️ ONE TEXT NODE, NEVER `router.refresh()`. A refresh replaces the whole
+ * section's innerHTML, which destroys the search input the manager is typing
+ * into and resets the board's scroll — four times a second, that is not a
+ * screen anybody can use.
+ */
+export function paintClock() {
+  if (typeof document === 'undefined') return;
+  const el = document.querySelector('[data-draft-clock]');
+  if (!el) { lastClockText = null; return; }
+  const remaining = remainingMs();
+  const text = formatClock(remaining);
+  if (text !== lastClockText) {
+    el.textContent = text;
+    lastClockText = text;
+  }
+  el.classList.toggle('urgent', remaining !== null && remaining > 0 && remaining < 15000);
+}
+
+/**
+ * What a repaint would have to be caused by.
+ *
+ * ⚠️ THE CLOCK IS DELIBERATELY NOT IN IT. Including the deadline would make
+ * every poll a full re-render again, which is the bug this exists to stop. Only
+ * things that change the SHAPE of the screen belong here.
+ */
+export function fingerprint(d) {
+  if (!d) return 'none';
+  return [
+    d.status,
+    Object.keys(d.picks ?? {}).length,
+    d.onClock?.overall ?? '-',
+    d.isCommissioner ? 'c' : '-',
+  ].join('|');
+}
+
 // ── Polling ──────────────────────────────────────────────────────────────────
 
 function startPolling(app) {
   stopPolling();
-  timer = setInterval(() => {
-    // Only poll while a draft is actually running. A finished or unstarted draft
-    // does not change on its own, and polling it burns the install's daily
-    // invocation allowance for nothing.
-    if (state.draft && (state.draft.status === 'active')) {
-      poll(app);
-    } else if (state.draft && state.draft.status !== 'pre') {
-      stopPolling();
+  idleTicks = 0;
+
+  tickTimer = setInterval(paintClock, TICK_MS);
+
+  pollTimer = setInterval(async () => {
+    const status = state.draft?.status;
+    // A finished draft cannot change on its own; stop rather than burn the
+    // install's daily invocation allowance on a settled board.
+    if (!status || status === 'complete') { stopPolling(); return; }
+
+    if (status !== 'active') {
+      idleTicks += 1;
+      if (idleTicks % IDLE_POLL_EVERY !== 0) return;
     }
-    app?.router?.refresh();
+
+    const before = fingerprint(state.draft);
+    await poll(app);
+    if (fingerprint(state.draft) !== before) refreshKeepingSearch(app);
+    else paintClock();
   }, POLL_MS);
 }
 
 export function stopPolling() {
-  if (timer) { clearInterval(timer); timer = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  lastClockText = null;
+}
+
+/**
+ * Re-render, then put the manager back where they were.
+ *
+ * ⚠️ THE HUB RE-RENDERS THE WHOLE VIEW, which destroys the input element. A
+ * refresh landing mid-word used to drop focus and the caret, so a search typed
+ * during a live draft lost characters to whichever poll happened to land. Focus
+ * is only restored if it was in the box to begin with — stealing it otherwise
+ * would yank the page around for somebody who was reading the board.
+ */
+function refreshKeepingSearch(app) {
+  const active = typeof document === 'undefined' ? null : document.activeElement;
+  const wasSearch = Boolean(active?.matches?.('[data-act="draft-search"]'));
+  const caret = wasSearch ? active.selectionStart : null;
+  app?.router?.refresh();
+  if (wasSearch) restoreSearchFocus(caret);
+  paintClock();
 }
 
 async function poll(app) {
   try {
-    const d = await getDraft(state.leagueId);
+    const d = await getDraft(state.leagueId, state.ranking);
     state.draft = d;
     state.noDraft = false;
+
     // Re-anchor the local countdown to the server's answer on every poll.
-    state.localDeadline = d.msRemaining === null || d.msRemaining === undefined
-      ? null
-      : Date.now() + d.msRemaining;
+    const paused = d.status === 'paused';
+    const ms = d.msRemaining === null || d.msRemaining === undefined ? null : d.msRemaining;
+    state.frozenRemaining = paused ? ms : null;
+    state.localDeadline = paused || ms === null ? null : Date.now() + ms;
+
     if (d.autoPicked?.length) {
       state.notice = `${d.autoPicked.length} pick${d.autoPicked.length === 1 ? '' : 's'} auto-drafted after the clock expired.`;
     }
@@ -280,18 +432,39 @@ async function poll(app) {
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 export async function load(app, { leagueId, league, teamId }) {
-  Object.assign(state, { leagueId, league, teamId, error: null, notice: null, query: '', results: [] });
-  // Names and search both need the index; a draft board showing raw ids is
+  Object.assign(state, {
+    leagueId, league, teamId, error: null, notice: null, query: '', filter: 'ALL',
+  });
+  // Names and the pool both need the index; a draft board showing raw ids is
   // unusable even though it is technically correct.
   await loadIndex();
+  // ⚠️ THE RANKING IS ALSO WHAT THE SERVER AUTODRAFTS FROM. It is sent on every
+  // `draft:get`, and without it `bestAvailable` has nothing to choose from and
+  // returns null — so a lapsed pick is never resolved, the cascade stops, and
+  // the board sits at 0:00 with nobody able to move. A board that cannot load
+  // the ranking must still work, so this is best-effort.
+  try {
+    await loadRanking();
+    state.ranking = rankingFor(state.league?.settings?.scoring ?? 'ppr');
+  } catch {
+    state.ranking = [];
+  }
   await poll(app);
   startPolling(app);
   app?.router?.refresh();
+  paintClock();
 }
 
-/** Every id already drafted — the set the search must exclude. */
+/** Every id already drafted — the set the pool must exclude. */
 export function takenIds() {
   return new Set(Object.values(state.draft?.picks ?? {}).map((p) => String(p.playerId)));
+}
+
+/** Narrow the pool to one position. */
+export function setFilter(app, filter) {
+  state.filter = String(filter ?? 'ALL');
+  app?.router?.refresh();
+  paintClock();
 }
 
 /**
@@ -304,9 +477,9 @@ export function takenIds() {
  */
 export function search(app, query, caret = null) {
   state.query = String(query ?? '');
-  state.results = searchPlayers(state.query, { taken: takenIds(), limit: 10 });
   app?.router?.refresh();
   restoreSearchFocus(caret);
+  paintClock();
 }
 
 /** Put focus and the caret back after a re-render. */
@@ -330,6 +503,7 @@ export async function create(app) {
   await poll(app);
   startPolling(app);
   app?.router?.refresh();
+  paintClock();
 }
 
 export async function start(app) { await act(app, () => startDraft(state.leagueId)); }
@@ -339,11 +513,7 @@ export async function finalize(app) {
 }
 
 export async function pick(app, playerId) {
-  await act(app, () => makePick(state.leagueId, state.teamId, playerId), 'Pick made.');
-  // Re-filter against the new picks, so the player just taken leaves the list
-  // rather than sitting there inviting a second click.
-  if (state.query) state.results = searchPlayers(state.query, { taken: takenIds(), limit: 10 });
-  app?.router?.refresh();
+  await act(app, () => makePick(state.leagueId, state.teamId, playerId, state.ranking), 'Pick made.');
 }
 
 async function act(app, fn, notice = null) {
@@ -354,12 +524,13 @@ async function act(app, fn, notice = null) {
     await fn();
     state.notice = notice;
     await poll(app);
-    if (state.draft?.status === 'active') startPolling(app);
+    if (state.draft && state.draft.status !== 'complete') startPolling(app);
   } catch (err) {
     state.error = describe(err);
   } finally {
     state.busy = false;
     app?.router?.refresh();
+    paintClock();
   }
 }
 

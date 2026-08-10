@@ -8,10 +8,10 @@ import {
   requireUser, requireCommissioner, requireTeamControl, isCommissioner, teamsOf,
 } from "./auth.js";
 import { normalizeSettings, validateSettings } from "../core/league/settings.js";
-import { splitRosterPositions, validateLineup } from "../core/league/slots.js";
+import { splitRosterPositions, validateLineup, irEligible } from "../core/league/slots.js";
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
 import { generateRegularSeason } from "../core/league/schedule.js";
-import { positionMap } from "./ops-scoring.js";
+import { positionMap, injuryMap } from "./ops-scoring.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -314,6 +314,25 @@ export function movePlayer({ p, payload }) {
 
   const playerId = String(payload?.playerId ?? "");
   const compartment = String(payload?.compartment ?? "players");
+
+  // ⚠️ CHECKED BEFORE THE SWAP, because it depends on nothing inside it. IR does
+  // not count against the roster limit, so a healthy player parked there is a
+  // free extra bench spot — the client hides the button, and this is what makes
+  // hiding it a rule rather than a suggestion.
+  if (compartment === "ir") {
+    const injuries = injuryMap();
+    // null = this install has never cached injury data (see injuryMap). Refusing
+    // every IR move on that basis would break IR entirely rather than protect it.
+    if (injuries) {
+      const allowed = meta.settings?.irStatuses;
+      const status = injuries[playerId] ?? null;
+      if (!irEligible(status, allowed ? { allowed } : undefined)) {
+        refuse(status
+          ? `player ${playerId} is listed ${status}, which is not an IR designation`
+          : `player ${playerId} carries no injury designation and cannot be placed on IR`);
+      }
+    }
+  }
 
   mutate(KEY.assets(lg), (a) => {
     const res = moveCompartment(a.rosters, teamId, playerId, compartment);

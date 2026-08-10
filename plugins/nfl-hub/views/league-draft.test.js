@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, reset, _state } from './league-draft.js';
+import { render, reset, remainingMs, _state } from './league-draft.js';
+import { setIndex } from '../core/player-index.js';
 
 const league = (teamCount = 4, over = {}) => ({
   id: 'lg',
@@ -146,5 +147,173 @@ describe('the live board', () => {
     const html = render();
     expect(html).toMatch(/Draft complete/i);
     expect(html).toContain('db-made');
+  });
+});
+
+// ── The player pool ──────────────────────────────────────────────────────────
+//
+// ⚠️ THE REGRESSION THIS FILE EXISTS FOR. The live board used to show players
+// only once you had typed two letters, so you could only draft somebody you had
+// already thought of — a search box where a draft board should be.
+describe('the pool of available players', () => {
+  const order = [
+    { overall: 1, round: 1, pickInRound: 1, slot: 't1', owner: 't1' },
+    { overall: 2, round: 1, pickInRound: 2, slot: 't2', owner: 't2' },
+  ];
+  const RANKING = ['qb1', 'rb1', 'wr1', 'rb2', 'te1'];
+
+  const setupPool = (over = {}, stateOver = {}) => {
+    setIndex({
+      qb1: { n: 'Quinn Back', p: 'QB', t: 'KC' },
+      rb1: { n: 'Ray Bee', p: 'RB', t: 'DET' },
+      rb2: { n: 'Rob Bee', p: 'RB', t: 'SF' },
+      wr1: { n: 'Will Rec', p: 'WR', t: 'MIN' },
+      te1: { n: 'Tay End', p: 'TE', t: 'BAL' },
+    });
+    Object.assign(_state, {
+      leagueId: 'lg', teamId: 't1', error: null, busy: false, notice: null,
+      noDraft: false, query: '', filter: 'ALL', ranking: RANKING,
+      localDeadline: Date.now() + 60000, frozenRemaining: null,
+      league: {
+        id: 'lg', isCommissioner: true, myTeams: ['t1'],
+        settings: { rosterPositions: ['QB', 'RB', 'BN'] },
+        teams: { t1: { id: 't1', name: 'Alice FC' }, t2: { id: 't2', name: 'Bob United' } },
+      },
+      draft: {
+        status: 'active', type: 'snake', rounds: 1, pickTimerSeconds: 90,
+        pickEndsAt: Date.now() + 60000, msRemaining: 60000,
+        onClock: { overall: 1, round: 1, teamId: 't1' },
+        picks: {}, order, isCommissioner: true, ...over,
+      },
+      ...stateOver,
+    });
+  };
+
+  it('lists players with nothing typed', () => {
+    setupPool();
+    const html = render();
+    expect(html).toContain('Quinn Back');
+    expect(html).toContain('Ray Bee');
+  });
+
+  it('lists them best-first, in ranking order', () => {
+    setupPool();
+    const html = render();
+    expect(html.indexOf('Quinn Back')).toBeLessThan(html.indexOf('Ray Bee'));
+    expect(html.indexOf('Ray Bee')).toBeLessThan(html.indexOf('Will Rec'));
+  });
+
+  it('offers a tab per position, with a count on each', () => {
+    setupPool();
+    const html = render();
+    expect(html).toContain('data-filter="QB"');
+    expect(html).toContain('data-filter="RB"');
+    expect(html).toContain('data-filter="DEF"');
+  });
+
+  // The headline ask: on the clock for a quarterback, the quarterbacks are one
+  // click away and already ranked.
+  it('narrows to one position, still ranked', () => {
+    setupPool({}, { filter: 'RB' });
+    const html = render();
+    expect(html).toContain('Ray Bee');
+    expect(html).toContain('Rob Bee');
+    expect(html).not.toContain('Quinn Back');
+    expect(html.indexOf('Ray Bee')).toBeLessThan(html.indexOf('Rob Bee'));
+  });
+
+  // ⚠️ Asserted on the BUTTON, not on the name. A drafted player still appears
+  // on the board — that is the board's job — so searching the whole document for
+  // his name would fail for the wrong reason.
+  it('drops a player the moment he is drafted', () => {
+    setupPool({ picks: { 1: { playerId: 'qb1', teamId: 't1', at: 1, auto: false } } });
+    const html = render();
+    expect(html).not.toContain('data-act="draft-take" data-player="qb1"');
+    expect(html).toContain('data-act="draft-take" data-player="rb1"');
+  });
+
+  it('offers a Draft button when the pick is yours', () => {
+    setupPool();
+    expect(render()).toContain('data-act="draft-take"');
+  });
+
+  // ⚠️ THE LIST STAYS, ONLY THE BUTTONS GO. A board you cannot look at until you
+  // are on the clock gives you ninety seconds to do all of your thinking.
+  it('still shows the pool when it is somebody else\'s pick, without buttons', () => {
+    setupPool({ onClock: { overall: 2, round: 1, teamId: 't2' } });
+    const html = render();
+    expect(html).toContain('Quinn Back');
+    expect(html).not.toContain('data-act="draft-take"');
+    expect(html).toContain('Waiting on the manager');
+  });
+
+  it('takes the buttons away while the draft is paused', () => {
+    setupPool({ status: 'paused' });
+    const html = render();
+    expect(html).toContain('Quinn Back');
+    expect(html).not.toContain('data-act="draft-take"');
+  });
+
+  it('narrows by name as well as by position', () => {
+    setupPool({}, { query: 'bee' });
+    const html = render();
+    expect(html).toContain('Ray Bee');
+    expect(html).not.toContain('Quinn Back');
+  });
+
+  // ⚠️ A ranking that failed to load must not read as "everybody is drafted",
+  // and must not leave a live draft with no way to make a pick at all.
+  it('falls back to search, and says so, when the ranking did not load', () => {
+    setupPool({}, { ranking: [] });
+    const html = render();
+    expect(html).toMatch(/ranked player pool could not be loaded/i);
+    expect(html).toMatch(/falling\s+back to search/i);
+  });
+
+  it('still lets a manager draft by name in that fallback', () => {
+    setupPool({}, { ranking: [], query: 'quinn' });
+    const html = render();
+    expect(html).toContain('Quinn Back');
+    expect(html).toContain('data-act="draft-take" data-player="qb1"');
+  });
+
+  it('keeps a drafted player out of the fallback results too', () => {
+    setupPool(
+      { picks: { 1: { playerId: 'qb1', teamId: 't1', at: 1, auto: false } } },
+      { ranking: [], query: 'quinn' },
+    );
+    expect(render()).not.toContain('data-act="draft-take" data-player="qb1"');
+  });
+});
+
+// ── The clock ────────────────────────────────────────────────────────────────
+describe('the pick clock', () => {
+  beforeEach(reset);
+
+  it('counts down from the deadline the server gave', () => {
+    Object.assign(_state, { localDeadline: Date.now() + 45_000, frozenRemaining: null });
+    const left = remainingMs();
+    expect(left).toBeGreaterThan(43_000);
+    expect(left).toBeLessThanOrEqual(45_000);
+  });
+
+  // ⚠️ A negative remainder rendered as a NEGATIVE clock. The pick is expired,
+  // which is 0:00, not "-0:03".
+  it('floors at zero rather than going negative', () => {
+    Object.assign(_state, { localDeadline: Date.now() - 5_000, frozenRemaining: null });
+    expect(remainingMs()).toBe(0);
+  });
+
+  // ⚠️ A PAUSED CLOCK DOES NOT COUNT DOWN. Counting down against a deadline that
+  // is not running is how a paused draft appears to expire while paused.
+  it('holds still while paused', () => {
+    Object.assign(_state, { localDeadline: null, frozenRemaining: 30_000 });
+    expect(remainingMs()).toBe(30_000);
+    expect(remainingMs()).toBe(30_000);
+  });
+
+  it('reports nothing for a draft with no clock at all', () => {
+    Object.assign(_state, { localDeadline: null, frozenRemaining: null });
+    expect(remainingMs()).toBe(null);
   });
 });

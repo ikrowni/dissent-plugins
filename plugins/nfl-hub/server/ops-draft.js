@@ -183,7 +183,12 @@ export function setDraftPaused({ p, payload }) {
   let out = null;
   mutate(KEY.draft(lg), (d) => {
     if (!d) refuse("no draft has been created");
-    const res = paused ? pauseDraft(d) : resumeDraft(d, Date.now());
+    // ⚠️ `now` on BOTH sides. Pausing banks the time left and resuming pays it
+    // back, so a pause with no clock reading banks nothing and hands the team a
+    // fresh ninety seconds — which is what pausing used to do every time, and
+    // made the pause button a way to buy time.
+    const now = Date.now();
+    const res = paused ? pauseDraft(d, now) : resumeDraft(d, now);
     if (!res.ok) refuse(res.error);
     out = { status: res.draft.status, pickEndsAt: res.draft.pickEndsAt };
     return res.draft;
@@ -233,7 +238,12 @@ function draftView(draft, meta, p) {
     rounds: draft.rounds,
     pickTimerSeconds: draft.pickTimerSeconds,
     pickEndsAt: draft.pickEndsAt,
-    msRemaining: draft.pickEndsAt ? Math.max(0, draft.pickEndsAt - Date.now()) : null,
+    // ⚠️ A PAUSED DRAFT REPORTS ITS BANKED TIME, not null. It has no deadline by
+    // definition, and reporting nothing left the board showing "—" while paused,
+    // so a manager could not see how long they would have on resume.
+    msRemaining: draft.pickEndsAt
+      ? Math.max(0, draft.pickEndsAt - Date.now())
+      : (draft.status === DRAFT_STATUS.PAUSED ? draft.pausedRemainingMs ?? null : null),
     onClock: onClock ? { overall: onClock.overall, round: onClock.round, teamId: onClock.owner } : null,
     picks: draft.picks,
     order: draft.order,

@@ -12,19 +12,14 @@
 
 import { esc } from '../core/ui.js';
 import { playerChip, positionColor, positionPill, avatar } from '../core/player-visuals.js';
+import { POOL_FILTERS, matchesFilter } from '../core/league/draft-pool.js';
 
-/** Positions the filter offers, in the order a draft board wants them. */
-export const POOL_FILTERS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF'];
+// ⚠️ RE-EXPORTED, NOT REDEFINED. The filter rule now lives in core/league so the
+// live draft, the mock and the pool counts all answer it the same way. This file
+// keeps exporting both so existing importers do not care where they moved to.
+export { POOL_FILTERS, matchesFilter };
 
 const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
-
-/** Does this player match the active filter? */
-export function matchesFilter(pos, filter) {
-  const p = String(pos ?? '').toUpperCase();
-  if (!filter || filter === 'ALL') return true;
-  if (filter === 'FLEX') return FLEX_POSITIONS.has(p);
-  return p === filter;
-}
 
 /**
  * The grid: rounds down, teams across.

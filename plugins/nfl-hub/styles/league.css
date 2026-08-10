@@ -421,3 +421,40 @@ h4 {
 /* Luck reads as a direction, so it needs a sign as well as a colour. */
 .tbl td.lucky { color: var(--win); }
 .tbl td.unlucky { color: var(--loss); }
+
+/* ── The pick clock ───────────────────────────────────────────────────────── */
+/* ⚠️ TABULAR FIGURES ARE NOT A FLOURISH. This repaints four times a second, and
+ * in a proportional face "1:11" is narrower than "1:00" — so the panel header
+ * twitches on every tick. Fixed-width digits are what make a live clock sit
+ * still. */
+.clock {
+  font-family: var(--f-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.clock.urgent { color: var(--loss); }
+/* Paused reads as deliberately stopped, not as broken or as expired. */
+.clock.paused { color: var(--text-3); opacity: 0.75; }
+
+/* ── Injury designations and IR ───────────────────────────────────────────── */
+.inj-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--loss);
+  background: rgba(198, 74, 74, 0.13);
+  border: 1px solid rgba(198, 74, 74, 0.3);
+}
+/* An empty IR slot is shown so a manager can see the spot exists at all. It is
+ * deliberately quiet — it is capacity, not a call to action. */
+.tbl tr.ir-empty td { opacity: 0.55; }
+.btn.tiny[disabled] { opacity: 0.35; cursor: not-allowed; }

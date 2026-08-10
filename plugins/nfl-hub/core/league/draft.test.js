@@ -155,23 +155,72 @@ describe('resolveExpired — the deadline-on-read clock', () => {
 });
 
 describe('pause and resume', () => {
-  it('clears the deadline on pause and gives a fresh one on resume', () => {
-    const p = pauseDraft(started());
+  it('clears the deadline on pause', () => {
+    const p = pauseDraft(started(), T0);
     expect(p.draft.status).toBe(DRAFT_STATUS.PAUSED);
     expect(p.draft.pickEndsAt).toBe(null);
+  });
 
-    // The team on the clock is not punished for the commissioner's pause.
+  // ⚠️ THE REGRESSION. Resume used to mint a fresh full timer, so a manager with
+  // nine seconds left got ninety back — pausing was a way to buy time, and
+  // pausing repeatedly was a way to never be on the clock at all.
+  it('banks the time left and pays exactly that back on resume', () => {
+    const p = pauseDraft(started(), T0 + 60 * SEC); // 30s left of 90
+    expect(p.draft.pausedRemainingMs).toBe(30 * SEC);
+
+    const r = resumeDraft(p.draft, T0 + 60 * 60 * SEC);
+    expect(r.draft.pickEndsAt).toBe(T0 + 60 * 60 * SEC + 30 * SEC);
+  });
+
+  it('does not depend on how long the pause lasted', () => {
+    const p = pauseDraft(started(), T0 + 60 * SEC);
+    const brief = resumeDraft(p.draft, T0 + 61 * SEC).draft;
+    const long = resumeDraft(p.draft, T0 + 86400 * SEC).draft;
+    expect(brief.pickEndsAt - (T0 + 61 * SEC)).toBe(30 * SEC);
+    expect(long.pickEndsAt - (T0 + 86400 * SEC)).toBe(30 * SEC);
+  });
+
+  // ⚠️ Cleared on resume. A banked value left on an active draft would be paid
+  // out AGAIN by the next pause/resume pair, however much time had really gone.
+  it('forgets the banked time once it has been paid back', () => {
+    const p = pauseDraft(started(), T0 + 60 * SEC);
+    const r = resumeDraft(p.draft, T0 + 100 * SEC);
+    expect(r.draft.pausedRemainingMs).toBeUndefined();
+
+    // Second pause banks what is genuinely left, not the first pause's 30s.
+    const again = pauseDraft(r.draft, T0 + 110 * SEC);
+    expect(again.draft.pausedRemainingMs).toBe(20 * SEC);
+  });
+
+  it('banks nothing rather than going negative on an already-expired pick', () => {
+    const p = pauseDraft(started(), T0 + 500 * SEC);
+    expect(p.draft.pausedRemainingMs).toBe(0);
+    expect(resumeDraft(p.draft, T0).draft.pickEndsAt).toBe(T0);
+  });
+
+  // ⚠️ A draft paused by an OLDER build carries no banked value. Resume must
+  // fall back to a full timer — which is exactly what that build already did —
+  // rather than resuming with NaN and an unreadable clock.
+  it('gives a full timer when there is nothing banked', () => {
+    const p = pauseDraft(started()); // no `now`: nothing measurable
+    expect(p.draft.pausedRemainingMs).toBe(null);
     const r = resumeDraft(p.draft, T0 + 60 * 60 * SEC);
     expect(r.draft.pickEndsAt).toBe(T0 + 60 * 60 * SEC + 90 * SEC);
   });
 
+  it('leaves a clockless draft without a deadline', () => {
+    const p = pauseDraft(started({ pickTimerSeconds: 0 }), T0);
+    expect(p.draft.pausedRemainingMs).toBe(null);
+    expect(resumeDraft(p.draft, T0).draft.pickEndsAt).toBe(null);
+  });
+
   it('refuses pause/resume from the wrong state', () => {
-    expect(pauseDraft(newDraft()).ok).toBe(false);
+    expect(pauseDraft(newDraft(), T0).ok).toBe(false);
     expect(resumeDraft(started(), T0).ok).toBe(false);
   });
 
   it('blocks picks while paused', () => {
-    expect(makePick(pauseDraft(started()).draft, 'a', 'p1', T0).ok).toBe(false);
+    expect(makePick(pauseDraft(started(), T0).draft, 'a', 'p1', T0).ok).toBe(false);
   });
 });
 

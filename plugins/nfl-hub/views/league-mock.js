@@ -10,6 +10,7 @@
 
 import { esc, panel, stateMsg } from '../core/ui.js';
 import { loadIndex, getIndex } from '../core/player-index.js';
+import { loadRanking } from '../core/draft-ranking.js';
 import {
   createMock, availableIn, rosterOf, onTheClock, pick as makeMockPick,
   runBotsUntilMyTurn, isComplete, gradeDrafts,
@@ -208,11 +209,9 @@ export async function start(app) {
   app?.router?.refresh();
   try {
     await loadIndex();
-    if (!state.ranking) {
-      const res = await fetch(new URL('../assets/draft-ranking.json', import.meta.url));
-      if (!res.ok) throw new Error(`ranking ${res.status}`);
-      state.ranking = await res.json();
-    }
+    // Shared with the live draft, so the rehearsal and the event rank from one
+    // fetch and one ordering.
+    if (!state.ranking) state.ranking = await loadRanking();
     const { teams, rounds, slot, scoring } = state.setup;
     const ranking = state.ranking[scoring] ?? state.ranking.ppr ?? [];
     if (ranking.length === 0) throw new Error('the draft ranking is empty');

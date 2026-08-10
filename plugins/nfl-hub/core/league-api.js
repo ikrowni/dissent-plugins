@@ -71,8 +71,12 @@ export const movePlayer = (leagueId, teamId, playerId, compartment) =>
 export const createDraft = (leagueId, opts = {}) => call('draft:create', { leagueId, ...opts });
 export const startDraft = (leagueId) => call('draft:start', { leagueId });
 export const getDraft = (leagueId, ranking = []) => call('draft:get', { leagueId, ranking });
-export const makePick = (leagueId, teamId, playerId) =>
-  call('draft:pick', { leagueId, teamId, playerId });
+// ⚠️ `ranking` is not cosmetic on a pick either. The module resolves any lapsed
+// picks in the SAME swap before applying this one, and it autodrafts them from
+// the ranking — sending none means a pick that arrives after somebody else's
+// clock expired cannot resolve the lapse and is refused.
+export const makePick = (leagueId, teamId, playerId, ranking = []) =>
+  call('draft:pick', { leagueId, teamId, playerId, ranking });
 export const setQueue = (leagueId, teamId, queue) =>
   call('draft:queue', { leagueId, teamId, queue });
 export const setPaused = (leagueId, paused) => call('draft:pause', { leagueId, paused });

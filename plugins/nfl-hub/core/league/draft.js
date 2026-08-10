@@ -171,17 +171,45 @@ export function resolveExpired(draft, now, autoPick) {
   return done(state, made);
 }
 
-/** Pause and resume, for a commissioner rescuing a draft. */
-export function pauseDraft(draft) {
+/**
+ * Pause and resume, for a commissioner rescuing a draft.
+ *
+ * ⚠️ PAUSING BANKS THE TIME LEFT; RESUMING PAYS IT BACK. A pause used to clear
+ * the deadline and a resume used to mint a fresh full timer, which meant a
+ * manager with nine seconds left got ninety back — so pausing was a way to buy
+ * time, and pausing repeatedly was a way to never be on the clock at all.
+ *
+ * `pausedRemainingMs` is what makes the round trip honest. It is absent on a
+ * draft paused by an older build, and absent is handled: resume falls back to a
+ * full timer, which is exactly what that build already did.
+ */
+export function pauseDraft(draft, now) {
   if (draft.status !== DRAFT_STATUS.ACTIVE) return fail(draft, `draft is ${draft.status}`);
-  return done({ ...draft, status: DRAFT_STATUS.PAUSED, pickEndsAt: null });
+  // A non-finite `now` means we cannot measure anything; bank nothing rather than
+  // banking NaN, and resume will hand out a full timer.
+  const measurable = Number.isFinite(now) && Number.isFinite(draft.pickEndsAt);
+  return done({
+    ...draft,
+    status: DRAFT_STATUS.PAUSED,
+    pickEndsAt: null,
+    pausedRemainingMs: measurable ? Math.max(0, draft.pickEndsAt - now) : null,
+  });
 }
 
 export function resumeDraft(draft, now) {
   if (draft.status !== DRAFT_STATUS.PAUSED) return fail(draft, `draft is ${draft.status}`);
-  // A fresh full timer on resume: the team on the clock should not be punished
-  // for however long the commissioner had the draft paused.
-  return done({ ...draft, status: DRAFT_STATUS.ACTIVE, pickEndsAt: deadlineFrom(draft, now) });
+
+  const banked = draft.pausedRemainingMs;
+  const next = { ...draft, status: DRAFT_STATUS.ACTIVE };
+  // A league with no clock at all stays that way — `deadlineFrom` returns null
+  // and banked time is meaningless.
+  next.pickEndsAt = draft.pickTimerSeconds > 0 && Number.isFinite(banked)
+    ? now + banked
+    : deadlineFrom(draft, now);
+  // Cleared, not left behind: a stale banked value on an active draft would be
+  // paid out again by the next pause/resume pair.
+  delete next.pausedRemainingMs;
+  return done(next);
 }
 
 /**
