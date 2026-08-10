@@ -1,0 +1,229 @@
+// views/league-home.js — the native league's landing surface.
+//
+// Pure render functions plus a small amount of state, matching the rest of the
+// hub: the view owns what it is showing, app.js owns the DOM and the events.
+//
+// ⚠️ THIS IS THE NATIVE LEAGUE, not the Sleeper mirror. The existing
+// views/fantasy*.js render a league that lives on Sleeper and can only be read;
+// this one renders a league that lives here and can be played. They coexist
+// because a native league is identified by its own `leagueId`.
+
+import { esc, panel, stateMsg, tile } from '../core/ui.js';
+import {
+  listLeagues, getLeague, createLeague, joinLeague, getScores, myTeam, canManage,
+} from '../core/league-api.js';
+// ⚠️ The SAME scoring presets the module uses. Imported rather than duplicated:
+// core/league/* is pure and shared by both halves of the plugin precisely so the
+// client cannot disagree with the server about what "PPR" means.
+import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
+
+const SCORING_PRESETS = {
+  ppr: PPR_SCORING,
+  half: HALF_PPR_SCORING,
+  std: STANDARD_SCORING,
+};
+
+const state = {
+  leagues: null,      // null = not loaded yet; [] = loaded and empty
+  leagueId: null,
+  league: null,
+  scores: null,
+  error: null,
+  busy: false,
+};
+
+export function reset() {
+  Object.assign(state, {
+    leagues: null, leagueId: null, league: null, scores: null, error: null, busy: false,
+  });
+}
+
+/** Exposed for the tests and for sibling views that need the selection. */
+export function current() {
+  return { leagueId: state.leagueId, league: state.league };
+}
+
+export function render() {
+  if (state.error) return errorPane(state.error);
+  if (state.leagues === null) return stateMsg('Loading your leagues…', { spinner: true });
+  if (state.leagues.length === 0) return emptyPane();
+  if (!state.league) return pickerPane(state.leagues);
+  return leaguePane(state.league, state.scores);
+}
+
+/**
+ * ⚠️ An error is a PANE, not a toast. A failed call here usually means the
+ * server module is unreachable or refused the caller, and both are states the
+ * user has to act on — a message that fades away leaves an empty screen with no
+ * explanation.
+ */
+function errorPane(message) {
+  return panel({
+    title: 'Fantasy League',
+    body: `<p class="muted">${esc(message)}</p>
+           <button class="btn" data-act="league-retry">Try again</button>`,
+  });
+}
+
+function emptyPane() {
+  return panel({
+    title: 'Fantasy League',
+    body: `
+      <p class="muted">No league on this server yet.</p>
+      <form data-act="league-create-form" class="stack">
+        <label>League name
+          <input name="name" value="Our League" maxlength="60" required>
+        </label>
+        <label>Teams
+          <input name="numTeams" type="number" min="2" max="16" value="10">
+        </label>
+        <label>Scoring
+          <select name="scoring">
+            <option value="ppr" selected>PPR</option>
+            <option value="half">Half PPR</option>
+            <option value="std">Standard</option>
+          </select>
+        </label>
+        <button class="btn primary" type="submit" ${state.busy ? 'disabled' : ''}>
+          ${state.busy ? 'Creating…' : 'Create league'}
+        </button>
+      </form>`,
+  });
+}
+
+function pickerPane(leagues) {
+  const rows = leagues.map((l) => `
+    <button class="row-btn" data-act="league-open" data-league="${esc(l.id)}">
+      <span class="row-main">${esc(l.name)}</span>
+      <span class="muted">${esc(String(l.format))} · ${l.teamCount} team${l.teamCount === 1 ? '' : 's'}
+        ${l.myTeams.length ? '· <strong>your team</strong>' : ''}
+        ${l.isCommissioner ? '· commissioner' : ''}</span>
+    </button>`).join('');
+  return panel({ title: 'Fantasy Leagues', body: `<div class="stack">${rows}</div>` });
+}
+
+function leaguePane(league, scores) {
+  const mine = myTeam(league);
+  const teams = Object.values(league.teams ?? {});
+  const week = league.currentWeek ?? null;
+
+  const standings = teams.map((t) => {
+    const pts = scores?.teams?.[t.id]?.total;
+    return `<tr>
+      <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="muted">(you)</span>' : ''}</td>
+      <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
+      <td class="num">${pts === undefined ? '—' : pts.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const joinCta = mine ? '' : `
+    <form data-act="league-join-form" class="stack">
+      <label>Team name <input name="teamName" maxlength="40" placeholder="Your team"></label>
+      <button class="btn primary" type="submit" ${state.busy ? 'disabled' : ''}>
+        ${state.busy ? 'Joining…' : 'Join this league'}
+      </button>
+    </form>`;
+
+  return panel({
+    title: esc(league.settings?.name ?? 'League'),
+    right: league.isCommissioner ? '<span class="muted">commissioner</span>' : '',
+    body: `
+      <div class="tiles">
+        ${tile('Format', esc(league.settings?.format ?? '—'))}
+        ${tile('Teams', String(teams.length))}
+        ${tile('Week', week === null ? 'preseason' : String(week))}
+      </div>
+      ${joinCta}
+      <table class="tbl">
+        <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
+        <tbody>${standings || '<tr><td colspan="3" class="muted">No teams yet.</td></tr>'}</tbody>
+      </table>
+      <div class="row-actions">
+        <button class="btn" data-act="league-refresh">Refresh</button>
+        ${mine ? '<button class="btn" data-act="league-goto-roster">My roster</button>' : ''}
+        <button class="btn" data-act="league-goto-draft">Draft</button>
+      </div>`,
+  });
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+
+export async function load(app) {
+  try {
+    state.error = null;
+    state.leagues = await listLeagues();
+    // One league is the common case; opening it straight away saves a click that
+    // only ever has one answer.
+    if (state.leagues.length === 1) await open(app, state.leagues[0].id);
+  } catch (err) {
+    state.error = describe(err);
+  }
+  app?.router?.refresh();
+}
+
+export async function open(app, leagueId) {
+  try {
+    state.error = null;
+    state.leagueId = leagueId;
+    state.league = await getLeague(leagueId);
+    const week = state.league.currentWeek ?? null;
+    // Scores are optional: a league in preseason has none, and failing to load
+    // them must not blank the whole pane.
+    state.scores = week
+      ? await getScores(leagueId, state.league.season, week).catch(() => null)
+      : null;
+  } catch (err) {
+    state.error = describe(err);
+  }
+  app?.router?.refresh();
+}
+
+export async function create(app, form) {
+  const scoringChoice = String(form.scoring ?? 'ppr');
+  state.busy = true;
+  app?.router?.refresh();
+  try {
+    const created = await createLeague({
+      name: String(form.name ?? 'Our League').slice(0, 60),
+      numTeams: Number(form.numTeams) || 10,
+      scoring: SCORING_PRESETS[scoringChoice] ?? PPR_SCORING,
+    });
+    state.leagues = await listLeagues();
+    await open(app, created.leagueId);
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+export async function join(app, teamName) {
+  state.busy = true;
+  app?.router?.refresh();
+  try {
+    await joinLeague(state.leagueId, teamName);
+    await open(app, state.leagueId);
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+/**
+ * ⚠️ Show the module's OWN message. Its refusals are written for a person —
+ * "you do not manage team t1", "this league is full" — and replacing them with a
+ * generic failure throws away the only explanation the user will get.
+ */
+export function describe(err) {
+  const msg = String(err?.message ?? err ?? '').trim();
+  if (!msg) return 'Something went wrong.';
+  if (/no server module|runtime unavailable|not enabled/i.test(msg)) {
+    return 'The league engine is not running on this server yet. A server admin needs to enable it in plugin settings.';
+  }
+  return msg;
+}
+
+export { state as _state, canManage };

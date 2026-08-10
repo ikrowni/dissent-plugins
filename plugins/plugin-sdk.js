@@ -82,6 +82,26 @@ export function debounceStorageSet(key, value, scope = 'server', delayMs = 350) 
 }
 
 // Two-argument form: realtimePublish(eventName, dataObject)
+/**
+ * Call this plugin's own server-side module.
+ *
+ * ⚠️ DO NOT PUT AN IDENTITY IN THE PAYLOAD. The node tells the module who is
+ * calling, from the verified session; anything you send here is just page data
+ * and a module that trusted it would let any member of the server act as any
+ * other.
+ *
+ * Returns the module's `data` envelope, or throws with its error message.
+ */
+export async function invokeModule(payload, timeoutMs = 15000) {
+  const res = await request('module:invoke', { payload }, timeoutMs);
+  // The node wraps the module's own {ok, data|error} envelope in its transport
+  // envelope, so a refusal arrives as a SUCCESSFUL call carrying ok:false.
+  // Unwrapping it here means callers write one error path, not two.
+  const inner = res?.data ?? res;
+  if (inner && inner.ok === false) throw new Error(inner.error || 'module refused the request');
+  return inner?.data ?? inner;
+}
+
 export async function realtimePublish(eventName, data) {
   try { return await request('realtime:publish', { event: eventName, data }); } catch { return null; }
 }

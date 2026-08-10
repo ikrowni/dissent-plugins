@@ -154,7 +154,7 @@ async function boot() {
 
   const [
     leagueView, gameView, standingsView, leadersView, newsView, teamView, playerView,
-    fantasyView,
+    fantasyView, myLeagueView,
   ] = await Promise.all([
     import('../views/league.js'),
     import('../views/game.js'),
@@ -164,6 +164,7 @@ async function boot() {
     import('../views/team.js'),
     import('../views/player.js'),
     import('../views/fantasy.js'),
+    import('../views/league-section.js'),
   ]);
 
   app.router = createRouter({
@@ -173,6 +174,8 @@ async function boot() {
       league: leagueView, game: gameView, standings: standingsView,
       leaders: leadersView, news: newsView, team: teamView, player: playerView,
       fantasy: fantasyView,
+      // The NATIVE league, distinct from `fantasy` which mirrors Sleeper.
+      myleague: myLeagueView,
     },
   });
 

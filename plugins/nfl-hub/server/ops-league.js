@@ -79,6 +79,9 @@ export function getLeague({ p, payload }) {
     id: lg,
     settings: meta.settings,
     season: meta.season,
+    // The UI renders the week and every week-scoped call is keyed on it, so
+    // omitting it made every league look like it was in preseason forever.
+    currentWeek: meta.currentWeek ?? null,
     commissioners: meta.commissioners,
     teams,
     assets,
