@@ -86,7 +86,13 @@ for (const [key, field] of SCORING) {
     return [id, pts - (baseline[pos] ?? 0)];
   });
   vor.sort((a, b) => b[1] - a[1]);
-  out[key] = vor.slice(0, DEPTH).map(([id]) => id);
+  const kept = vor.slice(0, DEPTH);
+  out[key] = kept.map(([id]) => id);
+  // ⚠️ The VALUES ship too, so a draft grade can be an honest sum rather than a
+  // number invented from ranking position. Rounded to whole points: the asset is
+  // downloaded by every browser that opens a mock, and two decimal places of
+  // last season's fantasy points buys nobody anything.
+  out[`${key}_v`] = Object.fromEntries(kept.map(([id, v]) => [id, Math.round(v)]));
   const top = out[key].slice(0, 12).map((id) => String(index[id].p).toUpperCase());
   console.log(`  ${key.padEnd(4)} ${out[key].length} players · first round: ${top.join(' ')}`);
 }

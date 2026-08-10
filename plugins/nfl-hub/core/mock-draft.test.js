@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   rngFrom, startingNeed, remainingNeed, botPick, createMock, availableIn,
-  rosterOf, onTheClock, pick, runBotsUntilMyTurn, isComplete, POSITION_CAP,
+  rosterOf, onTheClock, pick, runBotsUntilMyTurn, isComplete, POSITION_CAP, gradeDrafts,
 } from './mock-draft.js';
 
 const ROSTER = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN', 'BN', 'BN'];
@@ -175,5 +175,52 @@ describe('a whole mock draft', () => {
       ranking: RANKING.slice(0, 3), positionOf, seed: 3,
     });
     expect(() => runBotsUntilMyTurn(short)).not.toThrow();
+  });
+});
+
+describe('gradeDrafts', () => {
+  const graded = (valueOf) => {
+    let m = mock({ slot: 1 });
+    let guard = 300;
+    while (!isComplete(m) && guard-- > 0) {
+      m = runBotsUntilMyTurn(m);
+      if (isComplete(m)) break;
+      const a = availableIn(m);
+      if (!a.length) break;
+      m = pick(m, a[0].id);
+    }
+    return gradeDrafts(m, valueOf);
+  };
+  // Value falls off with ranking position, like a real board.
+  const byRank = (id) => Math.max(0, 300 - RANKING.indexOf(String(id)));
+
+  it('grades every team exactly once', () => {
+    const g = graded(byRank);
+    expect(g).toHaveLength(12);
+    expect(new Set(g.map((x) => x.teamId)).size).toBe(12);
+  });
+
+  it('ranks them best first', () => {
+    const totals = graded(byRank).map((x) => x.total);
+    expect([...totals].sort((a, b) => b - a)).toEqual(totals);
+  });
+
+  it('gives the best draft the top grade and the worst the bottom one', () => {
+    const g = graded(byRank);
+    expect(g[0].grade).toBe('A+');
+    expect(g[g.length - 1].grade).toBe('C');
+  });
+
+  // ⚠️ Missing values count as ZERO, not skipped — a team that drafted unranked
+  // players is scored for having done so, rather than quietly excused.
+  it('counts an unvalued pick as nothing rather than ignoring it', () => {
+    const g = graded(() => undefined);
+    expect(g.every((x) => x.total === 0)).toBe(true);
+  });
+
+  // ⚠️ A dead-flat field must not divide by zero.
+  it('gives everyone the same grade when every draft is identical', () => {
+    const g = graded(() => 1);
+    expect(new Set(g.map((x) => x.grade)).size).toBe(1);
   });
 });

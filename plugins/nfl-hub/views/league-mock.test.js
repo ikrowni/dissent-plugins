@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, reset, setField, take, simulate, setFilter, restart, _state, DEFAULT_SLOTS } from './league-mock.js';
 import { setIndex } from '../core/player-index.js';
-import { createMock, runBotsUntilMyTurn, onTheClock } from '../core/mock-draft.js';
+import { createMock, runBotsUntilMyTurn, onTheClock, availableIn, pick } from '../core/mock-draft.js';
 
 const MIX = ['RB', 'WR', 'WR', 'QB', 'RB', 'TE', 'WR', 'RB', 'QB', 'WR', 'TE', 'K', 'DEF'];
 const INDEX = Object.fromEntries(
@@ -149,5 +149,26 @@ describe('the rank shown in the pool', () => {
     const html = render();
     const firstRank = Number(html.match(/db-rank">(\d+)</)[1]);
     expect(firstRank).toBeGreaterThan(1);
+  });
+});
+
+describe('the finished mock', () => {
+  it('grades the room rather than just stopping', () => {
+    let m = startedMock();
+    let guard = 400;
+    while (guard-- > 0 && onTheClock(m)) {
+      m = runBotsUntilMyTurn(m);
+      if (!onTheClock(m)) break;
+      const a = availableIn(m);
+      if (!a.length) break;
+      m = pick(m, a[0].id);
+    }
+    _state.mock = m;
+    _state.ranking = { ppr_v: Object.fromEntries(RANKING.map((id, i) => [id, 300 - i])) };
+    const html = render();
+    expect(html).toMatch(/How the room drafted/i);
+    expect(html).toContain('grade-mark');
+    // ⚠️ The curve is stated, because a grade with no basis is decoration.
+    expect(html).toMatch(/value over replacement/i);
   });
 });

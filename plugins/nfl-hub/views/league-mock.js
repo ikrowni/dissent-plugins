@@ -12,7 +12,7 @@ import { esc, panel, stateMsg } from '../core/ui.js';
 import { loadIndex, getIndex } from '../core/player-index.js';
 import {
   createMock, availableIn, rosterOf, onTheClock, pick as makeMockPick,
-  runBotsUntilMyTurn, isComplete,
+  runBotsUntilMyTurn, isComplete, gradeDrafts,
 } from '../core/mock-draft.js';
 import {
   renderBoard, renderOnTheClock, renderFilters, renderPool, renderRosterProgress,
@@ -127,6 +127,7 @@ function boardPane() {
     right: `<span class="muted">${Object.keys(m.draft.picks).length} / ${m.draft.order.length} picks</span>`,
     body: `
       ${renderOnTheClock({ onClock: clock, teamLabel, isMine, complete: done })}
+      ${done ? gradesPane(m, teamLabel) : ''}
       <div class="mock-cols">
         <div class="mock-pool-col">
           <input class="db-search" type="search" placeholder="Search players…"
@@ -154,6 +155,30 @@ function boardPane() {
     teamLabel, isMine, onClock: clock, playerOf,
   })}`,
   });
+}
+
+/**
+ * How everybody did, once the board is full.
+ *
+ * ⚠️ A mock that just stops is a mock nobody runs twice. The grade is what turns
+ * a rehearsal into a result — and it is a CURVE against the rest of the room,
+ * because every pick came from one board and the total value in it is fixed.
+ */
+function gradesPane(m, teamLabel) {
+  const values = state.ranking?.[`${state.setup.scoring}_v`] ?? {};
+  const rows = gradeDrafts(m, (id) => values[String(id)]);
+  return `<div class="mock-grades">
+    <h4>How the room drafted</h4>
+    <div class="grade-list">${rows.map((r, i) => `
+      <div class="grade-row${r.teamId === m.myTeam ? ' mine' : ''}">
+        <span class="grade-rank">${i + 1}</span>
+        <span class="grade-team">${esc(teamLabel(r.teamId))}</span>
+        <span class="grade-bar"><span class="grade-bar-fill" style="width:${Math.max(3, Math.round(r.pct * 100))}%"></span></span>
+        <span class="grade-mark" data-grade="${esc(r.grade[0])}">${esc(r.grade)}</span>
+      </div>`).join('')}</div>
+    <p class="tiny">Graded on value over replacement, against the rest of this room —
+    every pick came from one board, so one team can only do well by another doing badly.</p>
+  </div>`;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

@@ -360,3 +360,18 @@ h4 {
 .mu-bar { display: block; height: 3px; margin-top: 6px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
 .mu-bar-fill { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,0.22); transition: width var(--dur) var(--ease-out); }
 .side.winning .mu-bar-fill { background: linear-gradient(90deg, rgba(79,158,127,0.5), rgba(79,158,127,0.95)); }
+
+/* ── Draft grades ─────────────────────────────────────────────────────────── */
+.mock-grades { margin: 14px 0 4px; padding: 14px 16px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.grade-list { display: flex; flex-direction: column; gap: 4px; }
+.grade-row { display: grid; grid-template-columns: 22px minmax(70px, 1fr) minmax(60px, 3fr) 42px; align-items: center; gap: 10px; padding: 4px 0; }
+.grade-row.mine .grade-team { color: var(--gold); font-weight: 700; }
+.grade-rank { font-family: var(--f-mono); font-size: 11px; color: var(--text-3); text-align: right; }
+.grade-team { font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grade-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.grade-bar-fill { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(79,158,127,0.45), rgba(79,158,127,0.95)); animation: gradeGrow var(--dur-slow) var(--ease-out) both; }
+@keyframes gradeGrow { from { width: 0 !important; } }
+.grade-mark { font-family: var(--f-display); font-size: 17px; font-weight: 700; text-align: right; }
+.grade-mark[data-grade="A"] { color: var(--win); }
+.grade-mark[data-grade="B"] { color: var(--gold); }
+.grade-mark[data-grade="C"] { color: var(--text-3); }

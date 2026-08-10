@@ -236,3 +236,48 @@ export function summarize(mock, teamId) {
   }
   return { count: roster.length, byPos };
 }
+
+/**
+ * Grade every team's draft.
+ *
+ * ⚠️ THE GRADE IS A CURVE, NOT AN ABSOLUTE. Every pick in a mock comes from the
+ * same board, so the total value in the room is fixed — one team can only do
+ * well by another doing badly. Grading against the field is therefore the only
+ * honest framing; a fixed threshold would hand out twelve A's in a shallow
+ * league and twelve C's in a deep one, and mean nothing either way.
+ *
+ * `valueOf(playerId)` returns the player's value over replacement. Missing
+ * values count as zero rather than skipping the pick, so a team that drafted
+ * unranked players is scored for having done so.
+ */
+export function gradeDrafts(mock, valueOf) {
+  const totals = mock.teamIds.map((teamId) => ({
+    teamId,
+    total: rosterOf(mock, teamId).reduce((sum, r) => sum + (Number(valueOf(r.id)) || 0), 0),
+  }));
+
+  const scores = totals.map((t) => t.total);
+  const best = Math.max(...scores);
+  const worst = Math.min(...scores);
+  const span = best - worst;
+
+  return totals
+    .map((t) => {
+      // A dead-flat field (everyone identical) is a B for everybody rather than
+      // a divide by zero.
+      const pct = span === 0 ? 0.5 : (t.total - worst) / span;
+      return { ...t, pct, grade: gradeFor(pct) };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+/** The curve. Deliberately generous at the top and short of an F. */
+function gradeFor(pct) {
+  if (pct >= 0.92) return 'A+';
+  if (pct >= 0.78) return 'A';
+  if (pct >= 0.62) return 'B+';
+  if (pct >= 0.46) return 'B';
+  if (pct >= 0.30) return 'B-';
+  if (pct >= 0.15) return 'C+';
+  return 'C';
+}
