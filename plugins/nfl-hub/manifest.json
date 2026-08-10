@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "A full NFL broadcast center \u2014 live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -37,9 +37,9 @@
   ],
   "server_module": {
     "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module.wasm",
-    "sha256": "88c58bfc254b35dac18e120c5b7e8f801f24b55645670b81c13aac93187fb6aa",
-    "size": 2445517,
-    "signature": "388788707827ed10bf5c2512b3a383ea2675caea532bf6110caa3e1dcdbf472bee8e4f20fc83b9a6d6ad8bc07e79ce28229ab1509196714bc7890f51d085f10e"
+    "sha256": "ffd52f3429384ab1ddcd9ee6b4d0e975b8d52e5d34a8f6d274b50d719fb872be",
+    "size": 2445880,
+    "signature": "a5006c037bce42cf4601935deb003e8daeff8dba3e247b81230cb309313a0b64be65541cf126a52950daa0679c6e988019fc6822886c6531db03c2df1f77fb04"
   },
   "sdk_version": "1"
 }
