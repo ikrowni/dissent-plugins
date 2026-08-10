@@ -397,3 +397,14 @@ h4 {
 .trend-count { font-family: var(--f-mono); font-size: 11px; flex-shrink: 0; }
 .trend-count.up { color: var(--win); }
 .trend-count.down { color: var(--loss); }
+
+/* ── Weekly recap ─────────────────────────────────────────────────────────── */
+.recap { margin: 14px 0; padding: 13px 15px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.rc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.rc-item { display: flex; flex-direction: column; gap: 3px; }
+.rc-label { font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.rc-value { font-size: 13px; color: var(--text-2); }
+.rc-value b { font-family: var(--f-display); font-size: 16px; color: var(--text); margin-left: 3px; }
+/* The story of the week gets the colour — it is the one people repeat. */
+.rc-item.unlucky .rc-label { color: var(--loss); }
+.rc-item.unlucky .rc-value b { color: var(--loss); }

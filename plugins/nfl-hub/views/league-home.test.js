@@ -204,3 +204,63 @@ describe('the empty-league callout', () => {
     expect(render()).not.toMatch(/so far/i);
   });
 });
+
+describe('the weekly recap', () => {
+  const sched = { weeks: [{ week: 3, matchups: [{ home: 't1', away: 't2' }, { home: 't3', away: 't1' }] }] };
+  const rec = { teams: { t1: { total: 140.2 }, t2: { total: 138.9 }, t3: { total: 40.5 } } };
+
+  // ⚠️ Absent, not empty. A "Week 3 recap" heading over blank rows reads as
+  // broken, and the panel would vanish and reappear as weeks are scored.
+  it('renders nothing without a schedule or scores', () => {
+    setup({ schedule: null, weekScores: {} });
+    expect(render()).not.toContain('recap');
+  });
+
+  it('renders nothing when the week has no results yet', () => {
+    setup({ schedule: sched, weekScores: {} });
+    expect(render()).not.toContain('recap');
+  });
+
+  it('tells the story of the last scored week', () => {
+    setup({ schedule: sched, weekScores: { 3: rec } });
+    const html = render();
+    expect(html).toContain('Week 3 recap');
+    expect(html).toContain('Top score');
+    expect(html).toContain('Closest game');
+    expect(html).toContain('Biggest win');
+  });
+
+  // ⚠️ The line everybody repeats — and it only exists when a LOSER outscored a
+  // WINNER, which the fixture above deliberately does not do. Forcing it to
+  // always appear would make it a lie most weeks.
+  it('calls out the team that scored big and still lost', () => {
+    const four = league({
+      teams: {
+        t1: { id: 't1', name: 'Alice FC' }, t2: { id: 't2', name: 'Bob United' },
+        t3: { id: 't3', name: 'Cara City' }, t4: { id: 't4', name: 'Dee Town' },
+      },
+    });
+    setup({
+      league: four,
+      schedule: { weeks: [{ week: 3, matchups: [{ home: 't1', away: 't2' }, { home: 't3', away: 't4' }] }] },
+      // t2 loses on 140; t3 wins on 60. The loser outscored a winner.
+      weekScores: { 3: { teams: { t1: { total: 150 }, t2: { total: 140 }, t3: { total: 60 }, t4: { total: 50 } } } },
+    });
+    const html = render();
+    expect(html).toMatch(/Scored big, still lost/i);
+    expect(html).toContain('Bob United');
+  });
+
+  it('omits that line on a week where every winner outscored every loser', () => {
+    setup({ schedule: sched, weekScores: { 3: rec } });
+    expect(render()).toContain('Week 3 recap');
+    expect(render()).not.toMatch(/Scored big, still lost/i);
+  });
+
+  it('names teams rather than printing ids', () => {
+    setup({ schedule: sched, weekScores: { 3: rec } });
+    const html = render();
+    expect(html).toContain('Alice FC');
+    expect(html).not.toMatch(/>t1</);
+  });
+});

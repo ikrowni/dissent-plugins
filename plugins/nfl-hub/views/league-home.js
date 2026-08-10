@@ -17,6 +17,8 @@ import {
 // core/league/* is pure and shared by both halves of the plugin precisely so the
 // client cannot disagree with the server about what "PPR" means.
 import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
+import { latestRecap } from '../core/league/recap.js';
+import { getSchedule } from '../core/league-api.js';
 
 const SCORING_PRESETS = {
   ppr: PPR_SCORING,
@@ -30,6 +32,8 @@ const state = {
   league: null,
   scores: null,
   standings: null,
+  schedule: null,     // for the weekly recap; absent early in a season
+  weekScores: {},     // week -> stored score record, for the recap only
   error: null,
   busy: false,
 };
@@ -129,6 +133,7 @@ function leaguePane(league, scores, standings) {
         ${tile('Week', week === null ? 'preseason' : String(week))}
       </div>
       ${joinCta}
+      ${recapPanel(league)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
       ${table}
@@ -139,6 +144,41 @@ function leaguePane(league, scores, standings) {
         <button class="btn" data-act="league-goto-draft">Draft</button>
       </div>`,
   });
+}
+
+/**
+ * Last week's story.
+ *
+ * ⚠️ STANDINGS SAY WHO IS WINNING; THEY NEVER SAY WHAT HAPPENED. That somebody
+ * put up the highest score of the season and still lost is the part people
+ * actually talk about, and it is free — computed from the schedule and scores
+ * the league already stores, with no extra fetch.
+ *
+ * ⚠️ Absent, not empty, when there is nothing to describe.
+ */
+function recapPanel(league) {
+  const r = latestRecap(league.currentWeek, state.schedule?.weeks ?? [], (w) => state.weekScores[w] ?? null);
+  if (!r) return '';
+  const name = (t) => esc(league.teams?.[t]?.name ?? t);
+  const pts = (n) => Number(n).toFixed(2);
+
+  const items = [
+    `<div class="rc-item"><span class="rc-label">Top score</span>
+       <span class="rc-value">${name(r.best.teamId)} <b>${pts(r.best.points)}</b></span></div>`,
+    `<div class="rc-item"><span class="rc-label">Closest game</span>
+       <span class="rc-value">${name(r.nailBiter.winner ?? r.nailBiter.home)} by <b>${pts(r.nailBiter.margin)}</b></span></div>`,
+    `<div class="rc-item"><span class="rc-label">Biggest win</span>
+       <span class="rc-value">${name(r.blowout.winner ?? r.blowout.home)} by <b>${pts(r.blowout.margin)}</b></span></div>`,
+  ];
+  if (r.unlucky) {
+    items.push(`<div class="rc-item unlucky"><span class="rc-label">Scored big, still lost</span>
+      <span class="rc-value">${name(r.unlucky.teamId)} <b>${pts(r.unlucky.points)}</b></span></div>`);
+  }
+
+  return `<div class="recap m-rise">
+    <h4>Week ${esc(String(r.week))} recap</h4>
+    <div class="rc-grid m-stagger">${items.join('')}</div>
+  </div>`;
 }
 
 /**
@@ -276,6 +316,18 @@ export async function open(app, leagueId) {
     // Standings are optional in the same way: a league with no scored week has
     // none, and failing to load them must not blank the pane.
     state.standings = await getStandings(leagueId, state.league.season).catch(() => null);
+    // ⚠️ Recap inputs are OPTIONAL and must never blank the pane. A league with
+    // no schedule or no scored week simply has no story yet.
+    state.schedule = await getSchedule(leagueId, state.league.season).catch(() => null);
+    state.weekScores = {};
+    if (week) {
+      // Only the last two weeks: latestRecap walks backwards and stops at the
+      // first week with results, so fetching the whole season would be waste.
+      for (const w of [week, week - 1].filter((n) => n >= 1)) {
+        const rec = await getScores(leagueId, state.league.season, w).catch(() => null);
+        if (rec) state.weekScores[w] = rec;
+      }
+    }
   } catch (err) {
     state.error = describe(err);
   }
