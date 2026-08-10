@@ -15,11 +15,13 @@ import * as home from './league-home.js';
 import * as roster from './league-roster.js';
 import * as draft from './league-draft.js';
 import * as matchup from './league-matchup.js';
+import * as moves from './league-moves.js';
 
 const TABS = [
   ['home', 'League'],
   ['matchup', 'Matchups'],
   ['roster', 'My Roster'],
+  ['moves', 'Moves'],
   ['draft', 'Draft'],
 ];
 
@@ -36,7 +38,8 @@ export function render() {
   const body = state.tab === 'roster' ? roster.render()
     : state.tab === 'draft' ? draft.render()
       : state.tab === 'matchup' ? matchup.render()
-        : home.render();
+        : state.tab === 'moves' ? moves.render()
+          : home.render();
   return `${tabsHtml()}<div class="section-body">${body}</div>`;
 }
 
@@ -96,6 +99,8 @@ export async function onAction(act, target) {
         draft.load(app, { leagueId, league, teamId });
       } else if (state.tab === 'matchup') {
         matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
+      } else if (state.tab === 'moves') {
+        moves.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
       }
       return;
 
@@ -132,6 +137,41 @@ export async function onAction(act, target) {
       draft.stopPolling();
       app.router.refresh();
       matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
+      return;
+
+    // ── Moves ──
+    case 'moves-retry':
+      moves.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
+      return;
+    case 'moves-search':
+      moves.search(app, target.value, target.selectionStart);
+      return;
+    case 'moves-bid':
+      moves.setBid(target.value);
+      return;
+    case 'moves-drop':
+      moves.setDrop(target.value);
+      return;
+    case 'moves-claim':
+      moves.claim(app, target.dataset.player);
+      return;
+    case 'moves-cancel-claim':
+      moves.cancel(app, target.dataset.player);
+      return;
+    case 'moves-trade-with':
+      moves.setTradeWith(app, target.value);
+      return;
+    case 'moves-trade-mine':
+      moves.toggleTradePlayer('mine', target.dataset.player, target.checked);
+      return;
+    case 'moves-trade-theirs':
+      moves.toggleTradePlayer('theirs', target.dataset.player, target.checked);
+      return;
+    case 'moves-propose':
+      moves.propose(app);
+      return;
+    case 'moves-trade-act':
+      moves.respond(app, target.dataset.trade, target.dataset.action);
       return;
 
     case 'league-goto-draft':
