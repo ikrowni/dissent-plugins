@@ -1,0 +1,151 @@
+/* styles/league.css — the NATIVE fantasy league views.
+ *
+ * ⚠️ THESE CLASSES WERE NEVER WRITTEN. views/league-*.js shipped using .btn,
+ * .tbl, .stack, .row-actions, .muted and thirty-odd others, and not one of them
+ * existed in any stylesheet — so the whole league rendered as raw HTML controls
+ * on top of an otherwise finished-looking hub. Everything here is catching the
+ * stylesheet up with markup that already shipped.
+ *
+ * Tokens come from base.css. Nothing here invents a colour.
+ *
+ * ⚠️ Scoped to the league views by class name only. The Sleeper mirror
+ * (views/fantasy*.js) shares this document, so a bare `button {}` or `table {}`
+ * rule here would restyle a surface this file has never seen.
+ */
+
+/* ── Text ─────────────────────────────────────────────────────────────────── */
+.muted { color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
+.tiny  { font-size: 11px; color: var(--text-3); }
+.mono  { font-family: var(--f-mono); font-size: 11.5px; color: var(--text-3); }
+.you   { color: var(--gold); font-weight: 600; }
+
+/* A result of an action, not a failure — distinct from the muted explanations
+ * around it, or nobody notices the thing they just did worked. */
+.notice {
+  margin: 10px 0; padding: 9px 12px; border-radius: var(--r);
+  background: rgba(255, 182, 18, 0.08); border: 1px solid rgba(255, 182, 18, 0.22);
+  color: var(--text-2); font-size: 12.5px; line-height: 1.5;
+}
+
+.section-body { padding-bottom: 24px; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text-2);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.btn:hover:not(:disabled) { background: var(--panel); color: var(--text); border-color: var(--text-3); }
+/* ⚠️ A disabled control must LOOK disabled. Half this UI disables buttons while
+ * a call is in flight, and without this they stay bright and invite a second
+ * click that silently does nothing. */
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: var(--gold); border-color: transparent; color: #05070b; font-weight: 700; }
+.btn.primary:hover:not(:disabled) { background: #ffc63f; color: #05070b; }
+.btn.danger { color: var(--loss); border-color: rgba(176, 69, 90, 0.4); background: rgba(176, 69, 90, 0.1); }
+.btn.danger:hover:not(:disabled) { background: rgba(176, 69, 90, 0.2); color: #e8798c; }
+
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.season-strip { padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* A whole row that is itself a button — the league picker. */
+.row-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%;
+  font: inherit; text-align: left; cursor: pointer;
+  padding: 11px 13px; border-radius: var(--r);
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+}
+.row-btn:hover { border-color: var(--line-2); background: var(--panel-2); }
+.row-main { font-family: var(--f-display); font-size: 15px; font-weight: 700; }
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+.stack { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; max-width: 380px; }
+.stack label, .inline { display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.inline { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+
+.stack input, .stack select, .inline input, .inline select,
+input[data-act], select[data-act] {
+  font: inherit; font-size: 13px;
+  padding: 7px 10px; border-radius: var(--r-sm);
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+  text-transform: none; letter-spacing: 0;
+}
+.stack input:focus, .stack select:focus, .inline input:focus,
+input[data-act]:focus, select[data-act]:focus {
+  outline: none; border-color: var(--gold);
+}
+.inline input[type="number"], input[data-act="league-week-input"] { width: 72px; }
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+.tbl th {
+  text-align: left; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; padding: 8px 10px;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.tbl td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.045); color: var(--text-2); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl th.num, .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* The viewer's own team, so it is findable in a twelve-row table at a glance. */
+.tbl tr.mine td { color: var(--text); background: rgba(255, 182, 18, 0.05); }
+/* ⚠️ The line sits AFTER the last qualifying seed, marking the cut rather than
+ * decorating the team — a border on the row above would read as "this team is
+ * out", which is the opposite of true. */
+.tbl tr.playoff-cut td { border-bottom: 2px solid rgba(255, 182, 18, 0.45); }
+.tbl td .slot, .tbl td.slot {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700;
+}
+.tbl.lineup select { width: 100%; max-width: 260px; }
+
+/* ── Matchups and brackets ────────────────────────────────────────────────── */
+.matchup {
+  display: flex; align-items: center; gap: 12px; margin: 8px 0;
+  padding: 11px 13px; border-radius: var(--r);
+  background: var(--ink-2); border: 1px solid var(--line);
+}
+.matchup .side {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  font: inherit; font-size: 13px; color: var(--text-2);
+  background: none; border: none; padding: 0; text-align: left; cursor: pointer;
+}
+.matchup .side .team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup .side .pts { margin-left: auto; font-family: var(--f-display); font-size: 17px; font-weight: 700; color: var(--text); }
+/* The winner, not merely the higher number — flat text makes a reader compare
+ * two decimals to answer a question the layout should answer for them. */
+.matchup .side.winning { color: var(--text); }
+.matchup .side.winning .pts { color: var(--win); }
+.matchup .vs { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+.matchup.bye { color: var(--text-3); }
+.matchup.bracket-game .seed {
+  font-family: var(--f-mono); font-size: 11px; color: var(--text-3);
+  min-width: 26px; flex-shrink: 0;
+}
+
+.champion { color: var(--gold); font-weight: 700; font-size: 13px; }
+.champion-line { margin-top: 12px; color: var(--gold); font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+/* ⚠️ Visibly a SECOND bracket, not a continuation of the first. Run together,
+ * the also-rans read as more playoff rounds. */
+.consolation { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+.consolation h3 { font-family: var(--f-display); font-size: 14px; font-weight: 700; color: var(--text-2); }
+
+/* ── Draft and moves ──────────────────────────────────────────────────────── */
+.pick-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.pick { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12.5px; color: var(--text-2); }
+.fa { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.045); }
+.fa:last-child { border-bottom: none; }
+.check { accent-color: var(--gold); }
+
+.trade { margin: 10px 0; padding: 11px 13px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.trade-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; }
+.trade-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.trade-legs { font-size: 12.5px; color: var(--text-2); line-height: 1.7; }
+
+h4 {
+  font-family: var(--f-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.03em; color: var(--text-2);
+  margin: 16px 0 6px; text-transform: uppercase;
+}

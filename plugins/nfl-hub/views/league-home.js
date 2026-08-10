@@ -11,7 +11,7 @@
 import { esc, panel, stateMsg, tile } from '../core/ui.js';
 import {
   listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
-  myTeam, canManage,
+  myTeam, canManage, setCurrentWeek,
 } from '../core/league-api.js';
 // ⚠️ The SAME scoring presets the module uses. Imported rather than duplicated:
 // core/league/* is pure and shared by both halves of the plugin precisely so the
@@ -129,6 +129,8 @@ function leaguePane(league, scores, standings) {
         ${tile('Week', week === null ? 'preseason' : String(week))}
       </div>
       ${joinCta}
+      ${rosterCallout(league, teams.length)}
+      ${commissionerStrip(league, week)}
       ${table}
       <div class="row-actions">
         <button class="btn" data-act="league-refresh">Refresh</button>
@@ -137,6 +139,48 @@ function leaguePane(league, scores, standings) {
         <button class="btn" data-act="league-goto-draft">Draft</button>
       </div>`,
   });
+}
+
+/**
+ * What this league is actually waiting for.
+ *
+ * ⚠️ AN EMPTY LEAGUE LOOKS BROKEN, and it is the state every new one starts in.
+ * Every tab correctly says it has nothing to show, which together reads as a
+ * dead feature rather than as "nobody has joined yet". Naming the missing thing
+ * is the difference.
+ */
+function rosterCallout(league, teamCount) {
+  if (teamCount >= 2) return '';
+  return `<p class="notice">This league has ${teamCount === 0 ? 'no teams' : 'one team'} so far.
+    A draft, a schedule and matchups all need at least two — invite people to the
+    server and have them open this tab to join.</p>`;
+}
+
+/**
+ * Commissioner: start the season, or move it.
+ *
+ * ⚠️ THE WEEK IS WHAT UNLOCKS EVERYTHING. Scoring, waivers, matchups and the
+ * roster are all keyed on it, and until it is set every one of those tabs
+ * correctly reports that it has nothing — with no control anywhere to change
+ * that. The op existed from the beginning; nothing ever called it.
+ *
+ * ⚠️ Auto-advance only moves a season already in progress: it refuses while the
+ * live NFL state is preseason, and it never moves backwards. So the first week
+ * is always a person's decision.
+ */
+function commissionerStrip(league, week) {
+  if (!league.isCommissioner) return '';
+  const start = league.settings?.startWeek ?? 1;
+  return `<div class="row-actions season-strip">
+    ${week === null
+    ? `<button class="btn primary" data-act="league-start-season" data-week="${start}" ${state.busy ? 'disabled' : ''}>
+         ${state.busy ? 'Starting…' : `Start the season at week ${start}`}
+       </button>`
+    : `<label class="inline">Week
+         <input type="number" min="1" max="22" value="${week}" data-act="league-week-input">
+       </label>
+       <button class="btn" data-act="league-set-week" ${state.busy ? 'disabled' : ''}>Set week</button>`}
+  </div>`;
 }
 
 /**
@@ -240,6 +284,34 @@ export async function create(app, form) {
     });
     state.leagues = await listLeagues();
     await open(app, created.leagueId);
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+/**
+ * Commissioner: set the league's current week.
+ *
+ * ⚠️ Reads the input at click time rather than tracking every keystroke — the
+ * hub re-renders the whole view on each refresh, so a controlled number field
+ * would lose focus between digits.
+ */
+export async function setWeek(app, week) {
+  const n = Number(week);
+  if (!Number.isInteger(n) || n < 1) {
+    state.error = 'Week must be a whole number of 1 or more.';
+    app?.router?.refresh();
+    return;
+  }
+  state.busy = true;
+  state.error = null;
+  app?.router?.refresh();
+  try {
+    await setCurrentWeek(state.leagueId, n);
+    await open(app, state.leagueId);
   } catch (err) {
     state.error = describe(err);
   } finally {

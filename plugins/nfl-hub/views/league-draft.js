@@ -11,7 +11,9 @@
 // open is what keeps a live draft moving.
 
 import { esc, panel, stateMsg } from '../core/ui.js';
-import { getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock } from '../core/league-api.js';
+import {
+  getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft,
+} from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel } from '../core/player-index.js';
 import { describe } from './league-home.js';
 
@@ -28,6 +30,11 @@ const state = {
   localDeadline: null, // epoch ms, refreshed from the server on every poll
   query: '',
   results: [],
+  // ⚠️ "No draft yet" is a STATE, not an error. The module refuses `draft:get`
+  // for a league that has never created one, and rendering that refusal as an
+  // error pane left a commissioner staring at "Try again" — a button that could
+  // never work, on the one screen that needed a "Create draft" instead.
+  noDraft: false,
 };
 
 let timer = null;
@@ -37,6 +44,7 @@ export function reset() {
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, query: '', results: [],
+    noDraft: false,
   });
 }
 
@@ -48,12 +56,38 @@ export function render() {
              <button class="btn" data-act="draft-retry">Try again</button>`,
     });
   }
+  if (state.noDraft) return noDraftPane();
   if (!state.draft) return stateMsg('Loading the draft…', { spinner: true });
 
   const d = state.draft;
   if (d.status === 'pre') return prePane(d);
   if (d.status === 'complete') return completePane(d);
   return livePane(d);
+}
+
+/**
+ * No draft exists yet — the state every new league starts in.
+ *
+ * ⚠️ A COMMISSIONER GETS THE BUTTON THAT FIXES IT. This used to render as an
+ * error with "Try again", which is the least useful thing to show somebody who
+ * is the only person able to act.
+ */
+function noDraftPane() {
+  const teams = Object.keys(state.league?.teams ?? {}).length;
+  return panel({
+    title: 'Draft',
+    body: `
+      <p class="muted">No draft has been set up for this league yet.</p>
+      ${teams < 2
+    ? `<p class="muted">A draft needs at least two teams — this league has ${teams}.
+         Invite people to the server and have them join from the League tab.</p>`
+    : ''}
+      ${state.league?.isCommissioner
+    ? `<button class="btn primary" data-act="draft-create" ${state.busy || teams < 2 ? 'disabled' : ''}>
+         ${state.busy ? 'Creating…' : 'Create draft'}
+       </button>`
+    : '<p class="muted">A commissioner needs to create it.</p>'}`,
+  });
 }
 
 function prePane(d) {
@@ -178,6 +212,7 @@ async function poll(app) {
   try {
     const d = await getDraft(state.leagueId);
     state.draft = d;
+    state.noDraft = false;
     // Re-anchor the local countdown to the server's answer on every poll.
     state.localDeadline = d.msRemaining === null || d.msRemaining === undefined
       ? null
@@ -186,7 +221,15 @@ async function poll(app) {
       state.notice = `${d.autoPicked.length} pick${d.autoPicked.length === 1 ? '' : 's'} auto-drafted after the clock expired.`;
     }
   } catch (err) {
-    state.error = describe(err);
+    // ⚠️ A league with no draft is not a failure, and polling it forever is
+    // pointless — the answer cannot change until somebody creates one.
+    if (/no draft/i.test(String(err?.message ?? err))) {
+      state.noDraft = true;
+      state.draft = null;
+      state.error = null;
+    } else {
+      state.error = describe(err);
+    }
     stopPolling();
   }
 }
@@ -231,6 +274,19 @@ export function restoreSearchFocus(caret = null) {
   el.focus();
   const pos = caret === null ? el.value.length : caret;
   try { el.setSelectionRange(pos, pos); } catch { /* not all inputs support it */ }
+}
+
+/** Commissioner: create the draft this league has never had. */
+export async function create(app) {
+  await act(app, async () => {
+    await createDraft(state.leagueId);
+    state.noDraft = false;
+  }, 'Draft created.');
+  // Polling stopped when the draft turned out not to exist; restart it now that
+  // one does, or the board never updates.
+  await poll(app);
+  startPolling(app);
+  app?.router?.refresh();
 }
 
 export async function start(app) { await act(app, () => startDraft(state.leagueId)); }

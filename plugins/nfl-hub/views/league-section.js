@@ -140,6 +140,17 @@ export async function onAction(act, target) {
       home.open(app, target.dataset.league);
       return;
 
+    case 'league-start-season':
+      home.setWeek(app, target.dataset.week);
+      return;
+    case 'league-set-week': {
+      // ⚠️ Read the field at click time. The hub re-renders on every refresh, so
+      // a controlled input would lose focus between keystrokes.
+      const field = document.querySelector('[data-act="league-week-input"]');
+      home.setWeek(app, field?.value);
+      return;
+    }
+
     case 'league-goto-roster':
       state.tab = 'roster';
       app.router.refresh();
@@ -269,6 +280,9 @@ export async function onAction(act, target) {
       return;
     case 'draft-pick-player':
       draft.pick(app, target.dataset.player);
+      return;
+    case 'draft-create':
+      draft.create(app);
       return;
     case 'draft-start':
       draft.start(app);

@@ -147,3 +147,58 @@ describe('describe (error text)', () => {
     expect(describeErr(null)).toBe('Something went wrong.');
   });
 });
+
+describe('the season control', () => {
+  // ⚠️ THE WEEK IS WHAT UNLOCKS EVERYTHING — scoring, waivers, matchups, the
+  // roster. Until it is set every tab correctly reports it has nothing, and
+  // there was no control anywhere to change that. The op existed from the
+  // start; nothing called it.
+  it('offers a commissioner a way to start a league that has not begun', () => {
+    setup({ league: league({ currentWeek: null }) });
+    const html = render();
+    expect(html).toContain('league-start-season');
+    expect(html).toContain('Start the season at week 1');
+  });
+
+  it('starts at the league’s own startWeek, not a hardcoded 1', () => {
+    setup({ league: league({ currentWeek: null, settings: { name: 'L', startWeek: 5 } }) });
+    expect(render()).toContain('data-week="5"');
+  });
+
+  it('switches to a week editor once the season is running', () => {
+    setup({ league: league({ currentWeek: 3 }) });
+    const html = render();
+    expect(html).toContain('league-week-input');
+    expect(html).toContain('league-set-week');
+    expect(html).not.toContain('league-start-season');
+  });
+
+  // ⚠️ Only a commissioner may set the week; offering the control to anyone
+  // else is an invitation to a refusal.
+  it('shows no season control to an ordinary manager', () => {
+    setup({ league: league({ currentWeek: null, isCommissioner: false }) });
+    const html = render();
+    expect(html).not.toContain('league-start-season');
+    expect(html).not.toContain('league-set-week');
+  });
+});
+
+describe('the empty-league callout', () => {
+  // ⚠️ A one-team league looks BROKEN: every tab truthfully reports nothing to
+  // show, and together that reads as a dead feature rather than as "nobody has
+  // joined yet".
+  it('says what a one-team league is waiting for', () => {
+    setup({ league: league({ teams: { t1: { id: 't1', name: 'Alice FC' } } }) });
+    expect(render()).toMatch(/one team so far/i);
+  });
+
+  it('says the same for a league with no teams at all', () => {
+    setup({ league: league({ teams: {}, myTeams: [] }) });
+    expect(render()).toMatch(/no teams so far/i);
+  });
+
+  it('says nothing once two teams exist', () => {
+    setup();
+    expect(render()).not.toMatch(/so far/i);
+  });
+});
