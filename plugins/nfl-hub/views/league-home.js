@@ -10,7 +10,8 @@
 
 import { esc, panel, stateMsg, tile } from '../core/ui.js';
 import {
-  listLeagues, getLeague, createLeague, joinLeague, getScores, myTeam, canManage,
+  listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
+  myTeam, canManage,
 } from '../core/league-api.js';
 // ⚠️ The SAME scoring presets the module uses. Imported rather than duplicated:
 // core/league/* is pure and shared by both halves of the plugin precisely so the
@@ -28,13 +29,15 @@ const state = {
   leagueId: null,
   league: null,
   scores: null,
+  standings: null,
   error: null,
   busy: false,
 };
 
 export function reset() {
   Object.assign(state, {
-    leagues: null, leagueId: null, league: null, scores: null, error: null, busy: false,
+    leagues: null, leagueId: null, league: null, scores: null, standings: null,
+    error: null, busy: false,
   });
 }
 
@@ -48,7 +51,7 @@ export function render() {
   if (state.leagues === null) return stateMsg('Loading your leagues…', { spinner: true });
   if (state.leagues.length === 0) return emptyPane();
   if (!state.league) return pickerPane(state.leagues);
-  return leaguePane(state.league, state.scores);
+  return leaguePane(state.league, state.scores, state.standings);
 }
 
 /**
@@ -102,19 +105,11 @@ function pickerPane(leagues) {
   return panel({ title: 'Fantasy Leagues', body: `<div class="stack">${rows}</div>` });
 }
 
-function leaguePane(league, scores) {
+function leaguePane(league, scores, standings) {
   const mine = myTeam(league);
   const teams = Object.values(league.teams ?? {});
   const week = league.currentWeek ?? null;
-
-  const standings = teams.map((t) => {
-    const pts = scores?.teams?.[t.id]?.total;
-    return `<tr>
-      <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="muted">(you)</span>' : ''}</td>
-      <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
-      <td class="num">${pts === undefined ? '—' : pts.toFixed(2)}</td>
-    </tr>`;
-  }).join('');
+  const table = standingsTable(league, standings, scores);
 
   const joinCta = mine ? '' : `
     <form data-act="league-join-form" class="stack">
@@ -134,10 +129,7 @@ function leaguePane(league, scores) {
         ${tile('Week', week === null ? 'preseason' : String(week))}
       </div>
       ${joinCta}
-      <table class="tbl">
-        <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
-        <tbody>${standings || '<tr><td colspan="3" class="muted">No teams yet.</td></tr>'}</tbody>
-      </table>
+      ${table}
       <div class="row-actions">
         <button class="btn" data-act="league-refresh">Refresh</button>
         ${mine ? '<button class="btn" data-act="league-goto-roster">My roster</button>' : ''}
@@ -145,6 +137,60 @@ function leaguePane(league, scores) {
         <button class="btn" data-act="league-goto-draft">Draft</button>
       </div>`,
   });
+}
+
+/**
+ * The league table.
+ *
+ * ⚠️ RECORDS COME FROM THE MODULE. Before any week is scored there is no table
+ * to show, so this falls back to a roster/points listing rather than printing a
+ * column of 0-0 that looks like a played season.
+ *
+ * ⚠️ The playoff line is drawn from the league's OWN playoffTeams setting, and
+ * only once records exist. Drawing it over an all-zero table would show a cut
+ * decided by nothing.
+ */
+function standingsTable(league, standings, scores) {
+  const teams = Object.values(league.teams ?? {});
+  if (teams.length === 0) return '<p class="muted">No teams yet.</p>';
+
+  const rows = standings?.standings ?? [];
+  const played = (standings?.weeks ?? 0) > 0;
+  const cut = played ? (league.settings?.playoffTeams ?? 0) : 0;
+
+  if (!played) {
+    return `<table class="tbl">
+      <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
+      <tbody>${teams.map((t) => `
+        <tr>
+          <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="muted">(you)</span>' : ''}</td>
+          <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
+          <td class="num">${scores?.teams?.[t.id]?.total === undefined ? '—' : scores.teams[t.id].total.toFixed(2)}</td>
+        </tr>`).join('')}</tbody>
+    </table>
+    <p class="muted">Records appear once a week has been scored.</p>`;
+  }
+
+  return `<table class="tbl standings">
+    <thead><tr>
+      <th class="num">#</th><th>Team</th><th class="num">W-L-T</th>
+      <th class="num">PF</th><th class="num">PA</th>
+    </tr></thead>
+    <tbody>${rows.map((r) => {
+    const name = league.teams?.[r.teamId]?.name ?? r.teamId;
+    const isMine = (league.myTeams ?? []).includes(r.teamId);
+    // The line sits AFTER the last qualifying seed, not on it.
+    const lastIn = cut > 0 && r.seed === cut;
+    return `<tr class="${isMine ? 'mine' : ''} ${lastIn ? 'playoff-cut' : ''}">
+        <td class="num">${r.seed}</td>
+        <td>${esc(name)}${isMine ? ' <span class="muted">(you)</span>' : ''}</td>
+        <td class="num">${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ''}</td>
+        <td class="num">${r.pointsFor.toFixed(2)}</td>
+        <td class="num">${r.pointsAgainst.toFixed(2)}</td>
+      </tr>`;
+  }).join('')}</tbody>
+  </table>
+  <p class="muted">After ${standings.weeks} scored week${standings.weeks === 1 ? '' : 's'}${cut ? ` · top ${cut} make the playoffs` : ''}.</p>`;
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -173,6 +219,9 @@ export async function open(app, leagueId) {
     state.scores = week
       ? await getScores(leagueId, state.league.season, week).catch(() => null)
       : null;
+    // Standings are optional in the same way: a league with no scored week has
+    // none, and failing to load them must not blank the pane.
+    state.standings = await getStandings(leagueId, state.league.season).catch(() => null);
   } catch (err) {
     state.error = describe(err);
   }

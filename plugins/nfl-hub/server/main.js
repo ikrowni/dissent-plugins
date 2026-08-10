@@ -27,10 +27,10 @@ import {
 } from "./ops-transactions.js";
 import {
   refreshPositions, scoreWeekForLeague, getScores, setCurrentWeek,
-  runScoring, positionsAreStale,
+  runScoring, positionsAreStale, getStandings,
 } from "./ops-scoring.js";
 
-const MODULE_VERSION = "0.4.0";
+const MODULE_VERSION = "0.5.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -89,6 +89,7 @@ const OPS = {
 
   // Scoring
   "scores:get": getScores,
+  "standings:get": getStandings,
   "league:week": setCurrentWeek,
   "positions:refresh": refreshPositions,
 

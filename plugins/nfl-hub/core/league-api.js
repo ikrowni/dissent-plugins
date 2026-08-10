@@ -75,9 +75,16 @@ export const listTrades = (leagueId) => call('trade:list', { leagueId });
 export const commissionerTrade = (leagueId, tradeId, approve) =>
   call('trade:commissioner', { leagueId, tradeId, approve });
 
-// ── Scores ───────────────────────────────────────────────────────────────────
+// ── Scores and standings ─────────────────────────────────────────────────────
 export const getScores = (leagueId, season, week) =>
   call('scores:get', { leagueId, season, week });
+
+// ⚠️ Standings are computed by the MODULE, not here. They decide playoff
+// seeding, so a second answer to "what is my record" is worse than a second
+// answer to "who do I play" — and working it out client-side would mean fetching
+// every week separately for a number the node already holds.
+export const getStandings = (leagueId, season) =>
+  call('standings:get', { leagueId, season });
 
 // ── UI-only helpers ──────────────────────────────────────────────────────────
 

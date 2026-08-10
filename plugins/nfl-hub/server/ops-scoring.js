@@ -16,6 +16,7 @@ import { requireScheduled, requireCommissioner } from "./auth.js";
 import { scoreStatLine } from "../core/league/scoring.js";
 import { splitRosterPositions } from "../core/league/slots.js";
 import { weeklyPoints } from "../core/league/lineup.js";
+import { buildStandings, seedTeams } from "../core/league/schedule.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -172,4 +173,71 @@ export function positionsAreStale() {
 /** Every league id on the install, for the tick. */
 export function allLeagues() {
   return leagueIndex();
+}
+
+/**
+ * The league table, computed from the STORED schedule and the STORED scores.
+ *
+ * ⚠️ COMPUTED HERE, NOT IN THE BROWSER, and for a stronger reason than the
+ * schedule was. Standings decide playoff seeding, so two answers to "what is my
+ * record" is worse than two answers to "who do I play" — and a client would have
+ * to fetch every week separately to work it out, which is a dozen invocations
+ * against the install's daily allowance for a number the node already holds.
+ *
+ * ⚠️ ONLY WEEKS THAT HAVE ACTUALLY BEEN SCORED COUNT. A future week has no
+ * result, and treating its absent scores as 0–0 would hand everybody a loss for
+ * games nobody has played.
+ */
+export function getStandings({ payload }) {
+  const lg = String(payload?.leagueId ?? '');
+  if (!lg) refuse('leagueId required');
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const season = Number(payload?.season ?? meta.season);
+  const schedule = read(KEY.schedule(lg, season), null);
+  const teamIds = Object.keys(teams);
+
+  if (!schedule) {
+    // No schedule means no games, which is a real state early in a season —
+    // an empty table, not an error.
+    return { season, weeks: 0, standings: buildStandings(teamIds, []), scheduled: false };
+  }
+
+  const results = [];
+  let scoredWeeks = 0;
+  for (const week of schedule.weeks ?? []) {
+    const scores = read(KEY.scores(lg, season, week.week), null);
+    if (!scores) continue; // not played yet
+    scoredWeeks++;
+    for (const m of week.matchups ?? []) {
+      const home = scores.teams?.[m.home];
+      // A bye still records points for, but no opponent and no result.
+      if (m.bye || !m.away) {
+        if (home) results.push({ week: week.week, home: m.home, away: null, homePoints: home.total, awayPoints: 0 });
+        continue;
+      }
+      const away = scores.teams?.[m.away];
+      // A matchup where one side was never scored is not half a result.
+      if (!home || !away) continue;
+      results.push({
+        week: week.week,
+        home: m.home, away: m.away,
+        homePoints: home.total, awayPoints: away.total,
+      });
+    }
+  }
+
+  const table = buildStandings(teamIds, results, {
+    medianMatchup: Boolean(meta.settings?.medianMatchup),
+  });
+
+  return {
+    season,
+    weeks: scoredWeeks,
+    scheduled: true,
+    // Seeded here too, so a client rendering a playoff line does not re-rank and
+    // risk disagreeing about the cut.
+    standings: seedTeams(table),
+  };
 }
