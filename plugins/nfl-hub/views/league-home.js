@@ -18,6 +18,8 @@ import {
 // client cannot disagree with the server about what "PPR" means.
 import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
 import { latestRecap } from '../core/league/recap.js';
+import { toScoredWeeks, toRosters, hasEnoughForPower } from '../core/league/power-adapter.js';
+import { powerRankings } from '../core/power.js';
 import { getSchedule } from '../core/league-api.js';
 
 const SCORING_PRESETS = {
@@ -134,6 +136,7 @@ function leaguePane(league, scores, standings) {
       </div>
       ${joinCta}
       ${recapPanel(league)}
+      ${powerPanel(league)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
       ${table}
@@ -178,6 +181,51 @@ function recapPanel(league) {
   return `<div class="recap m-rise">
     <h4>Week ${esc(String(r.week))} recap</h4>
     <div class="rc-grid m-stagger">${items.join('')}</div>
+  </div>`;
+}
+
+/**
+ * Power rankings: who is actually best, regardless of who they drew.
+ *
+ * ⚠️ HEAD-TO-HEAD RECORD IS A NOISY SIGNAL. A team can sit 4-1 having drawn the
+ * weakest opponent every week. ALL-PLAY asks the schedule-free question — if
+ * everyone played everyone, what would the record be — and LUCK is the gap
+ * between that and reality. It is the single most argued-over number in a
+ * fantasy league and we already had the maths.
+ *
+ * ⚠️ NO EFFICIENCY COLUMN. powerRankings reports it from `potentialPoints`,
+ * which the native league cannot compute — a stored week holds only the
+ * starters' points, so the bench scores needed for a best-possible lineup are
+ * absent. Printing 0% would be a confident lie.
+ */
+function powerPanel(league) {
+  const scored = toScoredWeeks(state.weekScores);
+  // ⚠️ Two weeks minimum. After one, all-play is just that week's scoreboard
+  // restated, and calling it a power ranking would be theatre.
+  if (!hasEnoughForPower(scored)) return '';
+
+  const rows = powerRankings(toRosters(state.standings?.standings ?? []), scored);
+  if (rows.length === 0) return '';
+
+  const name = (t) => esc(league.teams?.[t]?.name ?? t);
+  const luckClass = (n) => (n > 0.5 ? 'lucky' : n < -0.5 ? 'unlucky' : '');
+  const luckWord = (n) => (n > 0.5 ? `+${n.toFixed(1)}` : n.toFixed(1));
+
+  return `<div class="power m-rise">
+    <h4>Power rankings <span class="tiny">· all-play over ${scored.length} week${scored.length === 1 ? '' : 's'}</span></h4>
+    <table class="tbl m-stagger">
+      <thead><tr><th class="num">#</th><th>Team</th><th class="num">All-play</th><th class="num">Luck</th></tr></thead>
+      <tbody>${rows.map((r) => `
+        <tr class="${(league.myTeams ?? []).includes(r.rosterId) ? 'mine' : ''}">
+          <td class="num"><span class="seed-badge">${r.rank}</span></td>
+          <td>${name(r.rosterId)}</td>
+          <td class="num">${r.allPlay.wins}-${r.allPlay.losses}${r.allPlay.ties ? `-${r.allPlay.ties}` : ''}
+            <span class="tiny">${(r.allPlayPct * 100).toFixed(0)}%</span></td>
+          <td class="num ${luckClass(r.luck)}">${luckWord(r.luck)}</td>
+        </tr>`).join('')}</tbody>
+    </table>
+    <p class="tiny">Luck is real wins minus what an all-play record predicts. Positive means
+    the schedule has been kind.</p>
   </div>`;
 }
 
@@ -321,12 +369,15 @@ export async function open(app, leagueId) {
     state.schedule = await getSchedule(leagueId, state.league.season).catch(() => null);
     state.weekScores = {};
     if (week) {
-      // Only the last two weeks: latestRecap walks backwards and stops at the
-      // first week with results, so fetching the whole season would be waste.
-      for (const w of [week, week - 1].filter((n) => n >= 1)) {
-        const rec = await getScores(leagueId, state.league.season, w).catch(() => null);
-        if (rec) state.weekScores[w] = rec;
-      }
+      // ⚠️ EVERY week, not just the last two: power rankings need the whole
+      // season's scores, and one score record is a few hundred bytes. Fetched in
+      // PARALLEL — sequentially this would be seventeen round trips on tab load.
+      const start = state.league.settings?.startWeek ?? 1;
+      const weeks = [];
+      for (let w = start; w <= week; w += 1) weeks.push(w);
+      const records = await Promise.all(weeks.map((w) => getScores(leagueId, state.league.season, w)
+        .then((rec) => [w, rec]).catch(() => [w, null])));
+      for (const [w, rec] of records) if (rec) state.weekScores[w] = rec;
     }
   } catch (err) {
     state.error = describe(err);

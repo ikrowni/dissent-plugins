@@ -264,3 +264,46 @@ describe('the weekly recap', () => {
     expect(html).not.toMatch(/>t1</);
   });
 });
+
+describe('power rankings', () => {
+  const w = (map) => ({ teams: Object.fromEntries(Object.entries(map).map(([t, total]) => [t, { total }])) });
+  const twoWeeks = { 1: w({ t1: 120, t2: 100, t3: 80 }), 2: w({ t1: 130, t2: 110, t3: 90 }) };
+  const table = standings(2, [
+    { teamId: 't1', seed: 1, wins: 2, losses: 0, ties: 0, pointsFor: 250, pointsAgainst: 170 },
+    { teamId: 't2', seed: 2, wins: 1, losses: 1, ties: 0, pointsFor: 210, pointsAgainst: 210 },
+    { teamId: 't3', seed: 3, wins: 0, losses: 2, ties: 0, pointsFor: 170, pointsAgainst: 250 },
+  ]);
+
+  // ⚠️ After one week all-play is just that week's scoreboard restated, and
+  // calling it a power ranking would be theatre.
+  it('does not appear after a single week', () => {
+    setup({ standings: table, weekScores: { 1: twoWeeks[1] } });
+    expect(render()).not.toContain('Power rankings');
+  });
+
+  it('appears once two weeks have been played', () => {
+    setup({ standings: table, weekScores: twoWeeks });
+    const html = render();
+    expect(html).toContain('Power rankings');
+    expect(html).toContain('All-play');
+  });
+
+  it('ranks the consistently highest scorer first', () => {
+    setup({ standings: table, weekScores: twoWeeks });
+    const body = render().split('Power rankings')[1];
+    expect(body.indexOf('Alice FC')).toBeLessThan(body.indexOf('Cara City'));
+  });
+
+  // ⚠️ Efficiency comes from potentialPoints, which the native league cannot
+  // compute — a stored week holds only the starters. Printing 0% would be a
+  // confident lie.
+  it('shows no efficiency column', () => {
+    setup({ standings: table, weekScores: twoWeeks });
+    expect(render()).not.toMatch(/Efficiency/i);
+  });
+
+  it('explains what luck means rather than printing a bare number', () => {
+    setup({ standings: table, weekScores: twoWeeks });
+    expect(render()).toMatch(/real wins minus/i);
+  });
+});
