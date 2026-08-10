@@ -18,6 +18,9 @@ import { splitRosterPositions } from "../core/league/slots.js";
 import { weeklyPoints } from "../core/league/lineup.js";
 import { buildStandings, seedTeams } from "../core/league/schedule.js";
 import { shouldAdvance } from "../core/league/season-clock.js";
+// ⚠️ The refresh rule lives in core/league so it can be unit-tested — server/*.js
+// has no unit tests, and this decides whether scores update at all.
+import { fingerprintOf, isDue, nextBackoff } from "../core/league/score-backoff.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -72,11 +75,40 @@ export function positionMap() {
 export function scoreWeekForLeague({ p, payload }) {
   const err = requireScheduled(p);
   if (err) refuse(err);
-  return runScoring(String(payload?.leagueId ?? ""), payload?.season, payload?.week);
+  // An explicit scheduled request was asked for; it is not the routine tick.
+  return runScoring(String(payload?.leagueId ?? ""), payload?.season, payload?.week, { force: true });
 }
 
-/** The scoring pass itself, callable from the tick without re-checking auth. */
-export function runScoring(lg, seasonIn, weekIn) {
+/**
+ * ⚠️ ONE FETCH PER (season, week) PER INVOCATION. The tick loops every league on
+ * the install and each one asked for the same ~520 KB payload, so ten leagues
+ * meant ten identical downloads every five minutes — the single largest cost the
+ * node incurs, and entirely avoidable.
+ *
+ * ⚠️ SAFE BECAUSE THE INSTANCE IS FRESH PER INVOCATION. The runtime builds a new
+ * `Instance()` for every call, so this map is discarded when the tick ends and
+ * can never serve a stale week to a later one. It is a within-tick memo, NOT a
+ * cache — do not try to make it persist.
+ */
+const statsMemo = new Map();
+
+function weeklyStats(season, week) {
+  const key = `${season}:${week}`;
+  if (!statsMemo.has(key)) {
+    statsMemo.set(key, fetchJSON({ url: STATS_URL(season, week) }));
+  }
+  return statsMemo.get(key);
+}
+
+/**
+ * The scoring pass itself, callable from the tick without re-checking auth.
+ *
+ * ⚠️ `force` SKIPS THE BACKOFF and must be passed by anything that is not the
+ * routine tick: the final pass when a week rolls over gets one last chance to
+ * record that week correctly, and an explicit scheduled request was asked for.
+ * Throttling either would lose data rather than save bandwidth.
+ */
+export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
   if (!lg) refuse("leagueId required");
   const { meta, teams, assets } = loadLeague(lg);
   if (!meta) refuse(`no such league: ${lg}`);
@@ -85,7 +117,13 @@ export function runScoring(lg, seasonIn, weekIn) {
   const week = Number(weekIn ?? meta.currentWeek);
   if (!Number.isInteger(week) || week < 1) return { skipped: "no current week" };
 
-  const stats = fetchJSON({ url: STATS_URL(season, week) });
+  // Not due yet, and nothing has been changing — leave the stored score alone.
+  const prev = read(KEY.scores(lg, season, week), null);
+  if (!force && !isDue(prev)) {
+    return { season, week, skipped: "not due", dueIn: prev.nextScoreAt - Date.now() };
+  }
+
+  const stats = weeklyStats(season, week);
   const positions = positionMap();
   const { starters } = splitRosterPositions(meta.settings?.rosterPositions);
   const scoring = meta.settings?.scoring ?? {};
@@ -118,8 +156,13 @@ export function runScoring(lg, seasonIn, weekIn) {
     };
   }
 
+  // Back off while nothing moves, snap back the moment it does.
+  const fingerprint = fingerprintOf(results);
+  const { quietRuns, nextScoreAt } = nextBackoff(prev, fingerprint);
+
   writeUncontended(KEY.scores(lg, season, week), {
     season, week, scoredAt: Date.now(), teams: results,
+    fingerprint, quietRuns, nextScoreAt,
   });
 
   return {
@@ -286,7 +329,8 @@ export function advanceWeekIfDue(lg, state) {
   let finalized = null;
   if (current >= 1) {
     try {
-      finalized = runScoring(lg, meta.season, current);
+      // ⚠️ The last chance to record the week being left behind.
+      finalized = runScoring(lg, meta.season, current, { force: true });
     } catch (err) {
       // A failed final score must not block the season from moving on — the week
       // keeps whatever score it had, and that is visible, whereas a stuck league
@@ -331,7 +375,7 @@ export function backfillOneWeek(lg) {
   for (let week = start; week < current; week++) {
     if (read(KEY.scores(lg, season, week), null)) continue;
     try {
-      const result = runScoring(lg, season, week);
+      const result = runScoring(lg, season, week, { force: true });
       return { week, result };
     } catch (err) {
       // Report and move on rather than retrying the same week forever — a week
