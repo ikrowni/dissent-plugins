@@ -233,3 +233,54 @@ describe('local state helpers', () => {
     expect(_state.tradeTheirs).toEqual(['p2']);
   });
 });
+
+describe('the trending panel', () => {
+  const trending = {
+    adds: [{ id: 'fa1', count: 52614, player: INDEX.fa1 }],
+    drops: [{ id: 'p2', count: 11736, player: INDEX.p2 }],
+  };
+
+  // ⚠️ Supplementary, and loaded off the critical path. Before it arrives the
+  // waiver wire must look finished, not half-loaded — an empty "Trending" box
+  // would be louder than the feature is important.
+  it('renders nothing before it has loaded', () => {
+    setup({ trending: null });
+    expect(render()).not.toContain('Trending now');
+  });
+
+  it('renders nothing when both directions came back empty', () => {
+    setup({ trending: { adds: [], drops: [] } });
+    expect(render()).not.toContain('Trending now');
+  });
+
+  it('shows the most added and most dropped', () => {
+    setup({ trending });
+    const html = render();
+    expect(html).toContain('Trending now');
+    expect(html).toContain('Most added');
+    expect(html).toContain('Free Agent');
+    expect(html).toContain('Beta Two');
+  });
+
+  // ⚠️ 52,614 is a real top-add count. Raw, it is noise in a narrow column.
+  it('shortens the transaction counts', () => {
+    setup({ trending });
+    expect(render()).toContain('52.6k');
+  });
+
+  // ⚠️ Roughly 1 in 12 men cannot separate the red from the green, so direction
+  // is never carried by colour alone.
+  it('marks direction with a class, not only a colour', () => {
+    setup({ trending });
+    const html = render();
+    expect(html).toContain('trend-head up');
+    expect(html).toContain('trend-head down');
+  });
+
+  it('still renders one side when the other is empty', () => {
+    setup({ trending: { adds: trending.adds, drops: [] } });
+    const html = render();
+    expect(html).toContain('Trending now');
+    expect(html).toContain('Nothing yet.');
+  });
+});
