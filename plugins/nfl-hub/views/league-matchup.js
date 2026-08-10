@@ -179,7 +179,7 @@ function bracketGame(g) {
   // mixed up rather than as the also-rans' ladder.
   const seat = (t) => `<span class="side ${won(t) ? 'winning' : ''}">
       <span class="seed">#${esc(String(t.overallSeed ?? t.seed))}</span>
-      <span class="team">${esc(teamName(t.teamId))}${isMine(t.teamId) ? ' <span class="muted">(you)</span>' : ''}</span>
+      <span class="team">${esc(teamName(t.teamId))}${isMine(t.teamId) ? ' <span class="you">you</span>' : ''}</span>
     </span>`;
   return `<div class="matchup bracket-game">
     ${seat(g.home)}<div class="vs">vs</div>${seat(g.away)}
@@ -202,19 +202,25 @@ function matchupCard(m) {
   const homeWins = decided && home > away;
   const awayWins = decided && away > home;
 
+  const best = Math.max(home ?? 0, away ?? 0) || null;
   return `<div class="matchup">
-    ${side(m.home, home, homeWins)}
+    ${side(m.home, home, homeWins, best)}
     <div class="vs">vs</div>
-    ${side(m.away, away, awayWins)}
+    ${side(m.away, away, awayWins, best)}
   </div>
   ${state.expanded === m.home ? lineupTable(m.home) : ''}
   ${state.expanded === m.away ? lineupTable(m.away) : ''}`;
 }
 
-function side(teamId, points, winning) {
+function side(teamId, points, winning, best = null) {
+  // ⚠️ Scaled to the HIGHER of the two scores, not to zero. Both teams always
+  // score a large number, so a bar from zero is always nearly full and says
+  // nothing; against the leader it answers "by how much".
+  const pct = points === null || !best ? 0 : Math.max(2, Math.round((points / best) * 100));
   return `<button class="side ${winning ? 'winning' : ''}" data-act="matchup-expand" data-team="${esc(teamId)}">
-    <span class="team">${esc(teamName(teamId))}${isMine(teamId) ? ' <span class="muted">(you)</span>' : ''}</span>
+    <span class="team">${esc(teamName(teamId))}${isMine(teamId) ? ' <span class="you">you</span>' : ''}</span>
     <span class="pts">${points === null ? '—' : points.toFixed(2)}</span>
+    ${points === null ? '' : `<span class="mu-bar"><span class="mu-bar-fill" style="width:${pct}%"></span></span>`}
   </button>`;
 }
 

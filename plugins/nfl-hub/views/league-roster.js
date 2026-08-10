@@ -6,6 +6,8 @@
 // players.
 
 import { esc, panel, stateMsg } from '../core/ui.js';
+import { playerChip, positionColor } from '../core/player-visuals.js';
+import { getIndex } from '../core/player-index.js';
 import { setLineup, getLineup, dropPlayer, movePlayer } from '../core/league-api.js';
 import { splitRosterPositions, slotAccepts } from '../core/league/slots.js';
 import { describe } from './league-home.js';
@@ -91,15 +93,23 @@ function slotRow(slot, index, current, bench) {
     const sel = String(current ?? '') === String(id) ? ' selected' : '';
     options.push(`<option value="${esc(id)}"${sel}>${esc(playerLabel(id))}</option>`);
   }
+  // ⚠️ The chosen player is shown BESIDE the select, not only inside it. A
+  // <select> cannot carry a portrait or a position colour, and a lineup that is
+  // twelve identical dropdowns is the least readable form this screen can take.
+  const chosen = current ? (getIndex()?.[String(current)] ?? null) : null;
   return `<tr>
-    <td class="slot">${esc(slot)}</td>
-    <td><select data-act="roster-slot" data-index="${index}">${options.join('')}</select></td>
+    <td class="slot" style="color:${esc(positionColor(slot === 'FLEX' ? 'RB' : slot))}">${esc(slot)}</td>
+    <td class="lineup-pick">
+      ${chosen ? playerChip(chosen, { size: 30, compact: true }) : '<span class="db-slot-empty">Empty</span>'}
+      <select data-act="roster-slot" data-index="${index}">${options.join('')}</select>
+    </td>
   </tr>`;
 }
 
 function benchRow(id, where = 'bench') {
+  const p = getIndex()?.[String(id)] ?? null;
   return `<tr>
-    <td>${esc(playerLabel(id))}</td>
+    <td>${p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(id))}</td>
     <td class="num">
       ${where === 'bench'
     ? `<button class="btn tiny" data-act="roster-ir" data-player="${esc(id)}">IR</button>`

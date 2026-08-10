@@ -97,7 +97,9 @@ describe('render', () => {
 
   it('marks the viewer’s own team', () => {
     setup();
-    expect(render()).toContain('(you)');
+    // A styled badge rather than a parenthetical — assert the intent, not the
+    // exact characters, or every restyle "fails" for the wrong reason.
+    expect(render()).toContain('class="you"');
   });
 
   it('renders a bye as a bye rather than half a card', () => {

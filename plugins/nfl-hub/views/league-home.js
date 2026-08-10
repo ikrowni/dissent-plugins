@@ -207,13 +207,18 @@ function standingsTable(league, standings, scores) {
       <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
       <tbody>${teams.map((t) => `
         <tr>
-          <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="muted">(you)</span>' : ''}</td>
+          <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="you">you</span>' : ''}</td>
           <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
           <td class="num">${scores?.teams?.[t.id]?.total === undefined ? '—' : scores.teams[t.id].total.toFixed(2)}</td>
         </tr>`).join('')}</tbody>
     </table>
     <p class="muted">Records appear once a week has been scored.</p>`;
   }
+
+  // ⚠️ The bar is scaled to the LEADER, not to zero. Every team in a fantasy
+  // league scores hundreds of points, so bars from zero are all nearly full and
+  // say nothing; scaled to the best total, the gap is the story.
+  const topPF = Math.max(...rows.map((r) => r.pointsFor), 1);
 
   return `<table class="tbl standings">
     <thead><tr>
@@ -225,9 +230,14 @@ function standingsTable(league, standings, scores) {
     const isMine = (league.myTeams ?? []).includes(r.teamId);
     // The line sits AFTER the last qualifying seed, not on it.
     const lastIn = cut > 0 && r.seed === cut;
+    const inPlayoffs = cut > 0 && r.seed <= cut;
+    const pct = Math.round((r.pointsFor / topPF) * 100);
     return `<tr class="${isMine ? 'mine' : ''} ${lastIn ? 'playoff-cut' : ''}">
-        <td class="num">${r.seed}</td>
-        <td>${esc(name)}${isMine ? ' <span class="muted">(you)</span>' : ''}</td>
+        <td class="num"><span class="seed-badge${inPlayoffs ? ' in' : ''}">${r.seed}</span></td>
+        <td>
+          <span class="std-team">${esc(name)}${isMine ? ' <span class="you">you</span>' : ''}</span>
+          <span class="std-bar"><span class="std-bar-fill" style="width:${pct}%"></span></span>
+        </td>
         <td class="num">${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ''}</td>
         <td class="num">${r.pointsFor.toFixed(2)}</td>
         <td class="num">${r.pointsAgainst.toFixed(2)}</td>

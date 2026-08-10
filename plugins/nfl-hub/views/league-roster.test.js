@@ -62,10 +62,14 @@ describe('render', () => {
   // ⚠️ Scoped to ONE ROW. Slicing to the end of the document sweeps in the bench
   // list, where every player legitimately appears — which made this pass for the
   // wrong reason and then fail for the wrong reason.
+  // ⚠️ Attribute-agnostic. Matching the exact tag text coupled this helper to
+  // the markup, so adding a position colour to the slot cell silently returned
+  // an empty string and every assertion "failed" for the wrong reason.
   const rowFor = (html, slot) => {
-    const start = html.indexOf(`<td class="slot">${slot}</td>`);
-    const end = html.indexOf('</tr>', start);
-    return html.slice(start, end);
+    const m = new RegExp(`<td class="slot"[^>]*>${slot}</td>`).exec(html);
+    if (!m) return '';
+    const end = html.indexOf('</tr>', m.index);
+    return html.slice(m.index, end);
   };
 
   it('offers only eligible players for a slot', () => {

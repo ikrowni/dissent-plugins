@@ -318,3 +318,45 @@ h4 {
 .pv-team { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-3); letter-spacing: 0.05em; }
 .pv-team img { width: 13px; height: 13px; object-fit: contain; }
 .pv-team-none { opacity: 0.6; }
+
+/* Roster + waiver rows carry a portrait now, so they need room to breathe. */
+.lineup-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lineup-pick select { flex: 1; min-width: 150px; }
+.fa { justify-content: space-between; }
+.fa .btn { flex-shrink: 0; }
+
+/* ── Standings ────────────────────────────────────────────────────────────── */
+.seed-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  font-size: 10.5px; font-weight: 700; font-family: var(--f-display);
+  background: rgba(255,255,255,0.05); color: var(--text-3);
+}
+/* ⚠️ Marks who is IN, which is the question a standings table is asked. The cut
+ * line alone says where the boundary is but not which side anybody is on. */
+.seed-badge.in { background: rgba(255,182,18,0.16); color: var(--gold); }
+.std-team { display: block; }
+.std-bar {
+  display: block; height: 3px; margin-top: 5px; border-radius: 2px;
+  background: rgba(255,255,255,0.05); overflow: hidden; max-width: 190px;
+}
+.std-bar-fill {
+  display: block; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255,182,18,0.5), rgba(255,182,18,0.9));
+  transition: width var(--dur) var(--ease-out);
+}
+
+/* "you" as a badge rather than a parenthetical — findable at a glance in a
+ * twelve-row table, which "(you)" in body text is not. */
+.you {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  background: rgba(255,182,18,0.16); color: var(--gold);
+}
+
+/* ── Matchup score bar ────────────────────────────────────────────────────── */
+/* ⚠️ Scaled to the HIGHER of the two scores, so the bars answer "by how much"
+ * rather than "are these both large numbers", which they always are. */
+.mu-bar { display: block; height: 3px; margin-top: 6px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.mu-bar-fill { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,0.22); transition: width var(--dur) var(--ease-out); }
+.side.winning .mu-bar-fill { background: linear-gradient(90deg, rgba(79,158,127,0.5), rgba(79,158,127,0.95)); }

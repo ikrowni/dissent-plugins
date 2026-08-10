@@ -14,7 +14,8 @@ import {
   submitClaim, cancelClaim, listClaims, addPlayer, dropPlayer,
   proposeTrade, respondToTrade, listTrades,
 } from '../core/league-api.js';
-import { loadIndex, searchPlayers, playerLabel } from '../core/player-index.js';
+import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
+import { playerChip } from '../core/player-visuals.js';
 import { describe } from './league-home.js';
 
 const state = {
@@ -81,14 +82,17 @@ function freeAgentPane() {
   const budget = state.claims?.budgets?.[state.teamId];
   const myRoster = state.league?.assets?.rosters?.[state.teamId]?.players ?? [];
 
-  const rows = state.results.map((p) => `
-    <div class="row-btn fa">
-      <span class="row-main">${esc(p.name)}</span>
-      <span class="muted">${esc(p.position)}${p.team ? ` · ${esc(p.team)}` : ''}</span>
-      <button class="btn tiny" data-act="moves-claim" data-player="${esc(p.id)}" ${state.busy ? 'disabled' : ''}>
+  // The search result already carries name/position/team; the index record adds
+  // the portrait and the team mark, and falls back cleanly when it has neither.
+  const rows = state.results.map((p) => {
+    const rec = getIndex()?.[String(p.id)] ?? { n: p.name, p: p.position, t: p.team };
+    return `<div class="fa">
+      ${playerChip(rec, { size: 34, compact: true })}
+      <button class="btn" data-act="moves-claim" data-player="${esc(p.id)}" ${state.busy ? 'disabled' : ''}>
         ${faab ? 'Bid' : 'Claim'}
       </button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   return panel({
     title: 'Free agents',

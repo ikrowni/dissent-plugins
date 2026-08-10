@@ -102,7 +102,9 @@ describe('standings table', () => {
     setup({
       standings: standings(1, [{ teamId: 't1', seed: 1, wins: 1, losses: 0, ties: 0, pointsFor: 1, pointsAgainst: 0 }]),
     });
-    expect(render()).toContain('(you)');
+    // The marker is a styled badge rather than a parenthetical, so assert the
+    // intent — this row is mine — not the exact characters.
+    expect(render()).toContain('class="you"');
   });
 
   it('falls back gracefully when standings failed to load', () => {
