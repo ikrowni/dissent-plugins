@@ -4,9 +4,22 @@
 # ⚠️ THIS SCRIPT CANNOT SIGN. The signing private key is deliberately not on the
 # node — a key on the VPS would let anyone with VPS access sign code the node
 # then trusts and executes. This prints the sha256 and size; the OWNER produces
-# the signature on their own machine:
+# the signature on their own machine.
 #
-#     node scripts/plugin-module-key.mjs sign nfl-hub module.wasm
+# ⚠️ THE ARTIFACT IS CONTENT-ADDRESSED: module-<first 12 of sha256>.wasm. There
+# is deliberately no fixed `module.wasm`, because a fixed name means one file
+# whose meaning depends on WHEN you look at it — and that cost two wasted
+# signatures on 2026-08-10. The owner signed a stale binary, twice, because the
+# tree held the last PUBLISHED build under the name a new build would also take.
+#
+# A new build simply cannot overwrite a published one now: different bytes,
+# different name. Both can sit side by side while the manifest keeps vouching
+# for the old one, so client-side work never queues behind a signature.
+#
+# ⚠️ RENAMING IS SAFE. The signature covers the plugin id and the DIGEST, never
+# the URL (internal/pluginmodule/signature.go: sigContext + pluginID + "\n" +
+# digestHex). Moving an artifact and repointing manifest.server_module.url does
+# not invalidate anything.
 #
 # ⚠️ The SDK is NOT vendored into this repo. It is copied from dissent-core at
 # build time, because that copy is canonical and lives beside the Go host
@@ -83,16 +96,39 @@ echo "module version: $VERSION (from manifest.json)"
 npx --yes esbuild "$BUILD/server/main.js" --bundle --format=cjs --platform=neutral \
   --outfile="$BUILD/bundled.js" >/dev/null
 
-"$EJS" "$BUILD/bundled.js" -i module.d.ts -o module.wasm
+# Built to a temporary name first: the final one is derived from the digest,
+# which does not exist until the bytes do.
+"$EJS" "$BUILD/bundled.js" -i module.d.ts -o "$BUILD/out.wasm"
 
-SIZE=$(stat -c%s module.wasm)
-SHA=$(sha256sum module.wasm | cut -d' ' -f1)
+SIZE=$(stat -c%s "$BUILD/out.wasm")
+SHA=$(sha256sum "$BUILD/out.wasm" | cut -d' ' -f1)
+NAME="module-${SHA:0:12}.wasm"
+cp "$BUILD/out.wasm" "$NAME"
 
 echo
-echo "built module.wasm"
+echo "built $NAME"
 echo "  size:   $SIZE"
 echo "  sha256: $SHA"
 echo
-echo "NEXT — on the OWNER's machine, not here:"
-echo "  node scripts/plugin-module-key.mjs sign nfl-hub module.wasm"
-echo "then put url + sha256 + size + signature in manifest.json's server_module block."
+# ⚠️ Every artifact ever built stays until it is deliberately removed. Deleting
+# the previous one here would break the CURRENTLY PUBLISHED plugin the moment
+# this ran, since the manifest still points at it.
+OTHERS=$(ls module-*.wasm 2>/dev/null | grep -v "^$NAME$" || true)
+if [ -n "$OTHERS" ]; then
+  echo "other artifacts present (delete only after the manifest has moved off them):"
+  for f in $OTHERS; do echo "  $f"; done
+  echo
+fi
+
+cat <<NEXTSTEPS
+
+NEXT — on the OWNER's machine, not here:
+  git pull
+  node plugin-module-key.mjs sign nfl-hub $NAME plugin-module-key.pem
+
+then, back here, put this in manifest.json's server_module block:
+  "url":       "https://plugins.dissent.chat/plugins/nfl-hub/server/$NAME"
+  "sha256":    "$SHA"
+  "size":      $SIZE
+  "signature": "<from the signing tool>"
+NEXTSTEPS
