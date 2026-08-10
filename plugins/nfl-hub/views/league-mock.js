@@ -50,7 +50,17 @@ export function render() {
              <button class="btn" data-act="mock-reset">Start over</button>`,
     });
   }
-  if (state.loading) return stateMsg('Setting up the board…', { spinner: true });
+  // ⚠️ A skeleton, not a spinner: it reserves the space the board will occupy,
+  // so nothing jumps when the ranking lands, and it says WHAT is coming.
+  if (state.loading) {
+    return panel({
+      title: 'Mock draft',
+      body: `<div class="m-skel m-skel-row"></div>
+             <div class="m-skel m-skel-row"></div>
+             <div class="m-skel m-skel-row"></div>
+             <p class="tiny">Building the board…</p>`,
+    });
+  }
   if (!state.mock) return setupPane();
   return boardPane();
 }
@@ -167,9 +177,9 @@ function boardPane() {
 function gradesPane(m, teamLabel) {
   const values = state.ranking?.[`${state.setup.scoring}_v`] ?? {};
   const rows = gradeDrafts(m, (id) => values[String(id)]);
-  return `<div class="mock-grades">
+  return `<div class="mock-grades m-rise">
     <h4>How the room drafted</h4>
-    <div class="grade-list">${rows.map((r, i) => `
+    <div class="grade-list m-stagger">${rows.map((r, i) => `
       <div class="grade-row${r.teamId === m.myTeam ? ' mine' : ''}">
         <span class="grade-rank">${i + 1}</span>
         <span class="grade-team">${esc(teamLabel(r.teamId))}</span>

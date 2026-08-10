@@ -215,16 +215,22 @@ h4 {
   display: block; margin-top: 3px; font-size: 8.5px; letter-spacing: 0.1em;
   text-transform: uppercase; font-weight: 700; color: var(--gold);
 }
-/* Breathing, not blinking — a pulse you can sit next to for three hours. */
+/* Breathing, not blinking — a pulse you can sit next to for three hours.
+ *
+ * ⚠️ COMPOSITED, NOT PAINTED. This animated box-shadow originally, which
+ * repaints the cell every frame for the whole draft; the same pattern measured
+ * 68% of desktop idle GPU elsewhere in this project, because a repaint under a
+ * glass panel re-blurs the entire surface at refresh rate. A scaled, fading
+ * border is transform+opacity only, which never leaves the compositor. */
 .db-live::after {
   content: ''; position: absolute; inset: 0; border-radius: var(--r-sm);
-  box-shadow: 0 0 0 0 rgba(255,182,18,0.5); animation: dbPulse 2.4s var(--ease-out) infinite;
-  pointer-events: none;
+  border: 1px solid rgba(255,182,18,0.55);
+  animation: dbPulse 2.4s var(--ease-out) infinite;
+  pointer-events: none; will-change: transform, opacity;
 }
 @keyframes dbPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255,182,18,0.45); }
-  70%  { box-shadow: 0 0 0 8px rgba(255,182,18,0); }
-  100% { box-shadow: 0 0 0 0 rgba(255,182,18,0); }
+  from { transform: scale(1);    opacity: 0.75; }
+  to   { transform: scale(1.09); opacity: 0; }
 }
 
 /* ── On the clock ─────────────────────────────────────────────────────────── */
@@ -375,3 +381,19 @@ h4 {
 .grade-mark[data-grade="A"] { color: var(--win); }
 .grade-mark[data-grade="B"] { color: var(--gold); }
 .grade-mark[data-grade="C"] { color: var(--text-3); }
+
+/* ── Trending ─────────────────────────────────────────────────────────────── */
+.trend-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+.trend-head { margin: 0 0 6px; }
+/* ⚠️ Direction is carried by COLOUR AND AN ARROW, never colour alone — about 1 in
+ * 12 men cannot separate the red from the green. */
+.trend-head.up::before { content: '▲ '; color: var(--win); }
+.trend-head.down::before { content: '▼ '; color: var(--loss); }
+.trend-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 5px 6px; border-radius: var(--r-sm);
+}
+.trend-row:hover { background: rgba(255,255,255,0.03); }
+.trend-count { font-family: var(--f-mono); font-size: 11px; flex-shrink: 0; }
+.trend-count.up { color: var(--win); }
+.trend-count.down { color: var(--loss); }

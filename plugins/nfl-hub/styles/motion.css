@@ -1,0 +1,124 @@
+/* styles/motion.css — the hub's movement.
+ *
+ * ⚠️ TRANSFORM AND OPACITY ONLY. Those two are handled by the compositor; every
+ * other property (box-shadow, width, height, top/left, filter, background)
+ * repaints or relayouts on every frame. That is not a micro-optimisation here:
+ * a small pulsing dot animating box-shadow once measured 68% of this app's
+ * desktop idle GPU, because any repaint underneath a glass panel forces the
+ * whole surface to re-blur at the display's refresh rate.
+ *
+ * ⚠️ ENTRANCES END. Anything that loops forever keeps a compositor layer alive
+ * and a laptop fan with it. Infinite animation is reserved for the two places
+ * that genuinely mean "right now": a live game and the draft pick on the clock.
+ *
+ * ⚠️ NOTHING HERE ANIMATES ON FIRST PAINT WITHOUT A CLASS. The hub re-renders
+ * whole panels on every state change, so a blanket `.panel { animation }` would
+ * replay on every refresh and the page would never settle.
+ */
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ *
+ * ⚠️ NOT DECORATION. Vestibular disorders make sliding and scaling genuinely
+ * unpleasant, and this hub is dense with both. Everything still ARRIVES — it
+ * just arrives instantly, and the two "live" pulses become a static tint rather
+ * than disappearing, because that state has to remain legible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .live-dot::after { opacity: 0.35; transform: scale(1.8); }
+  .db-live::after { opacity: 0.75; transform: none; }
+}
+
+/* ── Entrances ─────────────────────────────────────────────────────────────
+ * Short, small, and finished. A 24px slide reads as "this arrived"; a 200px one
+ * reads as a slideshow and gets tiring by the third view.
+ */
+@keyframes mRise { from { opacity: 0; transform: translate3d(0, 10px, 0); } }
+@keyframes mFade { from { opacity: 0; } }
+@keyframes mSlideRight { from { opacity: 0; transform: translate3d(-14px, 0, 0); } }
+@keyframes mPop { from { opacity: 0; transform: scale(0.96); } }
+
+.m-rise { animation: mRise var(--dur) var(--ease-out) both; }
+.m-fade { animation: mFade var(--dur) var(--ease-out) both; }
+.m-pop  { animation: mPop var(--dur) var(--ease-spring) both; }
+
+/* ── Stagger ───────────────────────────────────────────────────────────────
+ *
+ * A cascade turns a list into an arrival. Capped at ten steps: past ~250 ms the
+ * last row feels broken rather than choreographed, and a 300-row table would
+ * otherwise take half a minute to finish appearing.
+ */
+.m-stagger > * { animation: mRise var(--dur) var(--ease-out) both; }
+.m-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.m-stagger > *:nth-child(2)  { animation-delay: 25ms; }
+.m-stagger > *:nth-child(3)  { animation-delay: 50ms; }
+.m-stagger > *:nth-child(4)  { animation-delay: 75ms; }
+.m-stagger > *:nth-child(5)  { animation-delay: 100ms; }
+.m-stagger > *:nth-child(6)  { animation-delay: 125ms; }
+.m-stagger > *:nth-child(7)  { animation-delay: 150ms; }
+.m-stagger > *:nth-child(8)  { animation-delay: 175ms; }
+.m-stagger > *:nth-child(9)  { animation-delay: 200ms; }
+.m-stagger > *:nth-child(n+10) { animation-delay: 225ms; }
+
+/* ── Interactive lift ──────────────────────────────────────────────────────
+ * Transform only. A hover that changes box-shadow repaints on every mouse move
+ * across a table of forty rows.
+ */
+.m-lift { transition: transform var(--dur-fast) var(--ease-out); }
+.m-lift:hover { transform: translate3d(0, -2px, 0); }
+.m-press { transition: transform 90ms var(--ease-out); }
+.m-press:active { transform: scale(0.97); }
+
+/* ── Value change ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ A score that changes silently is a score nobody notices. This runs ONCE,
+ * on the element that moved, and is the only feedback that a number is live.
+ * Colour is carried by a pseudo-element so the digits themselves never repaint.
+ */
+.m-bump { animation: mBump 900ms var(--ease-out) 1; }
+@keyframes mBump {
+  0%   { transform: scale(1); }
+  18%  { transform: scale(1.13); }
+  100% { transform: scale(1); }
+}
+
+/* ── Skeletons ─────────────────────────────────────────────────────────────
+ *
+ * ⚠️ A skeleton beats a spinner because it says WHAT is coming and reserves the
+ * space, so nothing jumps when the data lands. The shimmer is a transform on a
+ * gradient child — animating `background-position` would repaint the strip on
+ * every frame for as long as the load takes.
+ */
+.m-skel {
+  position: relative; overflow: hidden;
+  background: rgba(255, 255, 255, 0.045); border-radius: var(--r-sm);
+}
+.m-skel::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  animation: mShimmer 1.4s linear infinite; will-change: transform;
+}
+@keyframes mShimmer { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
+
+.m-skel-row { height: 42px; margin-bottom: 6px; }
+.m-skel-line { height: 11px; margin: 7px 0; }
+.m-skel-line.short { width: 42%; }
+
+/* ── Tab transitions ───────────────────────────────────────────────────────
+ *
+ * ⚠️ The section body is REPLACED wholesale on every tab change, so the new
+ * content is a brand-new element and animates on arrival without any
+ * bookkeeping. That is also why this must not be put on `.panel`: panels
+ * re-render on ordinary state changes too (a filter click, a poll), and the page
+ * would flicker continuously.
+ */
+.section-body > * { animation: mFade var(--dur-fast) var(--ease-out) both; }
+
+/* The subnav pill: the moving part is the background, so transition colour only
+ * on the properties that are cheap and leave the text alone. */
+.subnav button { transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }

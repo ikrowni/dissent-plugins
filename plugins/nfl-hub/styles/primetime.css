@@ -29,15 +29,26 @@ button.badge:hover { color: var(--text); border-color: var(--line-2); background
 .badge.final { color: var(--text-3); }
 .badge.redzone { color: #fff; background: rgba(213,10,10,.22); border-color: rgba(213,10,10,.6); }
 
+/* ⚠️ THE RING IS A SCALED PSEUDO-ELEMENT, NOT AN ANIMATED box-shadow.
+ * A box-shadow keyframe repaints the element every frame, forever. On this
+ * project that exact pattern — a small pulsing dot — measured 68% of desktop
+ * idle GPU, because any repaint under a glass panel forces the compositor to
+ * re-blur the whole surface at the display's refresh rate. transform and opacity
+ * are composited: no paint, no re-blur. */
 .live-dot {
+  position: relative;
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
   background: var(--live); margin-right: 6px; vertical-align: middle;
-  animation: livePulse 2s ease-out infinite;
+}
+.live-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--live);
+  animation: livePulse 2s var(--ease-out) infinite;
+  will-change: transform, opacity;
 }
 @keyframes livePulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255,45,75,.65); }
-  70%  { box-shadow: 0 0 0 7px rgba(255,45,75,0); }
-  100% { box-shadow: 0 0 0 0 rgba(255,45,75,0); }
+  from { transform: scale(1);   opacity: 0.6; }
+  to   { transform: scale(3.2); opacity: 0; }
 }
 
 /* Team chip — logo + abbr, the most repeated unit in the whole plugin. */

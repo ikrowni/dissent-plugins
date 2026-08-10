@@ -131,7 +131,7 @@ export function renderPool({
   if (available.length === 0) return `<p class="muted">${esc(emptyText)}</p>`;
   const rows = available.slice(0, limit).map((entry) => {
     const p = playerOf(entry.id);
-    return `<div class="db-pool-row">
+    return `<div class="db-pool-row m-lift">
       <span class="db-rank">${entry.rank ?? ''}</span>
       ${playerChip(p ?? { n: entry.id, p: entry.pos }, { size: 34, compact: true })}
       ${canPick
@@ -142,7 +142,7 @@ export function renderPool({
   const more = available.length > limit
     ? `<p class="tiny">${available.length - limit} more — narrow it with a filter or the search box.</p>`
     : '';
-  return `<div class="db-pool">${rows}</div>${more}`;
+  return `<div class="db-pool m-stagger">${rows}</div>${more}`;
 }
 
 /**
@@ -180,5 +180,5 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
         <span class="tiny">${pool.length} on the bench</span></div>`
     : '';
 
-  return `<div class="db-roster">${rows}${extra}</div>`;
+  return `<div class="db-roster m-stagger">${rows}${extra}</div>`;
 }

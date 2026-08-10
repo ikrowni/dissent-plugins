@@ -96,7 +96,7 @@ export function render() {
   return panel({
     title: 'Matchups',
     right: `<span class="muted">Week ${esc(String(state.week))}</span>`,
-    body: pairs.map((m) => matchupCard(m)).join(''),
+    body: `<div class="m-stagger">${pairs.map((m) => matchupCard(m)).join('')}</div>`,
   });
 }
 

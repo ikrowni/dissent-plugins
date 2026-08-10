@@ -16,9 +16,12 @@ import {
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
 import { playerChip } from '../core/player-visuals.js';
+import { loadTrending, formatCount } from '../core/trending.js';
+import { getJson } from '../core/http.js';
 import { describe } from './league-home.js';
 
 const state = {
+  trending: null,   // { adds, drops } — null until loaded, never fatal
   leagueId: null,
   league: null,
   teamId: null,
@@ -94,7 +97,7 @@ function freeAgentPane() {
     </div>`;
   }).join('');
 
-  return panel({
+  return trendingPanel() + panel({
     title: 'Free agents',
     right: faab && budget !== undefined ? `<span class="muted">$${budget} left</span>` : '',
     body: `
@@ -225,6 +228,42 @@ function teamName(teamId) {
   return state.league?.teams?.[String(teamId)]?.name ?? String(teamId);
 }
 
+/**
+ * What the rest of fantasy is doing right now.
+ *
+ * ⚠️ THE WAIVER WIRE'S MISSING HALF. A free-agent list sorted by name says
+ * nothing about which of those names just became relevant — an injury, a
+ * promotion, a breakout. Every other fantasy platform leads with this, and it
+ * costs under a kilobyte.
+ *
+ * ⚠️ Renders NOTHING until it has loaded, and nothing if it failed. It is
+ * supplementary; an error box here would be louder than the feature is
+ * important, and the tab works perfectly without it.
+ */
+function trendingPanel() {
+  const t = state.trending;
+  if (!t || (t.adds.length === 0 && t.drops.length === 0)) return '';
+
+  const column = (rows, label, kind) => `
+    <div class="trend-col">
+      <h4 class="trend-head ${kind}">${esc(label)}</h4>
+      ${rows.length === 0 ? '<p class="tiny">Nothing yet.</p>' : `<div class="m-stagger">${rows.map((r) => `
+        <div class="trend-row m-lift">
+          ${playerChip(r.player, { size: 30, compact: true })}
+          <span class="trend-count ${kind}">${esc(formatCount(r.count))}</span>
+        </div>`).join('')}</div>`}
+    </div>`;
+
+  return panel({
+    title: 'Trending now',
+    right: '<span class="tiny">last 24 hours, across Sleeper</span>',
+    body: `<div class="trend-cols">
+      ${column(t.adds, 'Most added', 'up')}
+      ${column(t.drops, 'Most dropped', 'down')}
+    </div>`,
+  });
+}
+
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 export async function load(app, { leagueId, league, teamId, week }) {
@@ -238,6 +277,12 @@ export async function load(app, { leagueId, league, teamId, week }) {
     // Both are optional: a league with no waiver week and no trades is normal.
     state.claims = week ? await listClaims(leagueId, week).catch(() => null) : null;
     state.trades = await listTrades(leagueId).catch(() => []);
+    // ⚠️ Deliberately NOT awaited into the critical path. The waiver wire is
+    // fully usable without it, so a slow or dead upstream must not hold up the
+    // whole tab — it fills in when it arrives.
+    loadTrending((url) => getJson(url), getIndex() ?? {}, { limit: 8 })
+      .then((t) => { state.trending = t; app?.router?.refresh(); })
+      .catch(() => { state.trending = { adds: [], drops: [] }; });
   } catch (err) {
     state.error = describe(err);
   } finally {
