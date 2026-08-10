@@ -218,6 +218,15 @@ describe('gradeDrafts', () => {
     expect(g.every((x) => x.total === 0)).toBe(true);
   });
 
+  // ⚠️ THE OUTLIER CASE THAT BROKE MIN-MAX. One team taking the best player
+  // available every single pick pushed every other total near the floor, and a
+  // room of twelve real drafts reported one A and eleven C's.
+  it('still spreads the field when one team dominates', () => {
+    const g = graded(byRank);
+    const grades = new Set(g.map((x) => x.grade));
+    expect(grades.size).toBeGreaterThanOrEqual(4);
+  });
+
   // ⚠️ A dead-flat field must not divide by zero.
   it('gives everyone the same grade when every draft is identical', () => {
     const g = graded(() => 1);

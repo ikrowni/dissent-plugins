@@ -256,19 +256,29 @@ export function gradeDrafts(mock, valueOf) {
     total: rosterOf(mock, teamId).reduce((sum, r) => sum + (Number(valueOf(r.id)) || 0), 0),
   }));
 
-  const scores = totals.map((t) => t.total);
-  const best = Math.max(...scores);
-  const worst = Math.min(...scores);
-  const span = best - worst;
+  // ⚠️ PERCENTILE OF THE FIELD, not min-max of the totals. Scaling between best
+  // and worst collapses under a single outlier: one team that hoovered the top
+  // of the board pushes every other total near the floor and the room reads as
+  // one A and eleven C's, which describes the outlier rather than the drafts.
+  // Position in the field is what "against the rest of this room" actually
+  // means, and it stays meaningful however lopsided the room is.
+  const sorted = [...totals].sort((a, b) => b.total - a.total);
+  const n = sorted.length;
 
-  return totals
-    .map((t) => {
-      // A dead-flat field (everyone identical) is a B for everybody rather than
-      // a divide by zero.
-      const pct = span === 0 ? 0.5 : (t.total - worst) / span;
-      return { ...t, pct, grade: gradeFor(pct) };
-    })
-    .sort((a, b) => b.total - a.total);
+  // ⚠️ Ties share a position, so identical drafts cannot get different grades
+  // purely because of sort order.
+  const positionOfTotal = new Map();
+  for (let i = 0; i < n; i += 1) {
+    const same = sorted.filter((t) => t.total === sorted[i].total);
+    const first = sorted.findIndex((t) => t.total === sorted[i].total);
+    positionOfTotal.set(sorted[i].total, first + (same.length - 1) / 2);
+  }
+
+  return sorted.map((t) => {
+    const pos = positionOfTotal.get(t.total);
+    const pct = n <= 1 ? 0.5 : 1 - pos / (n - 1);
+    return { ...t, pct, grade: gradeFor(pct) };
+  });
 }
 
 /** The curve. Deliberately generous at the top and short of an F. */
