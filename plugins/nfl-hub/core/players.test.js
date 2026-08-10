@@ -174,9 +174,16 @@ describe('the committed index asset', () => {
 describe('end-to-end join against a real ESPN roster', () => {
   // The highest-value test here: it exercises the actual cross-source join with real
   // data from both providers, which is the thing the fantasy features depend on.
-  // Measured 2026-08-07 for PHI: 20% resolve by espn_id, 78% by name, 98% combined.
-  // Without the name fallback this would be 20% and roster intelligence would be
-  // useless for most of a lineup.
+  //
+  // Measured 2026-08-07: 20% resolved by espn_id, 78% by name. Since 2026-08-10
+  // scripts/build-player-index.mjs fills the missing ids from ESPN's rosters at
+  // build time, so the fast path now carries nearly all of it — the JOIN is
+  // unchanged, the input data got better.
+  //
+  // ⚠️ THE INDEX AND THIS FIXTURE ARE TWO HALVES OF ONE JOIN and must be
+  // refreshed together. Regenerating the index alone leaves this matching fresh
+  // players against a frozen roster, and the failures look like a broken matcher
+  // rather than ordinary roster churn.
   const roster = JSON.parse(
     readFileSync(new URL('../tests/fixtures/team-roster-phi.json', import.meta.url), 'utf8'));
 
@@ -200,11 +207,46 @@ describe('end-to-end join against a real ESPN roster', () => {
 
     const covered = (viaId + viaName) / phi.length;
     expect(covered).toBeGreaterThan(0.9);
-    // The fallback must be doing the heavy lifting — if this inverts, either Sleeper
-    // started populating espn_id again or the name matcher has silently broken.
-    expect(viaName).toBeGreaterThan(viaId);
 
-    // The only acceptable miss is the team defence, which is not an athlete.
-    for (const p of unresolved) expect(p.position).toBe('DEF');
+    // ⚠️ THIS RATIO USED TO ASSERT `viaName > viaId`, and it was right to until
+    // 2026-08-10. It encoded the fact that Sleeper had largely stopped
+    // populating espn_id, so the name fallback did the heavy lifting.
+    //
+    // scripts/build-player-index.mjs now fills the gaps from ESPN's own rosters
+    // at build time, so the index ships with the ids already resolved and the
+    // fast path hits for nearly everyone. Nothing about the JOIN changed — that
+    // assertion was measuring the input data, not the code.
+    expect(viaId).toBeGreaterThan(0);
+
+    // The team defence is not an athlete and can never resolve.
+    const strayMisses = unresolved.filter((p) => p.position !== 'DEF');
+    // ⚠️ A HANDFUL OF MISSES IS NORMAL AND ALWAYS WILL BE: Sleeper lists
+    // practice-squad and just-signed players on a team before ESPN's active
+    // roster carries them — Ja'Quinden Jackson (RB, PHI) was exactly that on
+    // 2026-08-10. Demanding zero made this a tripwire for roster churn rather
+    // than for the join; a genuinely broken matcher misses dozens, not one.
+    expect(strayMisses.length).toBeLessThanOrEqual(3);
+  });
+
+  // ⚠️ What the ratio was really protecting: that the name matcher still works.
+  // Tested DIRECTLY now, by taking the id away — an assertion about the shape of
+  // the input data can be invalidated by a data refresh, and then it is telling
+  // you nothing while still passing.
+  it('still resolves by name alone when the id is missing', async () => {
+    const idx = createPlayerIndex({ loader: () => Promise.resolve(REAL) });
+    await idx.load();
+    const athletes = roster.team.athletes;
+
+    const phi = Object.entries(REAL).filter(([, v]) => v.t === 'PHI').map(([id]) => id);
+    let resolved = 0; let tried = 0;
+    for (const id of phi) {
+      const p = idx.get(id);
+      if (p.position === 'DEF') continue;
+      tried += 1;
+      // Strip the fast path, forcing the fallback to do the work.
+      if (idx.resolveEspnId({ ...p, espnId: null }, athletes)) resolved += 1;
+    }
+    expect(tried).toBeGreaterThan(30);
+    expect(resolved / tried).toBeGreaterThan(0.9);
   });
 });
