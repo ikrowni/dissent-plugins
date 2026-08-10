@@ -37,9 +37,9 @@
   ],
   "server_module": {
     "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module.wasm",
-    "sha256": "279ee498f83a219bbd0a70fd8db89a5a6ad452565e50ebb83bc5fc5e2c6d095a",
-    "size": 2445517,
-    "signature": "78a43b470626e6c025a9e1f91aa67eeca20060cb023dfd83111e749417a63ca169129c408f57fe98efc1ac7b631a7bfa098cf10830b736dfb75a02eb39415806"
+    "sha256": "3682e655538a25805afbfa24c089204ef4a2fc6d8db223ea6c3a92293dbccc00",
+    "size": 2447788,
+    "signature": "5854ba73424876f53c8d98dc816a3f56cf0b3ef2c4fc7e6fc0998e7709c4d95d15d430198793a49df7e068d5b089c9f5cf67306dc120671254b9373002b63a0a"
   },
   "sdk_version": "1"
 }
