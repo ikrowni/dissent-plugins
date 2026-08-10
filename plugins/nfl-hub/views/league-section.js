@@ -16,6 +16,7 @@ import * as roster from './league-roster.js';
 import * as draft from './league-draft.js';
 import * as matchup from './league-matchup.js';
 import * as moves from './league-moves.js';
+import * as coowners from './league-coowners.js';
 
 const TABS = [
   ['home', 'League'],
@@ -39,8 +40,25 @@ export function render() {
     : state.tab === 'draft' ? draft.render()
       : state.tab === 'matchup' ? matchup.render()
         : state.tab === 'moves' ? moves.render()
-          : home.render();
+          : home.render() + coOwnersPanel();
   return `${tabsHtml()}<div class="section-body">${body}</div>`;
+}
+
+/**
+ * Co-management sits UNDER the league home pane rather than in a tab of its own.
+ *
+ * It is a league-level question — who runs which team — and it has to be
+ * reachable by someone with NO team, who has nothing to look at on the roster or
+ * moves tabs. It renders to nothing until a league is open.
+ *
+ * ⚠️ Rendered from HERE, not from inside league-home, because the co-owner view
+ * imports `describe` from league-home. Calling it the other way round would make
+ * that a static import cycle, which this file's own comment on the app import
+ * explains the project avoids.
+ */
+function coOwnersPanel() {
+  const { league } = home.current();
+  return league ? coowners.render(league) : '';
 }
 
 // The app singleton, resolved on enter and kept for the actions. Imported
@@ -59,7 +77,16 @@ export async function enter() {
   // listener is the view's own, and leave() removes it.
   document.addEventListener('submit', onSubmit, true);
 
+  // A stale notice or a half-finished ask from a previous visit must not greet
+  // the next one.
+  coowners.reset();
   home.load(app);
+}
+
+/** What the co-owner actions need: the league id, and how to reload it. */
+function coCtx() {
+  const { leagueId } = home.current();
+  return { leagueId, reload: () => home.open(app, leagueId) };
 }
 
 export function leave() {
@@ -172,6 +199,29 @@ export async function onAction(act, target) {
       return;
     case 'moves-trade-act':
       moves.respond(app, target.dataset.trade, target.dataset.action);
+      return;
+
+    // ── Co-management ──
+    case 'co-pick-team':
+      coowners.pickTeam(app, target.value);
+      return;
+    case 'co-ask':
+      coowners.ask(app, coCtx());
+      return;
+    case 'co-withdraw':
+      coowners.withdraw(app, coCtx(), target.dataset.team);
+      return;
+    case 'co-approve':
+      coowners.approve(app, coCtx(), target.dataset.team, target.dataset.user);
+      return;
+    case 'co-decline':
+      coowners.decline(app, coCtx(), target.dataset.team, target.dataset.user);
+      return;
+    case 'co-remove':
+      coowners.remove(app, coCtx(), target.dataset.team, target.dataset.user);
+      return;
+    case 'co-leave':
+      coowners.leave(app, coCtx(), target.dataset.team);
       return;
 
     case 'league-goto-draft':

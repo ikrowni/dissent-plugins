@@ -67,6 +67,25 @@ export function requireTeamControl(p, teams, meta, teamId) {
   return null;
 }
 
+/**
+ * Guard an operation only a team's OWNER (or a commissioner) may perform.
+ *
+ * ⚠️ NOT `requireTeamControl`. That one admits co-owners, which is right for
+ * playing the team — setting a lineup, making a claim — and wrong for changing
+ * who else may play it. A co-owner who could approve co-owners could add an
+ * accomplice, then be removed by the owner and still control the team through
+ * them. Granting authority is the owner's alone.
+ */
+export function requireTeamOwner(p, teams, meta, teamId) {
+  const err = requireUser(p);
+  if (err) return err;
+  if (isCommissioner(meta, p.userId)) return null;
+  const t = teams?.[String(teamId)];
+  if (!t) return `no such team: ${teamId}`;
+  if (t.ownerId !== p.userId) return `only the owner of team ${teamId} can do that`;
+  return null;
+}
+
 /** Guard a commissioner-only operation. */
 export function requireCommissioner(p, meta) {
   const err = requireUser(p);

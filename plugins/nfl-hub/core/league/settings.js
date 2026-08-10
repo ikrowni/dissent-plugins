@@ -41,6 +41,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
   playoffWeekStart: 15,
   // Re-seed the bracket each round rather than fixing it at the start.
   playoffReseed: true,
+  // Run a second bracket for the teams that missed the cut, on the same weeks.
+  // ⚠️ Only ever seeded WITH the championship side, from the one standings read.
+  // A consolation bracket added later would be seeded from standings that
+  // already include playoff weeks — a different table to the one it belongs to.
+  playoffConsolation: true,
   // Play the league median as a second weekly result, Sleeper's league_average_match.
   medianMatchup: false,
 

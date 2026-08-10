@@ -11,14 +11,15 @@
 
 import { KEY, read, mutate, loadLeague } from "./store.js";
 import { requireCommissioner, isCommissioner } from "./auth.js";
-import { buildBracket, advanceBracket, bracketChampion } from "../core/league/schedule.js";
+import { buildBracket, consolationSeeds } from "../core/league/schedule.js";
+import { resolveBracket, weekForRound as weekOf } from "../core/league/bracket-resolve.js";
 import { getStandings } from "./ops-scoring.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
 /** The week a given round is played in. */
 export function weekForRound(settings, roundIndex) {
-  return (settings?.playoffWeekStart ?? 15) + roundIndex;
+  return weekOf(settings?.playoffWeekStart, roundIndex);
 }
 
 /**
@@ -53,6 +54,17 @@ export function startPlayoffs({ p, payload }) {
   if (seeds.length < 2) refuse("not enough teams to seed a bracket");
 
   const built = buildBracket(seeds);
+
+  // ⚠️ THE CONSOLATION SIDE IS SEEDED HERE OR NEVER, from the SAME standings
+  // read as the championship side. Adding one later would seed it from a table
+  // that already includes playoff weeks — the also-rans' order would come from
+  // games the bracket is not about. A bracket built before this existed simply
+  // has no consolation side, which is the honest outcome.
+  const alsoRans = meta.settings?.playoffConsolation === false
+    ? []
+    : consolationSeeds(table.standings ?? [], cut);
+  const consBuilt = alsoRans.length >= 2 ? buildBracket(alsoRans) : null;
+
   const record = {
     season,
     startedAt: Date.now(),
@@ -65,6 +77,9 @@ export function startPlayoffs({ p, payload }) {
     rounds: built.rounds,
     byes: built.byes,
     champion: null,
+    consolation: consBuilt
+      ? { seeds: alsoRans, rounds: consBuilt.rounds, byes: consBuilt.byes, champion: null }
+      : null,
   };
   mutate(KEY.bracket(lg, season), () => record, null);
   return summary(record, meta, p);
@@ -98,47 +113,15 @@ export function getPlayoffs({ p, payload }) {
  *
  * Callable from the tick without an auth check — it takes no user action, it
  * only reads scores that already exist.
+ *
+ * ⚠️ THE RULES LIVE IN `core/league/bracket-resolve.js`, not here. This is the
+ * adapter that hands them the module's storage: the whole of "who won, who
+ * advances, who is champion" is pure and unit-tested, and the two-sided
+ * behaviour it guards — neither bracket may gate the other — cannot be tested
+ * through a store at all.
  */
 export function resolve(lg, season, bracket) {
-  if (!bracket || bracket.champion) return bracket;
-
-  let state = bracket;
-  // A bracket cannot have more rounds than it has, so this is bounded.
-  let guard = 8;
-
-  while (guard-- > 0) {
-    const roundIndex = state.rounds.length - 1;
-    const round = state.rounds[roundIndex] ?? [];
-    if (round.length === 0) break;
-    if (round.every((g) => g.winner)) {
-      // Already decided; try to advance.
-      const advanced = advanceBracket(state, { reseed: state.reseed !== false });
-      if (advanced.rounds.length === state.rounds.length) break; // final round
-      state = { ...state, rounds: advanced.rounds, byes: advanced.byes };
-      continue;
-    }
-
-    const week = weekForRound({ playoffWeekStart: state.playoffWeekStart }, roundIndex);
-    const scores = read(KEY.scores(lg, season, week), null);
-    if (!scores) break; // not played yet — nothing to decide
-
-    const decided = round.map((g) => {
-      if (g.winner) return g;
-      const home = scores.teams?.[g.home?.teamId]?.total;
-      const away = scores.teams?.[g.away?.teamId]?.total;
-      if (home === undefined || away === undefined) return g;
-      // ⚠️ A TIE GOES TO THE BETTER SEED. Leaving it undecided stalls the whole
-      // bracket forever, and a fantasy week genuinely can tie.
-      if (home === away) return { ...g, winner: g.home.seed <= g.away.seed ? g.home : g.away, tie: true };
-      return { ...g, winner: home > away ? g.home : g.away };
-    });
-
-    if (decided.some((g) => !g.winner)) break; // still waiting on a score
-    state = { ...state, rounds: [...state.rounds.slice(0, roundIndex), decided] };
-  }
-
-  const champ = bracketChampion(state);
-  return champ ? { ...state, champion: champ } : state;
+  return resolveBracket(bracket, (week) => read(KEY.scores(lg, season, week), null));
 }
 
 /** Advance every league's bracket on the tick. */
@@ -156,6 +139,12 @@ export function resolveBracketsFor(lg, season) {
 /** The shape the UI renders. */
 function summary(b, meta, p) {
   if (!b) return null;
+  const withWeeks = (rounds) => (rounds ?? []).map((games, i) => ({
+    round: i + 1,
+    week: weekForRound({ playoffWeekStart: b.playoffWeekStart }, i),
+    games,
+  }));
+
   return {
     season: b.season,
     playoffWeekStart: b.playoffWeekStart,
@@ -164,11 +153,18 @@ function summary(b, meta, p) {
     byes: b.byes,
     champion: b.champion,
     isCommissioner: isCommissioner(meta, p?.userId),
-    rounds: b.rounds.map((games, i) => ({
-      round: i + 1,
-      week: weekForRound({ playoffWeekStart: b.playoffWeekStart }, i),
-      games,
-    })),
+    rounds: withWeeks(b.rounds),
+    // ⚠️ `null` when the league has no consolation side, NOT an empty object.
+    // The UI has to tell "this league does not run one" apart from "it does and
+    // nothing has happened yet" — the second gets a panel, the first must not.
+    consolation: b.consolation
+      ? {
+        seeds: b.consolation.seeds,
+        byes: b.consolation.byes,
+        champion: b.consolation.champion ?? null,
+        rounds: withWeeks(b.consolation.rounds),
+      }
+      : null,
   };
 }
 

@@ -84,11 +84,38 @@ export function getLeague({ p, payload }) {
     // omitting it made every league look like it was in preseason forever.
     currentWeek: meta.currentWeek ?? null,
     commissioners: meta.commissioners,
-    teams,
+    teams: redactRequests(teams, meta, p.userId),
     assets,
     myTeams: teamsOf(teams, p.userId),
     isCommissioner: isCommissioner(meta, p.userId),
+    // ⚠️ The caller's OWN verified id. `myTeams` cannot tell owning a team apart
+    // from co-owning one — `teamsOf` returns both — and the co-ownership UI has
+    // to, because only an owner may approve or remove anybody.
+    me: p.userId,
   };
+}
+
+/**
+ * Hide each team's pending co-ownership requests from everyone but the person
+ * who has to act on them.
+ *
+ * ⚠️ A REQUEST IS NOT PUBLIC. Who asked to co-own whose team is between those
+ * two and the commissioner; leaving it in the league payload would broadcast
+ * every declined approach to the whole server. The caller's OWN request stays
+ * visible to them so the UI can show "pending" instead of offering to ask again.
+ */
+function redactRequests(teams, meta, userId) {
+  const commish = isCommissioner(meta, userId);
+  const out = {};
+  for (const [id, team] of Object.entries(teams ?? {})) {
+    const pending = (team.coOwnerRequests ?? []).map((r) => (typeof r === 'string' ? { userId: r, label: '', at: 0 } : r));
+    const maySee = commish || team.ownerId === userId;
+    out[id] = {
+      ...team,
+      coOwnerRequests: maySee ? pending : pending.filter((r) => r.userId === userId),
+    };
+  }
+  return out;
 }
 
 /**

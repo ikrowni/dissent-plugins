@@ -274,4 +274,84 @@ describe('playoff bracket', () => {
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img');
   });
+
+  describe('consolation side', () => {
+    const alsoRan = (id, seed, overallSeed) => ({ teamId: id, seed, overallSeed });
+    const withConsolation = (over = {}) => bracket({
+      consolation: {
+        seeds: [alsoRan('t3', 1, 3), alsoRan('t4', 2, 4)],
+        byes: [],
+        champion: null,
+        rounds: [{
+          round: 1,
+          week: 15,
+          games: [{ home: alsoRan('t3', 1, 3), away: alsoRan('t4', 2, 4), winner: null }],
+        }],
+      },
+      ...over,
+    });
+
+    // ⚠️ A league that does not run one must get no section at all — an empty
+    // "Consolation bracket" heading tells half the league their season is over.
+    it('shows nothing when the league has no consolation side', () => {
+      setup({ bracket: bracket({ consolation: null }) });
+      expect(render()).not.toContain('Consolation');
+    });
+
+    it('renders the consolation pairings alongside the championship', () => {
+      setup({ league: league(['t1', 't2', 't3', 't4']), bracket: withConsolation() });
+      const html = render();
+      expect(html).toContain('Consolation bracket');
+      expect(html).toContain('Team T3');
+      expect(html).toContain('Team T4');
+    });
+
+    // ⚠️ The local seed is what pairs them; the OVERALL finish is what a manager
+    // recognises. Printing "#1" for the third-best team reads as a mix-up.
+    it('labels also-rans by their overall finish, not their local seed', () => {
+      setup({ league: league(['t1', 't2', 't3', 't4']), bracket: withConsolation() });
+      const html = render();
+      expect(html).toContain('#3');
+      expect(html).toContain('#4');
+    });
+
+    it('names the consolation rounds apart from the championship rounds', () => {
+      setup({ league: league(['t1', 't2', 't3', 't4']), bracket: withConsolation() });
+      const html = render();
+      expect(html).toContain('Consolation final');
+      // The championship final keeps its own unprefixed name.
+      expect(html).toContain('>Final ');
+    });
+
+    it('closes the consolation with its own line, not the league trophy', () => {
+      setup({
+        league: league(['t1', 't2', 't3', 't4']),
+        bracket: withConsolation({
+          consolation: {
+            seeds: [alsoRan('t3', 1, 3), alsoRan('t4', 2, 4)],
+            byes: [],
+            champion: alsoRan('t3', 1, 3),
+            rounds: [{
+              round: 1,
+              week: 15,
+              games: [{ home: alsoRan('t3', 1, 3), away: alsoRan('t4', 2, 4), winner: alsoRan('t3', 1, 3) }],
+            }],
+          },
+        }),
+      });
+      const html = render();
+      expect(html).toContain('takes the consolation bracket');
+      expect(html).not.toContain('🏆');
+      expect(html).not.toContain('wins the league');
+    });
+
+    it('escapes also-ran team names', () => {
+      const lg = league(['t1', 't2', 't3', 't4']);
+      lg.teams.t3.name = '<img src=x onerror=alert(1)>';
+      setup({ league: lg, bracket: withConsolation() });
+      const html = render();
+      expect(html).not.toContain('<img src=x');
+      expect(html).toContain('&lt;img');
+    });
+  });
 });

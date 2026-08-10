@@ -94,6 +94,26 @@ export function buildBracket(seeds) {
 }
 
 /**
+ * The teams that missed the playoffs, re-seeded for their own bracket.
+ *
+ * ⚠️ RE-SEEDED FROM 1. `buildBracket` awards byes by array order and
+ * `advanceBracket` reseeds survivors by `.seed`, so a consolation field still
+ * carrying overall seeds 7–10 would give its bye to "seed 7" and read as a
+ * bracket missing its first six teams. The overall finish is kept as
+ * `overallSeed` because that is the number a manager recognises.
+ *
+ * ⚠️ FEWER THAN TWO TEAMS IS NO BRACKET, not an empty one. A ten-team league
+ * with a nine-team playoff leaves one team over, and pairing it with nothing
+ * would hand it a championship it never played for.
+ */
+export function consolationSeeds(standings = [], playoffTeams = 0) {
+  const cut = Math.max(0, Number(playoffTeams) || 0);
+  const missed = standings.slice(cut);
+  if (missed.length < 2) return [];
+  return missed.map((row, i) => ({ ...row, seed: i + 1, overallSeed: row.seed ?? cut + i + 1 }));
+}
+
+/**
  * Advance a completed round into the next one.
  *
  * `reseed` re-ranks the survivors so the best remaining seed always plays the

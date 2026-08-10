@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateRegularSeason, regularSeasonWeeks, seedTeams, buildBracket,
-  advanceBracket, bracketChampion, buildStandings,
+  advanceBracket, bracketChampion, buildStandings, consolationSeeds,
 } from './schedule.js';
 import { normalizeSettings } from './settings.js';
 
@@ -183,6 +183,47 @@ describe('advanceBracket', () => {
     expect(b.rounds[2]).toHaveLength(1);
     b.rounds[2][0].winner = b.rounds[2][0].home;
     expect(bracketChampion(b).seed).toBe(1);
+  });
+});
+
+describe('consolationSeeds', () => {
+  const table = (n) => Array.from({ length: n }, (_, i) => ({ teamId: `t${i + 1}`, seed: i + 1 }));
+
+  it('takes everyone below the playoff cut', () => {
+    const out = consolationSeeds(table(10), 6);
+    expect(out.map((s) => s.teamId)).toEqual(['t7', 't8', 't9', 't10']);
+  });
+
+  // ⚠️ Leaving overall seeds in place would give the bye to "seed 7" and read as
+  // a bracket with its first six teams missing.
+  it('re-seeds from 1 while keeping the overall finish', () => {
+    const out = consolationSeeds(table(10), 6);
+    expect(out.map((s) => s.seed)).toEqual([1, 2, 3, 4]);
+    expect(out.map((s) => s.overallSeed)).toEqual([7, 8, 9, 10]);
+  });
+
+  // ⚠️ One leftover team is NOT a bracket — buildBracket would hand it a title
+  // it never played for.
+  it('returns nothing when fewer than two teams miss out', () => {
+    expect(consolationSeeds(table(10), 9)).toEqual([]);
+    expect(consolationSeeds(table(10), 10)).toEqual([]);
+    expect(consolationSeeds(table(10), 12)).toEqual([]);
+  });
+
+  it('is the whole field when nobody makes the playoffs', () => {
+    expect(consolationSeeds(table(4), 0)).toHaveLength(4);
+  });
+
+  it('feeds buildBracket directly', () => {
+    const b = buildBracket(consolationSeeds(table(10), 6));
+    expect(b.byes).toEqual([]);
+    expect(b.rounds[0].map((g) => [g.home.overallSeed, g.away.overallSeed])).toEqual([[7, 10], [8, 9]]);
+  });
+
+  it('gives byes to the best of the also-rans on an odd field', () => {
+    const b = buildBracket(consolationSeeds(table(9), 6));
+    expect(b.byes.map((s) => s.overallSeed)).toEqual([7]);
+    expect(b.rounds[0].map((g) => [g.home.overallSeed, g.away.overallSeed])).toEqual([[8, 9]]);
   });
 });
 

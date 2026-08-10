@@ -26,6 +26,25 @@ export const updateSettings = (leagueId, settings) =>
 export const setCurrentWeek = (leagueId, week) =>
   call('league:week', { leagueId, week });
 
+// ── Co-ownership ─────────────────────────────────────────────────────────────
+//
+// ⚠️ A HANDSHAKE, NOT AN INVITE, and the reason is worth knowing before reading
+// the UI: the module has no user directory, so an owner naming a user id could
+// attach a typo or a stranger who never agreed, and nothing could check it. The
+// prospective co-owner asks first — which records THEIR verified session — and
+// the owner approves from that list. Both ids are then real and both consented.
+// `label` is the requester's own display name, carried only so the owner sees
+// something more useful than a snowflake in the approval prompt. The module
+// never treats it as identity — see server/ops-coowners.js.
+export const requestCoOwnership = (leagueId, teamId, label = '') =>
+  call('team:coowner:request', { leagueId, teamId, label });
+export const withdrawCoOwnershipRequest = (leagueId, teamId) =>
+  call('team:coowner:request', { leagueId, teamId, withdraw: true });
+export const respondToCoOwnerRequest = (leagueId, teamId, userId, approve) =>
+  call('team:coowner:respond', { leagueId, teamId, userId, approve });
+export const removeCoOwner = (leagueId, teamId, userId) =>
+  call('team:coowner:remove', { leagueId, teamId, userId });
+
 // ── Schedule ─────────────────────────────────────────────────────────────────
 //
 // ⚠️ The schedule is STORED, not derived. It used to be recomputed in the

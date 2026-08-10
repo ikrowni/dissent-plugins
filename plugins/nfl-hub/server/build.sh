@@ -70,6 +70,14 @@ cp "$SDK" "$BUILD/server/sdk/server-sdk.js"
 cp ./*.js "$BUILD/server/"
 cp -r ../core/league "$BUILD/core/league"
 
+# ⚠️ THE VERSION IS GENERATED, never hand-maintained. It was a constant in
+# main.js and it lagged whenever a bump was forgotten, so `ping` reported a build
+# that was not the one running. Taking it from the manifest means the number the
+# module reports is by construction the number that was published.
+VERSION=$(node -p "require('$PWD/../manifest.json').version")
+printf 'export const MODULE_VERSION = "%s";\n' "$VERSION" > "$BUILD/server/version.js"
+echo "module version: $VERSION (from manifest.json)"
+
 # ⚠️ BUNDLE FIRST. extism-js does not resolve imports; feeding it a file with an
 # `import` fails at build time with an unhelpful message.
 npx --yes esbuild "$BUILD/server/main.js" --bundle --format=cjs --platform=neutral \

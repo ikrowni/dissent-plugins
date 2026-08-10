@@ -119,33 +119,66 @@ function bracketPane(playoffStart) {
   return panel({
     title: 'Playoffs',
     right: champ ? `<span class="champion">🏆 ${esc(teamName(champ.teamId))}</span>` : '',
-    body: `
-      ${b.byes?.length ? `<p class="muted">Bye: ${b.byes.map((s) => esc(teamName(s.teamId))).join(', ')}</p>` : ''}
-      ${b.rounds.map((r) => `
-        <h4>${roundName(r.round, b.rounds.length)} <span class="muted">· week ${esc(String(r.week))}</span></h4>
-        ${r.games.map((g) => bracketGame(g)).join('')}
-      `).join('')}
-      ${champ ? `<p class="champion-line">${esc(teamName(champ.teamId))} wins the league.</p>` : ''}`,
+    body: bracketSide(b, {
+      champLine: (name) => `${name} wins the league.`,
+    }) + consolationSection(b.consolation),
   });
+}
+
+/**
+ * The teams that missed the cut, playing their own bracket on the same weeks.
+ *
+ * ⚠️ ABSENT AND EMPTY ARE DIFFERENT. A league that does not run a consolation
+ * bracket gets no section at all; one that does but has not played yet gets the
+ * section with its pairings. Collapsing the two would tell half the league their
+ * season is simply over.
+ */
+function consolationSection(c) {
+  if (!c || !(c.rounds ?? []).length) return '';
+  return `<div class="consolation">
+    <h3>Consolation bracket</h3>
+    <p class="muted">The teams that missed the playoffs, playing the same weeks.</p>
+    ${bracketSide(c, {
+    champLine: (name) => `${name} takes the consolation bracket.`,
+    prefix: 'Consolation ',
+  })}
+  </div>`;
+}
+
+/** One side of the postseason: byes, rounds, and its own closing line. */
+function bracketSide(s, { champLine, prefix = '' }) {
+  const rounds = s.rounds ?? [];
+  const champ = s.champion;
+  return `
+    ${s.byes?.length ? `<p class="muted">Bye: ${s.byes.map((x) => esc(teamName(x.teamId))).join(', ')}</p>` : ''}
+    ${rounds.map((r) => `
+      <h4>${esc(roundName(r.round, rounds.length, prefix))} <span class="muted">· week ${esc(String(r.week))}</span></h4>
+      ${r.games.map((g) => bracketGame(g)).join('')}
+    `).join('')}
+    ${champ ? `<p class="champion-line">${esc(champLine(teamName(champ.teamId)))}</p>` : ''}`;
 }
 
 /**
  * ⚠️ Named from the END, not the start. "Round 2 of 3" tells a manager nothing;
  * "Semi-final" tells them exactly where they are.
  */
-function roundName(round, total) {
+function roundName(round, total, prefix = '') {
   const fromEnd = total - round;
-  if (fromEnd === 0) return 'Final';
-  if (fromEnd === 1) return 'Semi-final';
-  if (fromEnd === 2) return 'Quarter-final';
-  return `Round ${round}`;
+  if (fromEnd === 0) return `${prefix}${prefix ? 'final' : 'Final'}`;
+  if (fromEnd === 1) return `${prefix}${prefix ? 'semi-final' : 'Semi-final'}`;
+  if (fromEnd === 2) return `${prefix}${prefix ? 'quarter-final' : 'Quarter-final'}`;
+  return `${prefix}${prefix ? 'round' : 'Round'} ${round}`;
 }
 
 function bracketGame(g) {
   const decided = Boolean(g.winner);
   const won = (t) => decided && g.winner.teamId === t.teamId;
+  // ⚠️ Consolation teams carry BOTH a local seed (1..n, which is what pairs and
+  // reseeds them) and the overall finish. Printing the local one would label the
+  // seventh-best team in the league "#1", which reads as a bracket somebody has
+  // mixed up rather than as the also-rans' ladder.
   const seat = (t) => `<span class="side ${won(t) ? 'winning' : ''}">
-      <span class="seed">#${t.seed}</span>
+      <span class="seed">#${esc(String(t.overallSeed ?? t.seed))}</span>
       <span class="team">${esc(teamName(t.teamId))}${isMine(t.teamId) ? ' <span class="muted">(you)</span>' : ''}</span>
     </span>`;
   return `<div class="matchup bracket-game">
