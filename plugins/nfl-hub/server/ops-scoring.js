@@ -298,3 +298,46 @@ export function advanceWeekIfDue(lg, state) {
   mutate(KEY.meta(lg), (m) => ({ ...m, currentWeek: live }), meta);
   return { advanced: { from: current || null, to: live }, finalized };
 }
+
+/**
+ * Score the OLDEST past week that never got scored, if there is one.
+ *
+ * ⚠️ A MISSING WEEK IS PERMANENT WITHOUT THIS. Scoring only ever writes the
+ * current week, and the week advances on its own — so a node that was down for a
+ * fortnight leaves a hole that never fills, and standings, seeding and the whole
+ * playoff picture are quietly wrong for the rest of the season. Nothing errors:
+ * the table just adds up to less than it should.
+ *
+ * ⚠️ ONE WEEK PER CALL, DELIBERATELY. Each week costs a 570 KB stats fetch, and
+ * the scheduled budget is 5 seconds for everything the tick does across every
+ * league. Repairing a fortnight in one pass would blow the deadline and get the
+ * whole invocation killed — including the writes it had already made. One per
+ * tick repairs twelve weeks in an hour, which is fast enough for a thing that
+ * only happens after an outage.
+ */
+export function backfillOneWeek(lg) {
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) return null;
+
+  const season = Number(meta.season);
+  const current = Number(meta.currentWeek ?? 0);
+  if (current < 2) return null; // nothing is in the past yet
+
+  const schedule = read(KEY.schedule(lg, season), null);
+  const start = Number(schedule?.startWeek ?? meta.settings?.startWeek ?? 1);
+
+  // ⚠️ STRICTLY BEFORE the current week. The current one is being scored live on
+  // every tick; treating it as a gap would refetch the same stats twice a tick.
+  for (let week = start; week < current; week++) {
+    if (read(KEY.scores(lg, season, week), null)) continue;
+    try {
+      const result = runScoring(lg, season, week);
+      return { week, result };
+    } catch (err) {
+      // Report and move on rather than retrying the same week forever — a week
+      // whose stats will never load must not block the ones after it.
+      return { week, error: String(err.message ?? err) };
+    }
+  }
+  return null;
+}

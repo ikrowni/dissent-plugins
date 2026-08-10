@@ -28,10 +28,11 @@ import {
 import {
   refreshPositions, scoreWeekForLeague, getScores, setCurrentWeek,
   runScoring, positionsAreStale, getStandings, advanceWeekIfDue, nflState,
+  backfillOneWeek,
 } from "./ops-scoring.js";
 import { startPlayoffs, getPlayoffs, resolveBracketsFor } from "./ops-playoffs.js";
 
-const MODULE_VERSION = "0.7.0";
+const MODULE_VERSION = "0.8.0";
 
 // A flat table rather than a switch, so the op list is greppable and each op
 // stays independently testable.
@@ -177,6 +178,23 @@ function runScheduledTick(p) {
       }
     }
   }
+  // ⚠️ ONE BACKFILL PER TICK ACROSS THE WHOLE INSTALL, not per league. Each
+  // repaired week is a 570 KB fetch and the entire tick has 5 seconds; doing it
+  // per league would blow the deadline and lose the writes already made.
+  // Repairs are rare — this only fires after an outage — so slow is fine.
+  for (const leagueId of leagues) {
+    let repaired = null;
+    try {
+      repaired = backfillOneWeek(leagueId);
+    } catch (err) {
+      log(`tick backfill failed for ${leagueId}: ${err.message}`);
+    }
+    if (repaired) {
+      results.push({ leagueId, task: "backfill", result: repaired });
+      break; // one per tick, whichever league needed it first
+    }
+  }
+
   return { tick: true, leagues: leagues.length, results };
 }
 
