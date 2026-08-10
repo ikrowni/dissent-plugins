@@ -14,9 +14,11 @@ import { esc } from '../core/ui.js';
 import * as home from './league-home.js';
 import * as roster from './league-roster.js';
 import * as draft from './league-draft.js';
+import * as matchup from './league-matchup.js';
 
 const TABS = [
   ['home', 'League'],
+  ['matchup', 'Matchups'],
   ['roster', 'My Roster'],
   ['draft', 'Draft'],
 ];
@@ -33,7 +35,8 @@ function tabsHtml() {
 export function render() {
   const body = state.tab === 'roster' ? roster.render()
     : state.tab === 'draft' ? draft.render()
-      : home.render();
+      : state.tab === 'matchup' ? matchup.render()
+        : home.render();
   return `${tabsHtml()}<div class="section-body">${body}</div>`;
 }
 
@@ -85,12 +88,14 @@ export async function onAction(act, target) {
     case 'lg-tab':
       state.tab = target.dataset.tab;
       app.router.refresh();
+      // Leaving the draft tab must stop its poll, whichever tab is next.
+      if (state.tab !== 'draft') draft.stopPolling();
       if (state.tab === 'roster') {
         roster.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
       } else if (state.tab === 'draft') {
         draft.load(app, { leagueId, league, teamId });
-      } else {
-        draft.stopPolling();
+      } else if (state.tab === 'matchup') {
+        matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
       }
       return;
 
@@ -107,6 +112,20 @@ export async function onAction(act, target) {
       state.tab = 'roster';
       app.router.refresh();
       roster.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
+      return;
+
+    case 'matchup-retry':
+      matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
+      return;
+    case 'matchup-expand':
+      matchup.expand(app, target.dataset.team);
+      return;
+
+    case 'league-goto-matchup':
+      state.tab = 'matchup';
+      draft.stopPolling();
+      app.router.refresh();
+      matchup.load(app, { leagueId, league, week: league?.currentWeek ?? null });
       return;
 
     case 'league-goto-draft':
@@ -146,6 +165,14 @@ export async function onAction(act, target) {
     // ── Draft ──
     case 'draft-retry':
       draft.load(app, { leagueId, league, teamId });
+      return;
+    case 'draft-search':
+      // The caret travels with the query so restoring focus does not jump the
+      // cursor to the end mid-word.
+      draft.search(app, target.value, target.selectionStart);
+      return;
+    case 'draft-pick-player':
+      draft.pick(app, target.dataset.player);
       return;
     case 'draft-start':
       draft.start(app);

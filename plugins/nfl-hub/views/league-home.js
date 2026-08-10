@@ -141,6 +141,7 @@ function leaguePane(league, scores) {
       <div class="row-actions">
         <button class="btn" data-act="league-refresh">Refresh</button>
         ${mine ? '<button class="btn" data-act="league-goto-roster">My roster</button>' : ''}
+        <button class="btn" data-act="league-goto-matchup">Matchups</button>
         <button class="btn" data-act="league-goto-draft">Draft</button>
       </div>`,
   });

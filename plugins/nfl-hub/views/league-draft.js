@@ -12,6 +12,7 @@
 
 import { esc, panel, stateMsg } from '../core/ui.js';
 import { getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock } from '../core/league-api.js';
+import { loadIndex, searchPlayers, playerLabel } from '../core/player-index.js';
 import { describe } from './league-home.js';
 
 const POLL_MS = 3000;
@@ -25,6 +26,8 @@ const state = {
   busy: false,
   notice: null,
   localDeadline: null, // epoch ms, refreshed from the server on every poll
+  query: '',
+  results: [],
 };
 
 let timer = null;
@@ -33,7 +36,7 @@ export function reset() {
   stopPolling();
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
-    error: null, busy: false, notice: null, localDeadline: null,
+    error: null, busy: false, notice: null, localDeadline: null, query: '', results: [],
   });
 }
 
@@ -105,14 +108,29 @@ function livePane(d) {
   });
 }
 
+/**
+ * Search-and-pick.
+ *
+ * ⚠️ THE LIST EXCLUDES PLAYERS ALREADY DRAFTED. Offering one produces a refusal
+ * on every click, and the manager cannot tell whether they mistyped or somebody
+ * beat them to him — which, on a live clock, is the worst possible ambiguity.
+ */
 function pickForm() {
+  const rows = state.results.map((p) => `
+    <button class="row-btn pick" data-act="draft-pick-player" data-player="${esc(p.id)}"
+            ${state.busy ? 'disabled' : ''}>
+      <span class="row-main">${esc(p.name)}</span>
+      <span class="muted">${esc(p.position)}${p.team ? ` · ${esc(p.team)}` : ''}</span>
+    </button>`).join('');
+
   return `
-    <form data-act="draft-pick-form" class="row">
-      <input name="playerId" placeholder="Player id" required>
-      <button class="btn primary" type="submit" ${state.busy ? 'disabled' : ''}>
-        ${state.busy ? 'Picking…' : 'Draft'}
-      </button>
-    </form>`;
+    <div class="pick-box">
+      <input type="search" data-act="draft-search" placeholder="Search players…"
+             value="${esc(state.query)}" autocomplete="off" ${state.busy ? 'disabled' : ''}>
+      ${state.query.trim().length < 2
+    ? '<p class="muted">Type at least two letters.</p>'
+    : (rows || '<p class="muted">No available player matches that.</p>')}
+    </div>`;
 }
 
 function picksTable(d) {
@@ -125,7 +143,7 @@ function picksTable(d) {
       <tr>
         <td class="num">${esc(overall)}</td>
         <td>${esc(teamName(p.teamId))}</td>
-        <td>${esc(String(p.playerId))}</td>
+        <td>${esc(playerLabel(p.playerId))}</td>
         <td class="muted">${p.auto ? 'auto' : ''}</td>
       </tr>`).join('')}</tbody>
   </table>`;
@@ -176,10 +194,43 @@ async function poll(app) {
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 export async function load(app, { leagueId, league, teamId }) {
-  Object.assign(state, { leagueId, league, teamId, error: null, notice: null });
+  Object.assign(state, { leagueId, league, teamId, error: null, notice: null, query: '', results: [] });
+  // Names and search both need the index; a draft board showing raw ids is
+  // unusable even though it is technically correct.
+  await loadIndex();
   await poll(app);
   startPolling(app);
   app?.router?.refresh();
+}
+
+/** Every id already drafted — the set the search must exclude. */
+export function takenIds() {
+  return new Set(Object.values(state.draft?.picks ?? {}).map((p) => String(p.playerId)));
+}
+
+/**
+ * Filter as the manager types.
+ *
+ * ⚠️ THE HUB RE-RENDERS THE WHOLE VIEW, which destroys the input element. Without
+ * restoring focus and the caret, the box loses focus after EVERY keystroke and is
+ * unusable while appearing to work perfectly in a screenshot. Restoring is done
+ * synchronously after the refresh, before the browser paints.
+ */
+export function search(app, query, caret = null) {
+  state.query = String(query ?? '');
+  state.results = searchPlayers(state.query, { taken: takenIds(), limit: 10 });
+  app?.router?.refresh();
+  restoreSearchFocus(caret);
+}
+
+/** Put focus and the caret back after a re-render. */
+export function restoreSearchFocus(caret = null) {
+  if (typeof document === 'undefined') return;
+  const el = document.querySelector('[data-act="draft-search"]');
+  if (!el) return;
+  el.focus();
+  const pos = caret === null ? el.value.length : caret;
+  try { el.setSelectionRange(pos, pos); } catch { /* not all inputs support it */ }
 }
 
 export async function start(app) { await act(app, () => startDraft(state.leagueId)); }
@@ -190,6 +241,10 @@ export async function finalize(app) {
 
 export async function pick(app, playerId) {
   await act(app, () => makePick(state.leagueId, state.teamId, playerId), 'Pick made.');
+  // Re-filter against the new picks, so the player just taken leaves the list
+  // rather than sitting there inviting a second click.
+  if (state.query) state.results = searchPlayers(state.query, { taken: takenIds(), limit: 10 });
+  app?.router?.refresh();
 }
 
 async function act(app, fn, notice = null) {
