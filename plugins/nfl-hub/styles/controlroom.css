@@ -98,3 +98,57 @@
   border-radius: var(--r-sm); cursor: pointer; }
 .replay-bar button:hover { background: var(--panel); }
 .replay-bar input[type="range"] { flex: 1; accent-color: var(--gold); }
+
+/* ── Standings ─────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THIS WAS THE LAST SURFACE BUILT FROM WORKHORSE CHROME ALONE — eight bare
+ * tables stacked vertically with eleven equally-weighted columns and no colour,
+ * which is exactly what the spec meant by "a different, older app sitting inside
+ * a polished one". Nothing here is a new idea: team colour, a bar scaled to the
+ * leader, and a muted secondary tier are all vocabulary the hub already owns.
+ */
+.st-conf { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.st-conf-col { min-width: 0; }
+.st-conf-h {
+  font-family: var(--f-display); font-size: 12px; font-weight: 800;
+  letter-spacing: 0.18em; color: var(--text-3); text-transform: uppercase;
+  margin: 4px 0 8px 2px;
+}
+.st-div { margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.st-rows { padding: 2px 0; }
+
+/* ⚠️ THE ACCENT IS teamColor(), which lifts near-black primaries (Raiders and
+ * Steelers are #000000) until they are legible. A raw primary would render four
+ * teams with an invisible stripe. */
+.st-row {
+  display: grid; align-items: center; gap: 10px;
+  grid-template-columns: minmax(0, 1.5fr) 62px 46px minmax(70px, 1fr) 92px 96px 44px;
+  padding: 7px 12px; border-left: 3px solid var(--tc, transparent);
+  border-bottom: 1px solid rgba(255,255,255,.045);
+}
+.st-row:last-child { border-bottom: 0; }
+.st-row:hover { background: rgba(255,255,255,.025); }
+.st-team { min-width: 0; }
+
+/* The record reads as one thing, because that is how it is read. */
+.st-rec { font-family: var(--f-display); font-size: 15px; font-weight: 800; color: var(--text); }
+.st-pct { font-family: var(--f-mono); font-size: 11px; color: var(--text-2); text-align: right; }
+
+/* Differential, scaled within the division so both directions compare. */
+.st-diff { display: flex; align-items: center; gap: 7px; }
+.st-diff-bar { flex: 1; height: 4px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.st-diff-bar i { display: block; height: 100%; background: var(--text-3); }
+.st-diff.up .st-diff-bar i { background: var(--win); }
+.st-diff.down .st-diff-bar i { background: var(--loss); }
+.st-diff b { font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--text-3); min-width: 4ch; text-align: right; }
+.st-diff.up b { color: var(--win); }
+.st-diff.down b { color: var(--loss); }
+
+/* Everything a reader consults second, weighted like it. */
+.st-sec { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); text-align: right; white-space: nowrap; }
+.st-strk { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-2); text-align: right; }
+
+@media (max-width: 900px) {
+  .st-row { grid-template-columns: minmax(0, 1.4fr) 58px 44px minmax(60px, 1fr); }
+  .st-sec, .st-strk { display: none; }
+}

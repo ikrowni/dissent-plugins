@@ -44,9 +44,12 @@ describe('renderStandings', () => {
     expect(parse(renderStandings({ error: 'x' })).querySelector('[data-act="retry"]')).not.toBeNull();
   });
 
-  it('renders eight division tables from the real fixture', () => {
+  it('renders eight divisions from the real fixture', () => {
+    // ⚠️ Asserts the INTENT — all eight divisions appear — not the element type.
+    // These were `table.grid` before the visual pass; they are `.st-div` blocks
+    // now, and the thing worth guarding is that none went missing.
     const el = parse(renderStandings({ table }));
-    expect(el.querySelectorAll('table.grid').length).toBeGreaterThanOrEqual(8);
+    expect(el.querySelectorAll('.st-div').length).toBe(8);
   });
 
   it('makes every team clickable so it can drill into a team page', () => {
@@ -144,5 +147,56 @@ describe('the standings tab before a season starts', () => {
     t[firstDiv][0] = { ...t[firstDiv][0], wins: 12, record: '12-5' };
     expect(renderStandings({ loading: false, error: null, table: t, seasonType: 'post' }))
       .toContain('playoff picture');
+  });
+});
+
+// ── The visual pass ─────────────────────────────────────────────────────────
+//
+// ⚠️ THIS TAB WAS THE LAST "WORKHORSE CHROME ALONE" SURFACE. Eight identical
+// bare tables stacked vertically, eleven columns weighted the same, no colour
+// anywhere — the exact look the League tab had before its redesign, and the
+// reason the spec called that one "a different, older app sitting inside a
+// polished one". Everything added here is vocabulary the hub already owns.
+describe('the standings visual pass', () => {
+  const s = { loading: false, error: null, table, seasonType: 'regular' };
+
+  it('groups the divisions by conference instead of stacking eight panels', () => {
+    const html = renderStandings(s);
+    expect(html).toContain('st-conf');
+    // Both conferences get their own column.
+    expect((html.match(/st-conf-col/g) ?? []).length).toBe(2);
+  });
+
+  // ⚠️ teamColor() IS the right function here — these are NFL franchises, unlike
+  // the fantasy teams that needed managerColor(). It already lifts dark primaries
+  // (Raiders and Steelers are #000000) until they are legible on near-black.
+  it('accents every row with its own team colour', () => {
+    const html = renderStandings(s);
+    expect(html).toContain('--tc:');
+    expect(html).toContain('st-row');
+  });
+
+  // W, L and T as three separate columns is not how a record is read.
+  it('renders the record as one unit rather than three columns', () => {
+    const html = renderStandings(s);
+    expect(html).toContain('st-rec');
+    expect(html).not.toMatch(/<th[^>]*>W<\/th>/);
+  });
+
+  // ⚠️ THE GAP IS THE STORY — the same principle already used for the standings
+  // bar in league-home and the score bar in matchups. A column of raw
+  // differentials makes the reader do the comparison themselves.
+  it('draws a point-differential bar scaled within the division', () => {
+    const html = renderStandings(s);
+    expect(html).toContain('st-diff-bar');
+  });
+
+  it('still lets a team be clicked through to its page', () => {
+    expect(renderStandings(s)).toContain('data-act="team"');
+  });
+
+  it('still shows every division', () => {
+    const html = renderStandings(s);
+    for (const d of Object.keys(table)) expect(html).toContain(d);
   });
 });

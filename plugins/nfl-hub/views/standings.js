@@ -1,5 +1,6 @@
 // views/standings.js — division standings plus the playoff picture.
-import { chip, panel, stateMsg, esc, errorPane} from '../core/ui.js';
+import { chip, panel, stateMsg, esc, errorPane } from '../core/ui.js';
+import { teamColor } from '../core/player-visuals.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchStandings } from '../core/espn-client.js';
 import { parseStandings } from '../core/espn-league.js';
@@ -31,20 +32,45 @@ export function seedGroups(table, conf) {
   return { seeded, hunt: rest.slice(0, 5), out: rest.slice(5) };
 }
 
+/**
+ * One division.
+ *
+ * ⚠️ THE RECORD IS ONE THING, NOT THREE. W, L and T stood as separate equal
+ * columns beside seven more, so a reader scanning for "who is winning" weighed
+ * `STRK` exactly as heavily as the record. They are now a single unit, and the
+ * secondary stats are muted behind it.
+ *
+ * ⚠️ THE DIFFERENTIAL GETS A BAR, scaled to the largest ABSOLUTE gap in this
+ * division so both directions are comparable — the same "the gap is the story"
+ * rule already used by league-home's standings bar and the matchup score bar. A
+ * bare column of numbers makes the reader do that comparison themselves.
+ */
 function divisionTable(division, rows) {
-  const body = rows.map((r) => (
-    `<tr><td>${chip(r, { clickable: true, showRecord: false })}</td>`
-    + COLS.map(([, k]) => `<td class="num">${esc(r[k] ?? '—')}</td>`).join('')
-    + '</tr>'
-  )).join('');
-  return panel({
-    title: division,
-    flush: true,
-    body: '<table class="grid"><thead><tr><th>Team</th>'
-      + COLS.map(([label]) => `<th>${esc(label)}</th>`).join('')
-      + `</tr></thead><tbody>${body}</tbody></table>`,
-  });
+  const widest = Math.max(1, ...rows.map((r) => Math.abs(Number(r.diff) || 0)));
+  const body = rows.map((r) => {
+    const diff = Number(r.diff) || 0;
+    const pct = Math.round((Math.abs(diff) / widest) * 100);
+    return `<div class="st-row" style="--tc:${esc(teamColor(r.abbr))}">
+      <span class="st-team">${chip(r, { clickable: true, showRecord: false })}</span>
+      <span class="st-rec">${esc(r.wins ?? 0)}-${esc(r.losses ?? 0)}${Number(r.ties) ? `-${esc(r.ties)}` : ''}</span>
+      <span class="st-pct">${esc(r.pct ?? '—')}</span>
+      <span class="st-diff ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">
+        <span class="st-diff-bar"><i style="width:${pct}%"></i></span>
+        <b>${diff > 0 ? '+' : ''}${esc(diff)}</b>
+      </span>
+      <span class="st-sec" title="Division / Conference">${esc(r.divRecord ?? '—')} · ${esc(r.confRecord ?? '—')}</span>
+      <span class="st-sec">${esc(r.pointsFor ?? '—')} / ${esc(r.pointsAgainst ?? '—')}</span>
+      <span class="st-strk">${esc(r.streak ?? '—')}</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="st-div">
+    <div class="mod-head"><span class="t">${esc(division)}</span>
+      <span class="v">PF / PA</span></div>
+    <div class="st-rows">${body}</div>
+  </div>`;
 }
+
 
 function playoffColumn(conf, groups) {
   const row = (r, label) => (
@@ -125,7 +151,15 @@ export function renderStandings(s = state) {
         : 'The season has not started, so there is no playoff picture yet — every team is 0-0. '
           + 'The divisions below are the league as it stands.'}</p>`,
     });
-  for (const d of divisions.sort()) html += divisionTable(d, s.table[d]);
+  // ⚠️ TWO COLUMNS, BY CONFERENCE. Eight stacked panels meant the NFC began
+  // roughly two screens below the AFC, so the two halves of the league could
+  // never be compared without scrolling between them.
+  const col = (conf) => divisions.filter((d) => d.startsWith(conf)).sort()
+    .map((d) => divisionTable(d, s.table[d])).join('');
+  html += `<div class="st-conf">
+    <div class="st-conf-col"><h3 class="st-conf-h">AFC</h3>${col('AFC')}</div>
+    <div class="st-conf-col"><h3 class="st-conf-h">NFC</h3>${col('NFC')}</div>
+  </div>`;
   return html;
 }
 
