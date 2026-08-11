@@ -525,3 +525,17 @@ h4 {
   content: ''; position: absolute; left: 0; top: 50%;
   width: 8px; border-top: 1px dashed var(--text-3); opacity: 0.5;
 }
+
+/* ── Trade block ──────────────────────────────────────────────────────────────
+ * The heart carries a COUNT, because the question a manager has is not "who is
+ * popular" but "would anyone take him?" — and a number answers that where a
+ * plain icon does not. */
+.tb-team { margin-bottom: 10px; }
+.tb-team h5 {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--text-3); margin: 0 0 4px;
+}
+.tb-count {
+  margin-left: 6px; font-family: var(--f-mono); font-size: 10px;
+  color: var(--gold); font-weight: 700;
+}

@@ -14,6 +14,7 @@ import { generateRegularSeason } from "../core/league/schedule.js";
 import { positionMap, injuryMap } from "./ops-scoring.js";
 import { validateAutoSubs } from "../core/league/autosubs.js";
 import { rosterCapacity } from "../core/league/rosters.js";
+import { setBlock, setInterest, interestCounts } from "../core/league/trade-block.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -328,6 +329,85 @@ export function getAutoSubs({ payload }) {
   const week = Number(payload?.week);
   const teamId = String(payload?.teamId ?? "");
   return read(KEY.autosubs(lg, season, week, teamId), { subs: {}, setAt: null, setBy: null });
+}
+
+/**
+ * Set this team's trade block, or its interest list.
+ *
+ * ⚠️ CONTENDED — one record, every team writes it — so the whole read-modify-
+ * write goes through `mutate`. A plain `set` here loses a rival team's block
+ * silently: no error, no trace, just an offer that vanishes.
+ *
+ * ⚠️ OWNERSHIP IS RESOLVED FROM STORED ASSETS, NEVER FROM THE PAYLOAD. Trusting
+ * the caller would let a manager put somebody else's player on the market.
+ */
+export function setTradeBlock({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams, assets } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamControl(p, teams, meta, teamId);
+  if (err) refuse(err);
+
+  const rosters = assets.rosters ?? {};
+  const ownerOf = (playerId) => {
+    const id = String(playerId);
+    for (const [t, r] of Object.entries(rosters)) {
+      if ((r?.players ?? []).map(String).includes(id)) return String(t);
+      if ((r?.ir ?? []).map(String).includes(id)) return String(t);
+      if ((r?.taxi ?? []).map(String).includes(id)) return String(t);
+    }
+    return null;
+  };
+  const owns = (t, playerId) => ownerOf(playerId) === String(t);
+
+  const players = Array.isArray(payload?.players) ? payload.players.map(String) : [];
+  const picks = Array.isArray(payload?.picks) ? payload.picks : [];
+  const interested = Array.isArray(payload?.interest) ? payload.interest.map(String) : [];
+  const touchesBlock = payload?.players !== undefined || payload?.picks !== undefined;
+  const touchesInterest = payload?.interest !== undefined;
+
+  // ⚠️ THE CALLBACK STAYS PURE. `mutate` may run it more than once — on a CAS
+  // conflict it re-reads and re-applies — so capturing the result inside it
+  // would depend on which invocation happened to win. Read the settled value
+  // back afterwards instead.
+  mutate(KEY.tradeBlock(lg), (cur) => {
+    const state = cur ?? { block: {}, interest: {} };
+    let block = state.block ?? {};
+    let interest = state.interest ?? {};
+
+    if (touchesBlock) block = setBlock(block, teamId, { players, picks }, owns);
+    if (touchesInterest) interest = setInterest(interest, teamId, interested, ownerOf);
+
+    return { block, interest };
+  }, { block: {}, interest: {} });
+
+  const settled = read(KEY.tradeBlock(lg), { block: {}, interest: {} });
+  return {
+    leagueId: lg,
+    teamId,
+    block: settled.block?.[teamId] ?? { players: [], picks: [] },
+    counts: interestCounts(settled.interest ?? {}),
+  };
+}
+
+/**
+ * The whole league's block and interest.
+ *
+ * Returns counts alongside the raw interest so a roster view can render the
+ * heart-with-a-number without recomputing it per row.
+ */
+export function getTradeBlock({ payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const state = read(KEY.tradeBlock(lg), { block: {}, interest: {} });
+  return {
+    block: state.block ?? {},
+    interest: state.interest ?? {},
+    counts: interestCounts(state.interest ?? {}),
+  };
 }
 
 /**

@@ -258,6 +258,13 @@ export async function onAction(act, target) {
     case 'moves-trade-with':
       moves.setTradeWith(app, target.value);
       return;
+    case 'moves-block-toggle':
+      moves.toggleBlock(app, target.dataset.player);
+      return;
+    case 'moves-interest-toggle':
+      moves.toggleInterest(app, target.dataset.player);
+      return;
+
     case 'moves-trade-mine':
       moves.toggleTradePlayer('mine', target.dataset.player, target.checked);
       return;

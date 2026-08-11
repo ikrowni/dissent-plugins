@@ -35,6 +35,10 @@ export const KEY = {
   autosubs: (lg, season, week, team) => `fl:${lg}:autosub:${season}:w${week}:${team}`,
   scores: (lg, season, week) => `fl:${lg}:scores:${season}:w${week}`,
   bracket: (lg, season) => `fl:${lg}:bracket:${season}`,
+  // ⚠️ ONE record for the whole league, written by EVERY team — so it is
+  // contended and listed below. A per-team key would avoid that, but then
+  // "who wants this player" would need a read per team on every roster render.
+  tradeBlock: (lg) => `fl:${lg}:tradeblock`,
   audit: (lg, chunk) => `fl:${lg}:audit:${chunk}`,
 };
 
@@ -45,7 +49,7 @@ export const KEY = {
  * question someone answers wrongly at 1am, and `set` on a contended key loses
  * updates silently — no error, no trace, just a claim that vanishes.
  */
-export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex", "bracket"];
+export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex", "bracket", "tradeBlock"];
 
 /** Read a value, or a fallback when unset. */
 export function read(key, fallback = null) {

@@ -67,6 +67,12 @@ export const setAutoSubs = (leagueId, teamId, week, subs) =>
   call('autosub:set', { leagueId, teamId, week, subs });
 export const getAutoSubs = (leagueId, teamId, week) =>
   call('autosub:get', { leagueId, teamId, week });
+// ⚠️ `players`/`picks` set the block; `interest` sets what this team wants.
+// Omit a field to leave that half untouched — sending [] CLEARS it.
+export const setTradeBlock = (leagueId, teamId, patch) =>
+  call('tradeblock:set', { leagueId, teamId, ...patch });
+export const getTradeBlock = (leagueId) =>
+  call('tradeblock:get', { leagueId });
 export const addPlayer = (leagueId, teamId, playerId, dropPlayerId = null) =>
   call('roster:add', { leagueId, teamId, playerId, dropPlayerId });
 export const dropPlayer = (leagueId, teamId, playerId) =>

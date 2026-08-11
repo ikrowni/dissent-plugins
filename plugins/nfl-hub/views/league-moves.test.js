@@ -284,3 +284,39 @@ describe('the trending panel', () => {
     expect(html).toContain('Nothing yet.');
   });
 });
+
+describe('trade block', () => {
+  beforeEach(() => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: league(), teamId: 't1', week: 3, loaded: true, error: null,
+    });
+    _state.block = { t2: { players: ['p2'], picks: [] } };
+    _state.interest = { t2: ['p1'] };
+    _state.counts = { p1: 1 };
+  });
+
+  it('shows what other teams are offering', () => {
+    expect(render()).toContain('On the block');
+  });
+
+  // ⚠️ The heart-with-a-number from study §8.3 — it turns "would anyone take
+  // him?" into a number, which is the whole value of the feature.
+  it('shows how many teams want one of my players', () => {
+    expect(render()).toMatch(/1\s*(interested|<)/i);
+  });
+
+  it('offers a control to block my own players', () => {
+    expect(render()).toContain('moves-block-toggle');
+  });
+
+  it('offers a control to express interest in theirs', () => {
+    expect(render()).toContain('moves-interest-toggle');
+  });
+
+  it('renders without a block or interest at all', () => {
+    _state.block = {};
+    _state.interest = {};
+    _state.counts = {};
+    expect(() => render()).not.toThrow();
+  });
+});

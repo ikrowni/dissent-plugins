@@ -12,7 +12,7 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   submitClaim, cancelClaim, listClaims, addPlayer, dropPlayer,
-  proposeTrade, respondToTrade, listTrades,
+  proposeTrade, respondToTrade, listTrades, setTradeBlock, getTradeBlock,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
 import { playerChip } from '../core/player-visuals.js';
@@ -28,6 +28,9 @@ const state = {
   week: null,
   claims: null,      // { claims, budgets, pendingCount }
   trades: [],
+  block: {},        // { [teamId]: { players, picks } }
+  interest: {},     // { [teamId]: playerId[] }
+  counts: {},       // { [playerId]: how many teams want him }
   query: '',
   results: [],
   bid: 0,
@@ -44,6 +47,7 @@ const state = {
 export function reset() {
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, week: null, claims: null, trades: [],
+    block: {}, interest: {}, counts: {},
     query: '', results: [], bid: 0, dropId: '', tradeWith: '', tradeMine: [], tradeTheirs: [],
     loaded: false, error: null, busy: false, notice: null,
   });
@@ -74,6 +78,7 @@ export function render() {
   return `${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
     ${freeAgentPane()}
     ${claimsPane()}
+    ${tradeBlockPane()}
     ${tradePane()}
     ${tradeListPane()}`;
 }
@@ -138,6 +143,63 @@ function claimsPane() {
 }
 
 // ── Trades ───────────────────────────────────────────────────────────────────
+
+/**
+ * Who is offering what, and who wants mine.
+ *
+ * ⚠️ THIS IS THE LEAGUE ENGINE'S BLOCK, not the Fantasy tab's. Here a blocked
+ * player leads somewhere — the propose form below is ours. On the Sleeper mirror
+ * it could only ever be a noticeboard, because Sleeper cannot be written to.
+ */
+function tradeBlockPane() {
+  const teams = state.league?.teams ?? {};
+  const rosters = state.league?.assets?.rosters ?? {};
+  const mine = (rosters[state.teamId]?.players ?? []).map(String);
+  const myBlock = (state.block?.[state.teamId]?.players ?? []).map(String);
+  const myInterest = (state.interest?.[state.teamId] ?? []).map(String);
+
+  const othersBlocking = Object.entries(state.block ?? {})
+    .filter(([t]) => String(t) !== String(state.teamId))
+    .filter(([, e]) => (e?.players?.length ?? 0) > 0);
+
+  const theirRows = othersBlocking.map(([t, e]) => `
+    <div class="tb-team">
+      <h5>${esc(teams[t]?.name ?? t)}</h5>
+      ${e.players.map((id) => `<label class="check">
+        <input type="checkbox" data-act="moves-interest-toggle" data-player="${esc(String(id))}"
+               ${myInterest.includes(String(id)) ? 'checked' : ''}>
+        ${esc(playerLabel(id))}
+      </label>`).join('')}
+    </div>`).join('');
+
+  // ⚠️ The count is shown on MY players, because that is the question a manager
+  // actually has — not "who is popular", but "would anyone take him?".
+  const myRows = mine.map((id) => {
+    const n = state.counts?.[String(id)] ?? 0;
+    return `<label class="check">
+      <input type="checkbox" data-act="moves-block-toggle" data-player="${esc(id)}"
+             ${myBlock.includes(id) ? 'checked' : ''}>
+      ${esc(playerLabel(id))}
+      ${n > 0 ? `<span class="tb-count" title="${n} team${n === 1 ? '' : 's'} interested">♥ ${n}</span>` : ''}
+    </label>`;
+  }).join('');
+
+  return panel({
+    title: 'Trade block',
+    body: `
+      <div class="trade-cols">
+        <div>
+          <h4>Your players</h4>
+          <p class="tiny">Tick to offer. ♥ shows how many teams want him.</p>
+          ${myRows || '<p class="muted">No players.</p>'}
+        </div>
+        <div>
+          <h4>On the block</h4>
+          ${theirRows || '<p class="muted">Nobody else is offering anyone yet.</p>'}
+        </div>
+      </div>`,
+  });
+}
 
 function tradePane() {
   const others = Object.values(state.league?.teams ?? {}).filter((t) => t.id !== state.teamId);
@@ -205,6 +267,55 @@ export function actionsFor(trade, teamId) {
   }
   if (trade.status === 'review' && !isParty) return ['veto'];
   return [];
+}
+
+/**
+ * Offer (or withdraw) one of my players, saving immediately.
+ *
+ * ⚠️ SENDS THE WHOLE LIST, because `setBlock` REPLACES rather than merges —
+ * that is what makes un-blocking possible without a second verb. Sending only
+ * the changed id would wipe everything else the team was offering.
+ */
+export async function toggleBlock(app, playerId) {
+  const id = String(playerId ?? '');
+  if (!id || !state.teamId) return;
+  const current = (state.block?.[state.teamId]?.players ?? []).map(String);
+  const players = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+  await saveTradeBlock(app, { players });
+}
+
+/** Express (or withdraw) interest in someone else's player. */
+export async function toggleInterest(app, playerId) {
+  const id = String(playerId ?? '');
+  if (!id || !state.teamId) return;
+  const current = (state.interest?.[state.teamId] ?? []).map(String);
+  const interest = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+  await saveTradeBlock(app, { interest });
+}
+
+/**
+ * Persist a block/interest patch and fold the answer back in.
+ *
+ * ⚠️ RE-READS RATHER THAN GUESSING. The record is contended, so another team's
+ * write may have landed between render and save; the op returns the settled
+ * counts and this trusts those over anything computed locally.
+ */
+async function saveTradeBlock(app, patch) {
+  state.error = null;
+  state.busy = true;
+  app?.router?.refresh();
+  try {
+    await setTradeBlock(state.leagueId, state.teamId, patch);
+    const tb = await getTradeBlock(state.leagueId);
+    state.block = tb?.block ?? {};
+    state.interest = tb?.interest ?? {};
+    state.counts = tb?.counts ?? {};
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
 }
 
 function tradeRow(t) {
@@ -277,6 +388,12 @@ export async function load(app, { leagueId, league, teamId, week }) {
     // Both are optional: a league with no waiver week and no trades is normal.
     state.claims = week ? await listClaims(leagueId, week).catch(() => null) : null;
     state.trades = await listTrades(leagueId).catch(() => []);
+    // ⚠️ One read for the whole league. The block is a single contended record,
+    // so this is one request no matter how many teams are offering.
+    const tb = await getTradeBlock(leagueId).catch(() => null);
+    state.block = tb?.block ?? {};
+    state.interest = tb?.interest ?? {};
+    state.counts = tb?.counts ?? {};
     // ⚠️ Deliberately NOT awaited into the critical path. The waiver wire is
     // fully usable without it, so a slow or dead upstream must not hold up the
     // whole tab — it fills in when it arrives.
