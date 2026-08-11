@@ -1,8 +1,14 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import {
   matchesFilter, renderBoard, renderOnTheClock, renderFilters, renderPool,
   renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue, roundArrow, rosterNeeds,
+  renderHero, renderTicker, renderFeed, renderStage,
 } from './draft-board.js';
+
+// ⚠️ views/game-scorebug.js ALSO exports a renderHero. Different module, no clash —
+// but do not let an editor auto-import the wrong one.
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const INDEX = {
   p1: { n: 'Christian McCaffrey', p: 'RB', t: 'SF', e: 3117251 },
@@ -397,5 +403,59 @@ describe('flex variants in the roster strip', () => {
       slots: ['REC_FLEX'], owned: [{ id: 'r', pos: 'RB' }], playerOf: of,
     });
     expect(html).not.toContain('Ray');
+  });
+});
+
+describe('renderHero', () => {
+  const onClock = { overall: 4, round: 1, pickInRound: 4, owner: 't3' };
+
+  it('names the team on the clock and the pick it is', () => {
+    const el = parse(renderHero({ onClock, teamLabel: () => 'Killer Krowns', clockText: '1:04' }));
+    expect(el.querySelector('.gr-team').textContent).toBe('Killer Krowns');
+    expect(el.querySelector('.gr-meta').textContent).toContain('ROUND 1');
+    expect(el.querySelector('.gr-meta').textContent).toContain('PICK 4');
+    expect(el.querySelector('.gr-clock').textContent).toBe('1:04');
+    expect(el.querySelector('.gr-overall').textContent).toBe('#4 OVERALL');
+  });
+
+  it('says YOU ARE ON THE CLOCK when it is yours', () => {
+    const mine = parse(renderHero({ onClock, teamLabel: () => 'You', isMine: () => true, clockText: '0:30' }));
+    expect(mine.querySelector('.gr-label').textContent).toBe('YOU ARE ON THE CLOCK');
+    const theirs = parse(renderHero({ onClock, teamLabel: () => 'Them', isMine: () => false, clockText: '0:30' }));
+    expect(theirs.querySelector('.gr-label').textContent).toBe('ON THE CLOCK');
+  });
+
+  it('paints the duotone from the drafting team, deterministically', () => {
+    const a = parse(renderHero({ onClock, teamLabel: () => 'A', clockText: '1:00' }));
+    const b = parse(renderHero({ onClock, teamLabel: () => 'A', clockText: '1:00' }));
+    const style = a.querySelector('.gr-hero').getAttribute('style');
+    expect(style).toMatch(/--gr-team:#[0-9a-f]{6}/);
+    expect(b.querySelector('.gr-hero').getAttribute('style')).toBe(style);
+  });
+
+  it('falls back to the neutral duotone when nobody owns the pick', () => {
+    // ⚠️ Spec §7: a colourless slab is worse than a deliberate neutral one.
+    const el = parse(renderHero({ onClock: { overall: 1, round: 1, pickInRound: 1, owner: null }, clockText: '—' }));
+    expect(el.querySelector('.gr-hero').getAttribute('style')).toContain('--gr-team:#243044');
+  });
+
+  it('renders a finished hero rather than an empty one when the draft is complete', () => {
+    const el = parse(renderHero({ onClock: null, complete: true }));
+    expect(el.querySelector('.gr-label').textContent).toBe('DRAFT COMPLETE');
+    expect(el.querySelector('.gr-clock')).toBeNull();
+  });
+
+  it('renders nothing at all when there is no clock and the draft is not complete', () => {
+    expect(renderHero({ onClock: null })).toBe('');
+  });
+
+  it('escapes a team name rather than rendering it as markup', () => {
+    const el = parse(renderHero({ onClock, teamLabel: () => '<img src=x onerror=1>', clockText: '1:00' }));
+    expect(el.querySelector('img')).toBeNull();
+  });
+
+  it('marks the clock urgent so CSS can colour it, without a second render path', () => {
+    const el = parse(renderHero({ onClock, clockText: '0:09', urgent: true }));
+    expect(el.querySelector('.gr-clock').classList.contains('urgent')).toBe(true);
   });
 });
