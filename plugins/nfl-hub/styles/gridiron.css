@@ -136,6 +136,14 @@
  * to say. Nothing is hidden with display:none — that is what would move the board. */
 .gr-tick.is-quiet { background: rgba(8,12,19,.4); }
 
+/* ⚠️ ONE-SHOT. `1` iteration, `both` fill — it lands and stays landed. The class is
+ * only ever emitted on the render where the run was first detected. */
+.gr-tick.is-new { animation: grTickFlash 700ms var(--ease-out) 1 both; }
+@keyframes grTickFlash {
+  0%   { background: rgba(139,28,43,.55); }
+  100% { background: rgba(8,12,19,.75); }
+}
+
 /* ── Board + feed ──────────────────────────────────────────────────────────── */
 .gr-cols { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 176px; }
 .gr-board { min-width: 0; padding: 12px; }

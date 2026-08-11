@@ -69,7 +69,7 @@ export function renderBoard({
     </div>`;
   }).join('');
 
-  return `<div class="db-scroll"><div class="db" style="--db-cols:${teamIds.length}">${head}${body}</div></div>`;
+  return `<div class="db-scroll" data-gr-scroll><div class="db" style="--db-cols:${teamIds.length}">${head}${body}</div></div>`;
 }
 
 /**
@@ -388,11 +388,13 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
  * ⚠️ A TICKER THAT ALWAYS SPEAKS IS NOISE. People stop reading it after about four
  * picks. `line` is null most of the time and that is the design.
  */
-export function renderTicker(line = null) {
+export function renderTicker(line = null, { isNew = false } = {}) {
   if (!line) {
     return '<div class="gr-tick is-quiet" aria-live="polite"></div>';
   }
-  return `<div class="gr-tick" aria-live="polite" style="--gr-pos:${esc(positionColor(line.pos))}">
+  // ⚠️ `is-new` fires the flash ONCE, and only the caller knows whether this run is
+  // new — the renderer is pure and sees the same run on every re-render.
+  return `<div class="gr-tick${isNew ? ' is-new' : ''}" aria-live="polite" style="--gr-pos:${esc(positionColor(line.pos))}">
     <span class="gr-tick-flag">${esc(line.flag)}</span>
     <span class="gr-tick-text">${esc(line.text)}</span>
   </div>`;

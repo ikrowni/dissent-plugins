@@ -502,3 +502,28 @@ describe('the pick-landed sweep', () => {
     expect(() => flashSweep()).not.toThrow();
   });
 });
+
+describe('the backdrop parallax', () => {
+  // ⚠️ SCROLL-LINKED, NOT A LOOP. §6 lists this as costing nothing precisely because
+  // it does no work between scroll events. If this ever calls motion.loop() it has
+  // become the thing it was written to avoid.
+  it('shifts the yard lines from the board scroll position, with no loop', () => {
+    document.body.innerHTML = `<div data-gr-stage>
+      <div class="gr-lines"></div>
+      <div class="db-scroll" data-gr-scroll></div>
+    </div>`;
+    const spy = vi.spyOn(motion, 'loop');
+    bindParallax();
+    const scroller = document.querySelector('[data-gr-scroll]');
+    Object.defineProperty(scroller, 'scrollLeft', { value: 300, configurable: true });
+    scroller.dispatchEvent(new window.Event('scroll'));
+    expect(document.querySelector('.gr-lines').style.transform).toBe('translate3d(-90px, 0, 0)');
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('is a no-op when the stage is not on screen', () => {
+    document.body.innerHTML = '';
+    expect(() => bindParallax()).not.toThrow();
+  });
+});

@@ -590,3 +590,25 @@ describe('renderStage', () => {
     expect(el.querySelector('.gr-vig')).not.toBeNull();
   });
 });
+
+describe('the run-detected flash', () => {
+  // ⚠️ ON DETECTION, NOT ON EVERY RENDER. The live draft re-renders on every
+  // fingerprint change; a flash keyed to "there is a run" would re-fire for as long
+  // as the run lasted, which is the ambient cost this whole design avoids.
+  it('flashes only when the caller says the run is new', () => {
+    const loud = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }, { isNew: true }));
+    expect(loud.querySelector('.gr-tick').classList.contains('is-new')).toBe(true);
+    const same = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }, { isNew: false }));
+    expect(same.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+
+  it('defaults to not flashing', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }));
+    expect(el.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+
+  it('never flashes a quiet strip', () => {
+    const el = parse(renderTicker(null, { isNew: true }));
+    expect(el.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+});

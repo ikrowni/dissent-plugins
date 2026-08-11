@@ -86,9 +86,11 @@ let idleTicks = 0;
 let lastClockText = null;
 let stopGlowLoop = null;
 let glowPhase = 0;
+let lastRunPos = null;
 
 export function reset() {
   stopPolling();
+  lastRunPos = null;
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
@@ -297,7 +299,15 @@ function livePane(d) {
       urgent: remaining !== null && remaining > 0 && remaining < 15000,
       queued: state.queue.length || null,
     }),
-    ticker: renderTicker(tickerLine({ picks: d.picks, positionOf, pool })),
+    ticker: (() => {
+      const line = tickerLine({ picks: d.picks, positionOf, pool });
+      // ⚠️ COMPARED AGAINST THE LAST RUN, not against "is there a run". The view
+      // re-renders on every fingerprint change, so keying the flash on presence
+      // alone would re-fire it for the whole length of the run.
+      const isNew = Boolean(line) && line.pos !== lastRunPos;
+      lastRunPos = line?.pos ?? null;
+      return renderTicker(line, { isNew });
+    })(),
     board: renderBoard({
       order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
       teamLabel: (t) => teamName(t),
@@ -439,6 +449,31 @@ export function flashSweep() {
 }
 
 /**
+ * The yard lines drift against the board as it scrolls sideways.
+ *
+ * ⚠️ SCROLL-LINKED, WHICH MEANS NO LOOP AT ALL. §6 lists this as free precisely
+ * because it does zero work between scroll events — no rAF, no interval, nothing
+ * running while the board sits still. It writes one transform on one element.
+ *
+ * ⚠️ transform, not background-position. Moving the background repaints the whole
+ * stage on every scroll frame; a transform on a positioned layer stays on the
+ * compositor. That distinction is the difference between free and the 68%-of-idle-
+ * GPU pattern this project has measured three times.
+ */
+export function bindParallax() {
+  if (typeof document === 'undefined') return;
+  const stage = document.querySelector('[data-gr-stage]');
+  const lines = stage?.querySelector('.gr-lines');
+  const scroller = stage?.querySelector('[data-gr-scroll]');
+  if (!lines || !scroller) return;
+  const paint = () => {
+    lines.style.transform = `translate3d(${-Math.round(scroller.scrollLeft * 0.3)}px, 0, 0)`;
+  };
+  scroller.addEventListener('scroll', paint, { passive: true });
+  paint();
+}
+
+/**
  * What a repaint would have to be caused by.
  *
  * ⚠️ THE CLOCK IS DELIBERATELY NOT IN IT. Including the deadline would make
@@ -493,6 +528,7 @@ export function stopPolling() {
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
   stopGlow();
   lastClockText = null;
+  lastRunPos = null;
 }
 
 /**
@@ -511,6 +547,8 @@ function refreshKeepingSearch(app) {
   app?.router?.refresh();
   if (wasSearch) restoreSearchFocus(caret);
   paintClock();
+  // The old scroller and its listener went with the old DOM.
+  bindParallax();
 }
 
 async function poll(app) {
@@ -566,6 +604,7 @@ export async function load(app, { leagueId, league, teamId }) {
   startPolling(app);
   app?.router?.refresh();
   paintClock();
+  bindParallax();
 }
 
 /** Every id already drafted — the set the pool must exclude. */
