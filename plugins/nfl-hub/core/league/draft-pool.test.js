@@ -171,3 +171,39 @@ describe('unfilledSlots', () => {
     expect(unfilledSlots(['RB', 'RB'], owned('RB'))).toEqual(['RB']);
   });
 });
+
+// ── Flex variants beyond the literal 'FLEX' ──────────────────────────────────
+// ⚠️ `slots.js` has supported FLEX, WRRB_FLEX, REC_FLEX, SUPER_FLEX and
+// IDP_FLEX from the start. This module carried its OWN hardcoded flex set and
+// matched only the string 'FLEX', so every other variant fell through to the
+// exact-position branch — where it looks for a player whose POSITION is
+// literally "SUPER_FLEX", i.e. nobody.
+describe('flex variants in unfilledSlots', () => {
+  it('treats SUPER_FLEX as filled by a QB', () => {
+    expect(unfilledSlots(['SUPER_FLEX'], [{ pos: 'QB' }])).toEqual([]);
+  });
+
+  it('treats SUPER_FLEX as filled by an RB', () => {
+    expect(unfilledSlots(['SUPER_FLEX'], [{ pos: 'RB' }])).toEqual([]);
+  });
+
+  it('leaves SUPER_FLEX unfilled when only a kicker is left', () => {
+    expect(unfilledSlots(['SUPER_FLEX'], [{ pos: 'K' }])).toEqual(['SUPER_FLEX']);
+  });
+
+  it('treats WRRB_FLEX as filled by a WR but not a TE', () => {
+    expect(unfilledSlots(['WRRB_FLEX'], [{ pos: 'WR' }])).toEqual([]);
+    expect(unfilledSlots(['WRRB_FLEX'], [{ pos: 'TE' }])).toEqual(['WRRB_FLEX']);
+  });
+
+  it('treats REC_FLEX as filled by a TE but not an RB', () => {
+    expect(unfilledSlots(['REC_FLEX'], [{ pos: 'TE' }])).toEqual([]);
+    expect(unfilledSlots(['REC_FLEX'], [{ pos: 'RB' }])).toEqual(['REC_FLEX']);
+  });
+
+  // ⚠️ Exact slots must still be filled FIRST, or a superflex swallows the QB
+  // and the QB slot reports unfilled with a quarterback sitting in the flex.
+  it('fills the exact QB slot before the superflex', () => {
+    expect(unfilledSlots(['QB', 'SUPER_FLEX'], [{ pos: 'QB' }, { pos: 'RB' }])).toEqual([]);
+  });
+});

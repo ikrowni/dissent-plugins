@@ -9,10 +9,23 @@
 // board is for. The pool answers "who is the best player left", and the filters
 // answer it per position.
 
+import { eligiblePositions } from './slots.js';
+
 /** Positions the filter row offers, in the order a draft board wants them. */
 export const POOL_FILTERS = Object.freeze(['ALL', 'QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF']);
 
-const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
+// ⚠️ NO LOCAL FLEX SET. `slots.js` is the single source of truth for what any
+// slot accepts, and it has known five flex variants from the start. A second
+// copy here matched only the literal 'FLEX', so SUPER_FLEX / WRRB_FLEX /
+// REC_FLEX / IDP_FLEX fell through to the exact-position branch and looked for
+// a player whose POSITION was literally "SUPER_FLEX" — nobody. Superflex
+// leagues therefore reported every flex slot permanently unfilled.
+const FLEX_POSITIONS = new Set(eligiblePositions('FLEX'));
+
+/** Does this slot accept more than one position? Then it fills LAST. */
+function isFlexish(slot) {
+  return eligiblePositions(slot).length > 1;
+}
 
 /**
  * Does this player match the active filter?
@@ -24,6 +37,9 @@ const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
 export function matchesFilter(pos, filter) {
   const p = String(pos ?? '').toUpperCase();
   if (!filter || filter === 'ALL') return true;
+  // ⚠️ The FLEX PILL is a filter, not a slot — it means "flex-eligible", and
+  // POOL_FILTERS offers exactly one. FLEX_POSITIONS is now derived from
+  // slots.js rather than hardcoded, so this stays in step automatically.
   if (filter === 'FLEX') return FLEX_POSITIONS.has(p);
   return p === filter;
 }
@@ -115,11 +131,12 @@ export function unfilledSlots(slots = [], owned = []) {
   const flexish = [];
   const out = [];
   for (const slot of slots ?? []) {
-    if (slot === 'FLEX') { flexish.push(slot); continue; }
+    if (isFlexish(slot)) { flexish.push(slot); continue; }
     if (!take((p) => p === slot)) out.push(slot);
   }
   for (const slot of flexish) {
-    if (!take((p) => FLEX_POSITIONS.has(p))) out.push(slot);
+    const accepts = new Set(eligiblePositions(slot));
+    if (!take((p) => accepts.has(p))) out.push(slot);
   }
   return out;
 }

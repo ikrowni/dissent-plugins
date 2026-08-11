@@ -369,3 +369,33 @@ describe('renderFilters with roster needs', () => {
     expect(renderFilters('ALL', { RB: 41 })).not.toContain('db-filter-need');
   });
 });
+
+// ⚠️ views/draft-board.js carried its OWN copy of the flex rule and matched only
+// the literal 'FLEX', so a SUPER_FLEX slot looked for a player whose POSITION
+// was "SUPER_FLEX" — nobody — and rendered permanently empty in a superflex
+// league. slots.js has always known better.
+describe('flex variants in the roster strip', () => {
+  const idx = { q: { n: 'Quinn', p: 'QB' }, r: { n: 'Ray', p: 'RB' } };
+  const of = (id) => idx[id] ?? null;
+
+  it('fills a SUPER_FLEX with a QB', () => {
+    const html = renderRosterProgress({
+      slots: ['SUPER_FLEX'], owned: [{ id: 'q', pos: 'QB' }], playerOf: of,
+    });
+    expect(html).toContain('Quinn');
+  });
+
+  it('fills a WRRB_FLEX with an RB', () => {
+    const html = renderRosterProgress({
+      slots: ['WRRB_FLEX'], owned: [{ id: 'r', pos: 'RB' }], playerOf: of,
+    });
+    expect(html).toContain('Ray');
+  });
+
+  it('leaves a REC_FLEX empty for an RB', () => {
+    const html = renderRosterProgress({
+      slots: ['REC_FLEX'], owned: [{ id: 'r', pos: 'RB' }], playerOf: of,
+    });
+    expect(html).not.toContain('Ray');
+  });
+});

@@ -11,7 +11,9 @@ import { getIndex } from '../core/player-index.js';
 import {
   setLineup, getLineup, setAutoSubs, getAutoSubs, dropPlayer, movePlayer,
 } from '../core/league-api.js';
-import { splitRosterPositions, slotAccepts, irEligible } from '../core/league/slots.js';
+import {
+  splitRosterPositions, slotAccepts, irEligible, eligiblePositions,
+} from '../core/league/slots.js';
 import { describe } from './league-home.js';
 
 const state = {
@@ -151,7 +153,7 @@ function slotRow(slot, index, current, bench) {
   // twelve identical dropdowns is the least readable form this screen can take.
   const chosen = current ? (getIndex()?.[String(current)] ?? null) : null;
   return `<tr>
-    <td class="slot" style="color:${esc(positionColor(slot === 'FLEX' ? 'RB' : slot))}">${esc(slot)}</td>
+    <td class="slot" style="color:${esc(positionColor(eligiblePositions(slot).length > 1 ? 'RB' : slot))}">${esc(slot)}</td>
     <td class="lineup-pick">
       ${chosen ? playerChip(chosen, { size: 30, compact: true }) : '<span class="db-slot-empty">Empty</span>'}
       <select data-act="roster-slot" data-index="${index}">${options.join('')}</select>

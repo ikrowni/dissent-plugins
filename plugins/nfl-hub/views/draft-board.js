@@ -13,13 +13,19 @@
 import { esc } from '../core/ui.js';
 import { playerChip, positionColor, positionPill, avatar } from '../core/player-visuals.js';
 import { POOL_FILTERS, matchesFilter } from '../core/league/draft-pool.js';
+import { eligiblePositions } from '../core/league/slots.js';
 
 // ⚠️ RE-EXPORTED, NOT REDEFINED. The filter rule now lives in core/league so the
 // live draft, the mock and the pool counts all answer it the same way. This file
 // keeps exporting both so existing importers do not care where they moved to.
 export { POOL_FILTERS, matchesFilter };
 
-const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
+// ⚠️ NO LOCAL FLEX SET — slots.js is the single source of truth and has known
+// five flex variants from the start. This file's own copy matched only the
+// literal 'FLEX', so SUPER_FLEX / WRRB_FLEX / REC_FLEX / IDP_FLEX looked for a
+// player whose POSITION was the slot name and rendered permanently empty.
+const acceptsOf = (slot) => new Set(eligiblePositions(slot));
+const isFlexish = (slot) => eligiblePositions(slot).length > 1;
 
 /**
  * The grid: rounds down, teams across.
@@ -165,7 +171,7 @@ export function renderFilters(active = 'ALL', counts = {}, needs = {}) {
     const need = needs?.[f];
     return `<button class="db-filter${active === f ? ' on' : ''}" role="tab"
       aria-selected="${active === f}" data-act="draft-filter" data-filter="${f}"
-      ${f === 'ALL' ? '' : `style="--db-pos:${esc(positionColor(f === 'FLEX' ? 'RB' : f))}"`}>
+      ${f === 'ALL' ? '' : `style="--db-pos:${esc(positionColor(isFlexish(f) ? 'RB' : f))}"`}>
       ${esc(f)}${need === undefined ? '' : ` <span class="db-filter-need">${need.have}/${need.slots}</span>`}${n === undefined ? '' : ` <span class="db-filter-n">${n}</span>`}
     </button>`;
   }).join('')}</div>`;
@@ -277,8 +283,9 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
   };
 
   const filled = slots.map((slot) => {
-    const got = slot === 'FLEX'
-      ? take((p) => FLEX_POSITIONS.has(p))
+    const accepts = acceptsOf(slot);
+    const got = isFlexish(slot)
+      ? take((p) => accepts.has(p))
       : take((p) => p === slot);
     return { slot, got };
   });
@@ -286,7 +293,7 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
   const rows = filled.map(({ slot, got }) => {
     const p = got ? playerOf(got.id) : null;
     return `<div class="db-slot${got ? ' filled' : ''}">
-      <span class="db-slot-tag" style="--db-pos:${esc(positionColor(slot === 'FLEX' ? 'RB' : slot))}">${esc(slot)}</span>
+      <span class="db-slot-tag" style="--db-pos:${esc(positionColor(isFlexish(slot) ? 'RB' : slot))}">${esc(slot)}</span>
       ${p ? `${avatar(p, { size: 26 })}<span class="db-slot-name">${esc(p.n)}</span>`
     : '<span class="db-slot-empty">—</span>'}
     </div>`;
