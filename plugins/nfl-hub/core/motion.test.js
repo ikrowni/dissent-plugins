@@ -1,15 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMotion } from './motion.js';
 
-function harness({ visibility = 'visible', reduce = false } = {}) {
-  const listeners = new Set();
+function harness({ visibility = 'visible', reduce = false, focused = true } = {}) {
+  const docListeners = new Set();
+  const winListeners = new Map(); // event name -> Set<fn>
   let frame = 0;
+  const classes = new Set();
+
   const doc = {
     get visibilityState() { return visibility; },
-    setVisibility(v) { visibility = v; listeners.forEach((fn) => fn()); },
-    addEventListener: (_e, fn) => listeners.add(fn),
-    removeEventListener: (_e, fn) => listeners.delete(fn),
+    setVisibility(v) { visibility = v; docListeners.forEach((fn) => fn()); },
+    addEventListener: (_e, fn) => docListeners.add(fn),
+    removeEventListener: (_e, fn) => docListeners.delete(fn),
+    hasFocus: () => focused,
+    body: {
+      classList: {
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+        contains: (name) => classes.has(name),
+      },
+    },
   };
+
+  const fire = (name) => (winListeners.get(name) ?? new Set()).forEach((fn) => fn());
   const win = {
     matchMedia: () => ({ matches: reduce, addEventListener() {}, removeEventListener() {} }),
     requestAnimationFrame: (cb) => {
@@ -18,8 +30,15 @@ function harness({ visibility = 'visible', reduce = false } = {}) {
       return frame;
     },
     cancelAnimationFrame: vi.fn(),
+    addEventListener(name, fn) {
+      if (!winListeners.has(name)) winListeners.set(name, new Set());
+      winListeners.get(name).add(fn);
+    },
+    removeEventListener(name, fn) { winListeners.get(name)?.delete(fn); },
+    blur() { focused = false; fire('blur'); },
+    focus() { focused = true; fire('focus'); },
   };
-  return { doc, win };
+  return { doc, win, hasClass: (n) => classes.has(n) };
 }
 
 describe('createMotion', () => {
@@ -161,5 +180,74 @@ describe('createMotion', () => {
     // The loop itself is not force-stopped by destroy, but the visibility wiring is
     // gone, so no resume storm can occur.
     expect(cb.mock.calls.length).toBeGreaterThanOrEqual(after);
+  });
+
+  // ⚠️ THE GUARD. visibilitychange fires when a tab is hidden or a window is
+  // MINIMISED. A window merely sitting behind another application still reports
+  // visibilityState === 'visible', so before the focus gate this loop kept running
+  // at 30fps with nobody looking — the exact shape of all three measured GPU
+  // incidents. Delete the win.blur handler in motion.js and this test fails.
+  it('stops looping while the window is blurred, even though it is still visible', () => {
+    const { doc, win } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(200);
+    const before = cb.mock.calls.length;
+    expect(before).toBeGreaterThan(0);
+    win.blur();
+    expect(doc.visibilityState).toBe('visible'); // the whole point
+    vi.advanceTimersByTime(1000);
+    expect(cb.mock.calls.length).toBe(before);
+  });
+
+  it('resumes looping when the window regains focus', () => {
+    const { doc, win } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(200);
+    win.blur();
+    vi.advanceTimersByTime(1000);
+    const paused = cb.mock.calls.length;
+    win.focus();
+    vi.advanceTimersByTime(200);
+    expect(cb.mock.calls.length).toBeGreaterThan(paused);
+  });
+
+  // ⚠️ THE CLASS IS WHAT ACTUALLY COVERS THIS PLUGIN. No view calls motion.loop()
+  // yet; every ambient effect in the hub is a CSS `animation: … infinite`. Gating
+  // only the rAF loop would gate nothing that currently runs.
+  it('stamps a body class while idle so CSS animations pause too', () => {
+    const { doc, win, hasClass } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    expect(hasClass('motion-idle')).toBe(false);
+    win.blur();
+    expect(hasClass('motion-idle')).toBe(true);
+    win.focus();
+    expect(hasClass('motion-idle')).toBe(false);
+    doc.setVisibility('hidden');
+    expect(hasClass('motion-idle')).toBe(true);
+    m.destroy();
+  });
+
+  it('starts paused when the host reports the window is already unfocused', () => {
+    const { doc, win } = harness({ focused: false });
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(500);
+    expect(cb).not.toHaveBeenCalled();
+    win.focus();
+    vi.advanceTimersByTime(200);
+    expect(cb.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('detaches the focus listeners on destroy', () => {
+    const { doc, win, hasClass } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    m.destroy();
+    win.blur();
+    expect(hasClass('motion-idle')).toBe(false);
   });
 });
