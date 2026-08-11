@@ -20,7 +20,7 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
-  renderQueue, picksUntilTurn,
+  renderQueue, picksUntilTurn, rosterNeeds,
 } from './draft-board.js';
 import { getIndex } from '../core/player-index.js';
 import {
@@ -207,13 +207,31 @@ function pickPool(mine) {
   return `
     <input class="db-search" type="search" data-act="draft-search" placeholder="Search players…"
            value="${esc(state.query)}" autocomplete="off">
-    ${renderFilters(state.filter, ranked ? counts : {})}
+    ${renderFilters(state.filter, ranked ? counts : {}, myRosterNeeds())}
     ${ranked || state.query.trim().length >= 2
     ? renderPool({ available: shown, playerOf, canPick: mine && !state.busy, emptyText: empty })
     : `<p class="muted">The ranked player pool could not be loaded, so the board is falling
        back to search — type at least two letters to find a player.
        <button class="btn tiny" data-act="draft-retry">Try loading it again</button></p>`}
     ${mine ? '' : '<p class="tiny">Waiting on the manager who is up — you can still look around.</p>'}`;
+}
+
+/**
+ * This manager's rostered-vs-slots counts, for the filter pills.
+ *
+ * ⚠️ Passes the FULL `rosterPositions` — bench included — because `ALL` is
+ * roster size over the whole roster. Filtering BN out here would render
+ * `All 15/9` where Sleeper renders `All 15/15`; `rosterNeeds` drops bench from
+ * the per-position counts itself.
+ */
+function myRosterNeeds() {
+  const allSlots = state.league?.settings?.rosterPositions ?? [];
+  if (allSlots.length === 0) return {};
+  const playerOf = (id) => getIndex()?.[String(id)] ?? null;
+  const owned = Object.values(state.draft?.picks ?? {})
+    .filter((p) => String(p.teamId) === String(state.teamId))
+    .map((p) => ({ pos: String(playerOf(p.playerId)?.p ?? '').toUpperCase() }));
+  return rosterNeeds({ slots: allSlots, owned });
 }
 
 /**

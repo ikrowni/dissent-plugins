@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   matchesFilter, renderBoard, renderOnTheClock, renderFilters, renderPool,
-  renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue,
+  renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue, roundArrow, rosterNeeds,
 } from './draft-board.js';
 
 const INDEX = {
@@ -277,5 +277,95 @@ describe('renderQueue', () => {
   it('escapes player ids into the action attributes', () => {
     const html = renderQueue({ queue: ['"><img>'], playerOf: () => null, canEdit: true });
     expect(html).not.toContain('<img>');
+  });
+});
+
+describe('roundArrow', () => {
+  const cols = new Map([['a', 0], ['b', 1], ['c', 2], ['d', 3]]);
+
+  it('points right on a left-to-right round', () => {
+    expect(roundArrow(order, 1, cols)).toBe('→');
+  });
+
+  it('points left on a snapped-back round', () => {
+    expect(roundArrow(order, 2, cols)).toBe('←');
+  });
+
+  it('is blank when a round has a single pick', () => {
+    expect(roundArrow([order[0]], 1, cols)).toBe('');
+  });
+
+  it('is blank when a column is unknown', () => {
+    expect(roundArrow(order, 1, new Map())).toBe('');
+  });
+
+  // Derived from the ORDER, so a linear draft reads left-to-right every round
+  // without this function knowing draft types exist.
+  it('reads a linear draft as always rightward', () => {
+    const linear = [
+      { overall: 1, round: 1, pickInRound: 1, owner: 'a' },
+      { overall: 2, round: 1, pickInRound: 2, owner: 'b' },
+      { overall: 3, round: 2, pickInRound: 1, owner: 'a' },
+      { overall: 4, round: 2, pickInRound: 2, owner: 'b' },
+    ];
+    expect(roundArrow(linear, 1, cols)).toBe('→');
+    expect(roundArrow(linear, 2, cols)).toBe('→');
+  });
+});
+
+describe('board direction arrows', () => {
+  it('draws an arrow in every cell, not just the round label', () => {
+    const html = renderBoard({ order, picks: {}, teamIds, playerOf });
+    // 4 teams x 2 rounds = 8 cells, each carrying its round's arrow.
+    expect((html.match(/db-dir/g) ?? []).length).toBe(8);
+  });
+});
+
+describe('rosterNeeds', () => {
+  it('counts rostered players over starting slots', () => {
+    const need = rosterNeeds({ slots: ['QB', 'RB', 'RB'], owned: [{ pos: 'RB' }] });
+    expect(need.QB).toEqual({ have: 0, slots: 1 });
+    expect(need.RB).toEqual({ have: 1, slots: 2 });
+  });
+
+  // ⚠️ The correction from the live draft: Sleeper shows RB 4/2, not RB 2/2.
+  it('runs over the slot count instead of capping', () => {
+    const need = rosterNeeds({
+      slots: ['RB', 'RB'],
+      owned: [{ pos: 'RB' }, { pos: 'RB' }, { pos: 'RB' }, { pos: 'RB' }],
+    });
+    expect(need.RB).toEqual({ have: 4, slots: 2 });
+  });
+
+  it('does not let FLEX steal a player from their own position', () => {
+    const need = rosterNeeds({ slots: ['RB', 'FLEX'], owned: [{ pos: 'RB' }, { pos: 'WR' }] });
+    expect(need.RB.have).toBe(1);
+    expect(need.WR.have).toBe(1);
+    expect(need.FLEX.slots).toBe(1);
+  });
+
+  it('reports ALL as roster size over every slot including bench', () => {
+    const need = rosterNeeds({ slots: ['QB', 'RB', 'BN'], owned: [{ pos: 'QB' }, { pos: 'RB' }] });
+    expect(need.ALL).toEqual({ have: 2, slots: 3 });
+  });
+
+  it('excludes bench slots from position counts', () => {
+    expect(rosterNeeds({ slots: ['BN', 'IR', 'TAXI'], owned: [] }).BN).toBeUndefined();
+  });
+
+  it('is empty-safe', () => {
+    expect(rosterNeeds().ALL).toEqual({ have: 0, slots: 0 });
+  });
+});
+
+describe('renderFilters with roster needs', () => {
+  it('shows have/slots beside the availability count', () => {
+    const html = renderFilters('ALL', { RB: 41 }, { RB: { have: 4, slots: 2 } });
+    expect(html).toContain('4/2');
+    expect(html).toContain('41');
+  });
+
+  it('omits the need when none is supplied, keeping the old behaviour', () => {
+    expect(renderFilters('ALL', { RB: 41 })).not.toContain('db-filter-need');
   });
 });

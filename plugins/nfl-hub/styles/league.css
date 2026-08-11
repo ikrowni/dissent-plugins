@@ -185,6 +185,14 @@ h4 {
 .db-empty, .db-cell:not(.db-made) { display: flex; flex-direction: column; justify-content: center; }
 .db-no { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); opacity: 0.5; }
 .db-mine { background: rgba(255,182,18,0.05); }
+/* Snake direction, in EVERY cell — the board scrolls sideways, so a direction
+ * that lived only on the round label would vanish exactly when a wide league
+ * needs it. Decorative: aria-hidden in the markup. */
+.db-dir {
+  position: absolute; left: 5px; bottom: 3px;
+  font-size: 10px; line-height: 1; color: var(--text-3); opacity: 0.45;
+}
+.db-made .db-dir { opacity: 0.3; }
 
 /* A made pick: the position colour is the whole point of the cell. */
 .db-made { border-left: 3px solid var(--db-pos, var(--text-3)); background: var(--ink-2); }
@@ -258,6 +266,10 @@ h4 {
 .db-filter:hover { color: var(--text); }
 .db-filter.on { background: var(--db-pos, var(--gold)); border-color: transparent; color: #05070b; }
 .db-filter-n { opacity: 0.65; font-weight: 600; }
+/* Roster need, e.g. `RB 4/2` — four rostered against two starting slots. It sits
+ * BEFORE the availability count and is deliberately allowed to exceed the slot
+ * number, because the surplus is what a drafter is reading for. */
+.db-filter-need { font-family: var(--f-mono); font-size: 10px; opacity: 0.9; font-weight: 700; }
 
 .db-search {
   width: 100%; font: inherit; font-size: 13px; padding: 8px 12px;
@@ -458,3 +470,38 @@ h4 {
  * deliberately quiet — it is capacity, not a call to action. */
 .tbl tr.ir-empty td { opacity: 0.55; }
 .btn.tiny[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+
+/* ── The draft queue ──────────────────────────────────────────────────────────
+ * The queue is what lets autodraft express a preference; before it shipped the
+ * `draft:queue` op had no caller and every autopick fell to the league ranking. */
+.db-queue { margin-bottom: 14px; }
+.db-q-head {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--text-3); margin-bottom: 6px;
+}
+.db-q-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 7px;
+  border-radius: var(--r-sm); background: var(--ink-2); margin-bottom: 3px;
+}
+.db-q-rank { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); min-width: 14px; }
+.db-q-name { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.db-q-meta { font-size: 9.5px; color: var(--text-3); letter-spacing: 0.05em; }
+.db-q-up, .db-q-rm {
+  font: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 3px 7px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); color: var(--text-3);
+}
+.db-q-up { margin-left: auto; }
+.db-q-up:hover, .db-q-rm:hover { color: var(--text); border-color: var(--text-3); }
+
+/* ⚠️ The best idea in Sleeper's draft UI: a line showing how far down the queue
+ * your next pick is likely to reach. Without it a queue is a wish list. */
+.db-q-divider {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--f-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--gold); margin: 7px 0 5px;
+}
+.db-q-divider::before, .db-q-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,182,18,0.35);
+}

@@ -49,10 +49,11 @@ export function renderBoard({
 
   const body = rounds.map((round) => {
     const cells = new Array(teamIds.length).fill('<div class="db-cell db-empty"></div>');
+    const dir = roundArrow(order, round, colOf);
     for (const p of order.filter((x) => x.round === round)) {
       const col = colOf.get(String(p.owner));
       if (col === undefined) continue;
-      cells[col] = cell(p, picks[p.overall], onClock, playerOf, isMine(p.owner));
+      cells[col] = cell(p, picks[p.overall], onClock, playerOf, isMine(p.owner), dir);
     }
     return `<div class="db-row">
       <div class="db-rd">${round}</div>${cells.join('')}
@@ -62,11 +63,35 @@ export function renderBoard({
   return `<div class="db-scroll"><div class="db" style="--db-cols:${teamIds.length}">${head}${body}</div></div>`;
 }
 
-function cell(pick, made, onClock, playerOf, mine) {
+/**
+ * Which way a round runs across the board.
+ *
+ * ⚠️ DERIVED FROM THE ORDER, never from the draft type — so snake, linear and a
+ * future 3rd-Round Reversal all render correctly without this knowing they
+ * exist. Blank when a round is too short, or when a column is unknown.
+ */
+export function roundArrow(order = [], round = 1, colOf = new Map()) {
+  const inRound = (order ?? [])
+    .filter((p) => p.round === round)
+    .sort((a, b) => a.pickInRound - b.pickInRound);
+  if (inRound.length < 2) return '';
+  const a = colOf.get(String(inRound[0].owner));
+  const b = colOf.get(String(inRound[1].owner));
+  if (a === undefined || b === undefined || a === b) return '';
+  return b > a ? '→' : '←';
+}
+
+function cell(pick, made, onClock, playerOf, mine, dir = '') {
+  // ⚠️ THE ARROW GOES IN EVERY CELL, not on the round label — verified against
+  // the live Sleeper board 2026-08-11. The board scrolls horizontally, so a
+  // direction that lives only in the round column disappears exactly when a
+  // wide league needs it most.
+  const arrow = dir ? `<span class="db-dir" aria-hidden="true">${dir}</span>` : '';
   const live = onClock && onClock.overall === pick.overall;
   if (!made) {
     return `<div class="db-cell${live ? ' db-live' : ''}${mine ? ' db-mine' : ''}">
       <span class="db-no">${pick.round}.${String(pick.pickInRound).padStart(2, '0')}</span>
+      ${arrow}
       ${live ? '<span class="db-clocktag">On the clock</span>' : ''}
     </div>`;
   }
@@ -75,6 +100,7 @@ function cell(pick, made, onClock, playerOf, mine) {
   return `<div class="db-cell db-made${mine ? ' db-mine' : ''}" style="--db-pos:${esc(color)}">
     <span class="db-name">${esc(p?.n ?? made.playerId)}</span>
     <span class="db-sub">${esc(String(p?.p ?? '').toUpperCase())}${p?.t ? ` · ${esc(p.t)}` : ''}</span>
+    ${arrow}
     ${made.auto ? '<span class="db-auto" title="Auto-picked">auto</span>' : ''}
   </div>`;
 }
@@ -101,14 +127,46 @@ export function renderOnTheClock({ onClock, teamLabel = (t) => t, isMine = () =>
   </div>`;
 }
 
+/**
+ * Rostered players over starting slots, per position — the filter pills' need.
+ *
+ * ⚠️ NOT CAPPED, and deliberately not slot resolution. Live Sleeper renders
+ * `RB 4/2` — four RBs rostered against two RB starting slots — because the
+ * SURPLUS is the thing a drafter needs to see. An earlier version of this
+ * resolved players into slots and so could never exceed `slots`, which would
+ * have shown `RB 2/2` and hidden exactly what the control exists to convey.
+ *
+ * `have` counts every player at that position, bench included. `slots` counts
+ * starting slots only. `ALL` is roster size over the WHOLE roster including
+ * bench, which is why a full 15-man roster reads `All 15/15`.
+ */
+export function rosterNeeds({ slots = [], owned = [] } = {}) {
+  const BENCH = new Set(['BN', 'IR', 'TAXI']);
+  const need = { ALL: { have: owned.length, slots: slots.length } };
+
+  for (const slot of slots) {
+    if (BENCH.has(slot)) continue;
+    need[slot] ??= { have: 0, slots: 0 };
+    need[slot].slots += 1;
+  }
+  for (const p of owned) {
+    const pos = String(p?.pos ?? '').toUpperCase();
+    if (!pos) continue;
+    need[pos] ??= { have: 0, slots: 0 };
+    need[pos].have += 1;
+  }
+  return need;
+}
+
 /** The position filter row. */
-export function renderFilters(active = 'ALL', counts = {}) {
+export function renderFilters(active = 'ALL', counts = {}, needs = {}) {
   return `<div class="db-filters" role="tablist">${POOL_FILTERS.map((f) => {
     const n = counts[f];
+    const need = needs?.[f];
     return `<button class="db-filter${active === f ? ' on' : ''}" role="tab"
       aria-selected="${active === f}" data-act="draft-filter" data-filter="${f}"
       ${f === 'ALL' ? '' : `style="--db-pos:${esc(positionColor(f === 'FLEX' ? 'RB' : f))}"`}>
-      ${esc(f)}${n === undefined ? '' : ` <span class="db-filter-n">${n}</span>`}
+      ${esc(f)}${need === undefined ? '' : ` <span class="db-filter-need">${need.have}/${need.slots}</span>`}${n === undefined ? '' : ` <span class="db-filter-n">${n}</span>`}
     </button>`;
   }).join('')}</div>`;
 }
