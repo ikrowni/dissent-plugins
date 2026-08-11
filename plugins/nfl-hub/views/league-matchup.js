@@ -10,7 +10,7 @@
 // order into a stored record, and this view reads it. A league with no schedule
 // says so rather than inventing one.
 
-import { esc, panel, stateMsg } from '../core/ui.js';
+import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import { getScores, getSchedule, generateSchedule, getPlayoffs, startPlayoffs } from '../core/league-api.js';
 import { loadIndex, getIndex, playerLabel } from '../core/player-index.js';
 import { playerChip, positionColor, managerColor } from '../core/player-visuals.js';
@@ -59,6 +59,10 @@ export function render() {
     });
   }
   if (!state.loaded) return stateMsg('Loading matchups…', { spinner: true });
+  // ⚠️ "The season has not started" is a claim ABOUT A LEAGUE. With none loaded it
+  // is not true, merely plausible — and it contradicted the League tab, which was
+  // correctly reporting the engine being off.
+  if (!state.leagueId) return noLeaguePane('Matchups');
   if (!state.week) {
     return panel({
       title: 'Matchups',

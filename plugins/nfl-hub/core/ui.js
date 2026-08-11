@@ -159,3 +159,25 @@ export function errorPane(err, fallback = 'Could not load this.') {
   }
   return stateMsg(fallback, { retry: true });
 }
+
+/**
+ * No league is in context at all — so say that, and nothing else.
+ *
+ * ⚠️ THESE TABS USED TO STATE A CONFIDENT FALSEHOOD. My Roster said "You do not
+ * have a team in this league yet" and Matchups said "The season has not started"
+ * when in truth no league had ever loaded — on Dissent-Test, because the server
+ * module is disabled, so `league:list` fails and no leagueId ever reaches the
+ * sub-tab. The League and Draft tabs correctly reported the engine being off,
+ * so the hub contradicted itself: three tabs, three different stories, one cause.
+ *
+ * A claim about YOUR TEAM requires a league to have answered first. Without one
+ * the only honest thing to report is that there is no league, and where to go.
+ */
+export function noLeaguePane(title) {
+  return panel({
+    title,
+    body: '<p class="muted">No league is loaded, so there is nothing to show here yet. '
+      + 'Open the <strong>League</strong> tab to pick or create one — if it reports a problem, '
+      + 'that is the real reason this tab is empty.</p>',
+  });
+}

@@ -271,3 +271,26 @@ describe('AutoSubs on the roster', () => {
     expect(rbBlock.slice(0, 400)).not.toContain('Quinn Back');
   });
 });
+
+// ⚠️ THE CONTRADICTION THIS ENDS. On a server whose module is disabled,
+// `league:list` fails, so no leagueId ever reaches this tab — and it answered
+// "You do not have a team in this league yet", which is a confident falsehood.
+// Meanwhile the League and Draft tabs correctly reported the engine being off.
+// Three tabs, three stories, one cause.
+describe('with no league loaded at all', () => {
+  it('does not claim anything about your team', () => {
+    Object.assign(_state, {
+      leagueId: null, league: null, teamId: null, loaded: true, error: null,
+    });
+    const html = render();
+    expect(html).not.toMatch(/do not have a team/i);
+    expect(html).toMatch(/No league is loaded/i);
+  });
+
+  it('still says you have no team once a league IS loaded', () => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: { settings: {} }, teamId: null, loaded: true, error: null,
+    });
+    expect(render()).toMatch(/do not have a team/i);
+  });
+});

@@ -9,7 +9,7 @@
 // player in the league, not just the caller's own — offering a rostered player
 // produces a refusal on submit and the manager cannot tell why.
 
-import { esc, panel, stateMsg } from '../core/ui.js';
+import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import {
   submitClaim, cancelClaim, listClaims, addPlayer, dropPlayer,
   proposeTrade, respondToTrade, listTrades, setTradeBlock, getTradeBlock, getWaiverWire,
@@ -72,6 +72,7 @@ export function render() {
     });
   }
   if (!state.loaded) return stateMsg('Loading moves…', { spinner: true });
+  if (!state.leagueId) return noLeaguePane('Moves');
   if (!state.teamId) {
     return panel({ title: 'Moves', body: '<p class="muted">You do not have a team in this league.</p>' });
   }

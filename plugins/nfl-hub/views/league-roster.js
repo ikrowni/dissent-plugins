@@ -5,7 +5,7 @@
 // compacting it shifts every slot after the hole and silently starts the wrong
 // players.
 
-import { esc, panel, stateMsg } from '../core/ui.js';
+import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import { playerChip, positionColor } from '../core/player-visuals.js';
 import { getIndex } from '../core/player-index.js';
 import {
@@ -45,6 +45,9 @@ export function render() {
     });
   }
   if (!state.loaded) return stateMsg('Loading your roster…', { spinner: true });
+  // ⚠️ BEFORE any claim about YOUR TEAM. Without a league nothing has answered,
+  // and "you do not have a team" is a confident falsehood — see noLeaguePane.
+  if (!state.leagueId) return noLeaguePane('My Roster');
   if (!state.teamId) {
     return panel({ title: 'My Roster', body: '<p class="muted">You do not have a team in this league yet.</p>' });
   }

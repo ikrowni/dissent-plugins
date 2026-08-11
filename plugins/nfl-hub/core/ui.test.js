@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import {
-  esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg, legibleColor, errorPane,
+  esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg, legibleColor, errorPane, noLeaguePane,
 } from './ui.js';
 import { TEAMS } from './config.js';
 import { fmtClock, fmtSpread, fmtPct, fmtRecord, ordinalDown, fmtMoneyline } from './format.js';
@@ -300,5 +300,28 @@ describe('errorPane', () => {
   it('escapes the fallback rather than rendering it as markup', () => {
     const el = parse(errorPane('boom', '<img src=x onerror=1>'));
     expect(el.querySelector('img')).toBeNull();
+  });
+});
+
+// ── No league in context ────────────────────────────────────────────────────
+describe('noLeaguePane', () => {
+  it('says there is no league rather than making a claim about your team', () => {
+    const el = parse(noLeaguePane('My Roster'));
+    expect(el.textContent).toMatch(/no league/i);
+    // The two falsehoods it replaces.
+    expect(el.textContent).not.toMatch(/do not have a team/i);
+    expect(el.textContent).not.toMatch(/season has not started/i);
+  });
+
+  it('points at the tab that can actually fix it', () => {
+    expect(parse(noLeaguePane('Moves')).textContent).toMatch(/League tab/i);
+  });
+
+  it('keeps the panel title it was given', () => {
+    expect(noLeaguePane('Matchups')).toContain('Matchups');
+  });
+
+  it('escapes the title', () => {
+    expect(parse(noLeaguePane('<img src=x>')).querySelector('img')).toBeNull();
   });
 });
