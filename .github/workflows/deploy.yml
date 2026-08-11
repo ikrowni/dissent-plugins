@@ -8,7 +8,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # ⚠️ FULL HISTORY. The re-bless step diffs this push against its predecessor
+      # to work out which plugin directories changed; the default shallow clone
+      # has no predecessor and the diff fails.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -49,6 +54,54 @@ jobs:
           rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519" \
             plugins/ \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/dissent-plugins/plugins/
+
+      # ⚠️ WITHOUT THIS STEP A RELEASE TAKES THE PLUGIN OFFLINE.
+      #
+      # The registry pins a hash of each plugin's manifest and entry file, and a
+      # background job re-checks them on a timer. A release changes manifest.json
+      # (version, and the server_module block), so every release looks exactly like
+      # tampering: the job suspends the plugin, which blocks install and
+      # /plugins/fetch and makes channel_info report no plugin — so the channel
+      # silently falls back to an ordinary chat area.
+      #
+      # ⚠️ AND SUSPENSION IS A ONE-WAY DOOR. runVerifyAll selects
+      # `WHERE suspended = false`, so once suspended the job never re-checks it and
+      # a later correct deploy CANNOT clear it. On 2026-08-11 nfl-hub was found
+      # suspended and had been rendering nowhere; the re-bless tool and the wrapper
+      # script had existed since 2026-08-09/10 but were never wired in, so it
+      # depended on somebody remembering to run them by hand.
+      #
+      # ⚠️ ONLY THE PLUGINS THIS PUSH CHANGED. Re-blessing the whole registry would
+      # turn the verify job into a rubber stamp that happily blesses tampered
+      # bytes. This is the publisher confirming the bytes it just published;
+      # between deploys nothing re-blesses, so real tampering is still caught.
+      # Integrity is not skipped either — the binary re-fetches and re-runs the
+      # size caps, manifest parse and resource-hash checks.
+      #
+      # An id that is not in the registry is a no-op, so a new plugin directory
+      # cannot fail the deploy.
+      - name: Re-bless changed plugins in the registry
+        run: |
+          BEFORE="${{ github.event.before }}"
+          # First push to a branch reports an all-zero "before"; fall back to the
+          # previous commit rather than diffing against nothing and re-blessing all.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="${{ github.sha }}^"
+          fi
+          CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- plugins/ \
+            | awk -F/ '/^plugins\/[^/]+\//{print $2}' | sort -u)
+          if [ -z "$CHANGED" ]; then
+            echo "No plugin directories changed; nothing to re-bless."
+            exit 0
+          fi
+          echo "Re-blessing: $CHANGED"
+          for P in $CHANGED; do
+            echo "--- $P ---"
+            ssh -i ~/.ssh/id_ed25519 \
+              ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+              "/home/ubuntu/projects/scripts/rehash-plugin.sh '$P'" \
+              || { echo "re-bless FAILED for $P — it will be suspended by the verify job"; exit 1; }
+          done
 
       - name: Cleanup SSH key
         if: always()
