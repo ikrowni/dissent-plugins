@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   render, reset, rosteredIds, actionsFor, setBid, setDrop, toggleTradePlayer, _state,
@@ -31,6 +32,8 @@ beforeEach(() => {
   reset();
   setIndex(INDEX);
 });
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const setup = (over = {}) => {
   Object.assign(_state, {
@@ -351,5 +354,36 @@ describe('the waiver wire', () => {
   it('renders with no wire loaded at all', () => {
     _state.wire = undefined;
     expect(() => render()).not.toThrow();
+  });
+});
+
+// ── §8b item 2: a team's colour on its OWN cards ────────────────────────────
+//
+// ⚠️ SCOPED DELIBERATELY. §8b says "a team's colour on its own rows and cards".
+// The trade board renders one block per team, which is that team's own card, so
+// it takes the accent. Inline mentions of a team inside somebody else's row —
+// "dropped by X", or the "A → B: Player" trade legs — are neither a row nor a
+// card of that team's, and a left border on a mid-sentence span reads as damage.
+// Those are left alone on purpose; do not "finish the job" by accenting them.
+describe('team accent on the trade board', () => {
+  it('accents each other team block with its own colour', () => {
+    setup({
+      block: {
+        t2: { players: ['p3'] },
+      },
+    });
+    const el = parse(render());
+    const blocks = [...el.querySelectorAll('.tb-team')];
+    expect(blocks.length).toBeGreaterThan(0);
+    expect(blocks[0].classList.contains('team-accent')).toBe(true);
+    expect(blocks[0].getAttribute('style')).toContain('--mgr:');
+  });
+
+  it('leaves inline team mentions unaccented', () => {
+    setup({ block: { t2: { players: ['p3'] } } });
+    const el = parse(render());
+    for (const s of el.querySelectorAll('.ww-by, .trade-legs')) {
+      expect(s.classList.contains('team-accent')).toBe(false);
+    }
   });
 });

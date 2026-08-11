@@ -438,3 +438,45 @@ describe('the expanded lineup matches every other tab', () => {
     expect(withLineup().textContent).toContain('10.00');
   });
 });
+
+// ── §8b item 2: the accent must reach every surface that renders a team's row ──
+//
+// ⚠️ THE BRACKET SHARES `.side` WITH THE MATCHUP CARD. Accenting only the
+// regular-season card left a colour stripe on one and none on the playoff game
+// rendered directly below it — a visible inconsistency created by doing half of
+// a shared component.
+describe('team accent on the bracket and byes', () => {
+  const setup = (over = {}) => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: league(['t1', 't2']), week: 15, loaded: true,
+      error: null, expanded: null, scores: null, busy: false,
+      schedule: scheduleRecord([{ week: 15, matchups: [{ home: 't1', away: 't2', bye: false }] }]),
+      ...over,
+    });
+  };
+
+  it('accents both seats of a bracket game with their own team colours', () => {
+    setup({
+      bracket: {
+        rounds: [{ round: 1, week: 15, games: [{ home: { teamId: 't1', seed: 1 }, away: { teamId: 't2', seed: 2 } }] }],
+        byes: [], champion: null,
+      },
+    });
+    const el = parse(render());
+    const seats = [...el.querySelectorAll('.bracket-game .side')];
+    expect(seats).toHaveLength(2);
+    for (const s of seats) expect(s.classList.contains('team-accent')).toBe(true);
+    expect(seats[0].getAttribute('style')).not.toBe(seats[1].getAttribute('style'));
+  });
+
+  it('accents a bye row, which is still that team own row', () => {
+    setup({
+      week: 3,
+      schedule: scheduleRecord([{ week: 3, matchups: [{ home: 't1', away: null, bye: true }] }]),
+    });
+    const el = parse(render());
+    const bye = el.querySelector('.matchup.bye .side');
+    expect(bye.classList.contains('team-accent')).toBe(true);
+    expect(bye.getAttribute('style')).toContain('--mgr:');
+  });
+});

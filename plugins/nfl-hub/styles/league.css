@@ -117,8 +117,12 @@ input[data-act]:focus, select[data-act]:focus {
  */
 .team-accent { border-left: 3px solid var(--mgr, transparent); }
 .tbl tr.team-accent > td:first-child { padding-left: 9px; }
-/* The matchup side is a flex button, so it needs the padding on itself. */
+/* The matchup side is a flex button, so it needs the padding on itself. This
+ * also covers the bracket seats and the bye row — all three are `.side`. */
 .matchup .side.team-accent { padding-left: 9px; }
+/* The trade board's per-team block has no padding of its own, so the border
+ * would otherwise sit flush against the heading. */
+.tb-team.team-accent { padding-left: 9px; }
 
 /* ── Matchups and brackets ────────────────────────────────────────────────── */
 .matchup {

@@ -179,7 +179,11 @@ function bracketGame(g) {
   // reseeds them) and the overall finish. Printing the local one would label the
   // seventh-best team in the league "#1", which reads as a bracket somebody has
   // mixed up rather than as the also-rans' ladder.
-  const seat = (t) => `<span class="side ${won(t) ? 'winning' : ''}">
+  // ⚠️ THE SAME `.side` COMPONENT AS THE REGULAR-SEASON CARD, so it takes the same
+  // accent. Accenting only the matchup card left a colour stripe on one and none
+  // on the playoff game rendered directly below it.
+  const seat = (t) => `<span class="side team-accent ${won(t) ? 'winning' : ''}"
+      style="--mgr:${esc(managerColor(t.teamId))}">
       <span class="seed">#${esc(String(t.overallSeed ?? t.seed))}</span>
       <span class="team">${esc(teamName(t.teamId))}${isMine(t.teamId) ? ' <span class="you">you</span>' : ''}</span>
     </span>`;
@@ -194,7 +198,7 @@ function matchupCard(m) {
   // rendering half a card.
   if (m.bye || !m.away) {
     return `<div class="matchup bye">
-      <div class="side">${esc(teamName(m.home))} <span class="muted">— bye</span></div>
+      <div class="side team-accent" style="--mgr:${esc(managerColor(m.home))}">${esc(teamName(m.home))} <span class="muted">— bye</span></div>
     </div>`;
   }
 

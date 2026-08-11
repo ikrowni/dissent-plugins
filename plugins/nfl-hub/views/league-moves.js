@@ -15,7 +15,7 @@ import {
   proposeTrade, respondToTrade, listTrades, setTradeBlock, getTradeBlock, getWaiverWire,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
-import { playerChip } from '../core/player-visuals.js';
+import { playerChip, managerColor } from '../core/player-visuals.js';
 import { loadTrending, formatCount } from '../core/trending.js';
 import { getJson } from '../core/http.js';
 import { describe } from './league-home.js';
@@ -192,8 +192,12 @@ function tradeBlockPane() {
     .filter(([t]) => String(t) !== String(state.teamId))
     .filter(([, e]) => (e?.players?.length ?? 0) > 0);
 
+  // ⚠️ ACCENTED, because this block IS that team's own card. Inline mentions of a
+  // team inside another row ("dropped by X", the trade legs) deliberately are not
+  // — §8b scopes the accent to a team's own rows and cards, and a left border on a
+  // mid-sentence span reads as damage.
   const theirRows = othersBlocking.map(([t, e]) => `
-    <div class="tb-team">
+    <div class="tb-team team-accent" style="--mgr:${esc(managerColor(t))}">
       <h5>${esc(teams[t]?.name ?? t)}</h5>
       ${e.players.map((id) => `<label class="check">
         <input type="checkbox" data-act="moves-interest-toggle" data-player="${esc(String(id))}"
