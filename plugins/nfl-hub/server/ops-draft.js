@@ -48,7 +48,13 @@ export function createLeagueDraft({ p, payload }) {
     : Object.keys(teams);
   if (order.length === 0) refuse("the league has no teams to draft");
 
-  const type = payload?.type === DRAFT_TYPE.LINEAR ? DRAFT_TYPE.LINEAR : DRAFT_TYPE.SNAKE;
+  // ⚠️ ACCEPT ANY KNOWN TYPE, don't enumerate one. This previously read
+  // `=== LINEAR ? LINEAR : SNAKE`, which silently coerced every other value to
+  // snake — so adding 3rd Round Reversal to the engine would have shipped a
+  // setting that quietly did nothing, the worst kind of feature. An unknown
+  // value still falls back to snake, but a known one is honoured.
+  const known = new Set(Object.values(DRAFT_TYPE));
+  const type = known.has(payload?.type) ? payload.type : DRAFT_TYPE.SNAKE;
   const rounds = Number(payload?.rounds ?? meta.settings?.draftRounds ?? 15);
   const pickTimerSeconds = Number(payload?.pickTimerSeconds ?? meta.settings?.pickTimerSeconds ?? 90);
 

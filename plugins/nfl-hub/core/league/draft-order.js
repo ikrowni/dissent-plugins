@@ -5,7 +5,35 @@
 // is this?" a different question from "whose slot is this?".
 
 /** Draft types. Auction is deliberately absent — see the design's non-goals. */
-export const DRAFT_TYPE = Object.freeze({ SNAKE: 'snake', LINEAR: 'linear' });
+export const DRAFT_TYPE = Object.freeze({
+  SNAKE: 'snake',
+  LINEAR: 'linear',
+  /**
+   * 3rd Round Reversal: a snake that reverses AGAIN at round three.
+   *
+   * In a plain snake the team holding 1.01 ends round two and opens round
+   * three, taking two picks back to back — the imbalance 3RR exists to remove.
+   * Reversing again hands round three to whoever picked LAST in round one, and
+   * the draft snakes normally from there with its parity flipped.
+   */
+  THIRD_ROUND_REVERSAL: 'third_round_reversal',
+});
+
+/**
+ * Does this round run backwards?
+ *
+ * ⚠️ THE PARITY FLIPS AT ROUND THREE and stays flipped — 3RR is not a one-round
+ * special case. Rounds 1-2 behave like a snake (even rounds reversed); from
+ * round 3 on, ODD rounds are the reversed ones.
+ */
+function roundIsReversed(round, type) {
+  if (type === DRAFT_TYPE.LINEAR) return false;
+  if (type === DRAFT_TYPE.THIRD_ROUND_REVERSAL && round >= 3) return round % 2 === 1;
+  if (type === DRAFT_TYPE.SNAKE || type === DRAFT_TYPE.THIRD_ROUND_REVERSAL) {
+    return round % 2 === 0;
+  }
+  return false;
+}
 
 /**
  * Generate the full pick order.
@@ -32,7 +60,7 @@ export function generateOrder(draftOrder, rounds, type = DRAFT_TYPE.SNAKE) {
   if (n === 0 || !Number.isInteger(rounds) || rounds < 1) return picks;
 
   for (let round = 1; round <= rounds; round++) {
-    const reversed = type === DRAFT_TYPE.SNAKE && round % 2 === 0;
+    const reversed = roundIsReversed(round, type);
     const order = reversed ? [...teams].reverse() : teams;
     order.forEach((team, i) => {
       picks.push({

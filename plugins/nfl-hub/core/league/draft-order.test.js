@@ -128,3 +128,57 @@ describe('draftSlotOf', () => {
     expect(draftSlotOf(picks, 'ghost')).toBe(null);
   });
 });
+
+describe('3rd Round Reversal', () => {
+  const teams = ['a', 'b', 'c', 'd'];
+  const roundOf = (picks, r) => picks.filter((p) => p.round === r).map((p) => p.slot);
+
+  it('runs rounds 1 and 2 exactly like a snake', () => {
+    const p = generateOrder(teams, 5, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(roundOf(p, 1)).toEqual(['a', 'b', 'c', 'd']);
+    expect(roundOf(p, 2)).toEqual(['d', 'c', 'b', 'a']);
+  });
+
+  // ⚠️ THE WHOLE POINT. In a plain snake, round 3 runs forward and the team
+  // holding 1.01 picks back-to-back across the 2/3 turn. 3RR reverses again so
+  // the team that picked LAST in round one opens round three instead.
+  it('reverses again in round 3 instead of turning', () => {
+    const p = generateOrder(teams, 5, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(roundOf(p, 3)).toEqual(['d', 'c', 'b', 'a']);
+  });
+
+  it('kills the 1.01 holder\'s back-to-back at the 2/3 turn', () => {
+    const p = generateOrder(teams, 3, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    const r2 = roundOf(p, 2);
+    const r3 = roundOf(p, 3);
+    expect(r2[r2.length - 1]).toBe('a');
+    expect(r3[0]).not.toBe('a');
+  });
+
+  it('snakes normally from round 4 with the parity flipped', () => {
+    const p = generateOrder(teams, 6, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(roundOf(p, 4)).toEqual(['a', 'b', 'c', 'd']);
+    expect(roundOf(p, 5)).toEqual(['d', 'c', 'b', 'a']);
+    expect(roundOf(p, 6)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('differs from a plain snake from round 3 onward', () => {
+    const snake = generateOrder(teams, 4, DRAFT_TYPE.SNAKE);
+    const rr = generateOrder(teams, 4, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(roundOf(rr, 1)).toEqual(roundOf(snake, 1));
+    expect(roundOf(rr, 2)).toEqual(roundOf(snake, 2));
+    expect(roundOf(rr, 3)).not.toEqual(roundOf(snake, 3));
+    expect(roundOf(rr, 4)).not.toEqual(roundOf(snake, 4));
+  });
+
+  it('still numbers picks continuously', () => {
+    const p = generateOrder(teams, 3, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(p.map((x) => x.overall)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it('is a no-op distinction in a two-round draft', () => {
+    const snake = generateOrder(teams, 2, DRAFT_TYPE.SNAKE);
+    const rr = generateOrder(teams, 2, DRAFT_TYPE.THIRD_ROUND_REVERSAL);
+    expect(rr).toEqual(snake);
+  });
+});
