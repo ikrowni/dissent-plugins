@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -79,5 +79,45 @@ describe('the motion contract', () => {
       doc: { addEventListener() {}, removeEventListener() {}, hidden: false },
     });
     expect(m.bodyClass).toBe('');
+  });
+
+  // ⚠️ visibilitychange fires when a tab is hidden or a window is MINIMISED. A window
+  // merely sitting behind another application still reports visibilityState
+  // 'visible', so before this gate the loop kept running with nobody looking — the
+  // shape of all three of this project's measured GPU incidents.
+  it('stops looping while the window is blurred, even though it is still visible', () => {
+    const winListeners = new Map();
+    let focused = true;
+    const classes = new Set();
+    const doc = {
+      visibilityState: 'visible',
+      addEventListener() {}, removeEventListener() {},
+      hasFocus: () => focused,
+      body: { classList: { toggle(n, on) { if (on) classes.add(n); else classes.delete(n); } } },
+    };
+    const win = {
+      matchMedia: () => ({ matches: false }),
+      requestAnimationFrame: (cb) => { setTimeout(() => cb(Date.now()), 16); return 1; },
+      cancelAnimationFrame() {},
+      addEventListener(n, fn) {
+        if (!winListeners.has(n)) winListeners.set(n, new Set());
+        winListeners.get(n).add(fn);
+      },
+      removeEventListener(n, fn) { winListeners.get(n)?.delete(fn); },
+    };
+    vi.useFakeTimers();
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(200);
+    const before = cb.mock.calls.length;
+    expect(before).toBeGreaterThan(0);
+    focused = false;
+    winListeners.get('blur').forEach((fn) => fn());
+    vi.advanceTimersByTime(1000);
+    expect(cb.mock.calls.length).toBe(before);
+    expect(classes.has('motion-idle')).toBe(true);
+    m.destroy();
+    vi.useRealTimers();
   });
 });
