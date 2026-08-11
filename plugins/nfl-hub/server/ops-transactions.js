@@ -7,7 +7,10 @@
 
 import { KEY, read, mutate, loadLeague } from "./store.js";
 import { requireTeamControl, requireCommissioner, requireUser, requireScheduled, isCommissioner } from "./auth.js";
-import { resolveWaivers, remainingBudget } from "../core/league/waivers.js";
+import { resolveWaivers, remainingBudget, CLAIM_STATUS } from "../core/league/waivers.js";
+import {
+  onWaivers, removeFromWire, clearExpired, recordAcquisition, wirePlayers,
+} from "../core/league/waiver-wire.js";
 import {
   proposeTrade, acceptTrade, rejectTrade, cancelTrade, vetoTrade,
   commissionerResolve, resolveDueTrades, applyTrade, tradingIsOpen, TRADE_STATUS,
@@ -109,6 +112,7 @@ export function runWaivers({ p, payload }) {
   const claims = read(KEY.waivers(lg, season, week), []);
   if (claims.length === 0) return { processed: 0, results: [] };
 
+  const now = Date.now();
   let results = [];
   mutate(KEY.assets(lg), (a) => {
     const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
@@ -121,7 +125,24 @@ export function runWaivers({ p, payload }) {
     results = out.results.map((r) => ({
       teamId: r.claim.teamId, playerId: r.claim.playerId, status: r.status, reason: r.reason,
     }));
-    return { ...assets, rosters: out.rosters, budgets: out.budgets };
+
+    // ⚠️ A WON PLAYER COMES OFF THE WIRE. Left on it he would stay unaddable
+    // for the rest of his clear period even though somebody now owns him, and
+    // the next sweep would "clear" a rostered player into free agency.
+    //
+    // ⚠️ Recorded as acquired via WAIVERS, not free_agency — a claimed player
+    // dropped again within a day still goes to the wire. Only a free-agent
+    // pickup is exempt.
+    let wire = assets.wire ?? {};
+    let acquired = assets.acquired ?? {};
+    for (const r of out.results) {
+      if (r.status !== CLAIM_STATUS.WON) continue;
+      const pid = String(r.claim.playerId);
+      wire = removeFromWire(wire, pid);
+      acquired = recordAcquisition(acquired, pid, { at: now, via: "waivers" });
+    }
+
+    return { ...assets, rosters: out.rosters, budgets: out.budgets, wire, acquired };
   }, null);
 
   // The claim list is cleared only after the assets write succeeded. Clearing
@@ -274,4 +295,36 @@ function requireLeagueId(payload) {
   const lg = String(payload?.leagueId ?? "");
   if (!lg) refuse("leagueId required");
   return lg;
+}
+
+
+/**
+ * Sweep everyone whose waiver period is up.
+ *
+ * ⚠️ THE SWEEP IS HOUSEKEEPING, NOT THE RULE. `onWaivers()` answers from the
+ * clock, so a player is addable the moment he clears whether or not this has
+ * run — a late tick must never keep a free agent locked up. This only prunes
+ * the record so it does not grow forever.
+ */
+export function sweepWaiverWire(lg, now = Date.now()) {
+  let cleared = [];
+  mutate(KEY.assets(lg), (a) => {
+    const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
+    const out = clearExpired(assets.wire ?? {}, now);
+    if (out.cleared.length === 0) return assets;
+    return { ...assets, wire: out.wire };
+  }, null);
+
+  const settled = read(KEY.assets(lg), { wire: {} });
+  cleared = Object.keys(settled.wire ?? {});
+  return { onWire: cleared.length };
+}
+
+
+/** Who is currently on waivers, soonest to clear first. Any member may look. */
+export function getWaiverWire({ payload }) {
+  const lg = String(payload?.leagueId ?? "");
+  if (!lg) refuse("leagueId required");
+  const assets = read(KEY.assets(lg), { wire: {} });
+  return { wire: wirePlayers(assets.wire ?? {}, Date.now()) };
 }

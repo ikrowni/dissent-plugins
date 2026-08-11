@@ -12,7 +12,7 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   submitClaim, cancelClaim, listClaims, addPlayer, dropPlayer,
-  proposeTrade, respondToTrade, listTrades, setTradeBlock, getTradeBlock,
+  proposeTrade, respondToTrade, listTrades, setTradeBlock, getTradeBlock, getWaiverWire,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
 import { playerChip } from '../core/player-visuals.js';
@@ -31,6 +31,7 @@ const state = {
   block: {},        // { [teamId]: { players, picks } }
   interest: {},     // { [teamId]: playerId[] }
   counts: {},       // { [playerId]: how many teams want him }
+  wire: [],         // [{ playerId, clearsAt, droppedBy }] soonest first
   query: '',
   results: [],
   bid: 0,
@@ -47,7 +48,7 @@ const state = {
 export function reset() {
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, week: null, claims: null, trades: [],
-    block: {}, interest: {}, counts: {},
+    block: {}, interest: {}, counts: {}, wire: [],
     query: '', results: [], bid: 0, dropId: '', tradeWith: '', tradeMine: [], tradeTheirs: [],
     loaded: false, error: null, busy: false, notice: null,
   });
@@ -78,6 +79,7 @@ export function render() {
   return `${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
     ${freeAgentPane()}
     ${claimsPane()}
+    ${waiverWirePane()}
     ${tradeBlockPane()}
     ${tradePane()}
     ${tradeListPane()}`;
@@ -151,6 +153,34 @@ function claimsPane() {
  * player leads somewhere — the propose form below is ours. On the Sleeper mirror
  * it could only ever be a noticeboard, because Sleeper cannot be written to.
  */
+/**
+ * Who is sitting on waivers, and until when.
+ *
+ * ⚠️ A CLAIM IS THE ONLY WAY TO GET THESE PLAYERS — the add path refuses them
+ * outright. A manager who cannot see the wire, or the deadline on it, has no way
+ * to know why an add failed or when to bid.
+ */
+function waiverWirePane() {
+  const rows = (state.wire ?? []).map((w) => {
+    const when = Number(w.clearsAt);
+    const label = Number.isFinite(when)
+      ? new Date(when).toLocaleString()
+      : 'soon';
+    return `<div class="ww-row">
+      <span class="ww-name">${esc(playerLabel(w.playerId))}</span>
+      <span class="ww-when">clears ${esc(label)}</span>
+      ${w.droppedBy ? `<span class="ww-by">dropped by ${esc(teamName(w.droppedBy))}</span>` : ''}
+    </div>`;
+  }).join('');
+
+  return panel({
+    title: 'On waivers',
+    body: rows
+      ? `<p class="tiny">These players cannot be added directly — submit a claim.</p>${rows}`
+      : '<p class="muted">Nobody is on waivers right now.</p>',
+  });
+}
+
 function tradeBlockPane() {
   const teams = state.league?.teams ?? {};
   const rosters = state.league?.assets?.rosters ?? {};
@@ -390,6 +420,7 @@ export async function load(app, { leagueId, league, teamId, week }) {
     state.trades = await listTrades(leagueId).catch(() => []);
     // ⚠️ One read for the whole league. The block is a single contended record,
     // so this is one request no matter how many teams are offering.
+    state.wire = (await getWaiverWire(leagueId).catch(() => null))?.wire ?? [];
     const tb = await getTradeBlock(leagueId).catch(() => null);
     state.block = tb?.block ?? {};
     state.interest = tb?.interest ?? {};

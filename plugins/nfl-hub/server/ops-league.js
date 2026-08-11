@@ -15,6 +15,10 @@ import { positionMap, injuryMap } from "./ops-scoring.js";
 import { validateAutoSubs } from "../core/league/autosubs.js";
 import { rosterCapacity, mayAddAtPosition } from "../core/league/rosters.js";
 import { setBlock, setInterest, interestCounts } from "../core/league/trade-block.js";
+import {
+  DROP_DESTINATION, dropDestination, wireClearsAt, placeOnWire, onWaivers,
+  recordAcquisition, forgetAcquisition,
+} from "../core/league/waiver-wire.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -430,6 +434,7 @@ export function addFreeAgent({ p, payload }) {
   if (!playerId) refuse("playerId required");
   const dropId = payload?.dropPlayerId ? String(payload.dropPlayerId) : null;
 
+  const now = Date.now();
   let result = null;
   mutate(KEY.assets(lg), (a) => {
     const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
@@ -448,6 +453,13 @@ export function addFreeAgent({ p, payload }) {
     // one QB for another must pass even at the cap, and checking before the
     // drop would refuse it. Positions come from the cached index, never the
     // payload — the rule setLineup already encodes.
+    // ⚠️ A PLAYER ON WAIVERS IS NOT A FREE AGENT. Without this the whole wire is
+    // decorative: anyone could add a dropped player instantly and the claim
+    // everyone else submitted would lose to whoever refreshed fastest.
+    if (onWaivers(assets.wire ?? {}, playerId, now)) {
+      refuse(`${playerId} is on waivers — submit a claim instead`);
+    }
+
     const positions = positionMap();
     const limitCheck = mayAddAtPosition(
       rosters?.[teamId], playerId, meta.settings, (id) => positions[String(id)] ?? null,
@@ -457,7 +469,14 @@ export function addFreeAgent({ p, payload }) {
     const added = addPlayer(rosters, teamId, playerId);
     if (!added.ok) refuse(added.error);
     result = { added: playerId, dropped: dropId };
-    return { ...assets, rosters: added.rosters };
+
+    // ⚠️ RECORDED AS free_agency, which is the ONLY route the 24-Hour Rule
+    // exempts. A drafted or traded player dropped within a day still goes to
+    // waivers — see core/league/waiver-wire.js.
+    let acquired = recordAcquisition(assets.acquired ?? {}, playerId, { at: now, via: "free_agency" });
+    if (dropId) acquired = forgetAcquisition(acquired, dropId);
+
+    return { ...assets, rosters: added.rosters, acquired };
   }, null);
 
   return result;
@@ -473,12 +492,43 @@ export function dropFreeAgent({ p, payload }) {
   if (err) refuse(err);
 
   const playerId = String(payload?.playerId ?? "");
+  const now = Date.now();
+
   mutate(KEY.assets(lg), (a) => {
-    const res = dropPlayer(a.rosters, teamId, playerId);
+    const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
+    const res = dropPlayer(assets.rosters, teamId, playerId);
     if (!res.ok) refuse(res.error);
-    return { ...a, rosters: res.rosters };
+
+    // ⚠️ THE 24-HOUR RULE LIVES HERE. A free-agent pickup dropped inside a day
+    // goes straight back to free agency instead of onto the wire — the rule
+    // that stops a manager parking players on waivers to deny the league.
+    const dest = dropDestination({
+      acquired: assets.acquired ?? {}, playerId, now, settings: meta.settings,
+    });
+    const wire = dest === DROP_DESTINATION.WAIVERS
+      ? placeOnWire(assets.wire ?? {}, playerId, {
+        clearsAt: wireClearsAt(now, meta.settings), droppedBy: teamId, droppedAt: now,
+      })
+      : (assets.wire ?? {});
+
+    return {
+      ...assets,
+      rosters: res.rosters,
+      wire,
+      acquired: forgetAcquisition(assets.acquired ?? {}, playerId),
+    };
   }, null);
-  return { dropped: playerId };
+
+  // ⚠️ Read the settled state rather than reporting what the callback decided —
+  // `mutate` may run more than once on a CAS conflict.
+  const settled = read(KEY.assets(lg), { wire: {} });
+  return {
+    dropped: playerId,
+    destination: onWaivers(settled.wire ?? {}, playerId, now)
+      ? DROP_DESTINATION.WAIVERS
+      : DROP_DESTINATION.FREE_AGENCY,
+    clearsAt: settled.wire?.[playerId]?.clearsAt ?? null,
+  };
 }
 
 /** Move a player between active, IR and taxi. */

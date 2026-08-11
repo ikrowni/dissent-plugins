@@ -101,6 +101,7 @@ export const submitClaim = (leagueId, teamId, week, playerId, bid, dropPlayerId 
 export const cancelClaim = (leagueId, teamId, week, playerId) =>
   call('waiver:cancel', { leagueId, teamId, week, playerId });
 export const listClaims = (leagueId, week) => call('waiver:list', { leagueId, week });
+export const getWaiverWire = (leagueId) => call('waiver:wire', { leagueId });
 
 // ── Trades ───────────────────────────────────────────────────────────────────
 export const proposeTrade = (leagueId, fromTeamId, legs, opts = {}) =>

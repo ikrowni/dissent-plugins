@@ -65,14 +65,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   // Transactions
   waiverType: WAIVER_TYPE.FAAB,
   waiverBudget: 100,
-  // ⚠️ DEAD SETTING — declared, mapped from Sleeper by fromSleeperSettings, and
-  // consumed NOWHERE. Nothing models a dropped player sitting on waivers; a
-  // drop today returns the player straight to free agency, always.
+  // How many days a dropped player sits on waivers before clearing to free
+  // agency. 0 disables the wire entirely and every drop lands in free agency.
   //
-  // This is why Sleeper's 24-Hour Rule cannot be built yet: that rule is an
-  // EXCEPTION to drop-to-waivers ("goes straight back to free agency INSTEAD of
-  // waivers"), and without the base rule the exception describes what we
-  // already do unconditionally. Build drop-to-waivers first.
+  // ⚠️ WAS A DEAD SETTING until 2026-08-11 — declared, mapped from Sleeper,
+  // consumed nowhere. `core/league/waiver-wire.js` now reads it, which is also
+  // what made Sleeper's 24-Hour Rule expressible: that rule is an EXCEPTION to
+  // drop-to-waivers, and an exception needs a rule to except.
   waiverClearDays: 2,
   waiverDayOfWeek: 3,
   tradeDeadlineWeek: 12,

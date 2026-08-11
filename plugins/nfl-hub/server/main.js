@@ -23,7 +23,7 @@ import {
   setDraftQueue, setDraftPaused, finalizeDraft,
 } from "./ops-draft.js";
 import {
-  submitClaim, cancelClaim, listClaims, runWaivers,
+  submitClaim, cancelClaim, listClaims, runWaivers, sweepWaiverWire, getWaiverWire,
   proposeLeagueTrade, respondToTrade, commissionerTrade, listTrades, settleTrades,
 } from "./ops-transactions.js";
 import {
@@ -115,6 +115,7 @@ const OPS = {
 
   // Scheduled only — these refuse a user-triggered run themselves, in auth.js.
   "tick:waivers": runWaivers,
+  "waiver:wire": getWaiverWire,
   "tick:trades": settleTrades,
   "tick:scores": scoreWeekForLeague,
 };
@@ -175,6 +176,10 @@ function runScheduledTick(p) {
     for (const [name, fn, payload] of [
       ["trades", settleTrades, { leagueId }],
       ["waivers", runWaivers, { leagueId, season, week }],
+      // ⚠️ AFTER the waiver run, never before: a player won this tick must come
+      // off the wire first, or the sweep would "clear" a now-rostered player
+      // into free agency.
+      ["wire", () => sweepWaiverWire(leagueId), null],
       // ⚠️ Scoring is called through runScoring, not the op, because the op
       // requires a scheduled principal and re-checking it here would be a second
       // definition of the same rule.

@@ -320,3 +320,36 @@ describe('trade block', () => {
     expect(() => render()).not.toThrow();
   });
 });
+
+describe('the waiver wire', () => {
+  beforeEach(() => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: league(), teamId: 't1', week: 3, loaded: true, error: null,
+      block: {}, interest: {}, counts: {},
+    });
+  });
+
+  it('lists players sitting on waivers', () => {
+    _state.wire = [{ playerId: 'p2', clearsAt: Date.now() + 86400000, droppedBy: 't2' }];
+    const html = render();
+    expect(html).toContain('On waivers');
+    expect(html).toContain('Beta Two');
+  });
+
+  // ⚠️ The whole point of showing it: a claim is the ONLY way to get him, and a
+  // manager who cannot see the deadline cannot plan around it.
+  it('shows when each player clears', () => {
+    _state.wire = [{ playerId: 'p2', clearsAt: Date.now() + 86400000, droppedBy: 't2' }];
+    expect(render()).toMatch(/clears/i);
+  });
+
+  it('says so when the wire is empty', () => {
+    _state.wire = [];
+    expect(render()).toContain('Nobody is on waivers');
+  });
+
+  it('renders with no wire loaded at all', () => {
+    _state.wire = undefined;
+    expect(() => render()).not.toThrow();
+  });
+});
