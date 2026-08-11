@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import {
-  esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg, legibleColor,
+  esc, chip, tile, panel, badge, sparkline, cmpRow, stateMsg, legibleColor, errorPane,
 } from './ui.js';
 import { TEAMS } from './config.js';
 import { fmtClock, fmtSpread, fmtPct, fmtRecord, ordinalDown, fmtMoneyline } from './format.js';
@@ -269,5 +269,36 @@ describe('cmpRow', () => {
   it('escapes the label and the values', () => {
     const el = parse(cmpRow('<script>a</script>', '<script>b</script>', 1, '#f00', '#00f'));
     expect(el.querySelector('script')).toBeNull();
+  });
+});
+
+// ── The failed-load pane ────────────────────────────────────────────────────
+describe('errorPane', () => {
+  it('offers a retry for a real failure', () => {
+    const el = parse(errorPane('fetch failed: timeout', 'Could not load the scoreboard.'));
+    expect(el.textContent).toContain('Could not load the scoreboard.');
+    expect(el.querySelector('[data-act="retry"]')).not.toBeNull();
+  });
+
+  // ⚠️ THE POINT. A viewer who chose "View Without Joining" granted nothing, so
+  // the node refuses every call. "Try again" there is a button that can never
+  // work — it just re-refuses.
+  it('explains a permission refusal instead of offering an impossible retry', () => {
+    const el = parse(errorPane('fetch failed: fetch:external not granted', 'Could not load the scoreboard.'));
+    expect(el.querySelector('[data-act="retry"]')).toBeNull();
+    expect(el.textContent).toMatch(/without joining|anonymously/i);
+    expect(el.textContent).not.toContain('Could not load the scoreboard.');
+  });
+
+  it('tells the viewer how to turn live data on', () => {
+    const el = parse(errorPane('fetch:external not granted', 'x'));
+    // The consent card's own wording, so the instruction matches what they will see.
+    expect(el.textContent).toMatch(/User Settings/i);
+    expect(el.textContent).toMatch(/Privacy/i);
+  });
+
+  it('escapes the fallback rather than rendering it as markup', () => {
+    const el = parse(errorPane('boom', '<img src=x onerror=1>'));
+    expect(el.querySelector('img')).toBeNull();
   });
 });

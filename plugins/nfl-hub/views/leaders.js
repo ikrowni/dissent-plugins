@@ -2,7 +2,7 @@
 //
 // Fed by apis/site/v3 at limit=3 (see espn-client.js for why 3 and not more), so this is
 // a top-3 board across every category ESPN publishes.
-import { panel, stateMsg, esc } from '../core/ui.js';
+import { panel, stateMsg, esc, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchLeaders } from '../core/espn-client.js';
 import { parseLeaders } from '../core/espn-league.js';
@@ -45,7 +45,7 @@ function categoryPanel(c) {
 
 export function renderLeaders(s = state) {
   if (s.loading) return stateMsg('Loading leaders…', { spinner: true });
-  if (s.error) return stateMsg('Could not load leaders.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load leaders.');
   if (!s.cats?.length) return stateMsg('League leaders are not available yet.');
 
   const rank = (c) => {

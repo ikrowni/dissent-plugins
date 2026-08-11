@@ -23,6 +23,26 @@ export class HttpError extends Error {
  * That survived because every test stub and every dev rig hand-wrote an `ok` field,
  * encoding the assumption instead of the contract. Success is decided by `status`.
  */
+/**
+ * Did this failure come from the node REFUSING us, rather than from the network?
+ *
+ * ⚠️ THE DIFFERENCE DECIDES WHETHER A RETRY BUTTON IS HONEST. A viewer who picks
+ * "View Without Joining" grants the plugin nothing — dissent-client's
+ * SidebarOrchestrator calls `runGrant([], "view anonymously")` — so the node
+ * answers every outbound call with `fetch:external not granted` for as long as
+ * that choice stands. Offering "Try again" for that is offering a button that
+ * cannot ever work, which is the same mistake the League tab's "no draft yet"
+ * pane made before it was fixed.
+ *
+ * ⚠️ MATCHED NARROWLY, on the node's own wording in `plugins_fetch.go`. Widening
+ * this to anything mentioning "permission" would swallow real outages and tell a
+ * user their setup is wrong when the network is down.
+ */
+export function isPermissionDenied(err) {
+  const msg = typeof err === 'string' ? err : String(err?.message ?? '');
+  return /\bnot granted\b/i.test(msg);
+}
+
 async function hostFetch(url) {
   return request('fetch:external', { url, method: 'GET' }, 15_000);
 }

@@ -5,7 +5,7 @@
 // completed and upcoming weeks, 2026-08-08). 16 requests of ~12 KB behind a 10-minute
 // TTL is about 1.6 req/min, and it only happens when the user opens this view — which is
 // exactly why it is not on a landing surface.
-import { chip, panel, stateMsg, esc } from '../core/ui.js';
+import { chip, panel, stateMsg, esc, errorPane} from '../core/ui.js';
 import { fmtSpread, fmtMoneyline } from '../core/format.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchNews, fetchScoreboard, fetchOdds } from '../core/espn-client.js';
@@ -48,7 +48,7 @@ export function oddsRow(g, o) {
 
 export function renderNews(s = state) {
   if (s.loading) return stateMsg('Loading news…', { spinner: true });
-  if (s.error) return stateMsg('Could not load news.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load news.');
 
   let html = '';
   if (s.games?.length) {

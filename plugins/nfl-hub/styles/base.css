@@ -107,6 +107,16 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ⚠️ A REFUSAL, NOT A FAILURE. The viewer chose "View Without Joining", which
+ * grants the plugin nothing, so every fetch is refused until they change that.
+ * Deliberately NOT styled as an error: nothing is broken, and red here would
+ * send somebody hunting a bug that does not exist. Narrower than .state's
+ * centred text because it is three lines of explanation, not a status word. */
+.state-denied { gap: 8px; max-width: 46ch; margin: 0 auto; }
+.state-denied strong { color: var(--text); font-weight: 700; }
+.state-denied .muted { line-height: 1.55; }
+.state-denied .tiny { color: var(--text-3); line-height: 1.5; }
+
 .state .retry {
   appearance: none; border: 1px solid var(--line-2); background: transparent;
   color: var(--text); font: inherit; font-size: 12px; padding: 6px 14px;

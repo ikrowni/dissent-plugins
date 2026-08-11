@@ -3,7 +3,7 @@
 // Composes the Stadium hero over the control-room modules. In replay mode it reads
 // state from core/replay.js instead of the network, which is how this was developed
 // out of season.
-import { stateMsg, esc } from '../core/ui.js';
+import { stateMsg, esc, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import {
   urls, fetchSummary, fetchPlays, fetchDrives, fetchProbabilities, fetchScoreboard,
@@ -37,7 +37,7 @@ export function renderReplayBar(rs, isPlaying) {
 
 export function renderGame(s = state) {
   if (s.loading) return stateMsg('Loading game…', { spinner: true });
-  if (s.error) return stateMsg('Could not load this game.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load this game.');
   if (!s.game) {
     return stateMsg('Choose a game from Around the League to open Game Center.');
   }

@@ -3,7 +3,7 @@
 // Three fetches (roster, schedule, depth chart), each degrading independently: a dead
 // depth-chart endpoint must not cost the roster, and if the roster itself fails the hero
 // still renders from the local team table.
-import { chip, panel, stateMsg, esc } from '../core/ui.js';
+import { chip, panel, stateMsg, esc, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import {
   urls, fetchTeamRoster, fetchTeamSchedule, fetchDepthChart,
@@ -76,7 +76,7 @@ function playerRow(a) {
 
 export function renderTeam(s = state) {
   if (s.loading) return stateMsg('Loading team…', { spinner: true });
-  if (s.error) return stateMsg('Could not load this team.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load this team.');
   if (!s.team) return stateMsg('Choose a team to see its page.');
 
   const t = s.team;

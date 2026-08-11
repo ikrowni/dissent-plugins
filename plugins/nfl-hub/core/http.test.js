@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { getJson, setFetcher, resetFetcher, HttpError } from './http.js';
+import { getJson, setFetcher, resetFetcher, HttpError, isPermissionDenied} from './http.js';
 
 afterEach(() => { resetFetcher(); });
 
@@ -74,5 +74,39 @@ describe('getJson — tolerances', () => {
   it('treats a missing status as a failure rather than a silent success', async () => {
     setFetcher(async () => ({ body: '{}' }));
     await expect(getJson('https://x/y')).rejects.toBeInstanceOf(HttpError);
+  });
+});
+
+// ── Telling a refusal apart from a failure ──────────────────────────────────
+//
+// ⚠️ THE HUB TREATED THESE AS THE SAME THING and it produced a button that can
+// never work. A viewer who picks "View Without Joining" grants the plugin
+// NOTHING — dissent-client's SidebarOrchestrator calls `runGrant([], "view
+// anonymously")` — so every outbound call is refused by the node for as long as
+// that choice stands. Nine surfaces answered that with "Try again", which
+// re-refuses forever.
+describe('isPermissionDenied', () => {
+  it('recognises the node refusing an ungranted fetch', () => {
+    expect(isPermissionDenied('fetch failed: fetch:external not granted')).toBe(true);
+    expect(isPermissionDenied(new Error('fetch:external not granted'))).toBe(true);
+  });
+
+  it('recognises it through the HttpError the hub actually throws', () => {
+    expect(isPermissionDenied(new HttpError('fetch failed: fetch:external not granted', 0))).toBe(true);
+  });
+
+  // ⚠️ A REAL OUTAGE MUST STILL OFFER A RETRY. Widening this to any failure
+  // would hide genuine breakage behind a permissions explanation.
+  it('does not claim a real failure is a permission problem', () => {
+    expect(isPermissionDenied('fetch failed: timeout')).toBe(false);
+    expect(isPermissionDenied(new HttpError('HTTP 503', 503))).toBe(false);
+    expect(isPermissionDenied('Could not load the scoreboard.')).toBe(false);
+    expect(isPermissionDenied(null)).toBe(false);
+    expect(isPermissionDenied(undefined)).toBe(false);
+    expect(isPermissionDenied('')).toBe(false);
+  });
+
+  it('is not fooled by a message that merely mentions permission', () => {
+    expect(isPermissionDenied('the server refused: insufficient permissions')).toBe(false);
   });
 });

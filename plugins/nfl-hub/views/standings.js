@@ -1,5 +1,5 @@
 // views/standings.js — division standings plus the playoff picture.
-import { chip, panel, stateMsg, esc } from '../core/ui.js';
+import { chip, panel, stateMsg, esc, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchStandings } from '../core/espn-client.js';
 import { parseStandings } from '../core/espn-league.js';
@@ -68,7 +68,7 @@ function playoffColumn(conf, groups) {
 
 export function renderStandings(s = state) {
   if (s.loading) return stateMsg('Loading standings…', { spinner: true });
-  if (s.error) return stateMsg('Could not load standings.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load standings.');
 
   const divisions = Object.keys(s.table ?? {});
   if (!divisions.length) return stateMsg('Standings are not available yet.');

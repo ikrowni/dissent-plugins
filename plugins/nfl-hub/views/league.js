@@ -2,7 +2,7 @@
 //
 // Pure render plus enter/leave. Data arrives via a module-level state object that
 // enter() populates through the shared cache; render() never fetches.
-import { chip, panel, badge, stateMsg, esc } from '../core/ui.js';
+import { chip, panel, badge, stateMsg, esc, errorPane} from '../core/ui.js';
 import { fmtClock, ordinalDown } from '../core/format.js';
 import { cache, TTL } from '../core/cache.js';
 import { fetchScoreboard, urls } from '../core/espn-client.js';
@@ -85,7 +85,7 @@ function groupByTimeslot(games) {
 
 export function renderLeague(s = state) {
   if (s.loading) return stateMsg('Loading scoreboard…', { spinner: true });
-  if (s.error) return stateMsg('Could not load the scoreboard.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load the scoreboard.');
   if (!s.games?.length) return stateMsg('No games scheduled for this week.');
 
   const hero = s.games.find((g) => g.id === s.heroId) ?? pickHeroGame(s.games);

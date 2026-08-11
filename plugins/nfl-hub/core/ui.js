@@ -8,6 +8,12 @@
 // attributes, and core/app.js has the single listener. Inline onclick would work
 // under this CSP, but it forces every handler into module scope and makes the
 // renders untestable.
+//
+// ⚠️ ONE IMPORT, AND IT IS ONE-WAY. `errorPane` has to tell a refusal apart from
+// a failure, and that rule belongs to the outbound path that produces it — a
+// second copy of the predicate here would drift from the node's wording. core/
+// http.js imports only the SDK, so there is no cycle.
+import { isPermissionDenied } from './http.js';
 
 export function esc(s) {
   return String(s ?? '')
@@ -124,4 +130,32 @@ export function cmpRow(label, left, right, leftColor, rightColor) {
     + `<span class="cmp-bar"><i style="width:${rp}%;background:${esc(rightColor)}"></i></span>`
     + `<span class="v num">${esc(right)}</span>`
     + '</div>';
+}
+
+/**
+ * The pane for a load that did not happen.
+ *
+ * ⚠️ A REFUSAL IS NOT A FAILURE, and answering one with "Try again" offers a
+ * button that can never work. A viewer who picks "View Without Joining" grants
+ * the plugin NOTHING — dissent-client's SidebarOrchestrator calls
+ * `runGrant([], "view anonymously")` — so the node refuses every outbound call
+ * for as long as that choice stands, and retrying simply re-refuses. Nine
+ * surfaces in this hub made exactly that offer.
+ *
+ * So a refusal gets its own state: what is switched off, why, and the one route
+ * that actually changes it. The wording matches the consent card's own footer
+ * ("Revoke anytime in User Settings → Privacy") so the instruction names what
+ * the user will actually see.
+ */
+export function errorPane(err, fallback = 'Could not load this.') {
+  if (isPermissionDenied(err)) {
+    return `<div class="state state-denied">
+      <div><strong>Live data is off for you.</strong></div>
+      <div class="muted">You opened this plugin without joining, which grants it no
+        permissions — so it cannot fetch scores, stats or news. Nothing is broken.</div>
+      <div class="tiny">To turn it on: User Settings → Privacy, revoke this plugin's
+        entry, then reopen the channel and choose <strong>Join</strong>.</div>
+    </div>`;
+  }
+  return stateMsg(fallback, { retry: true });
 }

@@ -3,7 +3,7 @@
 // Needs BOTH athlete endpoints, because neither alone is a player page: athletes/{id}
 // carries the bio (jersey, height, weight, age, college) and athletes/{id}/overview
 // carries stats, fantasy ranks and news with no athlete key at all.
-import { chip, panel, stateMsg, esc, tile } from '../core/ui.js';
+import { chip, panel, stateMsg, esc, tile, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchAthlete, fetchAthleteBio } from '../core/espn-client.js';
 import { parseAthlete, parseAthleteBio } from '../core/espn-league.js';
@@ -29,7 +29,7 @@ export function statTable(splits) {
 
 export function renderPlayer(s = state) {
   if (s.loading) return stateMsg('Loading player…', { spinner: true });
-  if (s.error) return stateMsg('Could not load this player.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load this player.');
   if (!s.bio) return stateMsg('Choose a player to see their page.');
 
   const b = s.bio;

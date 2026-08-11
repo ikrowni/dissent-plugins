@@ -3,7 +3,7 @@
 // The sub-views (matchup, matchups, roster) are separate modules; this one owns which is
 // showing and renders their HTML into its own body. Onboarding lives here because it is the
 // gate: nothing else in the section can render without a league and a roster.
-import { esc, panel, stateMsg } from '../core/ui.js';
+import { esc, panel, stateMsg, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import { createSession, suggestRoster } from '../core/fantasy-session.js';
 import { players } from '../core/players.js';
@@ -108,7 +108,7 @@ export function renderFantasy(s) {
       + '</div>';
   }
   if (s.loading) return stateMsg('Loading your league…', { spinner: true });
-  if (s.error) return stateMsg('Could not load this league.', { retry: true });
+  if (s.error) return errorPane(s.error, 'Could not load this league.');
 
   return '<div class="fantasy-wrap">'
     + '<div class="fantasy-head">'
