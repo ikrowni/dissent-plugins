@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseLeaders } from '../core/espn-league.js';
-import { renderLeaders, FEATURED } from './leaders.js';
+import { renderLeaders, FEATURED, seasonLabel} from './leaders.js';
 
 // fileURLToPath rather than a URL object: under jsdom the global URL is jsdom's and
 // node:fs does not recognise it as a file URL.
@@ -68,5 +68,33 @@ describe('renderLeaders', () => {
   it('exports a featured order that is a non-empty list of category keys', () => {
     expect(Array.isArray(FEATURED)).toBe(true);
     expect(FEATURED.length).toBeGreaterThan(3);
+  });
+});
+
+describe('seasonLabel', () => {
+  it('says nothing when the numbers are from the season in progress', () => {
+    expect(seasonLabel({ year: 2026, name: 'Regular Season', isCurrent: true })).toBe('2026 · ');
+  });
+
+  // ⚠️ THE CASE THAT MATTERS. In August this endpoint answers with last season's
+  // finals; unlabelled, they read as the current race.
+  it('marks last season’s numbers as final', () => {
+    expect(seasonLabel({ year: 2025, name: 'Regular Season', isCurrent: false }))
+      .toBe('2025 regular season · final · ');
+  });
+
+  it('renders nothing when the season is unknown', () => {
+    expect(seasonLabel(null)).toBe('');
+    expect(seasonLabel({ year: null })).toBe('');
+  });
+});
+
+describe('the leaders panel head', () => {
+  it('carries the season into the rendered panel', () => {
+    const html = renderLeaders({
+      loading: false, error: null, season: { year: 2025, name: 'Regular Season', isCurrent: false },
+      cats: [{ name: 'Passing Yards', leaders: [{ athleteId: 1, name: 'A B', value: '4707', teamAbbr: 'LAR', position: 'QB' }] }],
+    });
+    expect(html).toContain('2025 regular season · final');
   });
 });

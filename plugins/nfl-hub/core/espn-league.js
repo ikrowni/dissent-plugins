@@ -190,6 +190,30 @@ export function parseAthlete(json) {
  *  /leaders gives a bare $ref per athlete instead — ~250 extra fetches to learn any
  *  names. The categories array sits under a different key depending on the response
  *  wrapper, so look in both places. */
+/**
+ * Which season the /leaders payload actually answered with.
+ *
+ * ⚠️ IT IS OFTEN NOT THE CURRENT ONE. Measured live 2026-08-11: currentSeason
+ * 2026 Preseason, requestedSeason 2025 Regular Season — so between February and
+ * September this endpoint serves LAST season's finals. parseLeaders discarded
+ * both fields and the tab rendered those totals with no year anywhere, which a
+ * reader cannot tell apart from a live race.
+ *
+ * `isCurrent` defaults to true when the payload says nothing, so a missing field
+ * produces a quiet label rather than a false "last season" claim.
+ */
+export function leadersSeason(json) {
+  const req = json?.requestedSeason ?? null;
+  const cur = json?.currentSeason ?? null;
+  const year = num(req?.year) ?? null;
+  const curYear = num(cur?.year) ?? null;
+  return {
+    year,
+    name: req?.type?.name ?? null,
+    isCurrent: year === null || curYear === null ? true : year === curYear,
+  };
+}
+
 export function parseLeaders(json) {
   const cats = json?.leaders?.categories ?? json?.categories ?? [];
   const out = [];

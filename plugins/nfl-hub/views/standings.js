@@ -66,6 +66,23 @@ function playoffColumn(conf, groups) {
     + '</div></div>';
 }
 
+
+/**
+ * Has anybody played yet?
+ *
+ * ⚠️ ESPN PUBLISHES playoffSeed IN PRESEASON, where it is division order rather
+ * than a standing. Seeding a "playoff picture" from an all-0-0 table presents
+ * that ordering as information and gives the reader no way to tell it from a
+ * real one — which, from February to September, is what this tab opens on.
+ * views/league-home.js already refuses to draw records before a week is scored;
+ * this is the same rule for the NFL table.
+ */
+export function seasonStarted(table) {
+  return Object.values(table ?? {})
+    .flat()
+    .some((r) => (Number(r?.wins) || 0) + (Number(r?.losses) || 0) + (Number(r?.ties) || 0) > 0);
+}
+
 export function renderStandings(s = state) {
   if (s.loading) return stateMsg('Loading standings…', { spinner: true });
   if (s.error) return errorPane(s.error, 'Could not load standings.');
@@ -73,13 +90,21 @@ export function renderStandings(s = state) {
   const divisions = Object.keys(s.table ?? {});
   if (!divisions.length) return stateMsg('Standings are not available yet.');
 
-  let html = panel({
-    title: 'Playoff picture',
-    body: '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">'
-      + playoffColumn('AFC', seedGroups(s.table, 'AFC'))
-      + playoffColumn('NFC', seedGroups(s.table, 'NFC'))
-      + '</div>',
-  });
+  // Before kickoff the seeds are noise; say what the tab is showing instead of
+  // dressing division order up as a race.
+  let html = seasonStarted(s.table)
+    ? panel({
+      title: 'Playoff picture',
+      body: '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">'
+        + playoffColumn('AFC', seedGroups(s.table, 'AFC'))
+        + playoffColumn('NFC', seedGroups(s.table, 'NFC'))
+        + '</div>',
+    })
+    : panel({
+      title: 'Standings',
+      body: '<p class="muted">The season has not started, so there is no playoff picture yet — '
+        + 'every team is 0-0. The divisions below are the league as it stands.</p>',
+    });
   for (const d of divisions.sort()) html += divisionTable(d, s.table[d]);
   return html;
 }

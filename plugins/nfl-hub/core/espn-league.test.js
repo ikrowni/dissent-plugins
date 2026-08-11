@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   parseStandings, parseInjuries, parseRosterInjuries, parseNews, parseOdds, parseAthlete,
-  parseLeaders, parseAthleteBio,
-} from './espn-league.js';
+  parseLeaders, parseAthleteBio, leadersSeason} from './espn-league.js';
 
 const fixture = (n) =>
   JSON.parse(readFileSync(new URL(`../tests/fixtures/${n}`, import.meta.url), 'utf8'));
@@ -258,5 +257,40 @@ describe('parseAthleteBio', () => {
   it('returns null for junk', () => {
     expect(parseAthleteBio(null)).toBeNull();
     expect(parseAthleteBio({})).toBeNull();
+  });
+});
+
+// ── Which season are the leaders FROM? ──────────────────────────────────────
+//
+// ⚠️ IN AUGUST THIS ENDPOINT ANSWERS WITH LAST SEASON. Measured live 2026-08-11:
+// currentSeason 2026 Preseason, requestedSeason 2025 Regular Season. The tab
+// rendered those finals with no year anywhere, so a reader in the 2026 preseason
+// saw 2025's totals presented as the current race. parseLeaders discarded both
+// fields; they are in the payload for free.
+describe('leadersSeason', () => {
+  const payload = (over = {}) => ({
+    currentSeason: { year: 2026, type: { name: 'Preseason' } },
+    requestedSeason: { year: 2025, type: { name: 'Regular Season' } },
+    ...over,
+  });
+
+  it('reports the season the numbers actually came from', () => {
+    expect(leadersSeason(payload())).toMatchObject({ year: 2025, name: 'Regular Season' });
+  });
+
+  it('flags that it is NOT the current season', () => {
+    expect(leadersSeason(payload()).isCurrent).toBe(false);
+  });
+
+  it('flags a live season as current, so the label can stay quiet', () => {
+    const live = payload({
+      currentSeason: { year: 2025, type: { name: 'Regular Season' } },
+    });
+    expect(leadersSeason(live).isCurrent).toBe(true);
+  });
+
+  it('survives a payload with neither field rather than throwing', () => {
+    expect(leadersSeason({})).toEqual({ year: null, name: null, isCurrent: true });
+    expect(leadersSeason(null)).toEqual({ year: null, name: null, isCurrent: true });
   });
 });

@@ -81,3 +81,46 @@ describe('renderStandings', () => {
     expect(el.textContent).not.toContain('undefined');
   });
 });
+
+// ── Out of season ───────────────────────────────────────────────────────────
+//
+// ⚠️ ESPN PUBLISHES playoffSeed IN PRESEASON TOO. It is division order, not a
+// standing — every team is 0-0 and nothing has been played. Rendering it as a
+// "Playoff picture" with seeds #1–#7 presents that ordering as information, and
+// a reader has no way to tell it apart from a real one. `views/league-home.js`
+// already learned this for the fantasy table ("a column of 0-0 before anyone has
+// played looks like a played season in which everybody drew"); the NFL standings
+// tab did not, and in August it is what the tab opens on.
+describe('the standings tab before a season starts', () => {
+  const zeroed = (t) => Object.fromEntries(Object.entries(t).map(([div, rows]) => [
+    div, rows.map((r) => ({ ...r, wins: 0, losses: 0, ties: 0, record: '0-0' })),
+  ]));
+
+  it('draws no playoff picture when nobody has played', () => {
+    const html = renderStandings({ loading: false, error: null, table: zeroed(table) });
+    // ⚠️ Assert the STRUCTURE, not the phrase — the replacement copy explains
+    // that there is no playoff picture yet, so a substring check on those two
+    // words matches the very text that proves the fix worked.
+    expect(html).not.toContain('AFC playoff picture');
+    expect(html).not.toContain('NFC playoff picture');
+    expect(html).not.toMatch(/#1<\/span>/);
+  });
+
+  it('says so, rather than silently dropping the panel', () => {
+    const html = renderStandings({ loading: false, error: null, table: zeroed(table) });
+    expect(html).toMatch(/season has not started|no games have been played/i);
+  });
+
+  // The division tables are the league's structure and are honest at 0-0.
+  it('still shows the divisions', () => {
+    const html = renderStandings({ loading: false, error: null, table: zeroed(table) });
+    expect(html).toMatch(/AFC|NFC/);
+  });
+
+  it('restores the playoff picture as soon as one game has been played', () => {
+    const t = zeroed(table);
+    const firstDiv = Object.keys(t)[0];
+    t[firstDiv][0] = { ...t[firstDiv][0], wins: 1, record: '1-0' };
+    expect(renderStandings({ loading: false, error: null, table: t })).toContain('playoff picture');
+  });
+});

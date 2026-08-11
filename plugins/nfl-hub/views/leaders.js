@@ -5,11 +5,11 @@
 import { panel, stateMsg, esc, errorPane} from '../core/ui.js';
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchLeaders } from '../core/espn-client.js';
-import { parseLeaders } from '../core/espn-league.js';
+import { parseLeaders, leadersSeason} from '../core/espn-league.js';
 import { imageUrl } from '../../plugin-sdk.js';
 import { logoPath } from '../core/config.js';
 
-const state = { loading: true, error: null, cats: [] };
+const state = { loading: true, error: null, cats: [], season: null };
 
 /** Categories a football fan looks for first. Everything else follows in ESPN's order. */
 export const FEATURED = [
@@ -43,6 +43,18 @@ function categoryPanel(c) {
     + '</div>';
 }
 
+
+/**
+ * "2025 regular season · final · " when the numbers are not from the current
+ * season, and nothing at all when they are — a live race needs no disclaimer.
+ */
+export function seasonLabel(season) {
+  if (!season?.year) return '';
+  const name = String(season.name ?? '').toLowerCase();
+  if (season.isCurrent) return `${season.year} · `;
+  return `${season.year} ${name || 'season'} · final · `;
+}
+
 export function renderLeaders(s = state) {
   if (s.loading) return stateMsg('Loading leaders…', { spinner: true });
   if (s.error) return errorPane(s.error, 'Could not load leaders.');
@@ -56,7 +68,11 @@ export function renderLeaders(s = state) {
 
   return panel({
     title: 'League leaders',
-    right: `<span class="kicker">${ordered.length} categories</span>`,
+    // ⚠️ THE SEASON IS PART OF THE HEADLINE, not a footnote. Between February and
+    // September this endpoint answers with LAST season's finals (measured
+    // 2026-08-11: current 2026 Preseason, requested 2025 Regular Season), and
+    // without the year a reader cannot tell those totals from a live race.
+    right: `<span class="kicker">${seasonLabel(s.season)}${ordered.length} categories</span>`,
     body: '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">'
       + ordered.map(categoryPanel).join('')
       + '</div>',
@@ -76,6 +92,7 @@ export async function enter() {
     const raw = await cache.get(urls.leaders(), () => fetchLeaders(), TTL.LEADERS,
       { staleOnError: true });
     state.cats = parseLeaders(raw);
+    state.season = leadersSeason(raw);
     state.error = null;
   } catch (err) {
     state.error = err?.message ?? 'failed';
