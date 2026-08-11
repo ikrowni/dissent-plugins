@@ -47,6 +47,37 @@ describe('the motion contract', () => {
     expect(offenders).toEqual([]);
   });
 
+  // ⚠️ THE REGRESSION THESE EXIST FOR. `body.motion-idle` first shipped as a
+  // blanket `body.motion-idle *` and it made the hub INVISIBLE: entrances use
+  // `animation-fill-mode: both`, which holds the FROM state (opacity 0) until the
+  // animation runs, so anything rendered while the window was unfocused painted
+  // nothing at all. Kept in step with plugins/nfl-hub/core/motion.test.js.
+  it('the idle rule never pauses animations with a blanket selector', () => {
+    const css = readFileSync(join(root, 'styles', 'base.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(css).not.toMatch(/body\.motion-idle\s*\*/);
+  });
+
+  it('the idle rule names every infinite animation the plugin ships', () => {
+    const strip = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '');
+    const dir = join(root, 'styles');
+    const idleBlock = strip(readFileSync(join(dir, 'base.css'), 'utf8'))
+      .split(/body\.motion-idle/).slice(1).join(' ');
+
+    const missing = [];
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.css'))) {
+      const css = strip(readFileSync(join(dir, f), 'utf8'));
+      for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        if (!/\banimation\b[^;]*\binfinite\b/.test(m[2])) continue;
+        for (const sel of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
+          if (/^\d|^from$|^to$|reduce-motion/.test(sel)) continue;
+          if (!idleBlock.includes(sel.replace(/^body\./, '').trim())) missing.push(`${f}: ${sel}`);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
   it('the guard reads code, not comments', () => {
     expect(codeOnly('// uses requestAnimationFrame\nconst a = 1;'))
       .not.toMatch(/requestAnimationFrame/);
