@@ -146,6 +146,71 @@ export function renderPool({
  * ⚠️ Shows the SLOTS, not just what was taken — an empty QB row is the single
  * most useful thing on a draft screen and a plain list of picks never shows it.
  */
+/**
+ * How many picks happen before this team's next one.
+ *
+ * Feeds the queue's NEXT PICK divider: that many players come off the board
+ * before the manager chooses again, so anything past that point in the queue is
+ * unlikely to survive.
+ *
+ * 0 means on the clock. null means no pick left — the divider is then
+ * meaningless and must not be drawn at all.
+ */
+export function picksUntilTurn(order = [], picks = {}, teamId = null) {
+  if (!teamId) return null;
+  const made = new Set(Object.keys(picks ?? {}).map((k) => Number(k)));
+  const upcoming = (order ?? [])
+    .filter((p) => !made.has(Number(p.overall)))
+    .sort((a, b) => a.overall - b.overall);
+  const idx = upcoming.findIndex((p) => String(p.owner) === String(teamId));
+  return idx === -1 ? null : idx;
+}
+
+/**
+ * A manager's autodraft queue.
+ *
+ * ⚠️ THE DIVIDER IS THE POINT. Sleeper draws a `NEXT PICK` line inside the queue
+ * showing how far down the list this manager's next pick is likely to reach —
+ * verified live on 2026-08-11, where a pre-draft queue put it at the very top.
+ * Without it a queue is a wish list; with it, it is a plan.
+ *
+ * It is drawn only when it falls INSIDE the queue: a divider hanging off the end
+ * says nothing, and one drawn with no next turn is a lie.
+ *
+ * ⚠️ The queue is what makes autodraft express a preference. Until this shipped,
+ * `setQueue()` had no caller and every autodraft fell through to the league
+ * ranking — see `server/ops-draft.js` `autoPicker`.
+ */
+export function renderQueue({
+  queue = [], playerOf = () => null, untilTurn = null, canEdit = false,
+} = {}) {
+  const head = `<div class="db-q-head">QUEUE (${queue.length})</div>`;
+  if (queue.length === 0) {
+    return `<div class="db-queue">${head}<p class="muted">Queue is empty. Queued players are picked for you if your clock runs out.</p></div>`;
+  }
+
+  const divider = '<div class="db-q-divider" role="separator">NEXT PICK</div>';
+  const showDivider = untilTurn !== null && untilTurn <= queue.length;
+
+  const rows = queue.map((id, i) => {
+    const p = playerOf(id);
+    const name = p ? p.n : `Player ${id}`;
+    const meta = p ? `${p.p ?? ''} - ${p.t ?? ''}` : '';
+    const safe = esc(String(id));
+    return `${showDivider && i === untilTurn ? divider : ''}
+      <div class="db-q-row">
+        <span class="db-q-rank">${i + 1}</span>
+        <span class="db-q-name">${esc(name)}</span>
+        <span class="db-q-meta">${esc(meta)}</span>
+        ${canEdit ? `<button class="db-q-up" data-act="draft-queue-up" data-player="${safe}" aria-label="Move ${esc(name)} up">↑</button>
+        <button class="db-q-rm" data-act="draft-queue-remove" data-player="${safe}" aria-label="Remove ${esc(name)}">REMOVE</button>` : ''}
+      </div>`;
+  }).join('');
+
+  const trailing = showDivider && untilTurn === queue.length ? divider : '';
+  return `<div class="db-queue">${head}${rows}${trailing}</div>`;
+}
+
 export function renderRosterProgress({ slots = [], owned = [], playerOf = () => null }) {
   const pool = [...owned];
   const take = (accept) => {

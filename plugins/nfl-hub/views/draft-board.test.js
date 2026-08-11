@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   matchesFilter, renderBoard, renderOnTheClock, renderFilters, renderPool,
-  renderRosterProgress, POOL_FILTERS,
+  renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue,
 } from './draft-board.js';
 
 const INDEX = {
@@ -199,5 +199,83 @@ describe('renderRosterProgress', () => {
     const html = renderRosterProgress({ slots, owned, playerOf });
     expect(html).toContain('db-bench');
     expect(html).toContain('8 on the bench');
+  });
+});
+
+// --- Wave 1: the draft queue -------------------------------------------------
+
+describe('picksUntilTurn', () => {
+  const q = [
+    { overall: 1, round: 1, pickInRound: 1, owner: 'a' },
+    { overall: 2, round: 1, pickInRound: 2, owner: 'b' },
+    { overall: 3, round: 1, pickInRound: 3, owner: 'c' },
+    { overall: 4, round: 2, pickInRound: 1, owner: 'c' },
+  ];
+
+  it('counts the picks before my next one', () => {
+    expect(picksUntilTurn(q, {}, 'c')).toBe(2);
+  });
+
+  it('is 0 when I am on the clock', () => {
+    expect(picksUntilTurn(q, {}, 'a')).toBe(0);
+  });
+
+  it('skips picks already made', () => {
+    expect(picksUntilTurn(q, { 1: { playerId: 'p1' } }, 'c')).toBe(1);
+  });
+
+  it('is null when I have no pick left', () => {
+    expect(picksUntilTurn(q, { 1: {}, 2: {}, 3: {}, 4: {} }, 'c')).toBe(null);
+  });
+
+  it('is null without a team', () => {
+    expect(picksUntilTurn(q, {}, null)).toBe(null);
+  });
+});
+
+describe('renderQueue', () => {
+  it('lists queued players in order', () => {
+    const html = renderQueue({ queue: ['p1', 'p2'], playerOf });
+    expect(html.indexOf('McCaffrey')).toBeLessThan(html.indexOf('Nacua'));
+  });
+
+  it('carries the count', () => {
+    expect(renderQueue({ queue: ['p1', 'p2'], playerOf })).toContain('QUEUE (2)');
+  });
+
+  it('draws the divider after the picks that land first', () => {
+    const html = renderQueue({ queue: ['p1', 'p2', 'p3'], playerOf, untilTurn: 2 });
+    const divider = html.indexOf('NEXT PICK');
+    expect(divider).toBeGreaterThan(html.indexOf('Nacua'));
+    expect(divider).toBeLessThan(html.indexOf('Allen'));
+  });
+
+  // Matches the live capture: pre-draft, nothing has been picked, so the
+  // divider sits at the very top of the queue.
+  it('puts the divider on top when on the clock', () => {
+    const html = renderQueue({ queue: ['p1'], playerOf, untilTurn: 0 });
+    expect(html.indexOf('NEXT PICK')).toBeLessThan(html.indexOf('McCaffrey'));
+  });
+
+  it('omits the divider when there is no next turn', () => {
+    expect(renderQueue({ queue: ['p1'], playerOf, untilTurn: null })).not.toContain('NEXT PICK');
+  });
+
+  it('omits the divider when the queue cannot reach it', () => {
+    expect(renderQueue({ queue: ['p1'], playerOf, untilTurn: 5 })).not.toContain('NEXT PICK');
+  });
+
+  it('shows an empty state', () => {
+    expect(renderQueue({ queue: [], playerOf })).toContain('Queue is empty');
+  });
+
+  it('only offers edit controls when the manager owns a team', () => {
+    expect(renderQueue({ queue: ['p1'], playerOf, canEdit: false })).not.toContain('draft-queue-remove');
+    expect(renderQueue({ queue: ['p1'], playerOf, canEdit: true })).toContain('draft-queue-remove');
+  });
+
+  it('escapes player ids into the action attributes', () => {
+    const html = renderQueue({ queue: ['"><img>'], playerOf: () => null, canEdit: true });
+    expect(html).not.toContain('<img>');
   });
 });
