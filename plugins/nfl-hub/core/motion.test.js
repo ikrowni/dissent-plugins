@@ -345,6 +345,23 @@ describe('the motion contract', () => {
     expect(codeOnly('setInterval(fn, 10);')).toMatch(/setInterval/);
   });
 
+  // ⚠️ THE TWO PROPERTIES gridiron.css EXISTS TO NOT HAVE.
+  //
+  // backdrop-filter re-blurs whenever anything behind it moves, and a draft board is
+  // a surface where things move on every pick. It is what made stadium.css "the
+  // expensive layer and the one that needs measuring", and the whole reason the
+  // League tab got its own sheet instead of extending that one.
+  //
+  // `infinite` is the other half: the clock glow is driven from motion.loop() so it
+  // is capped and focus-gated, and a CSS infinite animation would route around that
+  // entirely. Everything else on the stage is painted once or fires on change.
+  it('gridiron.css has no backdrop-filter and no infinite animation', () => {
+    const css = readFileSync(join(root, 'styles', 'gridiron.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ''); // its own docs name both; read the rules
+    expect(css).not.toMatch(/backdrop-filter/);
+    expect(css).not.toMatch(/\binfinite\b/);
+  });
+
   it('the guard tells a bare timer apart from a method that shares its name', () => {
     // ⚠️ THE FALSE POSITIVE THAT ALMOST WIDENED THE ALLOWLIST. views/league.js calls
     // app.scheduler.setInterval(ms) to set the poll cadence. Excusing that file

@@ -1,0 +1,202 @@
+/* styles/gridiron.css — the League tab's cinematic layer.
+ *
+ * ⚠️ DELIBERATELY NOT AN EXTENSION OF stadium.css. The budgets differ: stadium.css
+ * dresses a 300px hero that scrolls away, this dresses a full-height board that is
+ * on screen for an entire draft. Two sheets means the board can never inherit a
+ * backdrop-filter by accident.
+ *
+ * ⚠️ NO backdrop-filter ANYWHERE IN THIS FILE. It re-blurs whenever anything behind
+ * it moves, and a draft board is a surface where things move — every pick, every
+ * second of the clock. That property is what made stadium.css "the layer that needs
+ * measuring"; this layer does not need measuring because it does not have one.
+ *
+ * ⚠️ ONE ANIMATION IN THIS FILE LOOPS: the clock glow, driven by motion.loop() from
+ * views/league-draft.js. Everything else is painted once or fires on change. Both
+ * are stopped by body.motion-idle (see motion.css) when the window is behind another
+ * app, which is when all three of this project's GPU incidents happened.
+ *
+ * Tokens come from base.css. Nothing here invents a colour except the stadium
+ * gradient itself, which is the one thing this layer exists to add.
+ */
+
+/* ── The stage ─────────────────────────────────────────────────────────────
+ * One continuous lit surface. The hero is INSIDE it, not a slab on top — which is
+ * the difference between a broadcast set and a banner.
+ * Painted once. Never animates. */
+.gr-stage {
+  position: relative; overflow: hidden;
+  border-radius: var(--r); margin: 0 0 14px;
+  background: radial-gradient(130% 100% at 50% -20%, #1a3a56 0%, #0a1119 52%, #05070c 100%);
+}
+.gr-lines {
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    rgba(255,255,255,.045) 0 1px, transparent 1px 72px);
+}
+.gr-vig {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(0,0,0,.55) 100%);
+}
+
+/* ── The hero ──────────────────────────────────────────────────────────────
+ * Duotone halves on an angled seam, FADING INTO the stage at the bottom so the
+ * countdown reads as lit by the same room rather than pasted over it. */
+.gr-hero { position: relative; height: 120px; overflow: hidden; }
+.gr-hero-l, .gr-hero-r { position: absolute; top: 0; bottom: 0; width: 66%; }
+.gr-hero-l {
+  left: 0; clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%);
+  background: linear-gradient(115deg, var(--gr-team, #243044), rgba(6,28,68,.25));
+}
+.gr-hero-r {
+  right: 0; clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%);
+  background: linear-gradient(115deg, rgba(58,13,22,.25), var(--gr-team-2, #141b26));
+}
+.gr-seam {
+  position: absolute; top: 0; bottom: 0; left: 64.5%; width: 2px; pointer-events: none;
+  background: linear-gradient(180deg, var(--gold), rgba(255,182,18,0));
+}
+.gr-fade {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 38px; pointer-events: none;
+  background: linear-gradient(rgba(5,7,12,0), rgba(5,7,12,.9));
+}
+.gr-hero-in {
+  position: relative; height: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 0 24px;
+}
+.gr-label {
+  font-size: 9.5px; letter-spacing: .24em; font-weight: 700; color: var(--gold);
+  text-transform: uppercase;
+}
+.gr-team {
+  font-family: var(--f-display); font-size: 31px; font-weight: 800; line-height: 1;
+  color: #fff; margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46ch;
+}
+.gr-meta {
+  font-size: 10.5px; letter-spacing: .12em; color: rgba(255,255,255,.6); margin-top: 5px;
+  text-transform: uppercase;
+}
+.gr-clock-wrap { text-align: right; flex: 0 0 auto; }
+/* ⚠️ TABULAR NUMERALS. Proportional digits change width as they count down, so the
+ * clock jitters left and right once a second for the whole draft. */
+.gr-clock {
+  font-family: var(--f-display); font-variant-numeric: tabular-nums;
+  font-size: 60px; font-weight: 800; line-height: .86; color: #fff;
+  text-shadow: 0 0 26px rgba(255,182,18,.28);
+}
+.gr-clock.urgent { color: var(--gold); }
+.gr-overall {
+  font-size: 10px; letter-spacing: .18em; color: rgba(255,255,255,.55); margin-top: 4px;
+}
+
+/* The glow pulse. The ONLY looping effect in this file, and it is driven from
+ * views/league-draft.js through motion.loop() — capped, visibility-gated and
+ * focus-gated. Opacity only: never leaves the compositor. */
+.gr-glow {
+  position: absolute; inset: -40% 30% -40% 30%; pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255,182,18,.20), transparent 70%);
+  opacity: var(--gr-glow, 0);
+}
+
+/* ⚠️ ONE-SHOT, ON THE PICK THAT JUST LANDED. Not a loop. stadium.css's `.sweep`
+ * translates forever and is documented there as the first thing to cut; here the
+ * same gesture fires once per pick, which is when it means something. The class is
+ * added by the view and removed on animationend. */
+.gr-sweep {
+  position: absolute; top: -30%; bottom: -30%; width: 180px; left: -220px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  pointer-events: none; will-change: transform;
+  animation: grSweep 900ms var(--ease-out) 1 both;
+}
+@keyframes grSweep {
+  from { transform: translateX(0) skewX(-16deg); }
+  to   { transform: translateX(calc(100% + 1400px)) skewX(-16deg); }
+}
+
+/* ── The ticker ────────────────────────────────────────────────────────────
+ *
+ * ⚠️ FIXED HEIGHT. It goes QUIET, it does not collapse. A strip that collapses
+ * shifts the whole board mid-draft, which is the worst possible moment to move a
+ * click target — and a ticker that always has something to say is noise people stop
+ * reading after about four picks. Silence is what makes the loud moments land. */
+.gr-tick {
+  position: relative; display: flex; align-items: center; gap: 9px;
+  height: 31px; padding: 0 16px;
+  background: rgba(8,12,19,.75);
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.gr-tick-flag {
+  font-size: 8.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 3px; background: var(--gr-flag, #8b1c2b); color: #fff;
+}
+.gr-tick-text { font-size: 11px; color: var(--text-2); }
+.gr-tick-text b { color: var(--gr-pos, var(--text)); font-weight: 700; }
+/* Quiet: the strip is still there and still the same height, it just has nothing
+ * to say. Nothing is hidden with display:none — that is what would move the board. */
+.gr-tick.is-quiet { background: rgba(8,12,19,.4); }
+
+/* ── Board + feed ──────────────────────────────────────────────────────────── */
+.gr-cols { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 176px; }
+.gr-board { min-width: 0; padding: 12px; }
+
+.gr-feed { border-left: 1px solid var(--line); padding: 10px 12px; min-width: 0; }
+.gr-feed-label {
+  font-size: 8.5px; letter-spacing: .16em; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.gr-feed-item {
+  font-size: 10px; color: var(--text-2); padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gr-feed-item b { color: var(--text); font-weight: 700; }
+.gr-feed-pos { color: var(--gr-pos, var(--text-3)); font-weight: 700; }
+.gr-feed-item.is-auto { opacity: .7; }
+.gr-feed-empty { font-size: 10px; color: var(--text-3); }
+
+/* ── Cells on the stage ────────────────────────────────────────────────────
+ * The board itself is still .db-* from league.css — this only raises the cells so
+ * they read as lit objects on a surface rather than holes cut into it. */
+.gr-stage .db-cell {
+  background: linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.015));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+.gr-stage .db-made { background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.02)); }
+.gr-stage .db-rd, .gr-stage .db-th { background: rgba(255,255,255,.03); }
+.gr-stage .db-live {
+  background: rgba(255,182,18,.12);
+  box-shadow: 0 0 0 1px rgba(255,182,18,.85), 0 0 22px rgba(255,182,18,.3);
+}
+
+/* ⚠️ MADE PICKS ONLY, AND UNDER THE TEXT. Position colour is the primary encoding
+ * on a board — you read a roster's shape, or spot a run, before you read a single
+ * name. On an empty cell a watermark would compete with the pick number for no
+ * gain; on a made cell the position colour already owns the left border, so 7% is
+ * texture rather than a second signal. */
+.gr-wm {
+  position: absolute; right: -6px; bottom: -8px; width: 40px; height: 40px;
+  opacity: .07; pointer-events: none; object-fit: contain;
+}
+
+/* ── Narrow ────────────────────────────────────────────────────────────────
+ * Spec §7: the hero collapses to a single band and the feed moves below the board.
+ * The stage stays — it is the surface, not an ornament. */
+@media (max-width: 760px) {
+  .gr-cols { grid-template-columns: 1fr; }
+  .gr-feed { border-left: 0; border-top: 1px solid var(--line); }
+  .gr-hero { height: auto; padding: 14px 0; }
+  .gr-hero-in { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .gr-hero-r, .gr-seam { display: none; }
+  .gr-hero-l { width: 100%; clip-path: none; }
+  .gr-clock-wrap { text-align: left; }
+  .gr-clock { font-size: 44px; }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * ⚠️ FINISHED, NOT STRIPPED. The whole surface is painted once, so removing the two
+ * moving parts leaves a complete design rather than a skeleton. The glow settles at
+ * a constant low value so "on the clock" is still legible without breathing. */
+body.reduce-motion .gr-sweep { display: none; }
+body.reduce-motion .gr-glow { opacity: .12; }
+

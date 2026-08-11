@@ -19,6 +19,9 @@
   <!-- The NATIVE league views. Last, so it can lean on the tokens and the panel
        styling the earlier sheets establish. -->
   <link rel="stylesheet" href="nfl-hub/styles/league.css">
+  <!-- The League tab's cinematic layer. After league.css so it can raise the .db-*
+       cells that sheet defines; before motion.css so reduced-motion still wins. -->
+  <link rel="stylesheet" href="nfl-hub/styles/gridiron.css">
   <!-- Movement last: it overrides durations for reduced motion, and that must
        win over anything an earlier sheet set. -->
   <link rel="stylesheet" href="nfl-hub/styles/motion.css">
