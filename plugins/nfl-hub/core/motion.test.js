@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { createMotion } from './motion.js';
 
 function harness({ visibility = 'visible', reduce = false, focused = true } = {}) {
@@ -249,5 +252,110 @@ describe('createMotion', () => {
     m.destroy();
     win.blur();
     expect(hasClass('motion-idle')).toBe(false);
+  });
+});
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+
+function sources(dir, out = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) { if (name !== 'tests' && name !== 'assets') sources(p, out); continue; }
+    if (name.endsWith('.js') && !name.endsWith('.test.js')) out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Strip comments before scanning.
+ *
+ * Without this the guard fires on any file that merely DISCUSSES the rule —
+ * core/config.js explains why TARGET_FPS is 30 by naming `requestAnimationFrame`,
+ * and views/game-winprob.js names it to say it deliberately does not use one. Both
+ * are documentation, not a loop.
+ */
+const codeOnly = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+/**
+ * ⚠️ TWO DIFFERENT RULES, NOT ONE.
+ *
+ * rAF is ANIMATION: exactly one module may own it, and it is core/motion.js, which
+ * caps the frame rate, stops while the frame is hidden and now stops while the
+ * window is merely behind another app.
+ *
+ * setInterval is POLLING: how often to REFETCH, not how to animate. Three modules
+ * legitimately own one, and each is listed with why — an unexplained allowlist
+ * grows until it means nothing.
+ */
+/**
+ * Does this source actually OPEN a timer, as opposed to naming one?
+ *
+ * ⚠️ A HOST CALL, NOT SOMEBODY ELSE'S METHOD. `views/league.js` calls
+ * `app.scheduler.setInterval(ms)` — that is the scheduler's own API for setting its
+ * cadence, not a second timer. Flagging it would have meant either a false failure
+ * or an allowlist entry that quietly excused that whole file from the real rule.
+ *
+ * ⚠️ BUT THE GLOBAL RECEIVERS STILL COUNT. `window.requestAnimationFrame(cb)` is
+ * exactly as much of a loop as the bare call — and it is the form core/motion.js
+ * itself uses (`win.requestAnimationFrame`). Excluding every dotted receiver would
+ * have left the guard unable to see the most likely way a view would smuggle one in.
+ */
+const OPENS = (name) => new RegExp(
+  `(^|[^.\\w]|\\b(?:window|globalThis|self|win)\\.)${name}\\s*\\(`,
+  'm',
+);
+
+const RAF_OWNERS = [join('core', 'motion.js')];
+const INTERVAL_OWNERS = [
+  // The single POLL loop — how often the hub refetches.
+  join('core', 'scheduler.js'),
+  // Replay stepping. Developer tooling; drives recorded fixtures, not the UI.
+  join('core', 'replay.js'),
+  // ⚠️ DELIBERATELY NOT FOCUS-GATED. Every `draft:get` resolves lapsed picks
+  // server-side — the node's scheduler floor is five minutes and cannot drive a
+  // 90-second pick clock, so the board being OPEN is what keeps a live draft
+  // moving. Pausing this on blur would stall everybody else's draft the moment one
+  // manager alt-tabbed. Its sibling 250ms tick writes one text node and paints
+  // nothing else, which is why it is not worth gating either.
+  join('views', 'league-draft.js'),
+];
+
+describe('the motion contract', () => {
+  it('only core/motion.js opens a requestAnimationFrame loop', () => {
+    const offenders = sources(root)
+      .filter((f) => !RAF_OWNERS.some((owner) => f.endsWith(owner)))
+      .filter((f) => OPENS('requestAnimationFrame').test(codeOnly(readFileSync(f, 'utf8'))))
+      .map((f) => f.replace(root, ''));
+    expect(offenders).toEqual([]);
+  });
+
+  it('only the three declared owners open a setInterval', () => {
+    const offenders = sources(root)
+      .filter((f) => !INTERVAL_OWNERS.some((owner) => f.endsWith(owner)))
+      .filter((f) => OPENS('setInterval').test(codeOnly(readFileSync(f, 'utf8'))))
+      .map((f) => f.replace(root, ''));
+    expect(offenders).toEqual([]);
+  });
+
+  it('the guard reads code, not comments', () => {
+    expect(codeOnly('// uses requestAnimationFrame\nconst a = 1;')).not.toMatch(/requestAnimationFrame/);
+    expect(codeOnly('/* setInterval */\nconst a = 1;')).not.toMatch(/setInterval/);
+    expect(codeOnly('setInterval(fn, 10);')).toMatch(/setInterval/);
+  });
+
+  it('the guard tells a bare timer apart from a method that shares its name', () => {
+    // ⚠️ THE FALSE POSITIVE THAT ALMOST WIDENED THE ALLOWLIST. views/league.js calls
+    // app.scheduler.setInterval(ms) to set the poll cadence. Excusing that file
+    // wholesale would have exempted it from the real rule forever.
+    expect(OPENS('setInterval').test('app.scheduler.setInterval(4000);')).toBe(false);
+    expect(OPENS('setInterval').test('timer = setInterval(tick, 10);')).toBe(true);
+    expect(OPENS('setInterval').test('setInterval(tick, 10);')).toBe(true);
+    // ⚠️ The global receivers are still a loop. This is the form motion.js uses, and
+    // the most likely way a view would smuggle one past a naive bare-call check.
+    expect(OPENS('requestAnimationFrame').test('win.requestAnimationFrame(frame);')).toBe(true);
+    expect(OPENS('requestAnimationFrame').test('window.requestAnimationFrame(frame);')).toBe(true);
+    expect(OPENS('requestAnimationFrame').test('requestAnimationFrame(frame);')).toBe(true);
   });
 });
