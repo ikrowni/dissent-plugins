@@ -471,3 +471,34 @@ describe('the clock glow', () => {
     expect(() => stopGlow()).not.toThrow();
   });
 });
+
+describe('the pick-landed sweep', () => {
+  it('adds one sweep element to the stage', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    expect(document.querySelectorAll('.gr-sweep')).toHaveLength(1);
+  });
+
+  // ⚠️ ONE-SHOT MEANS ONE. stadium.css's .sweep translates forever and is documented
+  // there as the first thing to cut. Leaving these on the stage would rebuild that
+  // cost one element at a time over a fifteen-round draft.
+  it('removes itself when the animation ends', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    const el = document.querySelector('.gr-sweep');
+    el.dispatchEvent(new window.Event('animationend'));
+    expect(document.querySelector('.gr-sweep')).toBeNull();
+  });
+
+  it('never stacks two sweeps when picks land back to back', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    flashSweep();
+    expect(document.querySelectorAll('.gr-sweep')).toHaveLength(1);
+  });
+
+  it('does nothing when there is no stage on screen', () => {
+    document.body.innerHTML = '';
+    expect(() => flashSweep()).not.toThrow();
+  });
+});

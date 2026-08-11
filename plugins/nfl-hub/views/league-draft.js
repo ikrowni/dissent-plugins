@@ -416,6 +416,29 @@ export function stopGlow() {
 }
 
 /**
+ * A single sweep across the stage, fired when a pick lands.
+ *
+ * ⚠️ ONE-SHOT, NOT AMBIENT. stadium.css's `.sweep` translates forever and that file
+ * names it as the first thing to cut if the WebView2 measurement comes back bad.
+ * The same gesture is worth keeping at the moment it means something — a pick
+ * landing — and worth nothing at all for the ninety seconds in between.
+ *
+ * ⚠️ IT DELETES ITSELF. An element left on the stage keeps a compositor layer alive,
+ * and fifteen rounds of them would rebuild the exact cost this avoids. It also
+ * refuses to stack: two picks landing in the same poll produce one sweep, not two.
+ */
+export function flashSweep() {
+  if (typeof document === 'undefined') return;
+  const stage = document.querySelector('[data-gr-stage]');
+  if (!stage) return;
+  if (stage.querySelector('.gr-sweep')) return;
+  const el = document.createElement('div');
+  el.className = 'gr-sweep';
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+  stage.appendChild(el);
+}
+
+/**
  * What a repaint would have to be caused by.
  *
  * ⚠️ THE CLOCK IS DELIBERATELY NOT IN IT. Including the deadline would make
@@ -452,10 +475,16 @@ function startPolling(app) {
       if (idleTicks % IDLE_POLL_EVERY !== 0) return;
     }
 
+    // ⚠️ COUNT THE PICKS, do not just compare the fingerprint. The fingerprint also
+    // changes on a pause or a commissioner change, and sweeping the stage for those
+    // would spend the gesture on nothing.
     const before = fingerprint(state.draft);
+    const picksBefore = Object.keys(state.draft?.picks ?? {}).length;
     await poll(app);
-    if (fingerprint(state.draft) !== before) refreshKeepingSearch(app);
-    else paintClock();
+    if (fingerprint(state.draft) !== before) {
+      refreshKeepingSearch(app);
+      if (Object.keys(state.draft?.picks ?? {}).length > picksBefore) flashSweep();
+    } else paintClock();
   }, POLL_MS);
 }
 
