@@ -434,3 +434,40 @@ describe('the live draft renders on the stage', () => {
     expect(hooks[0].classList.contains('gr-clock')).toBe(true);
   });
 });
+
+describe('the clock glow', () => {
+  it('goes through motion.loop(), never its own rAF', () => {
+    // ⚠️ THE GUARD IN core/motion.test.js ENFORCES THIS STATICALLY. This asserts the
+    // behaviour: the view asks motion for a loop and holds the stop function it gets.
+    const spy = vi.spyOn(motion, 'loop');
+    startGlow();
+    expect(spy).toHaveBeenCalledTimes(1);
+    stopGlow();
+    spy.mockRestore();
+  });
+
+  it('stopping twice is safe', () => {
+    startGlow();
+    stopGlow();
+    expect(() => stopGlow()).not.toThrow();
+  });
+
+  it('starting twice does not leave an orphan loop running', () => {
+    const spy = vi.spyOn(motion, 'loop');
+    startGlow();
+    startGlow();
+    expect(spy).toHaveBeenCalledTimes(2);
+    stopGlow();
+    spy.mockRestore();
+  });
+
+  it('survives a frame with no glow element on screen', () => {
+    // ⚠️ The hero is absent before a draft exists and after it completes, so the
+    // loop callback runs against a DOM with no [data-gr-glow]. It must skip the
+    // frame, not throw — a throwing callback is swallowed by motion.loop() and the
+    // failure would be completely silent.
+    document.body.innerHTML = '';
+    startGlow();
+    expect(() => stopGlow()).not.toThrow();
+  });
+});

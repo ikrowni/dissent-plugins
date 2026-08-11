@@ -84,6 +84,8 @@ let pollTimer = null;
 let tickTimer = null;
 let idleTicks = 0;
 let lastClockText = null;
+let stopGlowLoop = null;
+let glowPhase = 0;
 
 export function reset() {
   stopPolling();
@@ -381,6 +383,39 @@ export function paintClock() {
 }
 
 /**
+ * The on-the-clock glow — the only continuously animating thing this view owns.
+ *
+ * ⚠️ THROUGH motion.loop(), NEVER A RAW rAF. That is the plugin's whole motion
+ * budget in one line: capped at TARGET_FPS, stopped while the frame is hidden, and —
+ * since the focus gate — stopped while the window merely sits behind another
+ * application, which is when all three of this project's measured GPU incidents
+ * happened. core/motion.test.js has a static guard that fails if any view opens its
+ * own loop.
+ *
+ * ⚠️ OPACITY ONLY, VIA A CUSTOM PROPERTY. It writes one CSS variable on one element,
+ * which the compositor handles without a repaint. Animating the glow's colour, size
+ * or box-shadow instead would repaint a 120px band every frame for the whole draft —
+ * the exact pattern that measured 68% of desktop idle GPU elsewhere in this project.
+ */
+export function startGlow() {
+  stopGlow();
+  if (typeof document === 'undefined') return;
+  stopGlowLoop = motion.loop((dt) => {
+    const el = document.querySelector('[data-gr-glow]');
+    if (!el) return;
+    // ~4.5s per breath. Slow enough to sit next to for three hours.
+    glowPhase = (glowPhase + dt / 4500) % 1;
+    const eased = (1 - Math.cos(glowPhase * Math.PI * 2)) / 2;
+    el.style.setProperty('--gr-glow', (0.08 + eased * 0.26).toFixed(3));
+  });
+}
+
+export function stopGlow() {
+  if (stopGlowLoop) { stopGlowLoop(); stopGlowLoop = null; }
+  glowPhase = 0;
+}
+
+/**
  * What a repaint would have to be caused by.
  *
  * ⚠️ THE CLOCK IS DELIBERATELY NOT IN IT. Including the deadline would make
@@ -404,6 +439,7 @@ function startPolling(app) {
   idleTicks = 0;
 
   tickTimer = setInterval(paintClock, TICK_MS);
+  startGlow();
 
   pollTimer = setInterval(async () => {
     const status = state.draft?.status;
@@ -426,6 +462,7 @@ function startPolling(app) {
 export function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  stopGlow();
   lastClockText = null;
 }
 
