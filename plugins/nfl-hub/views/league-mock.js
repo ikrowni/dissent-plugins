@@ -17,6 +17,7 @@ import {
 } from '../core/mock-draft.js';
 import {
   renderBoard, renderOnTheClock, renderFilters, renderPool, renderRosterProgress,
+  rosterNeeds,
   matchesFilter,
 } from './draft-board.js';
 import { PPR_SCORING } from '../core/league/scoring.js';
@@ -143,7 +144,13 @@ function boardPane() {
         <div class="mock-pool-col">
           <input class="db-search" type="search" placeholder="Search players…"
                  value="${esc(state.query)}" data-act="mock-search">
-          ${renderFilters(state.filter, counts)}
+          ${renderFilters(state.filter, counts, rosterNeeds({
+    // ⚠️ THE FULL ROSTER SHAPE, bench included — `ALL` is roster size over every
+    // spot, which is why a full 15-man roster reads `All 15/15` rather than
+    // `15/10`. The starters alone would understate it.
+    slots: [...DEFAULT_SLOTS, 'BN', 'BN', 'BN', 'BN', 'BN'],
+    owned: rosterOf(m, m.myTeam),
+  }))}
           ${renderPool({
     available: shown,
     playerOf,

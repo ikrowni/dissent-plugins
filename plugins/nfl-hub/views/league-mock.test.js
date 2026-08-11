@@ -172,3 +172,28 @@ describe('the finished mock', () => {
     expect(html).toMatch(/value over replacement/i);
   });
 });
+
+// ⚠️ FOUND BY BROWSER QA, not by the suite. renderFilters was made
+// backward-compatible so the mock was "unchanged" — which left wave 1's
+// roster-need pills invisible in the ONE draft surface that works solo. A live
+// draft needs two teams; a rehearsal is exactly where roster need matters.
+describe('roster-need pills in the mock', () => {
+  const start = () => {
+    restart(null);
+    setField(null, 'teams', '12');
+    setField(null, 'slot', '1');
+    _state.mock = createMock({ ranking: RANKING, index: INDEX, teams: 12, rounds: 15, slot: 1 });
+  };
+
+  it('shows have/slots on the pills, not just availability', () => {
+    start();
+    expect(render()).toContain('db-filter-need');
+  });
+
+  it('counts the whole roster including bench in ALL', () => {
+    start();
+    const html = render();
+    // 10 starters + 5 bench = 15 roster spots, nobody drafted yet.
+    expect(html).toContain('0/15');
+  });
+});

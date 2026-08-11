@@ -189,10 +189,13 @@ h4 {
  * that lived only on the round label would vanish exactly when a wide league
  * needs it. Decorative: aria-hidden in the markup. */
 .db-dir {
-  position: absolute; left: 5px; bottom: 3px;
-  font-size: 10px; line-height: 1; color: var(--text-3); opacity: 0.45;
+  position: absolute; left: 6px; bottom: 4px;
+  font-size: 14px; line-height: 1; font-weight: 700;
+  color: var(--gold); opacity: 0.75;
 }
-.db-made .db-dir { opacity: 0.3; }
+/* On a made pick the cell already carries a position colour and a name, so the
+ * arrow steps back — but stays readable. */
+.db-made .db-dir { opacity: 0.5; font-size: 12px; }
 
 /* A made pick: the position colour is the whole point of the cell. */
 .db-made { border-left: 3px solid var(--db-pos, var(--text-3)); background: var(--ink-2); }
