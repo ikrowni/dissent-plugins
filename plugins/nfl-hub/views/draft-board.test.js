@@ -1,8 +1,14 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import {
   matchesFilter, renderBoard, renderOnTheClock, renderFilters, renderPool,
   renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue, roundArrow, rosterNeeds,
+  renderHero, renderTicker, renderFeed, renderStage,
 } from './draft-board.js';
+
+// ⚠️ views/game-scorebug.js ALSO exports a renderHero. Different module, no clash —
+// but do not let an editor auto-import the wrong one.
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const INDEX = {
   p1: { n: 'Christian McCaffrey', p: 'RB', t: 'SF', e: 3117251 },
@@ -397,5 +403,212 @@ describe('flex variants in the roster strip', () => {
       slots: ['REC_FLEX'], owned: [{ id: 'r', pos: 'RB' }], playerOf: of,
     });
     expect(html).not.toContain('Ray');
+  });
+});
+
+describe('renderHero', () => {
+  const onClock = { overall: 4, round: 1, pickInRound: 4, owner: 't3' };
+
+  it('names the team on the clock and the pick it is', () => {
+    const el = parse(renderHero({ onClock, teamLabel: () => 'Killer Krowns', clockText: '1:04' }));
+    expect(el.querySelector('.gr-team').textContent).toBe('Killer Krowns');
+    expect(el.querySelector('.gr-meta').textContent).toContain('ROUND 1');
+    expect(el.querySelector('.gr-meta').textContent).toContain('PICK 4');
+    expect(el.querySelector('.gr-clock').textContent).toBe('1:04');
+    expect(el.querySelector('.gr-overall').textContent).toBe('#4 OVERALL');
+  });
+
+  it('says YOU ARE ON THE CLOCK when it is yours', () => {
+    const mine = parse(renderHero({ onClock, teamLabel: () => 'You', isMine: () => true, clockText: '0:30' }));
+    expect(mine.querySelector('.gr-label').textContent).toBe('YOU ARE ON THE CLOCK');
+    const theirs = parse(renderHero({ onClock, teamLabel: () => 'Them', isMine: () => false, clockText: '0:30' }));
+    expect(theirs.querySelector('.gr-label').textContent).toBe('ON THE CLOCK');
+  });
+
+  it('paints the duotone from the drafting team, deterministically', () => {
+    const a = parse(renderHero({ onClock, teamLabel: () => 'A', clockText: '1:00' }));
+    const b = parse(renderHero({ onClock, teamLabel: () => 'A', clockText: '1:00' }));
+    const style = a.querySelector('.gr-hero').getAttribute('style');
+    expect(style).toMatch(/--gr-team:#[0-9a-f]{6}/);
+    expect(b.querySelector('.gr-hero').getAttribute('style')).toBe(style);
+  });
+
+  it('falls back to the neutral duotone when nobody owns the pick', () => {
+    // ⚠️ Spec §7: a colourless slab is worse than a deliberate neutral one.
+    const el = parse(renderHero({ onClock: { overall: 1, round: 1, pickInRound: 1, owner: null }, clockText: '—' }));
+    expect(el.querySelector('.gr-hero').getAttribute('style')).toContain('--gr-team:#243044');
+  });
+
+  it('renders a finished hero rather than an empty one when the draft is complete', () => {
+    const el = parse(renderHero({ onClock: null, complete: true }));
+    expect(el.querySelector('.gr-label').textContent).toBe('DRAFT COMPLETE');
+    expect(el.querySelector('.gr-clock')).toBeNull();
+  });
+
+  it('renders nothing at all when there is no clock and the draft is not complete', () => {
+    expect(renderHero({ onClock: null })).toBe('');
+  });
+
+  it('escapes a team name rather than rendering it as markup', () => {
+    const el = parse(renderHero({ onClock, teamLabel: () => '<img src=x onerror=1>', clockText: '1:00' }));
+    expect(el.querySelector('img')).toBeNull();
+  });
+
+  it('marks the clock urgent so CSS can colour it, without a second render path', () => {
+    const el = parse(renderHero({ onClock, clockText: '0:09', urgent: true }));
+    expect(el.querySelector('.gr-clock').classList.contains('urgent')).toBe(true);
+  });
+});
+
+describe('renderTicker', () => {
+  it('renders the flag and the sentence when there is one', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: '4 of the last 6 picks were RB — 2 top-12 backs left' }));
+    expect(el.querySelector('.gr-tick-flag').textContent).toBe('RUN');
+    expect(el.querySelector('.gr-tick-text').textContent)
+      .toBe('4 of the last 6 picks were RB — 2 top-12 backs left');
+  });
+
+  it('tints the sentence with the position colour', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'anything' }));
+    expect(el.querySelector('.gr-tick').getAttribute('style')).toContain('--gr-pos:#3fc4a0');
+  });
+
+  // ⚠️ THE POINT OF THE WHOLE COMPONENT. A collapsing strip shifts the board
+  // mid-draft, which is the worst moment to move a click target. Silence must cost
+  // exactly the same pixels as speech.
+  it('keeps its height and its element when it has nothing to say', () => {
+    const quiet = parse(renderTicker(null));
+    const strip = quiet.querySelector('.gr-tick');
+    expect(strip).not.toBeNull();
+    expect(strip.classList.contains('is-quiet')).toBe(true);
+    expect(strip.getAttribute('style') ?? '').not.toContain('display:none');
+    expect(quiet.querySelector('.gr-tick-flag')).toBeNull();
+  });
+
+  it('renders the same single root element loud or quiet', () => {
+    expect(parse(renderTicker(null)).children).toHaveLength(1);
+    expect(parse(renderTicker({ flag: 'RUN', pos: 'WR', text: 'x' })).children).toHaveLength(1);
+  });
+
+  it('escapes the sentence rather than rendering it as markup', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: '<img src=x onerror=1>' }));
+    expect(el.querySelector('img')).toBeNull();
+  });
+
+  it('marks the strip aria-live so a screen reader hears a run without being spammed', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }));
+    expect(el.querySelector('.gr-tick').getAttribute('aria-live')).toBe('polite');
+  });
+});
+
+describe('renderFeed', () => {
+  const items = [
+    { kind: 'pick', overall: 3, playerId: 'c', name: 'J. Gibbs', pos: 'RB', team: 'Krowns', auto: false },
+    { kind: 'pick', overall: 2, playerId: 'b', name: 'J. Chase', pos: 'WR', team: 'NapTown', auto: false },
+    { kind: 'pick', overall: 1, playerId: 'a', name: 'B. Robinson', pos: 'RB', team: 'Team 3', auto: true },
+  ];
+
+  it('renders one row per item, in the order given', () => {
+    const el = parse(renderFeed(items));
+    const rows = [...el.querySelectorAll('.gr-feed-item')];
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('J. Gibbs');
+    expect(rows[2].textContent).toContain('B. Robinson');
+  });
+
+  it('tints each row by its own position colour', () => {
+    const el = parse(renderFeed(items));
+    const first = el.querySelector('.gr-feed-item');
+    expect(first.getAttribute('style')).toContain('--gr-pos:#3fc4a0');
+  });
+
+  it('marks auto-picks so a lapsed clock is visible on the rail', () => {
+    const el = parse(renderFeed(items));
+    const rows = [...el.querySelectorAll('.gr-feed-item')];
+    expect(rows[2].classList.contains('is-auto')).toBe(true);
+    expect(rows[0].classList.contains('is-auto')).toBe(false);
+  });
+
+  it('says the draft has not started rather than rendering an empty rail', () => {
+    const el = parse(renderFeed([]));
+    expect(el.querySelector('.gr-feed-empty')).not.toBeNull();
+    expect(el.querySelector('.gr-feed-label')).not.toBeNull();
+  });
+
+  it('escapes names and team labels', () => {
+    const el = parse(renderFeed([{ ...items[0], name: '<img src=x>', team: '<b>x</b>' }]));
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelector('.gr-feed-item b').textContent).toBe('<img src=x>');
+  });
+});
+
+describe('the made-pick watermark', () => {
+  const wmOrder = [{ overall: 1, round: 1, pickInRound: 1, owner: 'A' },
+    { overall: 2, round: 1, pickInRound: 2, owner: 'B' }];
+  const wmPicks = { 1: { playerId: 'p1', teamId: 'A', at: 1, auto: false } };
+
+  it('puts a team logo watermark on a made pick', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    const made = el.querySelector('.db-made');
+    expect(made.querySelector('.gr-wm')).not.toBeNull();
+  });
+
+  // ⚠️ Position colour outranks decoration. On an empty cell a watermark competes
+  // with the pick number for no gain — there is no position colour there to anchor it.
+  it('puts no watermark on an empty cell', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    const empty = [...el.querySelectorAll('.db-cell')].find((c) => !c.classList.contains('db-made'));
+    expect(empty.querySelector('.gr-wm')).toBeNull();
+  });
+
+  it('puts no watermark on a free agent, rather than a broken image', () => {
+    const fa = (id) => (id === 'p1' ? { n: 'Nobody', p: 'RB', t: null } : null);
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf: fa }));
+    expect(el.querySelector('.db-made .gr-wm')).toBeNull();
+  });
+
+  it('leaves the position colour as the cell border, untouched', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    expect(el.querySelector('.db-made').getAttribute('style')).toContain('--db-pos:#3fc4a0');
+  });
+});
+
+describe('renderStage', () => {
+  it('assembles hero, ticker, board and feed inside one stage', () => {
+    const el = parse(renderStage({ hero: '<i id="h"></i>', ticker: '<i id="t"></i>', board: '<i id="b"></i>', feed: '<i id="f"></i>' }));
+    const stage = el.querySelector('.gr-stage');
+    expect(stage).not.toBeNull();
+    expect(stage.querySelector('#h')).not.toBeNull();
+    expect(stage.querySelector('#t')).not.toBeNull();
+    expect(stage.querySelector('.gr-board #b')).not.toBeNull();
+    expect(stage.querySelector('#f')).not.toBeNull();
+  });
+
+  it('paints the yard lines and the vignette once, as siblings that never animate', () => {
+    const el = parse(renderStage({ hero: '', ticker: '', board: '', feed: '' }));
+    expect(el.querySelector('.gr-lines')).not.toBeNull();
+    expect(el.querySelector('.gr-vig')).not.toBeNull();
+  });
+});
+
+describe('the run-detected flash', () => {
+  // ⚠️ ON DETECTION, NOT ON EVERY RENDER. The live draft re-renders on every
+  // fingerprint change; a flash keyed to "there is a run" would re-fire for as long
+  // as the run lasted, which is the ambient cost this whole design avoids.
+  it('flashes only when the caller says the run is new', () => {
+    const loud = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }, { isNew: true }));
+    expect(loud.querySelector('.gr-tick').classList.contains('is-new')).toBe(true);
+    const same = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }, { isNew: false }));
+    expect(same.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+
+  it('defaults to not flashing', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }));
+    expect(el.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+
+  it('never flashes a quiet strip', () => {
+    const el = parse(renderTicker(null, { isNew: true }));
+    expect(el.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
   });
 });

@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, reset, remainingMs, _state } from './league-draft.js';
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  render, reset, remainingMs, _state, startGlow, stopGlow, flashSweep, bindParallax,
+} from './league-draft.js';
 import * as draftQueue from './league-draft.js';
 import { setIndex } from '../core/player-index.js';
+import { motion } from '../core/motion.js';
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const league = (teamCount = 4, over = {}) => ({
   id: 'lg',
@@ -107,7 +113,11 @@ describe('the live board', () => {
     setupLive();
     const html = render();
     expect(html).toContain('db-made');
-    expect(html).toContain('Board');
+    // ⚠️ The board used to sit under an <h4>Board</h4>. It is now inside the stage,
+    // where the hero above it already says what it is — a heading there would be
+    // labelling the only thing on the surface.
+    expect(html).toContain('gr-stage');
+    expect(html).toContain('gr-board');
   });
 
   // ⚠️ THE SHAPE MISMATCH THIS EXISTS FOR. The module sends `teamId`, the board
@@ -357,5 +367,163 @@ describe('draft queue mutations', () => {
     Object.assign(_state, { teamId: null, queue: [] });
     expect(() => draftQueue.queueAdd(null, 'p1')).not.toThrow();
     expect(_state.queue).toEqual(['p1']);
+  });
+});
+
+describe('the live draft renders on the stage', () => {
+  const liveDraft = {
+    status: 'active',
+    rounds: 2,
+    order: [
+      { overall: 1, round: 1, pickInRound: 1, owner: 't1' },
+      { overall: 2, round: 1, pickInRound: 2, owner: 't2' },
+      { overall: 3, round: 2, pickInRound: 1, owner: 't2' },
+      { overall: 4, round: 2, pickInRound: 2, owner: 't1' },
+    ],
+    picks: { 1: { playerId: 'p1', teamId: 't1', at: 1, auto: false } },
+    onClock: { overall: 2, round: 1, teamId: 't2' },
+    isCommissioner: false,
+    msRemaining: 64000,
+  };
+
+  beforeEach(() => {
+    setIndex({ p1: { n: 'B. Robinson', p: 'RB', t: 'ATL' } });
+    setup({
+      draft: liveDraft,
+      league: league(2, { settings: { rosterPositions: ['QB', 'RB', 'BN'] } }),
+      localDeadline: Date.now() + 64000,
+      frozenRemaining: null,
+      ranking: [],
+      queue: [],
+      filter: 'ALL',
+    });
+  });
+
+  it('puts the board inside a stage', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-stage')).not.toBeNull();
+    expect(el.querySelector('.gr-stage .db')).not.toBeNull();
+  });
+
+  it('shows the hero with the team on the clock', () => {
+    const el = parse(render());
+    // `league(2)` names its teams "Team 1" / "Team 2"; t2 is on the clock at #2.
+    expect(el.querySelector('.gr-team').textContent).toBe('Team 2');
+    expect(el.querySelector('.gr-overall').textContent).toBe('#2 OVERALL');
+  });
+
+  it('renders the ticker strip even with nothing to say', () => {
+    const el = parse(render());
+    const tick = el.querySelector('.gr-tick');
+    expect(tick).not.toBeNull();
+    expect(tick.classList.contains('is-quiet')).toBe(true);
+  });
+
+  it('renders the live rail with the pick that has landed', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-feed').textContent).toContain('B. Robinson');
+  });
+
+  // ⚠️ paintClock() writes ONE TEXT NODE via [data-draft-clock]. The hero now owns
+  // that hook; if it went missing the clock would silently stop moving between
+  // polls while the board looked perfect.
+  it('keeps exactly one [data-draft-clock] hook, in the hero', () => {
+    const el = parse(render());
+    const hooks = el.querySelectorAll('[data-draft-clock]');
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0].classList.contains('gr-clock')).toBe(true);
+  });
+});
+
+describe('the clock glow', () => {
+  it('goes through motion.loop(), never its own rAF', () => {
+    // ⚠️ THE GUARD IN core/motion.test.js ENFORCES THIS STATICALLY. This asserts the
+    // behaviour: the view asks motion for a loop and holds the stop function it gets.
+    const spy = vi.spyOn(motion, 'loop');
+    startGlow();
+    expect(spy).toHaveBeenCalledTimes(1);
+    stopGlow();
+    spy.mockRestore();
+  });
+
+  it('stopping twice is safe', () => {
+    startGlow();
+    stopGlow();
+    expect(() => stopGlow()).not.toThrow();
+  });
+
+  it('starting twice does not leave an orphan loop running', () => {
+    const spy = vi.spyOn(motion, 'loop');
+    startGlow();
+    startGlow();
+    expect(spy).toHaveBeenCalledTimes(2);
+    stopGlow();
+    spy.mockRestore();
+  });
+
+  it('survives a frame with no glow element on screen', () => {
+    // ⚠️ The hero is absent before a draft exists and after it completes, so the
+    // loop callback runs against a DOM with no [data-gr-glow]. It must skip the
+    // frame, not throw — a throwing callback is swallowed by motion.loop() and the
+    // failure would be completely silent.
+    document.body.innerHTML = '';
+    startGlow();
+    expect(() => stopGlow()).not.toThrow();
+  });
+});
+
+describe('the pick-landed sweep', () => {
+  it('adds one sweep element to the stage', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    expect(document.querySelectorAll('.gr-sweep')).toHaveLength(1);
+  });
+
+  // ⚠️ ONE-SHOT MEANS ONE. stadium.css's .sweep translates forever and is documented
+  // there as the first thing to cut. Leaving these on the stage would rebuild that
+  // cost one element at a time over a fifteen-round draft.
+  it('removes itself when the animation ends', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    const el = document.querySelector('.gr-sweep');
+    el.dispatchEvent(new window.Event('animationend'));
+    expect(document.querySelector('.gr-sweep')).toBeNull();
+  });
+
+  it('never stacks two sweeps when picks land back to back', () => {
+    document.body.innerHTML = '<div data-gr-stage></div>';
+    flashSweep();
+    flashSweep();
+    expect(document.querySelectorAll('.gr-sweep')).toHaveLength(1);
+  });
+
+  it('does nothing when there is no stage on screen', () => {
+    document.body.innerHTML = '';
+    expect(() => flashSweep()).not.toThrow();
+  });
+});
+
+describe('the backdrop parallax', () => {
+  // ⚠️ SCROLL-LINKED, NOT A LOOP. §6 lists this as costing nothing precisely because
+  // it does no work between scroll events. If this ever calls motion.loop() it has
+  // become the thing it was written to avoid.
+  it('shifts the yard lines from the board scroll position, with no loop', () => {
+    document.body.innerHTML = `<div data-gr-stage>
+      <div class="gr-lines"></div>
+      <div class="db-scroll" data-gr-scroll></div>
+    </div>`;
+    const spy = vi.spyOn(motion, 'loop');
+    bindParallax();
+    const scroller = document.querySelector('[data-gr-scroll]');
+    Object.defineProperty(scroller, 'scrollLeft', { value: 300, configurable: true });
+    scroller.dispatchEvent(new window.Event('scroll'));
+    expect(document.querySelector('.gr-lines').style.transform).toBe('translate3d(-90px, 0, 0)');
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('is a no-op when the stage is not on screen', () => {
+    document.body.innerHTML = '';
+    expect(() => bindParallax()).not.toThrow();
   });
 });

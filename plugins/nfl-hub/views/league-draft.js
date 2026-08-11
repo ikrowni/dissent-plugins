@@ -20,8 +20,10 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
-  renderQueue, picksUntilTurn, rosterNeeds,
+  renderQueue, picksUntilTurn, rosterNeeds, renderStage, renderHero, renderTicker, renderFeed,
 } from './draft-board.js';
+import { tickerLine, feedItems } from '../core/draft-intel.js';
+import { motion } from '../core/motion.js';
 import { getIndex } from '../core/player-index.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft, setQueue,
@@ -82,9 +84,13 @@ let pollTimer = null;
 let tickTimer = null;
 let idleTicks = 0;
 let lastClockText = null;
+let stopGlowLoop = null;
+let glowPhase = 0;
+let lastRunPos = null;
 
 export function reset() {
   stopPolling();
+  lastRunPos = null;
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
@@ -150,13 +156,18 @@ function completePane(d) {
   const playerOf = (id) => getIndex()?.[String(id)] ?? null;
   return panel({
     title: 'Draft complete',
+    flush: true,
     body: `
-      ${renderOnTheClock({ onClock: null, complete: true })}
-      ${renderBoard({
-    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-    playerOf,
+      ${renderStage({
+    hero: renderHero({ onClock: null, complete: true }),
+    ticker: renderTicker(null),
+    board: renderBoard({
+      order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      playerOf,
+    }),
+    feed: renderFeed(feedItems({ picks: d.picks, playerOf, teamLabel: (t) => teamName(t) })),
   })}
       ${d.isCommissioner
     ? `<button class="btn primary" data-act="draft-finalize" ${state.busy ? 'disabled' : ''}>
@@ -273,17 +284,46 @@ function livePane(d) {
   const slots = state.league?.settings?.rosterPositions?.filter((x) => x !== 'BN' && x !== 'IR' && x !== 'TAXI') ?? [];
   const paused = d.status === 'paused';
 
+  // ⚠️ THE POOL THE TICKER READS IS THE ONE THE BOARD ALREADY BUILT. Rebuilding it
+  // here would be a second answer to "who is left", and the two would drift.
+  const positionOf = (id) => getIndex()?.[String(id)]?.p ?? null;
+  const pool = availablePool({ ranking: state.ranking, taken: takenIds(), positionOf });
+  const remaining = remainingMs();
+
+  const stage = renderStage({
+    hero: renderHero({
+      onClock: clock,
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      clockText: clockText(),
+      urgent: remaining !== null && remaining > 0 && remaining < 15000,
+      queued: state.queue.length || null,
+    }),
+    ticker: (() => {
+      const line = tickerLine({ picks: d.picks, positionOf, pool });
+      // ⚠️ COMPARED AGAINST THE LAST RUN, not against "is there a run". The view
+      // re-renders on every fingerprint change, so keying the flash on presence
+      // alone would re-fire it for the whole length of the run.
+      const isNew = Boolean(line) && line.pos !== lastRunPos;
+      lastRunPos = line?.pos ?? null;
+      return renderTicker(line, { isNew });
+    })(),
+    board: renderBoard({
+      order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      onClock: clock, playerOf,
+    }),
+    feed: renderFeed(feedItems({ picks: d.picks, playerOf, teamLabel: (t) => teamName(t) })),
+  });
+
   return panel({
     title: 'Draft',
-    right: `<span class="clock${paused ? ' paused' : ''}" data-draft-clock>${esc(clockText())}</span>`,
+    flush: true,
     body: `
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
       ${paused ? '<p class="notice">The draft is paused. The clock resumes where it stopped.</p>' : ''}
-      ${renderOnTheClock({
-    onClock: clock,
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-  })}
+      ${stage}
       <div class="mock-cols">
         <div class="mock-pool-col">
           ${pickPool(mine && !paused)}
@@ -304,14 +344,7 @@ function livePane(d) {
               </button>
             </div>` : ''}
         </div>
-      </div>
-      <h4>Board</h4>
-      ${renderBoard({
-    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-    onClock: clock, playerOf,
-  })}`,
+      </div>`,
   });
 }
 
@@ -360,6 +393,87 @@ export function paintClock() {
 }
 
 /**
+ * The on-the-clock glow — the only continuously animating thing this view owns.
+ *
+ * ⚠️ THROUGH motion.loop(), NEVER A RAW rAF. That is the plugin's whole motion
+ * budget in one line: capped at TARGET_FPS, stopped while the frame is hidden, and —
+ * since the focus gate — stopped while the window merely sits behind another
+ * application, which is when all three of this project's measured GPU incidents
+ * happened. core/motion.test.js has a static guard that fails if any view opens its
+ * own loop.
+ *
+ * ⚠️ OPACITY ONLY, VIA A CUSTOM PROPERTY. It writes one CSS variable on one element,
+ * which the compositor handles without a repaint. Animating the glow's colour, size
+ * or box-shadow instead would repaint a 120px band every frame for the whole draft —
+ * the exact pattern that measured 68% of desktop idle GPU elsewhere in this project.
+ */
+export function startGlow() {
+  stopGlow();
+  if (typeof document === 'undefined') return;
+  stopGlowLoop = motion.loop((dt) => {
+    const el = document.querySelector('[data-gr-glow]');
+    if (!el) return;
+    // ~4.5s per breath. Slow enough to sit next to for three hours.
+    glowPhase = (glowPhase + dt / 4500) % 1;
+    const eased = (1 - Math.cos(glowPhase * Math.PI * 2)) / 2;
+    el.style.setProperty('--gr-glow', (0.08 + eased * 0.26).toFixed(3));
+  });
+}
+
+export function stopGlow() {
+  if (stopGlowLoop) { stopGlowLoop(); stopGlowLoop = null; }
+  glowPhase = 0;
+}
+
+/**
+ * A single sweep across the stage, fired when a pick lands.
+ *
+ * ⚠️ ONE-SHOT, NOT AMBIENT. stadium.css's `.sweep` translates forever and that file
+ * names it as the first thing to cut if the WebView2 measurement comes back bad.
+ * The same gesture is worth keeping at the moment it means something — a pick
+ * landing — and worth nothing at all for the ninety seconds in between.
+ *
+ * ⚠️ IT DELETES ITSELF. An element left on the stage keeps a compositor layer alive,
+ * and fifteen rounds of them would rebuild the exact cost this avoids. It also
+ * refuses to stack: two picks landing in the same poll produce one sweep, not two.
+ */
+export function flashSweep() {
+  if (typeof document === 'undefined') return;
+  const stage = document.querySelector('[data-gr-stage]');
+  if (!stage) return;
+  if (stage.querySelector('.gr-sweep')) return;
+  const el = document.createElement('div');
+  el.className = 'gr-sweep';
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+  stage.appendChild(el);
+}
+
+/**
+ * The yard lines drift against the board as it scrolls sideways.
+ *
+ * ⚠️ SCROLL-LINKED, WHICH MEANS NO LOOP AT ALL. §6 lists this as free precisely
+ * because it does zero work between scroll events — no rAF, no interval, nothing
+ * running while the board sits still. It writes one transform on one element.
+ *
+ * ⚠️ transform, not background-position. Moving the background repaints the whole
+ * stage on every scroll frame; a transform on a positioned layer stays on the
+ * compositor. That distinction is the difference between free and the 68%-of-idle-
+ * GPU pattern this project has measured three times.
+ */
+export function bindParallax() {
+  if (typeof document === 'undefined') return;
+  const stage = document.querySelector('[data-gr-stage]');
+  const lines = stage?.querySelector('.gr-lines');
+  const scroller = stage?.querySelector('[data-gr-scroll]');
+  if (!lines || !scroller) return;
+  const paint = () => {
+    lines.style.transform = `translate3d(${-Math.round(scroller.scrollLeft * 0.3)}px, 0, 0)`;
+  };
+  scroller.addEventListener('scroll', paint, { passive: true });
+  paint();
+}
+
+/**
  * What a repaint would have to be caused by.
  *
  * ⚠️ THE CLOCK IS DELIBERATELY NOT IN IT. Including the deadline would make
@@ -383,6 +497,7 @@ function startPolling(app) {
   idleTicks = 0;
 
   tickTimer = setInterval(paintClock, TICK_MS);
+  startGlow();
 
   pollTimer = setInterval(async () => {
     const status = state.draft?.status;
@@ -395,17 +510,25 @@ function startPolling(app) {
       if (idleTicks % IDLE_POLL_EVERY !== 0) return;
     }
 
+    // ⚠️ COUNT THE PICKS, do not just compare the fingerprint. The fingerprint also
+    // changes on a pause or a commissioner change, and sweeping the stage for those
+    // would spend the gesture on nothing.
     const before = fingerprint(state.draft);
+    const picksBefore = Object.keys(state.draft?.picks ?? {}).length;
     await poll(app);
-    if (fingerprint(state.draft) !== before) refreshKeepingSearch(app);
-    else paintClock();
+    if (fingerprint(state.draft) !== before) {
+      refreshKeepingSearch(app);
+      if (Object.keys(state.draft?.picks ?? {}).length > picksBefore) flashSweep();
+    } else paintClock();
   }, POLL_MS);
 }
 
 export function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  stopGlow();
   lastClockText = null;
+  lastRunPos = null;
 }
 
 /**
@@ -424,6 +547,8 @@ function refreshKeepingSearch(app) {
   app?.router?.refresh();
   if (wasSearch) restoreSearchFocus(caret);
   paintClock();
+  // The old scroller and its listener went with the old DOM.
+  bindParallax();
 }
 
 async function poll(app) {
@@ -479,6 +604,7 @@ export async function load(app, { leagueId, league, teamId }) {
   startPolling(app);
   app?.router?.refresh();
   paintClock();
+  bindParallax();
 }
 
 /** Every id already drafted — the set the pool must exclude. */

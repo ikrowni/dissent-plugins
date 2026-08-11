@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   initials, positionColor, teamColor, avatar, teamMark, positionPill, playerChip, playerNote,
+  managerColor, MANAGER_PALETTE, NEUTRAL_DUOTONE, POSITION_COLORS,
 } from './player-visuals.js';
 
 // Index records, the shape assets/players.index.json actually stores.
@@ -144,5 +145,34 @@ describe('opening the player page', () => {
   it('is reachable by keyboard when it is clickable', () => {
     expect(playerChip(mahomes)).toContain('tabindex="0"');
     expect(playerChip(noShot)).not.toContain('tabindex');
+  });
+});
+
+describe('managerColor', () => {
+  it('is stable for the same team id', () => {
+    expect(managerColor('t7')).toBe(managerColor('t7'));
+  });
+
+  it('is drawn from the fixed palette', () => {
+    expect(MANAGER_PALETTE).toContain(managerColor('anything'));
+  });
+
+  it('spreads a twelve-team league over more than one colour', () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `team-${i}`);
+    expect(new Set(ids.map(managerColor)).size).toBeGreaterThan(3);
+  });
+
+  it('falls back to the neutral duotone for an unknown team', () => {
+    // ⚠️ Spec §7: a colourless slab is worse than a deliberate neutral one.
+    expect(managerColor(null)).toBe(NEUTRAL_DUOTONE);
+    expect(managerColor('')).toBe(NEUTRAL_DUOTONE);
+    expect(managerColor(undefined)).toBe(NEUTRAL_DUOTONE);
+  });
+
+  it('never collides with a position colour', () => {
+    // ⚠️ Position colour is the board's primary encoding. A hero that happened to
+    // be RB-green would read as a position rather than a team.
+    const positions = new Set(Object.values(POSITION_COLORS).map((c) => c.toLowerCase()));
+    for (const c of MANAGER_PALETTE) expect(positions.has(c.toLowerCase())).toBe(false);
   });
 });

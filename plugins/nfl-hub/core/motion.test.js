@@ -1,15 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { createMotion } from './motion.js';
 
-function harness({ visibility = 'visible', reduce = false } = {}) {
-  const listeners = new Set();
+function harness({ visibility = 'visible', reduce = false, focused = true } = {}) {
+  const docListeners = new Set();
+  const winListeners = new Map(); // event name -> Set<fn>
   let frame = 0;
+  const classes = new Set();
+
   const doc = {
     get visibilityState() { return visibility; },
-    setVisibility(v) { visibility = v; listeners.forEach((fn) => fn()); },
-    addEventListener: (_e, fn) => listeners.add(fn),
-    removeEventListener: (_e, fn) => listeners.delete(fn),
+    setVisibility(v) { visibility = v; docListeners.forEach((fn) => fn()); },
+    addEventListener: (_e, fn) => docListeners.add(fn),
+    removeEventListener: (_e, fn) => docListeners.delete(fn),
+    hasFocus: () => focused,
+    body: {
+      classList: {
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+        contains: (name) => classes.has(name),
+      },
+    },
   };
+
+  const fire = (name) => (winListeners.get(name) ?? new Set()).forEach((fn) => fn());
   const win = {
     matchMedia: () => ({ matches: reduce, addEventListener() {}, removeEventListener() {} }),
     requestAnimationFrame: (cb) => {
@@ -18,8 +33,15 @@ function harness({ visibility = 'visible', reduce = false } = {}) {
       return frame;
     },
     cancelAnimationFrame: vi.fn(),
+    addEventListener(name, fn) {
+      if (!winListeners.has(name)) winListeners.set(name, new Set());
+      winListeners.get(name).add(fn);
+    },
+    removeEventListener(name, fn) { winListeners.get(name)?.delete(fn); },
+    blur() { focused = false; fire('blur'); },
+    focus() { focused = true; fire('focus'); },
   };
-  return { doc, win };
+  return { doc, win, hasClass: (n) => classes.has(n) };
 }
 
 describe('createMotion', () => {
@@ -161,5 +183,196 @@ describe('createMotion', () => {
     // The loop itself is not force-stopped by destroy, but the visibility wiring is
     // gone, so no resume storm can occur.
     expect(cb.mock.calls.length).toBeGreaterThanOrEqual(after);
+  });
+
+  // ⚠️ THE GUARD. visibilitychange fires when a tab is hidden or a window is
+  // MINIMISED. A window merely sitting behind another application still reports
+  // visibilityState === 'visible', so before the focus gate this loop kept running
+  // at 30fps with nobody looking — the exact shape of all three measured GPU
+  // incidents. Delete the win.blur handler in motion.js and this test fails.
+  it('stops looping while the window is blurred, even though it is still visible', () => {
+    const { doc, win } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(200);
+    const before = cb.mock.calls.length;
+    expect(before).toBeGreaterThan(0);
+    win.blur();
+    expect(doc.visibilityState).toBe('visible'); // the whole point
+    vi.advanceTimersByTime(1000);
+    expect(cb.mock.calls.length).toBe(before);
+  });
+
+  it('resumes looping when the window regains focus', () => {
+    const { doc, win } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(200);
+    win.blur();
+    vi.advanceTimersByTime(1000);
+    const paused = cb.mock.calls.length;
+    win.focus();
+    vi.advanceTimersByTime(200);
+    expect(cb.mock.calls.length).toBeGreaterThan(paused);
+  });
+
+  // ⚠️ THE CLASS IS WHAT ACTUALLY COVERS THIS PLUGIN. No view calls motion.loop()
+  // yet; every ambient effect in the hub is a CSS `animation: … infinite`. Gating
+  // only the rAF loop would gate nothing that currently runs.
+  it('stamps a body class while idle so CSS animations pause too', () => {
+    const { doc, win, hasClass } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    expect(hasClass('motion-idle')).toBe(false);
+    win.blur();
+    expect(hasClass('motion-idle')).toBe(true);
+    win.focus();
+    expect(hasClass('motion-idle')).toBe(false);
+    doc.setVisibility('hidden');
+    expect(hasClass('motion-idle')).toBe(true);
+    m.destroy();
+  });
+
+  it('starts paused when the host reports the window is already unfocused', () => {
+    const { doc, win } = harness({ focused: false });
+    const m = createMotion({ doc, win, fps: 30 });
+    const cb = vi.fn();
+    m.loop(cb);
+    vi.advanceTimersByTime(500);
+    expect(cb).not.toHaveBeenCalled();
+    win.focus();
+    vi.advanceTimersByTime(200);
+    expect(cb.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('detaches the focus listeners on destroy', () => {
+    const { doc, win, hasClass } = harness();
+    const m = createMotion({ doc, win, fps: 30 });
+    m.destroy();
+    win.blur();
+    expect(hasClass('motion-idle')).toBe(false);
+  });
+});
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+
+function sources(dir, out = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) { if (name !== 'tests' && name !== 'assets') sources(p, out); continue; }
+    if (name.endsWith('.js') && !name.endsWith('.test.js')) out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Strip comments before scanning.
+ *
+ * Without this the guard fires on any file that merely DISCUSSES the rule —
+ * core/config.js explains why TARGET_FPS is 30 by naming `requestAnimationFrame`,
+ * and views/game-winprob.js names it to say it deliberately does not use one. Both
+ * are documentation, not a loop.
+ */
+const codeOnly = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+/**
+ * ⚠️ TWO DIFFERENT RULES, NOT ONE.
+ *
+ * rAF is ANIMATION: exactly one module may own it, and it is core/motion.js, which
+ * caps the frame rate, stops while the frame is hidden and now stops while the
+ * window is merely behind another app.
+ *
+ * setInterval is POLLING: how often to REFETCH, not how to animate. Three modules
+ * legitimately own one, and each is listed with why — an unexplained allowlist
+ * grows until it means nothing.
+ */
+/**
+ * Does this source actually OPEN a timer, as opposed to naming one?
+ *
+ * ⚠️ A HOST CALL, NOT SOMEBODY ELSE'S METHOD. `views/league.js` calls
+ * `app.scheduler.setInterval(ms)` — that is the scheduler's own API for setting its
+ * cadence, not a second timer. Flagging it would have meant either a false failure
+ * or an allowlist entry that quietly excused that whole file from the real rule.
+ *
+ * ⚠️ BUT THE GLOBAL RECEIVERS STILL COUNT. `window.requestAnimationFrame(cb)` is
+ * exactly as much of a loop as the bare call — and it is the form core/motion.js
+ * itself uses (`win.requestAnimationFrame`). Excluding every dotted receiver would
+ * have left the guard unable to see the most likely way a view would smuggle one in.
+ */
+const OPENS = (name) => new RegExp(
+  `(^|[^.\\w]|\\b(?:window|globalThis|self|win)\\.)${name}\\s*\\(`,
+  'm',
+);
+
+const RAF_OWNERS = [join('core', 'motion.js')];
+const INTERVAL_OWNERS = [
+  // The single POLL loop — how often the hub refetches.
+  join('core', 'scheduler.js'),
+  // Replay stepping. Developer tooling; drives recorded fixtures, not the UI.
+  join('core', 'replay.js'),
+  // ⚠️ DELIBERATELY NOT FOCUS-GATED. Every `draft:get` resolves lapsed picks
+  // server-side — the node's scheduler floor is five minutes and cannot drive a
+  // 90-second pick clock, so the board being OPEN is what keeps a live draft
+  // moving. Pausing this on blur would stall everybody else's draft the moment one
+  // manager alt-tabbed. Its sibling 250ms tick writes one text node and paints
+  // nothing else, which is why it is not worth gating either.
+  join('views', 'league-draft.js'),
+];
+
+describe('the motion contract', () => {
+  it('only core/motion.js opens a requestAnimationFrame loop', () => {
+    const offenders = sources(root)
+      .filter((f) => !RAF_OWNERS.some((owner) => f.endsWith(owner)))
+      .filter((f) => OPENS('requestAnimationFrame').test(codeOnly(readFileSync(f, 'utf8'))))
+      .map((f) => f.replace(root, ''));
+    expect(offenders).toEqual([]);
+  });
+
+  it('only the three declared owners open a setInterval', () => {
+    const offenders = sources(root)
+      .filter((f) => !INTERVAL_OWNERS.some((owner) => f.endsWith(owner)))
+      .filter((f) => OPENS('setInterval').test(codeOnly(readFileSync(f, 'utf8'))))
+      .map((f) => f.replace(root, ''));
+    expect(offenders).toEqual([]);
+  });
+
+  it('the guard reads code, not comments', () => {
+    expect(codeOnly('// uses requestAnimationFrame\nconst a = 1;')).not.toMatch(/requestAnimationFrame/);
+    expect(codeOnly('/* setInterval */\nconst a = 1;')).not.toMatch(/setInterval/);
+    expect(codeOnly('setInterval(fn, 10);')).toMatch(/setInterval/);
+  });
+
+  // ⚠️ THE TWO PROPERTIES gridiron.css EXISTS TO NOT HAVE.
+  //
+  // backdrop-filter re-blurs whenever anything behind it moves, and a draft board is
+  // a surface where things move on every pick. It is what made stadium.css "the
+  // expensive layer and the one that needs measuring", and the whole reason the
+  // League tab got its own sheet instead of extending that one.
+  //
+  // `infinite` is the other half: the clock glow is driven from motion.loop() so it
+  // is capped and focus-gated, and a CSS infinite animation would route around that
+  // entirely. Everything else on the stage is painted once or fires on change.
+  it('gridiron.css has no backdrop-filter and no infinite animation', () => {
+    const css = readFileSync(join(root, 'styles', 'gridiron.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ''); // its own docs name both; read the rules
+    expect(css).not.toMatch(/backdrop-filter/);
+    expect(css).not.toMatch(/\binfinite\b/);
+  });
+
+  it('the guard tells a bare timer apart from a method that shares its name', () => {
+    // ⚠️ THE FALSE POSITIVE THAT ALMOST WIDENED THE ALLOWLIST. views/league.js calls
+    // app.scheduler.setInterval(ms) to set the poll cadence. Excusing that file
+    // wholesale would have exempted it from the real rule forever.
+    expect(OPENS('setInterval').test('app.scheduler.setInterval(4000);')).toBe(false);
+    expect(OPENS('setInterval').test('timer = setInterval(tick, 10);')).toBe(true);
+    expect(OPENS('setInterval').test('setInterval(tick, 10);')).toBe(true);
+    // ⚠️ The global receivers are still a loop. This is the form motion.js uses, and
+    // the most likely way a view would smuggle one past a naive bare-call check.
+    expect(OPENS('requestAnimationFrame').test('win.requestAnimationFrame(frame);')).toBe(true);
+    expect(OPENS('requestAnimationFrame').test('window.requestAnimationFrame(frame);')).toBe(true);
+    expect(OPENS('requestAnimationFrame').test('requestAnimationFrame(frame);')).toBe(true);
   });
 });

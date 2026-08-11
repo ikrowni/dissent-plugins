@@ -132,6 +132,27 @@ body.reduce-motion *::after {
   transition-duration: 80ms !important;
 }
 
+/* ── Idle ──────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THIS IS THE HALF OF THE MOTION BUDGET core/motion.js CANNOT REACH. That module
+ * gates `motion.loop()`, but the ambient effects here are CSS `animation: … infinite`
+ * — .sweep, .vs-pulse, .spinner. A rAF gate alone would gate none of them.
+ *
+ * core/motion.js stamps `motion-idle` on <body> whenever the frame is hidden OR the
+ * window is merely behind another application — the case visibilitychange never
+ * fires for, and the one all three of this project's GPU incidents were.
+ *
+ * ⚠️ `paused`, NOT `none`. Pausing keeps the current frame, so alt-tabbing back
+ * resumes where it was instead of snapping everything to frame zero at once — which
+ * would be a whole-surface repaint on every focus.
+ *
+ * Kept byte-for-byte in step with plugins/nfl-hub/styles/motion.css. */
+body.motion-idle *,
+body.motion-idle *::before,
+body.motion-idle *::after {
+  animation-play-state: paused !important;
+}
+
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;

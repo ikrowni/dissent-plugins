@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, reset, setField, take, simulate, setFilter, restart, _state, DEFAULT_SLOTS } from './league-mock.js';
 import { setIndex } from '../core/player-index.js';
@@ -10,6 +11,8 @@ const INDEX = Object.fromEntries(
 const RANKING = Object.keys(INDEX);
 
 beforeEach(() => { reset(); setIndex(INDEX); });
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const startedMock = (over = {}) => runBotsUntilMyTurn(createMock({
   teams: 12, rounds: 15, slot: 1,
@@ -58,9 +61,13 @@ describe('setup', () => {
 describe('the board', () => {
   beforeEach(() => { _state.mock = startedMock(); });
 
-  it('renders the board, the clock and the pool', () => {
+  it('renders the board, who is up, and the pool', () => {
     const html = render();
-    expect(html).toContain('db-clock');
+    // ⚠️ "Who is up" is the HERO now, not the old .db-clock banner. Asserting
+    // `db-clock` here would still pass — it is a prefix of `db-clocktag`, which the
+    // on-the-clock board cell renders — so this checks the hero's own markup.
+    expect(html).toContain('gr-hero');
+    expect(html).toContain('gr-overall');
     expect(html).toContain('db-pool');
     expect(html).toContain('Player');
   });
@@ -195,5 +202,39 @@ describe('roster-need pills in the mock', () => {
     const html = render();
     // 10 starters + 5 bench = 15 roster spots, nobody drafted yet.
     expect(html).toContain('0/15');
+  });
+});
+
+describe('the mock renders on the same stage as the live draft', () => {
+  beforeEach(() => { _state.mock = startedMock(); });
+
+  it('wraps the board in a stage with a hero and a ticker', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-stage')).not.toBeNull();
+    expect(el.querySelector('.gr-stage .db')).not.toBeNull();
+    expect(el.querySelector('.gr-tick')).not.toBeNull();
+  });
+
+  // ⚠️ THE MOCK HAS NO CLOCK. It is turn-based against bots — there is no deadline
+  // and no countdown. A hero rendering "—" where a live draft shows 1:04 would be
+  // the rehearsal lying about the event.
+  it('renders the hero with no clock, because a mock has no deadline', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-clock')).toBeNull();
+    expect(el.querySelector('.gr-overall')).not.toBeNull();
+  });
+
+  it('renders the live rail from the mock picks', () => {
+    // ⚠️ startedMock() runs the bots up to seat 1's turn, so on slot 1 the board can
+    // legitimately be empty. Take a pick first so the rail has something to show.
+    _state.mock = pick(_state.mock, availableIn(_state.mock)[0].id);
+    const el = parse(render());
+    expect(el.querySelector('.gr-feed').querySelectorAll('.gr-feed-item').length).toBeGreaterThan(0);
+  });
+
+  it('keeps the same stage once the draft is complete', () => {
+    _state.mock = startedMock({ teams: 2, rounds: 1 });
+    const el = parse(render());
+    expect(el.querySelector('.gr-stage')).not.toBeNull();
   });
 });

@@ -19,7 +19,9 @@ import {
   renderBoard, renderOnTheClock, renderFilters, renderPool, renderRosterProgress,
   rosterNeeds,
   matchesFilter,
+  renderStage, renderHero, renderTicker, renderFeed,
 } from './draft-board.js';
+import { tickerLine, feedItems } from '../core/draft-intel.js';
 import { PPR_SCORING } from '../core/league/scoring.js';
 
 const DEFAULT_SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF'];
@@ -134,11 +136,29 @@ function boardPane() {
     counts[f] = all.filter((e) => matchesFilter(e.pos, f)).length;
   }
 
+  // ⚠️ THE SAME STAGE AS THE LIVE DRAFT, on purpose. Two boards that looked
+  // different would make the rehearsal worthless.
+  const stage = renderStage({
+    hero: renderHero({
+      onClock: clock, teamLabel, isMine, complete: done,
+      // ⚠️ NO CLOCK. A mock is turn-based against bots — there is no deadline to
+      // count down, and a hero showing "—" would be the rehearsal lying.
+      clockText: null,
+    }),
+    ticker: renderTicker(tickerLine({ picks: m.draft.picks, positionOf, pool: all })),
+    board: renderBoard({
+      order: m.draft.order, picks: m.draft.picks, teamIds: m.teamIds,
+      teamLabel, isMine, onClock: clock, playerOf,
+    }),
+    feed: renderFeed(feedItems({ picks: m.draft.picks, playerOf, teamLabel })),
+  });
+
   return panel({
     title: 'Mock draft',
+    flush: true,
     right: `<span class="muted">${Object.keys(m.draft.picks).length} / ${m.draft.order.length} picks</span>`,
     body: `
-      ${renderOnTheClock({ onClock: clock, teamLabel, isMine, complete: done })}
+      ${stage}
       ${done ? gradesPane(m, teamLabel) : ''}
       <div class="mock-cols">
         <div class="mock-pool-col">
@@ -166,12 +186,7 @@ function boardPane() {
             <button class="btn" data-act="mock-reset">New mock</button>
           </div>
         </div>
-      </div>
-      <h4>Board</h4>
-      ${renderBoard({
-    order: m.draft.order, picks: m.draft.picks, teamIds: m.teamIds,
-    teamLabel, isMine, onClock: clock, playerOf,
-  })}`,
+      </div>`,
   });
 }
 

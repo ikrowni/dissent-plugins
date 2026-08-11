@@ -11,7 +11,10 @@
 // way to see the shape of a roster, or a run on running backs, at a glance.
 
 import { esc } from '../core/ui.js';
-import { playerChip, positionColor, positionPill, avatar } from '../core/player-visuals.js';
+import {
+  playerChip, positionColor, positionPill, avatar, managerColor, NEUTRAL_DUOTONE,
+} from '../core/player-visuals.js';
+import { logoPath } from '../core/config.js';
 import { POOL_FILTERS, matchesFilter } from '../core/league/draft-pool.js';
 import { eligiblePositions } from '../core/league/slots.js';
 
@@ -66,7 +69,7 @@ export function renderBoard({
     </div>`;
   }).join('');
 
-  return `<div class="db-scroll"><div class="db" style="--db-cols:${teamIds.length}">${head}${body}</div></div>`;
+  return `<div class="db-scroll" data-gr-scroll><div class="db" style="--db-cols:${teamIds.length}">${head}${body}</div></div>`;
 }
 
 /**
@@ -103,7 +106,17 @@ function cell(pick, made, onClock, playerOf, mine, dir = '') {
   }
   const p = playerOf(made.playerId);
   const color = positionColor(p?.p);
+  // ⚠️ WATERMARK ON MADE PICKS ONLY, UNDER THE TEXT. Position colour is the primary
+  // encoding here — you read a roster's shape, or spot a run, before you read a
+  // single name — so the logo sits at 7% opacity bottom-right where the position
+  // colour already owns the left border. On an empty cell it would compete with the
+  // pick number for no gain. A free agent has no logo, and a broken image is worse
+  // than none.
+  const wm = p?.t
+    ? `<img class="gr-wm" src="${esc(logoPath(p.t))}" alt="" loading="lazy" onerror="this.remove()">`
+    : '';
   return `<div class="db-cell db-made${mine ? ' db-mine' : ''}" style="--db-pos:${esc(color)}">
+    ${wm}
     <span class="db-name">${esc(p?.n ?? made.playerId)}</span>
     <span class="db-sub">${esc(String(p?.p ?? '').toUpperCase())}${p?.t ? ` · ${esc(p.t)}` : ''}</span>
     ${arrow}
@@ -130,6 +143,61 @@ export function renderOnTheClock({ onClock, teamLabel = (t) => t, isMine = () =>
     <span class="db-clock-label">${mine ? 'You are on the clock' : 'On the clock'}</span>
     <span class="db-clock-team">${esc(teamLabel(onClock.owner))}</span>
     <span class="db-clock-pick">Round ${onClock.round} · pick ${onClock.pickInRound} · #${onClock.overall} overall</span>
+  </div>`;
+}
+
+/**
+ * The hero — the top of the stage, and the loudest thing on the screen.
+ *
+ * ⚠️ THE DUOTONE COMES FROM managerColor(), NOT teamColor(). A fantasy team has no
+ * colour field; see core/player-visuals.js for why that is derived rather than
+ * stored. `NEUTRAL_DUOTONE` is the §7 fallback and it is a designed state, not a
+ * failure — a colourless slab is what this avoids.
+ *
+ * ⚠️ RENDERS THE STRING '' WHEN THERE IS NOTHING TO SAY. A hero that renders an
+ * empty 120px band before the draft starts is a hole in the page.
+ */
+export function renderHero({
+  onClock = null, teamLabel = (t) => String(t), isMine = () => false,
+  clockText = null, urgent = false, complete = false, queued = null,
+} = {}) {
+  if (complete) {
+    return `<div class="gr-hero" style="--gr-team:${esc(NEUTRAL_DUOTONE)}">
+      <div class="gr-hero-l"></div><div class="gr-hero-r"></div><div class="gr-seam"></div>
+      <div class="gr-hero-in">
+        <div>
+          <div class="gr-label">DRAFT COMPLETE</div>
+          <div class="gr-team">Every pick is in</div>
+        </div>
+      </div>
+      <div class="gr-fade"></div>
+    </div>`;
+  }
+  if (!onClock) return '';
+
+  const mine = isMine(onClock.owner);
+  const color = onClock.owner ? managerColor(onClock.owner) : NEUTRAL_DUOTONE;
+  const meta = [
+    `ROUND ${onClock.round}`,
+    `PICK ${onClock.pickInRound}`,
+    queued === null ? null : `${queued} QUEUED`,
+  ].filter(Boolean).join(' · ');
+
+  return `<div class="gr-hero" style="--gr-team:${esc(color)}">
+    <div class="gr-hero-l"></div><div class="gr-hero-r"></div><div class="gr-seam"></div>
+    <div class="gr-glow" data-gr-glow></div>
+    <div class="gr-hero-in">
+      <div>
+        <div class="gr-label">${mine ? 'YOU ARE ON THE CLOCK' : 'ON THE CLOCK'}</div>
+        <div class="gr-team">${esc(teamLabel(onClock.owner))}</div>
+        <div class="gr-meta">${esc(meta)}</div>
+      </div>
+      <div class="gr-clock-wrap">
+        ${clockText === null ? '' : `<div class="gr-clock${urgent ? ' urgent' : ''}" data-draft-clock>${esc(clockText)}</div>`}
+        <div class="gr-overall">#${esc(String(onClock.overall))} OVERALL</div>
+      </div>
+    </div>
+    <div class="gr-fade"></div>
   </div>`;
 }
 
@@ -306,4 +374,71 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
     : '';
 
   return `<div class="db-roster m-stagger">${rows}${extra}</div>`;
+}
+
+/**
+ * The ticker: one sentence, or deliberate silence.
+ *
+ * ⚠️ FIXED HEIGHT — IT GOES QUIET, IT DOES NOT COLLAPSE. Returning '' here, or
+ * hiding the strip, shifts the entire board up by 31px the moment a run ends. On a
+ * live draft board that moves everybody's click target at the exact second they are
+ * reaching for it. The height lives in gridiron.css and the quiet state only dims
+ * the background.
+ *
+ * ⚠️ A TICKER THAT ALWAYS SPEAKS IS NOISE. People stop reading it after about four
+ * picks. `line` is null most of the time and that is the design.
+ */
+export function renderTicker(line = null, { isNew = false } = {}) {
+  if (!line) {
+    return '<div class="gr-tick is-quiet" aria-live="polite"></div>';
+  }
+  // ⚠️ `is-new` fires the flash ONCE, and only the caller knows whether this run is
+  // new — the renderer is pure and sees the same run on every re-render.
+  return `<div class="gr-tick${isNew ? ' is-new' : ''}" aria-live="polite" style="--gr-pos:${esc(positionColor(line.pos))}">
+    <span class="gr-tick-flag">${esc(line.flag)}</span>
+    <span class="gr-tick-text">${esc(line.text)}</span>
+  </div>`;
+}
+
+/**
+ * The live rail — picks as they land.
+ *
+ * ⚠️ NEWEST FIRST, AND THE ORDER IS THE CALLER'S. core/draft-intel.js already sorts
+ * numerically by overall pick number; re-sorting here would be a second opinion on
+ * something that has one right answer.
+ */
+export function renderFeed(items = []) {
+  const head = '<div class="gr-feed-label">Live</div>';
+  if (!items || items.length === 0) {
+    return `<div class="gr-feed">${head}<p class="gr-feed-empty">Picks appear here as they land.</p></div>`;
+  }
+  const rows = items.map((it) => `<div class="gr-feed-item${it.auto ? ' is-auto' : ''}"
+      style="--gr-pos:${esc(positionColor(it.pos))}">
+    <b>${esc(it.name)}</b>${it.pos ? ` <span class="gr-feed-pos">${esc(it.pos)}</span>` : ''} → ${esc(it.team)}
+  </div>`).join('');
+  return `<div class="gr-feed">${head}${rows}</div>`;
+}
+
+/**
+ * The stage: one continuous lit surface with everything inside it.
+ *
+ * ⚠️ THE HERO IS INSIDE THE SURFACE, NOT A SLAB ON TOP. That is the whole difference
+ * between a broadcast set and a banner, and it is why the lines and the vignette are
+ * siblings spanning the entire stage rather than children of the hero.
+ *
+ * ⚠️ EVERY LAYER HERE IS PAINTED ONCE. Nothing in this function animates. The two
+ * moving parts — the clock glow and the one-shot sweep — are added by the view, and
+ * both are gated by motion.js (capped, hidden-gated, focus-gated).
+ */
+export function renderStage({ hero = '', ticker = '', board = '', feed = '' } = {}) {
+  return `<div class="gr-stage" data-gr-stage>
+    <div class="gr-lines"></div>
+    ${hero}
+    ${ticker}
+    <div class="gr-cols">
+      <div class="gr-board">${board}</div>
+      ${feed}
+    </div>
+    <div class="gr-vig"></div>
+  </div>`;
 }
