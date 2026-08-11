@@ -57,3 +57,66 @@ export function detectRun(picks = {}, {
   }
   return best;
 }
+
+/**
+ * The plain-English name of a position, for a sentence rather than a table.
+ *
+ * ⚠️ A ticker is read aloud in somebody's head. "2 top-12 RB left" is a cell in a
+ * spreadsheet; "2 top-12 backs left" is a broadcast.
+ */
+const NOUN = {
+  QB: ['quarterback', 'quarterbacks'],
+  RB: ['back', 'backs'],
+  WR: ['receiver', 'receivers'],
+  TE: ['tight end', 'tight ends'],
+  K: ['kicker', 'kickers'],
+  DEF: ['defence', 'defences'],
+};
+
+function noun(pos, n) {
+  const pair = NOUN[String(pos ?? '').toUpperCase()];
+  if (!pair) return String(pos ?? '').toUpperCase();
+  return n === 1 ? pair[0] : pair[1];
+}
+
+/**
+ * How many of a position are left inside its own top tier.
+ *
+ * ⚠️ RANKED WITHIN THE POSITION, not overall. "Top-12 backs" means the twelve best
+ * backs; measuring against the overall top 12 would report zero tight ends left in
+ * every draft ever played, which is a true number answering the wrong question.
+ *
+ * `pool` is what `availablePool()` returns — `{ id, pos, rank }`, already ordered
+ * best-first, so position rank is just the index within the filtered list.
+ */
+export function scarcityAt(pool = [], pos, { tier = SCARCITY_TIER } = {}) {
+  const want = String(pos ?? '').toUpperCase();
+  if (!want) return 0;
+  let seen = 0;
+  for (const entry of pool ?? []) {
+    if (String(entry?.pos ?? '').toUpperCase() !== want) continue;
+    seen += 1;
+    if (seen >= tier) break;
+  }
+  return Math.min(seen, tier);
+}
+
+/**
+ * The one sentence the ticker has, or null.
+ *
+ * ⚠️ NULL IS THE COMMON CASE AND THE STRIP MUST STILL KEEP ITS HEIGHT. See
+ * renderTicker in views/draft-board.js: a collapsing strip shifts the board
+ * mid-draft, which is the worst possible moment to move a click target.
+ */
+export function tickerLine({ picks = {}, positionOf = () => null, pool = [] } = {}) {
+  const run = detectRun(picks, { positionOf });
+  if (!run) return null;
+
+  const left = scarcityAt(pool, run.pos);
+  const head = `${run.count} of the last ${run.window} picks were ${run.pos}`;
+  const text = left > 0
+    ? `${head} — ${left} top-${SCARCITY_TIER} ${noun(run.pos, left)} left`
+    : head;
+
+  return { flag: 'RUN', pos: run.pos, text };
+}

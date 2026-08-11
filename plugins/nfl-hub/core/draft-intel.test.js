@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { recentPicks, detectRun, RUN_WINDOW, RUN_THRESHOLD } from './draft-intel.js';
+import {
+  recentPicks, detectRun, scarcityAt, tickerLine,
+  RUN_WINDOW, RUN_THRESHOLD, SCARCITY_TIER,
+} from './draft-intel.js';
 
 /** picks keyed by overall, exactly as core/league/draft.js:118 writes them. */
 const picksOf = (...ids) => Object.fromEntries(
@@ -81,5 +84,75 @@ describe('detectRun', () => {
   it('exposes its constants so the view and the tests cannot disagree', () => {
     expect(RUN_WINDOW).toBe(6);
     expect(RUN_THRESHOLD).toBe(4);
+  });
+});
+
+/** A pool entry, exactly as core/league/draft-pool.js:76 builds one. */
+const poolEntry = (id, pos, rank) => ({ id, pos, rank });
+
+describe('scarcityAt', () => {
+  it('counts how many of a position remain inside the tier', () => {
+    const pool = [
+      poolEntry('a', 'RB', 3), poolEntry('b', 'RB', 9), poolEntry('c', 'RB', 40),
+      poolEntry('d', 'WR', 5),
+    ];
+    expect(scarcityAt(pool, 'RB')).toBe(3);
+  });
+
+  it('counts by POSITION RANK, not overall rank', () => {
+    // ⚠️ "2 top-12 backs left" means the 12 best BACKS, not backs inside the
+    // overall top 12. Overall rank would report ~zero for every position but RB
+    // and WR, which is the wrong sentence with the right number in it.
+    const pool = [
+      poolEntry('t1', 'TE', 30), poolEntry('t2', 'TE', 44), poolEntry('t3', 'TE', 120),
+    ];
+    expect(scarcityAt(pool, 'TE', { tier: 2 })).toBe(2);
+  });
+
+  it('is zero for a position with nobody left', () => {
+    expect(scarcityAt([poolEntry('a', 'RB', 1)], 'QB')).toBe(0);
+  });
+
+  it('survives an empty or missing pool', () => {
+    expect(scarcityAt([], 'RB')).toBe(0);
+    expect(scarcityAt(undefined, 'RB')).toBe(0);
+  });
+
+  it('exposes the tier constant', () => {
+    expect(SCARCITY_TIER).toBe(12);
+  });
+});
+
+describe('tickerLine', () => {
+  it('says nothing when no run is happening', () => {
+    const picks = picksOf('c', 'g', 'h');
+    expect(tickerLine({ picks, positionOf, pool: [] })).toBeNull();
+  });
+
+  it('names the run and the scarcity behind it', () => {
+    const picks = picksOf('a', 'b', 'c', 'd', 'e', 'f'); // 4 of the last 6 are RB
+    const pool = [poolEntry('r1', 'RB', 4), poolEntry('r2', 'RB', 11)];
+    expect(tickerLine({ picks, positionOf, pool })).toEqual({
+      flag: 'RUN',
+      pos: 'RB',
+      text: '4 of the last 6 picks were RB — 2 top-12 backs left',
+    });
+  });
+
+  it('drops the scarcity clause rather than claiming zero when the tier is empty', () => {
+    // ⚠️ "0 top-12 backs left" is true and useless. When the tier is gone the run
+    // is still the news; the clause is not.
+    const picks = picksOf('a', 'b', 'c', 'd', 'e', 'f');
+    const line = tickerLine({ picks, positionOf, pool: [] });
+    expect(line.text).toBe('4 of the last 6 picks were RB');
+  });
+
+  it('uses the plain-English plural for each position', () => {
+    const map = { z1: 'TE', z2: 'TE', z3: 'TE', z4: 'TE', z5: 'QB', z6: 'WR' };
+    const picks = {};
+    for (let i = 1; i <= 6; i += 1) picks[i] = { playerId: `z${i}`, teamId: 't', at: i, auto: false };
+    const pool = [poolEntry('e1', 'TE', 2)];
+    const line = tickerLine({ picks, positionOf: (id) => map[id] ?? null, pool });
+    expect(line.text).toBe('4 of the last 6 picks were TE — 1 top-12 tight end left');
   });
 });
