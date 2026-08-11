@@ -40,7 +40,17 @@ export const DEFAULT_SETTINGS = Object.freeze({
   playoffTeams: 6,
   playoffWeekStart: 15,
   // Re-seed the bracket each round rather than fixing it at the start.
-  playoffReseed: true,
+  //
+  // ⚠️ FALSE MATCHES SLEEPER, and we shipped the opposite until 2026-08-11.
+  // Their default keeps a team on the side of the bracket it was seeded into;
+  // re-seeding is the opt-in. Captured from the live settings screen —
+  // "Default (teams stay on their initial side of the bracket) · Re-seed".
+  //
+  // ⚠️ NEW LEAGUES ONLY. `server/ops-playoffs.js` reads this as `!== false`, and
+  // a league writes its settings at creation, so leagues already running keep
+  // the rules they started under. That is correct — playoff rules must not move
+  // under a season in progress. Do not "fix" this into a retroactive change.
+  playoffReseed: false,
   // Run a second bracket for the teams that missed the cut, on the same weeks.
   // ⚠️ Only ever seeded WITH the championship side, from the one standings read.
   // A consolation bracket added later would be seeded from standings that

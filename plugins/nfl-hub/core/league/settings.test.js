@@ -165,3 +165,12 @@ describe('fromSleeperSettings', () => {
     expect(fromSleeperSettings({}).format).toBe(FORMAT.REDRAFT);
   });
 });
+
+describe('playoff bracket default', () => {
+  // ⚠️ Sleeper's default keeps a team on the side of the bracket it was seeded
+  // into; re-seeding each round is the opt-in. We shipped the opposite until
+  // 2026-08-11. See docs/research/sleeper-parity-study.md §6.1.
+  it('leaves teams on their side of the bracket, as Sleeper does', () => {
+    expect(DEFAULT_SETTINGS.playoffReseed).toBe(false);
+  });
+});

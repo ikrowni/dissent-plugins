@@ -37,6 +37,36 @@ export function scoreStatLine(stats, settings) {
 }
 
 /**
+ * The same arithmetic as `scoreStatLine`, itemised — one row per rule that fired.
+ *
+ * Answers "why did I only get 11 points?", which is the question a scoring map
+ * cannot answer on its own. Rows are `{ key, stat, per, points }`, which is
+ * exactly the `STAT · PTS PER · POINTS` table Sleeper renders.
+ *
+ * ⚠️ MUST STAY IN LOCKSTEP WITH `scoreStatLine`. Both walk the stat keys and
+ * multiply by the league's weight; if they ever diverge a manager sees a
+ * breakdown that does not add up to the score printed beside it, which is worse
+ * than showing no breakdown at all. The suite asserts they agree, including
+ * against the real PPR map.
+ *
+ * Rows scoring zero are dropped — listing every rule that did NOT fire is noise.
+ */
+export function scoreBreakdown(stats, settings) {
+  if (!stats || !settings) return [];
+  const rows = [];
+  for (const key of Object.keys(stats)) {
+    const per = settings[key];
+    if (typeof per !== 'number') continue;
+    const stat = Number(stats[key]);
+    if (!Number.isFinite(stat)) continue;
+    const points = Math.round(stat * per * 100) / 100;
+    if (points === 0) continue;
+    rows.push({ key, stat, per, points });
+  }
+  return rows;
+}
+
+/**
  * Score every entity in a week's stats payload.
  *
  * Returns a plain object keyed exactly as the payload is, so callers keep

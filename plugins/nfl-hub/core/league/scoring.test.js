@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  scoreStatLine, scoreWeek, classifyStatKey, scorableEntities,
+  scoreStatLine, scoreWeek, classifyStatKey, scorableEntities, scoreBreakdown,
   PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING, sleeperDefaultPoints,
 } from './scoring.js';
 
@@ -138,5 +138,59 @@ describe('scoreWeek', () => {
     const out = scoreWeek(stats, PPR_SCORING);
     expect(Object.keys(out).length).toBe(Object.keys(stats).length);
     expect(Object.values(out).every((n) => Number.isFinite(n))).toBe(true);
+  });
+});
+
+describe('scoreBreakdown', () => {
+  const settings = { rec_yd: 0.1, rec: 1, rec_td: 6, rush_yd: 0.1 };
+
+  it('returns one row per rule that fired', () => {
+    expect(scoreBreakdown({ rec_yd: 265, rec: 11, rec_td: 2 }, settings)).toEqual([
+      { key: 'rec_yd', stat: 265, per: 0.1, points: 26.5 },
+      { key: 'rec', stat: 11, per: 1, points: 11 },
+      { key: 'rec_td', stat: 2, per: 6, points: 12 },
+    ]);
+  });
+
+  it('omits stat keys the league does not score', () => {
+    const rows = scoreBreakdown({ rec_yd: 10, pass_rtg: 99, off_yd_per_play: 5 }, settings);
+    expect(rows.map((r) => r.key)).toEqual(['rec_yd']);
+  });
+
+  it('omits rules that scored nothing', () => {
+    expect(scoreBreakdown({ rec: 0, rush_yd: 0 }, settings)).toEqual([]);
+  });
+
+  it('keeps negative contributions', () => {
+    const rows = scoreBreakdown({ fum_lost: 2 }, { fum_lost: -2 });
+    expect(rows).toEqual([{ key: 'fum_lost', stat: 2, per: -2, points: -4 }]);
+  });
+
+  it('ignores non-finite stats', () => {
+    expect(scoreBreakdown({ rec: 'x', rec_yd: null }, settings)).toEqual([]);
+  });
+
+  // ⚠️ THE GUARD THAT MATTERS: a breakdown that does not sum to the score shown
+  // beside it is worse than showing no breakdown at all.
+  it('sums to exactly what scoreStatLine returns', () => {
+    for (const stats of [
+      { rec_yd: 265, rec: 11, rec_td: 2 },
+      { rush_yd: 87, rec: 4, rec_yd: 33 },
+      { rec_yd: 1, rec: 1 },
+    ]) {
+      const total = scoreBreakdown(stats, settings).reduce((s, r) => s + r.points, 0);
+      expect(Math.round(total * 100) / 100).toBe(scoreStatLine(stats, settings));
+    }
+  });
+
+  it('agrees with scoreStatLine on the real PPR map', () => {
+    const stats = { pass_yd: 312, pass_td: 3, pass_int: 1, rush_yd: 22, fum_lost: 1 };
+    const total = scoreBreakdown(stats, PPR_SCORING).reduce((s, r) => s + r.points, 0);
+    expect(Math.round(total * 100) / 100).toBe(scoreStatLine(stats, PPR_SCORING));
+  });
+
+  it('is empty without stats or settings', () => {
+    expect(scoreBreakdown(null, settings)).toEqual([]);
+    expect(scoreBreakdown({ rec: 1 }, null)).toEqual([]);
   });
 });
