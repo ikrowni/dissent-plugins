@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, reset, remainingMs, _state } from './league-draft.js';
+import * as draftQueue from './league-draft.js';
 import { setIndex } from '../core/player-index.js';
 
 const league = (teamCount = 4, over = {}) => ({
@@ -315,5 +316,46 @@ describe('the pick clock', () => {
   it('reports nothing for a draft with no clock at all', () => {
     Object.assign(_state, { localDeadline: null, frozenRemaining: null });
     expect(remainingMs()).toBe(null);
+  });
+});
+
+describe('draft queue mutations', () => {
+  beforeEach(() => {
+    Object.assign(_state, { leagueId: 'L1', teamId: 't1', queue: [], notice: null });
+  });
+
+  it('adds a player once, never twice', () => {
+    draftQueue.queueAdd(null, 'p1');
+    draftQueue.queueAdd(null, 'p1');
+    expect(_state.queue).toEqual(['p1']);
+  });
+
+  it('ignores an empty id', () => {
+    draftQueue.queueAdd(null, '');
+    expect(_state.queue).toEqual([]);
+  });
+
+  it('removes a player', () => {
+    Object.assign(_state, { queue: ['p1', 'p2'] });
+    draftQueue.queueRemove(null, 'p1');
+    expect(_state.queue).toEqual(['p2']);
+  });
+
+  it('moves a player up', () => {
+    Object.assign(_state, { queue: ['p1', 'p2'] });
+    draftQueue.queueUp(null, 'p2');
+    expect(_state.queue).toEqual(['p2', 'p1']);
+  });
+
+  it('leaves the top player where it is', () => {
+    Object.assign(_state, { queue: ['p1', 'p2'] });
+    draftQueue.queueUp(null, 'p1');
+    expect(_state.queue).toEqual(['p1', 'p2']);
+  });
+
+  it('does not persist without a team', () => {
+    Object.assign(_state, { teamId: null, queue: [] });
+    expect(() => draftQueue.queueAdd(null, 'p1')).not.toThrow();
+    expect(_state.queue).toEqual(['p1']);
   });
 });

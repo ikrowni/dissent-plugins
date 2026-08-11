@@ -20,10 +20,11 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
+  renderQueue, picksUntilTurn,
 } from './draft-board.js';
 import { getIndex } from '../core/player-index.js';
 import {
-  getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft,
+  getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft, setQueue,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers } from '../core/player-index.js';
 import { loadRanking, rankingFor } from '../core/draft-ranking.js';
@@ -67,6 +68,7 @@ const state = {
   localDeadline: null,    // epoch ms, refreshed from the server on every poll
   frozenRemaining: null,  // ms banked while paused — see the clock note below
   ranking: [],
+  queue: [],
   filter: 'ALL',
   query: '',
   // ⚠️ "No draft yet" is a STATE, not an error. The module refuses `draft:get`
@@ -86,7 +88,7 @@ export function reset() {
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
-    ranking: [], filter: 'ALL', query: '', noDraft: false,
+    ranking: [], queue: [], filter: 'ALL', query: '', noDraft: false,
   });
 }
 
@@ -269,6 +271,12 @@ function livePane(d) {
           ${pickPool(mine && !paused)}
         </div>
         <div class="mock-side">
+          ${renderQueue({
+    queue: state.queue,
+    playerOf,
+    untilTurn: picksUntilTurn(d.order, d.picks, state.teamId),
+    canEdit: Boolean(state.teamId),
+  })}
           <h4>Your roster</h4>
           ${renderRosterProgress({ slots, owned, playerOf })}
           ${d.isCommissioner ? `
@@ -458,6 +466,48 @@ export async function load(app, { leagueId, league, teamId }) {
 /** Every id already drafted — the set the pool must exclude. */
 export function takenIds() {
   return new Set(Object.values(state.draft?.picks ?? {}).map((p) => String(p.playerId)));
+}
+
+/**
+ * Persist the queue to the module.
+ *
+ * Fire-and-forget: the local list is truth for rendering, because a failed save
+ * must not wipe what the manager just built mid-draft.
+ *
+ * ⚠️ `setQueue` had NO caller before this — the op has shipped in the signed
+ * module since 2.26.0, so every autodraft fell through to the league ranking.
+ */
+function saveQueue(app) {
+  if (!state.leagueId || !state.teamId) return;
+  Promise.resolve(setQueue(state.leagueId, state.teamId, state.queue))
+    .catch(() => { state.notice = 'Queue not saved \u2014 check your connection.'; });
+  app?.router?.refresh();
+}
+
+/** Add a player to the end of the queue. Adding twice is a no-op, not a duplicate. */
+export function queueAdd(app, playerId) {
+  const id = String(playerId ?? '');
+  if (!id || state.queue.includes(id)) return;
+  state.queue = [...state.queue, id];
+  saveQueue(app);
+}
+
+/** Drop a player from the queue. */
+export function queueRemove(app, playerId) {
+  const id = String(playerId ?? '');
+  state.queue = state.queue.filter((q) => q !== id);
+  saveQueue(app);
+}
+
+/** Move a player one place up the queue. */
+export function queueUp(app, playerId) {
+  const id = String(playerId ?? '');
+  const i = state.queue.indexOf(id);
+  if (i <= 0) return;
+  const next = [...state.queue];
+  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+  state.queue = next;
+  saveQueue(app);
 }
 
 /** Narrow the pool to one position. */

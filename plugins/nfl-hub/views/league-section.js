@@ -164,6 +164,18 @@ export async function onAction(act, target) {
       if (state.tab === 'draft') draft.setFilter(app, target.dataset.filter);
       else mock.setFilter(app, target.dataset.filter);
       return;
+    // ⚠️ SAME SHARED-BOARD HAZARD as draft-filter above. The queue panel is only
+    // rendered by the LIVE draft, but these still branch on the tab rather than
+    // assume — draft-board.js is shared and the mock could grow a queue later.
+    case 'draft-queue-add':
+      if (state.tab === 'draft') draft.queueAdd(app, target.dataset.player);
+      return;
+    case 'draft-queue-remove':
+      if (state.tab === 'draft') draft.queueRemove(app, target.dataset.player);
+      return;
+    case 'draft-queue-up':
+      if (state.tab === 'draft') draft.queueUp(app, target.dataset.player);
+      return;
     case 'draft-take':
       if (state.tab === 'draft') draft.pick(app, target.dataset.player);
       else mock.take(app, target.dataset.player);
