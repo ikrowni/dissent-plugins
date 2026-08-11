@@ -85,7 +85,12 @@ for (const manifestPath of manifests) {
 
   for (const f of built) {
     if (f === wanted) continue;
-    console.log(`::warning::${dir}: ${f} is built but NOT referenced by the manifest — it is unsigned/unpromoted, so its ops do not exist in the running module.`);
+    // ⚠️ Two very different situations produce an unreferenced module, and this
+    // cannot tell them apart from the filesystem alone: one built but not yet
+    // signed and promoted (the 2.32.0 case, where new views called an op that did
+    // not exist), and one that WAS signed and has since been superseded (kept for
+    // rollback). Do not word this as "unsigned" — that is false for the second.
+    console.log(`::warning::${dir}: ${f} is built but NOT referenced by the manifest — either awaiting signature/promotion, or a superseded build kept for rollback.`);
     warned += 1;
   }
 }

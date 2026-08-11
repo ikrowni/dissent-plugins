@@ -2,7 +2,7 @@
   "id": "nfl-hub",
   "name": "NFL Hub",
   "version": "2.32.0",
-  "description": "A full NFL broadcast center \u2014 live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
+  "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -27,7 +27,7 @@
   "config_schema": {
     "sleeper_league_id": {
       "type": "string",
-      "label": "Sleeper League ID (optional \u2014 enables live fantasy matchups, free at sleeper.com)"
+      "label": "Sleeper League ID (optional — enables live fantasy matchups, free at sleeper.com)"
     }
   },
   "categories": [
@@ -36,10 +36,10 @@
     "fantasy"
   ],
   "server_module": {
-    "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module-7ff21260d983.wasm",
-    "sha256": "7ff21260d983d8541bd66b26590be343fa032781bec7bc8eda73f90ba598762b",
-    "size": 2484641,
-    "signature": "12f2d134bf905e51062d8c407ad42cd4df799fd1441a8dfbd8065fe99b59a5a366982bee36bce12b545df78fb0f867146c1b88d055d03ae84f40507c9acec40d"
+    "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module-5024449f0e09.wasm",
+    "sha256": "5024449f0e0929dc3b31c735f7f48b6873d63a8fb5e8b6e0e089d46bc83fc8b0",
+    "size": 2512199,
+    "signature": "06b3fe99479b891a5bbf68f9f0bc1e792b552aec46c29b6c941cfd983d0c01dc566587267f8cd71af1c4479456a4084b067f8e4f2bfc8b8e85074335c3f83008"
   },
   "sdk_version": "1"
 }
