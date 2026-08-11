@@ -36,6 +36,15 @@ jobs:
           fi
           echo "All manifests valid"
 
+      # Fails when a manifest names a server module that is missing or whose bytes
+      # do not match the declared sha256 — a broken publish the node would refuse.
+      # Warns when a module is built but unreferenced, i.e. not yet signed and
+      # promoted: that is the exact state that shipped nfl-hub 2.32.0's client
+      # against 2.31.0's module, where the missing op failed silently into an
+      # empty state and was found days later.
+      - name: Check server modules match their manifests
+        run: node scripts/check-server-modules.mjs
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
