@@ -122,3 +122,24 @@
 /* The subnav pill: the moving part is the background, so transition colour only
  * on the properties that are cheap and leave the text alone. */
 .subnav button { transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+
+/* ── Idle ──────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THIS IS THE HALF OF THE MOTION BUDGET core/motion.js CANNOT REACH. That
+ * module gates `motion.loop()`, but every ambient effect in this hub is a CSS
+ * `animation: … infinite`: .sweep, .db-live::after, .live-dot::after,
+ * .m-skel::after, .spinner. A rAF gate alone would gate none of them.
+ *
+ * core/motion.js stamps `motion-idle` on <body> whenever the frame is hidden OR
+ * the window is merely behind another application — the case visibilitychange
+ * never fires for, and the one all three of this project's GPU incidents were.
+ *
+ * ⚠️ `paused`, NOT `none`. Pausing keeps the current frame, so alt-tabbing back
+ * resumes where it was instead of snapping everything to frame zero at once —
+ * which would be a whole-surface repaint on every focus.
+ */
+body.motion-idle *,
+body.motion-idle *::before,
+body.motion-idle *::after {
+  animation-play-state: paused !important;
+}
