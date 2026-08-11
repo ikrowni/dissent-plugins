@@ -106,7 +106,17 @@ function cell(pick, made, onClock, playerOf, mine, dir = '') {
   }
   const p = playerOf(made.playerId);
   const color = positionColor(p?.p);
+  // ⚠️ WATERMARK ON MADE PICKS ONLY, UNDER THE TEXT. Position colour is the primary
+  // encoding here — you read a roster's shape, or spot a run, before you read a
+  // single name — so the logo sits at 7% opacity bottom-right where the position
+  // colour already owns the left border. On an empty cell it would compete with the
+  // pick number for no gain. A free agent has no logo, and a broken image is worse
+  // than none.
+  const wm = p?.t
+    ? `<img class="gr-wm" src="${esc(logoPath(p.t))}" alt="" loading="lazy" onerror="this.remove()">`
+    : '';
   return `<div class="db-cell db-made${mine ? ' db-mine' : ''}" style="--db-pos:${esc(color)}">
+    ${wm}
     <span class="db-name">${esc(p?.n ?? made.playerId)}</span>
     <span class="db-sub">${esc(String(p?.p ?? '').toUpperCase())}${p?.t ? ` · ${esc(p.t)}` : ''}</span>
     ${arrow}
@@ -364,4 +374,69 @@ export function renderRosterProgress({ slots = [], owned = [], playerOf = () => 
     : '';
 
   return `<div class="db-roster m-stagger">${rows}${extra}</div>`;
+}
+
+/**
+ * The ticker: one sentence, or deliberate silence.
+ *
+ * ⚠️ FIXED HEIGHT — IT GOES QUIET, IT DOES NOT COLLAPSE. Returning '' here, or
+ * hiding the strip, shifts the entire board up by 31px the moment a run ends. On a
+ * live draft board that moves everybody's click target at the exact second they are
+ * reaching for it. The height lives in gridiron.css and the quiet state only dims
+ * the background.
+ *
+ * ⚠️ A TICKER THAT ALWAYS SPEAKS IS NOISE. People stop reading it after about four
+ * picks. `line` is null most of the time and that is the design.
+ */
+export function renderTicker(line = null) {
+  if (!line) {
+    return '<div class="gr-tick is-quiet" aria-live="polite"></div>';
+  }
+  return `<div class="gr-tick" aria-live="polite" style="--gr-pos:${esc(positionColor(line.pos))}">
+    <span class="gr-tick-flag">${esc(line.flag)}</span>
+    <span class="gr-tick-text">${esc(line.text)}</span>
+  </div>`;
+}
+
+/**
+ * The live rail — picks as they land.
+ *
+ * ⚠️ NEWEST FIRST, AND THE ORDER IS THE CALLER'S. core/draft-intel.js already sorts
+ * numerically by overall pick number; re-sorting here would be a second opinion on
+ * something that has one right answer.
+ */
+export function renderFeed(items = []) {
+  const head = '<div class="gr-feed-label">Live</div>';
+  if (!items || items.length === 0) {
+    return `<div class="gr-feed">${head}<p class="gr-feed-empty">Picks appear here as they land.</p></div>`;
+  }
+  const rows = items.map((it) => `<div class="gr-feed-item${it.auto ? ' is-auto' : ''}"
+      style="--gr-pos:${esc(positionColor(it.pos))}">
+    <b>${esc(it.name)}</b>${it.pos ? ` <span class="gr-feed-pos">${esc(it.pos)}</span>` : ''} → ${esc(it.team)}
+  </div>`).join('');
+  return `<div class="gr-feed">${head}${rows}</div>`;
+}
+
+/**
+ * The stage: one continuous lit surface with everything inside it.
+ *
+ * ⚠️ THE HERO IS INSIDE THE SURFACE, NOT A SLAB ON TOP. That is the whole difference
+ * between a broadcast set and a banner, and it is why the lines and the vignette are
+ * siblings spanning the entire stage rather than children of the hero.
+ *
+ * ⚠️ EVERY LAYER HERE IS PAINTED ONCE. Nothing in this function animates. The two
+ * moving parts — the clock glow and the one-shot sweep — are added by the view, and
+ * both are gated by motion.js (capped, hidden-gated, focus-gated).
+ */
+export function renderStage({ hero = '', ticker = '', board = '', feed = '' } = {}) {
+  return `<div class="gr-stage" data-gr-stage>
+    <div class="gr-lines"></div>
+    ${hero}
+    ${ticker}
+    <div class="gr-cols">
+      <div class="gr-board">${board}</div>
+      ${feed}
+    </div>
+    <div class="gr-vig"></div>
+  </div>`;
 }

@@ -459,3 +459,134 @@ describe('renderHero', () => {
     expect(el.querySelector('.gr-clock').classList.contains('urgent')).toBe(true);
   });
 });
+
+describe('renderTicker', () => {
+  it('renders the flag and the sentence when there is one', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: '4 of the last 6 picks were RB — 2 top-12 backs left' }));
+    expect(el.querySelector('.gr-tick-flag').textContent).toBe('RUN');
+    expect(el.querySelector('.gr-tick-text').textContent)
+      .toBe('4 of the last 6 picks were RB — 2 top-12 backs left');
+  });
+
+  it('tints the sentence with the position colour', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'anything' }));
+    expect(el.querySelector('.gr-tick').getAttribute('style')).toContain('--gr-pos:#3fc4a0');
+  });
+
+  // ⚠️ THE POINT OF THE WHOLE COMPONENT. A collapsing strip shifts the board
+  // mid-draft, which is the worst moment to move a click target. Silence must cost
+  // exactly the same pixels as speech.
+  it('keeps its height and its element when it has nothing to say', () => {
+    const quiet = parse(renderTicker(null));
+    const strip = quiet.querySelector('.gr-tick');
+    expect(strip).not.toBeNull();
+    expect(strip.classList.contains('is-quiet')).toBe(true);
+    expect(strip.getAttribute('style') ?? '').not.toContain('display:none');
+    expect(quiet.querySelector('.gr-tick-flag')).toBeNull();
+  });
+
+  it('renders the same single root element loud or quiet', () => {
+    expect(parse(renderTicker(null)).children).toHaveLength(1);
+    expect(parse(renderTicker({ flag: 'RUN', pos: 'WR', text: 'x' })).children).toHaveLength(1);
+  });
+
+  it('escapes the sentence rather than rendering it as markup', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: '<img src=x onerror=1>' }));
+    expect(el.querySelector('img')).toBeNull();
+  });
+
+  it('marks the strip aria-live so a screen reader hears a run without being spammed', () => {
+    const el = parse(renderTicker({ flag: 'RUN', pos: 'RB', text: 'x' }));
+    expect(el.querySelector('.gr-tick').getAttribute('aria-live')).toBe('polite');
+  });
+});
+
+describe('renderFeed', () => {
+  const items = [
+    { kind: 'pick', overall: 3, playerId: 'c', name: 'J. Gibbs', pos: 'RB', team: 'Krowns', auto: false },
+    { kind: 'pick', overall: 2, playerId: 'b', name: 'J. Chase', pos: 'WR', team: 'NapTown', auto: false },
+    { kind: 'pick', overall: 1, playerId: 'a', name: 'B. Robinson', pos: 'RB', team: 'Team 3', auto: true },
+  ];
+
+  it('renders one row per item, in the order given', () => {
+    const el = parse(renderFeed(items));
+    const rows = [...el.querySelectorAll('.gr-feed-item')];
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('J. Gibbs');
+    expect(rows[2].textContent).toContain('B. Robinson');
+  });
+
+  it('tints each row by its own position colour', () => {
+    const el = parse(renderFeed(items));
+    const first = el.querySelector('.gr-feed-item');
+    expect(first.getAttribute('style')).toContain('--gr-pos:#3fc4a0');
+  });
+
+  it('marks auto-picks so a lapsed clock is visible on the rail', () => {
+    const el = parse(renderFeed(items));
+    const rows = [...el.querySelectorAll('.gr-feed-item')];
+    expect(rows[2].classList.contains('is-auto')).toBe(true);
+    expect(rows[0].classList.contains('is-auto')).toBe(false);
+  });
+
+  it('says the draft has not started rather than rendering an empty rail', () => {
+    const el = parse(renderFeed([]));
+    expect(el.querySelector('.gr-feed-empty')).not.toBeNull();
+    expect(el.querySelector('.gr-feed-label')).not.toBeNull();
+  });
+
+  it('escapes names and team labels', () => {
+    const el = parse(renderFeed([{ ...items[0], name: '<img src=x>', team: '<b>x</b>' }]));
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelector('.gr-feed-item b').textContent).toBe('<img src=x>');
+  });
+});
+
+describe('the made-pick watermark', () => {
+  const wmOrder = [{ overall: 1, round: 1, pickInRound: 1, owner: 'A' },
+    { overall: 2, round: 1, pickInRound: 2, owner: 'B' }];
+  const wmPicks = { 1: { playerId: 'p1', teamId: 'A', at: 1, auto: false } };
+
+  it('puts a team logo watermark on a made pick', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    const made = el.querySelector('.db-made');
+    expect(made.querySelector('.gr-wm')).not.toBeNull();
+  });
+
+  // ⚠️ Position colour outranks decoration. On an empty cell a watermark competes
+  // with the pick number for no gain — there is no position colour there to anchor it.
+  it('puts no watermark on an empty cell', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    const empty = [...el.querySelectorAll('.db-cell')].find((c) => !c.classList.contains('db-made'));
+    expect(empty.querySelector('.gr-wm')).toBeNull();
+  });
+
+  it('puts no watermark on a free agent, rather than a broken image', () => {
+    const fa = (id) => (id === 'p1' ? { n: 'Nobody', p: 'RB', t: null } : null);
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf: fa }));
+    expect(el.querySelector('.db-made .gr-wm')).toBeNull();
+  });
+
+  it('leaves the position colour as the cell border, untouched', () => {
+    const el = parse(renderBoard({ order: wmOrder, picks: wmPicks, teamIds: ['A', 'B'], playerOf }));
+    expect(el.querySelector('.db-made').getAttribute('style')).toContain('--db-pos:#3fc4a0');
+  });
+});
+
+describe('renderStage', () => {
+  it('assembles hero, ticker, board and feed inside one stage', () => {
+    const el = parse(renderStage({ hero: '<i id="h"></i>', ticker: '<i id="t"></i>', board: '<i id="b"></i>', feed: '<i id="f"></i>' }));
+    const stage = el.querySelector('.gr-stage');
+    expect(stage).not.toBeNull();
+    expect(stage.querySelector('#h')).not.toBeNull();
+    expect(stage.querySelector('#t')).not.toBeNull();
+    expect(stage.querySelector('.gr-board #b')).not.toBeNull();
+    expect(stage.querySelector('#f')).not.toBeNull();
+  });
+
+  it('paints the yard lines and the vignette once, as siblings that never animate', () => {
+    const el = parse(renderStage({ hero: '', ticker: '', board: '', feed: '' }));
+    expect(el.querySelector('.gr-lines')).not.toBeNull();
+    expect(el.querySelector('.gr-vig')).not.toBeNull();
+  });
+});
