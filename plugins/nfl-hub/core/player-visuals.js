@@ -50,6 +50,42 @@ export function teamColor(abbr) {
 }
 
 /**
+ * The hero's duotone colour for a FANTASY team.
+ *
+ * ⚠️ A LEAGUE TEAM HAS NO COLOUR. `server/ops-league.js` stores it as
+ * `{ id, name, ownerId, coOwners }` and nothing else — so `teamColor()`, which reads
+ * the NFL team table, cannot answer this. Adding a colour field is a signed-module
+ * change; this derives one instead, deterministically, from the id.
+ *
+ * ⚠️ THE ID, NOT THE NAME. Managers rename teams mid-season, and a hero that changes
+ * colour when somebody edits their name reads as a bug.
+ *
+ * Eight hues, far apart, all legible on the near-black surface — the same brief as
+ * POSITION_COLORS, but they must never collide with it: position colour is the
+ * board's primary encoding and the hero must not look like a position.
+ */
+export const MANAGER_PALETTE = Object.freeze([
+  '#2f6fd0', '#8b1c2b', '#1f8a70', '#7a4bb8',
+  '#c1731c', '#2a7f9e', '#a3357a', '#4d6b2f',
+]);
+
+/** The colourless case, stated once. */
+export const NEUTRAL_DUOTONE = '#243044';
+
+export function managerColor(teamId) {
+  const id = String(teamId ?? '');
+  if (!id) return NEUTRAL_DUOTONE;
+  // FNV-1a, 32-bit. Cheap, well-spread, and identical in every JS engine — the
+  // hero must be the same colour for every manager watching the same draft.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i += 1) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return MANAGER_PALETTE[h % MANAGER_PALETTE.length];
+}
+
+/**
  * Initials for the monogram.
  *
  * ⚠️ FIRST AND LAST, never the first two letters of a surname — "Ja'Marr Chase"
