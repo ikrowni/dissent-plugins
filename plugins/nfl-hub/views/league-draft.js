@@ -17,7 +17,7 @@
 // one text node and touches nothing else; a full re-render happens only when the
 // draft ACTUALLY CHANGED — a pick, a status change, somebody new on the clock.
 
-import { esc, panel, stateMsg } from '../core/ui.js';
+import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
   renderQueue, picksUntilTurn, rosterNeeds, renderStage, renderHero, renderTicker, renderFeed,
@@ -99,6 +99,11 @@ export function reset() {
 }
 
 export function render() {
+  // ⚠️ BEFORE the error check, because "leagueId required" IS the no-league case
+  // arriving as a module refusal. Rendering it verbatim showed a developer string
+  // next to a Try again that cannot work, while every sibling tab said there was
+  // no league — the last disagreement in the set.
+  if (!state.leagueId) return noLeaguePane('Draft');
   if (state.error) {
     return panel({
       title: 'Draft',

@@ -527,3 +527,24 @@ describe('the backdrop parallax', () => {
     expect(() => bindParallax()).not.toThrow();
   });
 });
+
+// ⚠️ THE LAST TAB THAT LEAKED. With no league loaded, draft.load() calls
+// getDraft(null) and the module refuses with "leagueId required" — a developer
+// string — which this tab rendered verbatim next to a Try again that cannot
+// work. Every sibling tab now says there is no league; this one disagreed with a
+// stack-trace fragment.
+describe('the draft tab with no league loaded', () => {
+  it('says there is no league instead of leaking the module refusal', () => {
+    setup({ leagueId: null, league: null, teamId: null, error: 'leagueId required' });
+    const html = render();
+    expect(html).not.toContain('leagueId required');
+    expect(html).toMatch(/No league is loaded/i);
+  });
+
+  it('still shows a real error once a league IS loaded', () => {
+    setup({ leagueId: 'lg', error: 'the league engine is not running' });
+    const html = render();
+    expect(html).toContain('not running');
+    expect(html).toContain('draft-retry');
+  });
+});
