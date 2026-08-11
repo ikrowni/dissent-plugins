@@ -60,13 +60,31 @@ export function teamColor(abbr) {
  * ⚠️ THE ID, NOT THE NAME. Managers rename teams mid-season, and a hero that changes
  * colour when somebody edits their name reads as a bug.
  *
- * Eight hues, far apart, all legible on the near-black surface — the same brief as
+ * Twelve hues, far apart, all legible on the near-black surface — the same brief as
  * POSITION_COLORS, but they must never collide with it: position colour is the
- * board's primary encoding and the hero must not look like a position.
+ * board's primary encoding and a team must not look like a position.
+ *
+ * ⚠️ TWELVE BECAUSE A STANDARD LEAGUE IS TWELVE. The draft hero shows one team at a
+ * time, so a repeat there is invisible; the standings table shows every team at once.
+ * At eight hues pigeonhole FORCED at least four collisions in a 12-team league.
+ *
+ * ⚠️ IT IS STILL NOT COLLISION-FREE, AND THE NUMBERS ARE NOT CLOSE. This is a hash,
+ * not an allocator: twelve ids into twelve buckets yields about EIGHT distinct
+ * colours, measured, which is exactly what the birthday paradox predicts. Roughly a
+ * third of a full league shares a hue with somebody. Do not read this as an
+ * identifier.
+ *
+ * That is accepted deliberately. Assigning by index would guarantee uniqueness, but
+ * a team's colour would shift whenever the league gained or lost a team, and would
+ * disagree with the draft hero's. Identity that survives a roster change is worth
+ * more than distinctness here, because the team NAME is always adjacent — this is an
+ * accent, not a legend. If it ever needs to be a legend, that is an allocator and it
+ * belongs to the deferred full redesign, not to a parity pass.
  */
 export const MANAGER_PALETTE = Object.freeze([
   '#2f6fd0', '#8b1c2b', '#1f8a70', '#7a4bb8',
   '#c1731c', '#2a7f9e', '#a3357a', '#4d6b2f',
+  '#4a56c4', '#2f8a45', '#8a7a1e', '#b04a2e',
 ]);
 
 /** The colourless case, stated once. */

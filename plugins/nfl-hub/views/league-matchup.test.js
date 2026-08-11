@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pairingsFor, render, expand, reset, _state } from './league-matchup.js';
 import { setIndex } from '../core/player-index.js';
@@ -15,6 +16,8 @@ beforeEach(() => {
   reset();
   setIndex({ p1: { n: 'Pat One', p: 'QB', t: 'KC' } });
 });
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 // A stored schedule record, the shape schedule:generate writes.
 const scheduleRecord = (weeks) => ({
@@ -355,5 +358,83 @@ describe('playoff bracket', () => {
       expect(html).not.toContain('<img src=x');
       expect(html).toContain('&lt;img');
     });
+  });
+});
+
+
+// ── §8b parity: the expanded lineup ─────────────────────────────────────────
+//
+// ⚠️ THIS TAB WAS THE ONE THAT DIVERGED. My Roster and Moves already render
+// players through playerChip (monogram, position pill, team mark); this table
+// rendered `playerLabel()` as a bare string — "Pat One (QB · KC)" — so the same
+// player looked like a different object depending on which tab you opened.
+describe('the expanded lineup matches every other tab', () => {
+  const setup = (over = {}) => {
+    Object.assign(_state, {
+      leagueId: 'lg', league: league(['t1', 't2']), week: 3, loaded: true,
+      error: null, expanded: null, scores: null, busy: false,
+      schedule: scheduleRecord([{ week: 3, matchups: [{ home: 't1', away: 't2', bye: false }] }]),
+      ...over,
+    });
+  };
+
+  const withLineup = () => {
+    setup({
+      scores: {
+        teams: {
+          t1: {
+            total: 10,
+            rows: [
+              { slot: 'QB', playerId: 'p1', points: 10 },
+              { slot: 'FLEX', playerId: 'p1', points: 4 },
+              { slot: 'BN', playerId: null, points: 0 },
+            ],
+          },
+          t2: { total: 5, rows: [] },
+        },
+      },
+    });
+    expand(null, 't1');
+    return parse(render());
+  };
+
+  it('renders the player through the shared chip, not as a bare label', () => {
+    const el = withLineup();
+    expect(el.querySelector('.pv-chip')).not.toBeNull();
+    expect(el.querySelector('.pv-name').textContent).toBe('Pat One');
+    // The old bare-string form, which no other tab uses.
+    expect(el.textContent).not.toContain('Pat One (QB');
+  });
+
+  it('gives every player a monogram, because only ~23% have a headshot', () => {
+    const el = withLineup();
+    expect(el.querySelector('.pv-mono')).not.toBeNull();
+  });
+
+  // ⚠️ THE DIVERGENCE §8b NAMES. views/league-roster.js has always coloured its
+  // slot chip by position; this table left it flat --text-3, so QB and RB looked
+  // identical on the one screen where you compare two lineups side by side.
+  it('colours the slot chip by position, the same way My Roster does', () => {
+    const el = withLineup();
+    const qb = el.querySelector('td.slot');
+    expect(qb.getAttribute('style')).toContain('#f2557d'); // POSITION_COLORS.QB
+  });
+
+  it('colours a flex slot by the flex hue rather than looking for a FLEX player', () => {
+    // ⚠️ Same rule as roster.js: a slot accepting >1 position is "flexish" and
+    // takes RB's hue. Matching the literal position would leave it uncoloured.
+    const el = withLineup();
+    const slots = [...el.querySelectorAll('td.slot')];
+    const flex = slots.find((s) => s.textContent.trim() === 'FLEX');
+    expect(flex.getAttribute('style')).toContain('#3fc4a0'); // POSITION_COLORS.RB
+  });
+
+  it('still says empty for a slot with nobody in it', () => {
+    const el = withLineup();
+    expect(el.textContent).toContain('empty');
+  });
+
+  it('still shows the points', () => {
+    expect(withLineup().textContent).toContain('10.00');
   });
 });

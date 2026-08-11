@@ -169,6 +169,18 @@ describe('managerColor', () => {
     expect(managerColor(undefined)).toBe(NEUTRAL_DUOTONE);
   });
 
+  // ⚠️ PIGEONHOLE. A standard league is 12 teams and the standings table shows
+  // every one at once. At eight hues at least four rows were FORCED to share a
+  // colour, whatever the hash did. This does not make collisions impossible — it
+  // stops them being guaranteed.
+  it('has at least one hue per team in a standard twelve-team league', () => {
+    expect(MANAGER_PALETTE.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it('has no duplicate hues in the palette itself', () => {
+    expect(new Set(MANAGER_PALETTE).size).toBe(MANAGER_PALETTE.length);
+  });
+
   it('never collides with a position colour', () => {
     // ⚠️ Position colour is the board's primary encoding. A hero that happened to
     // be RB-green would read as a position rather than a team.

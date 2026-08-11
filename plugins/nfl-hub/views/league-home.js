@@ -9,6 +9,7 @@
 // because a native league is identified by its own `leagueId`.
 
 import { esc, panel, stateMsg, tile } from '../core/ui.js';
+import { managerColor } from '../core/player-visuals.js';
 import {
   listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
   myTeam, canManage, setCurrentWeek,
@@ -216,7 +217,9 @@ function powerPanel(league) {
     <table class="tbl m-stagger">
       <thead><tr><th class="num">#</th><th>Team</th><th class="num">All-play</th><th class="num">Luck</th></tr></thead>
       <tbody>${rows.map((r) => `
-        <tr class="${(league.myTeams ?? []).includes(r.rosterId) ? 'mine' : ''}">
+        <tr data-team="${esc(r.rosterId)}"
+          class="team-accent ${(league.myTeams ?? []).includes(r.rosterId) ? 'mine' : ''}"
+          style="--mgr:${esc(managerColor(r.rosterId))}">
           <td class="num"><span class="seed-badge">${r.rank}</span></td>
           <td>${name(r.rosterId)}</td>
           <td class="num">${r.allPlay.wins}-${r.allPlay.losses}${r.allPlay.ties ? `-${r.allPlay.ties}` : ''}
@@ -294,7 +297,7 @@ function standingsTable(league, standings, scores) {
     return `<table class="tbl">
       <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
       <tbody>${teams.map((t) => `
-        <tr>
+        <tr data-team="${esc(t.id)}" class="team-accent" style="--mgr:${esc(managerColor(t.id))}">
           <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="you">you</span>' : ''}</td>
           <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
           <td class="num">${scores?.teams?.[t.id]?.total === undefined ? '—' : scores.teams[t.id].total.toFixed(2)}</td>
@@ -320,7 +323,9 @@ function standingsTable(league, standings, scores) {
     const lastIn = cut > 0 && r.seed === cut;
     const inPlayoffs = cut > 0 && r.seed <= cut;
     const pct = Math.round((r.pointsFor / topPF) * 100);
-    return `<tr class="${isMine ? 'mine' : ''} ${lastIn ? 'playoff-cut' : ''}">
+    return `<tr data-team="${esc(r.teamId)}"
+        class="team-accent ${isMine ? 'mine' : ''} ${lastIn ? 'playoff-cut' : ''}"
+        style="--mgr:${esc(managerColor(r.teamId))}">
         <td class="num"><span class="seed-badge${inPlayoffs ? ' in' : ''}">${r.seed}</span></td>
         <td>
           <span class="std-team">${esc(name)}${isMine ? ' <span class="you">you</span>' : ''}</span>

@@ -12,7 +12,9 @@
 
 import { esc, panel, stateMsg } from '../core/ui.js';
 import { getScores, getSchedule, generateSchedule, getPlayoffs, startPlayoffs } from '../core/league-api.js';
-import { loadIndex, playerLabel } from '../core/player-index.js';
+import { loadIndex, getIndex, playerLabel } from '../core/player-index.js';
+import { playerChip, positionColor, managerColor } from '../core/player-visuals.js';
+import { eligiblePositions } from '../core/league/slots.js';
 import { describe } from './league-home.js';
 
 const state = {
@@ -217,7 +219,9 @@ function side(teamId, points, winning, best = null) {
   // score a large number, so a bar from zero is always nearly full and says
   // nothing; against the leader it answers "by how much".
   const pct = points === null || !best ? 0 : Math.max(2, Math.round((points / best) * 100));
-  return `<button class="side ${winning ? 'winning' : ''}" data-act="matchup-expand" data-team="${esc(teamId)}">
+  return `<button class="side team-accent ${winning ? 'winning' : ''}"
+    style="--mgr:${esc(managerColor(teamId))}"
+    data-act="matchup-expand" data-team="${esc(teamId)}">
     <span class="team">${esc(teamName(teamId))}${isMine(teamId) ? ' <span class="you">you</span>' : ''}</span>
     <span class="pts">${points === null ? '—' : points.toFixed(2)}</span>
     ${points === null ? '' : `<span class="mu-bar"><span class="mu-bar-fill" style="width:${pct}%"></span></span>`}
@@ -229,13 +233,26 @@ function lineupTable(teamId) {
   if (rows.length === 0) {
     return '<p class="muted">No lineup scored for this team yet.</p>';
   }
+  // ⚠️ THE SAME CHIP AND THE SAME SLOT COLOUR AS My Roster. This table used to
+  // render `playerLabel()` as a bare string — "Pat One (QB · KC)" — and leave the
+  // slot flat, so the one screen where you compare two lineups side by side was
+  // also the one screen where a player looked like a different object. The slot
+  // colour rule is `eligiblePositions().length > 1 ? 'RB' : slot`, matching
+  // views/league-roster.js exactly: a flexish slot takes RB's hue, because
+  // colouring by the literal slot name finds no position and renders uncoloured.
+  const playerOf = (id) => getIndex()?.[String(id)] ?? null;
   return `<table class="tbl lineup-detail">
-    <tbody>${rows.map((r) => `
-      <tr>
-        <td class="slot">${esc(r.slot)}</td>
-        <td>${r.playerId ? esc(playerLabel(r.playerId)) : '<span class="muted">empty</span>'}</td>
+    <tbody>${rows.map((r) => {
+    const p = r.playerId ? playerOf(r.playerId) : null;
+    const hue = positionColor(eligiblePositions(r.slot).length > 1 ? 'RB' : r.slot);
+    return `<tr>
+        <td class="slot" style="color:${esc(hue)}">${esc(r.slot)}</td>
+        <td>${r.playerId
+    ? (p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(r.playerId)))
+    : '<span class="muted">empty</span>'}</td>
         <td class="num">${Number(r.points ?? 0).toFixed(2)}</td>
-      </tr>`).join('')}</tbody>
+      </tr>`;
+  }).join('')}</tbody>
   </table>`;
 }
 

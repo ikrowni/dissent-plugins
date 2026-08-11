@@ -101,6 +101,25 @@ input[data-act]:focus, select[data-act]:focus {
 }
 .tbl.lineup select { width: 100%; max-width: 260px; }
 
+/* ── Team accent ──────────────────────────────────────────────────────────────
+ *
+ * A fantasy team's own colour, on its own rows and cards.
+ *
+ * ⚠️ NOT teamColor(). That maps an NFL abbreviation to a franchise's colour, and
+ * these rows are FANTASY teams — server/ops-league.js stores one as
+ * `{ id, name, ownerId, coOwners }` with no colour at all. `managerColor()`
+ * derives a stable one from the team ID, which is the same source the draft
+ * hero's duotone uses, so a manager is the same colour on every surface.
+ *
+ * ⚠️ A BORDER, NOT A BACKGROUND. These rows already carry meaning in their
+ * background — `.mine` is gold-tinted and `.playoff-cut` draws the qualifying
+ * line — and a second tint would fight both. The left edge is unclaimed.
+ */
+.team-accent { border-left: 3px solid var(--mgr, transparent); }
+.tbl tr.team-accent > td:first-child { padding-left: 9px; }
+/* The matchup side is a flex button, so it needs the padding on itself. */
+.matchup .side.team-accent { padding-left: 9px; }
+
 /* ── Matchups and brackets ────────────────────────────────────────────────── */
 .matchup {
   display: flex; align-items: center; gap: 12px; margin: 8px 0;

@@ -1,5 +1,9 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, reset, describe as describeErr, _state } from './league-home.js';
+import { managerColor } from '../core/player-visuals.js';
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const league = (over = {}) => ({
   id: 'lg',
@@ -305,5 +309,51 @@ describe('power rankings', () => {
   it('explains what luck means rather than printing a bare number', () => {
     setup({ standings: table, weekScores: twoWeeks });
     expect(render()).toMatch(/real wins minus/i);
+  });
+});
+
+
+// ── §8b parity: team colour as accent ───────────────────────────────────────
+//
+// ⚠️ §8b says "via the existing teamColor()". IT CANNOT BE — teamColor() maps an
+// NFL abbreviation to that franchise's colour, and these rows are FANTASY teams.
+// server/ops-league.js stores a team as { id, name, ownerId, coOwners } with no
+// colour at all. managerColor() derives a stable one from the team ID (not the
+// name: managers rename mid-season and a row that changed colour would read as a
+// bug), which is the same source the draft hero's duotone uses.
+describe('team colour as accent', () => {
+  it('accents a pre-season standings row with its own team colour', () => {
+    setup({ standings: standings(0, []) });
+    const el = parse(render());
+    const row = el.querySelector('.tbl tr[data-team="t1"]');
+    expect(row).not.toBeNull();
+    expect(row.getAttribute('style')).toContain(managerColor('t1'));
+  });
+
+  it('accents a scored standings row too', () => {
+    setup({
+      standings: standings(2, [
+        { teamId: 't1', seed: 1, wins: 2, losses: 0, ties: 0, pointsFor: 200, pointsAgainst: 150 },
+        { teamId: 't2', seed: 2, wins: 0, losses: 2, ties: 0, pointsFor: 150, pointsAgainst: 200 },
+      ]),
+    });
+    const el = parse(render());
+    const row = el.querySelector('.tbl.standings tr[data-team="t2"]');
+    expect(row.getAttribute('style')).toContain(managerColor('t2'));
+  });
+
+  it('gives two different teams two different accents', () => {
+    setup({ standings: standings(0, []) });
+    const el = parse(render());
+    const a = el.querySelector('tr[data-team="t1"]').getAttribute('style');
+    const b = el.querySelector('tr[data-team="t2"]').getAttribute('style');
+    expect(a).not.toBe(b);
+  });
+
+  it('is stable across renders, so a row does not change colour on a refresh', () => {
+    setup({ standings: standings(0, []) });
+    const first = parse(render()).querySelector('tr[data-team="t1"]').getAttribute('style');
+    const second = parse(render()).querySelector('tr[data-team="t1"]').getAttribute('style');
+    expect(first).toBe(second);
   });
 });
