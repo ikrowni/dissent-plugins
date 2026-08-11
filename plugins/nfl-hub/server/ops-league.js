@@ -440,10 +440,36 @@ export function addFreeAgent({ p, payload }) {
     const assets = a ?? { rosters: {}, budgets: {}, pickOwnership: [] };
     let rosters = assets.rosters;
 
+    // ⚠️ THE SWAP'S DROP IS STILL A DROP, and it must obey the same rule as
+    // `roster:drop`. It did not: this path called dropPlayer() and nothing else,
+    // so the dropped half of an add/drop skipped the wire ENTIRELY and went
+    // straight to free agency — while the identical player dropped through
+    // roster:drop went to waivers. That is the whole wire defeated by a swap,
+    // which is exactly the abuse the 24-Hour Rule exists to prevent: never drop,
+    // always swap. Sleeper sends the dropped half of an add/drop to waivers like
+    // any other drop.
+    //
+    // ⚠️ DESTINATION IS COMPUTED BEFORE forgetAcquisition() BELOW, because the
+    // rule reads how the dropped player was ACQUIRED. Forgetting first would
+    // erase the evidence and send every swap-drop to waivers.
+    let swapWire = assets.wire ?? {};
+    let swapDest = null;
     if (dropId) {
       const dropped = dropPlayer(rosters, teamId, dropId);
       if (!dropped.ok) refuse(dropped.error);
       rosters = dropped.rosters;
+
+      swapDest = dropDestination({
+        acquired: assets.acquired ?? {}, playerId: dropId, now, settings: meta.settings,
+      });
+      // ⚠️ Dropping and re-adding the SAME player leaves him rostered, so he must
+      // not also appear on the wire — that would advertise a claim on somebody
+      // another team already owns.
+      if (swapDest === DROP_DESTINATION.WAIVERS && dropId !== playerId) {
+        swapWire = placeOnWire(swapWire, dropId, {
+          clearsAt: wireClearsAt(now, meta.settings), droppedBy: teamId, droppedAt: now,
+        });
+      }
     }
 
     const owner = ownerOf(rosters, playerId);
@@ -468,7 +494,16 @@ export function addFreeAgent({ p, payload }) {
 
     const added = addPlayer(rosters, teamId, playerId);
     if (!added.ok) refuse(added.error);
-    result = { added: playerId, dropped: dropId };
+    // Reports where the swapped-out player went, the same way roster:drop does —
+    // a manager who swaps needs to know whether he can be picked straight back up.
+    result = {
+      added: playerId,
+      dropped: dropId,
+      destination: dropId ? swapDest : null,
+      clearsAt: dropId && swapDest === DROP_DESTINATION.WAIVERS
+        ? wireClearsAt(now, meta.settings)
+        : null,
+    };
 
     // ⚠️ RECORDED AS free_agency, which is the ONLY route the 24-Hour Rule
     // exempts. A drafted or traded player dropped within a day still goes to
@@ -476,7 +511,7 @@ export function addFreeAgent({ p, payload }) {
     let acquired = recordAcquisition(assets.acquired ?? {}, playerId, { at: now, via: "free_agency" });
     if (dropId) acquired = forgetAcquisition(acquired, dropId);
 
-    return { ...assets, rosters: added.rosters, acquired };
+    return { ...assets, rosters: added.rosters, acquired, wire: swapWire };
   }, null);
 
   return result;
