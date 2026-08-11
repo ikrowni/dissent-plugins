@@ -226,3 +226,65 @@ export function rosterCapacity(settings) {
   const positions = settings?.rosterPositions ?? [];
   return positions.filter((p) => p !== 'IR' && p !== 'TAXI').length;
 }
+
+/**
+ * How many ACTIVE players a team holds at each position.
+ *
+ * ⚠️ IR AND TAXI ARE EXEMPT, which is the entire point of those compartments.
+ * Counting them would mean a league with a QB cap could not use IR at all —
+ * an injured quarterback would occupy a cap slot he cannot play in.
+ */
+export function positionCounts(roster, positionOf = () => null) {
+  const counts = {};
+  for (const id of roster?.players ?? []) {
+    const pos = positionOf(id);
+    if (!pos) continue;
+    counts[pos] = (counts[pos] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Positions where a roster exceeds its league's cap.
+ *
+ * `settings.positionLimits` is `{ [position]: max }`; a position absent from it
+ * is uncapped. Returns `[]` when the league sets no limits, which is the
+ * default and by far the common case.
+ *
+ * ⚠️ REPORTS rather than refuses. A trade may legitimately leave a roster over
+ * the cap for a while — Sleeper allows it and locks the LINEUP until it is
+ * cured — so the caller decides what a breach means in its context.
+ */
+export function overPositionLimit(roster, settings, positionOf = () => null) {
+  const limits = settings?.positionLimits ?? {};
+  if (Object.keys(limits).length === 0) return [];
+
+  const counts = positionCounts(roster, positionOf);
+  const out = [];
+  for (const [position, max] of Object.entries(limits)) {
+    if (!Number.isInteger(max) || max < 0) continue;
+    const have = counts[position] ?? 0;
+    if (have > max) out.push({ position, have, max });
+  }
+  return out;
+}
+
+/**
+ * May this team add this player without breaching its positional cap?
+ *
+ * ⚠️ AN UNKNOWN POSITION IS ALLOWED. Refusing a player the index has not caught
+ * up on would block a legal add for a data-freshness reason the manager cannot
+ * see or fix — the same reasoning `injuryMap()` uses for IR enforcement.
+ */
+export function mayAddAtPosition(roster, playerId, settings, positionOf = () => null) {
+  const limits = settings?.positionLimits ?? {};
+  const pos = positionOf(playerId);
+  if (!pos) return { ok: true };
+
+  const max = limits[pos];
+  if (!Number.isInteger(max) || max < 0) return { ok: true };
+
+  const have = positionCounts(roster, positionOf)[pos] ?? 0;
+  if (have < max) return { ok: true };
+  return { ok: false, error: `this league allows at most ${max} ${pos}${max === 1 ? '' : 's'} on an active roster` };
+}

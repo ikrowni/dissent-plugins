@@ -181,3 +181,22 @@ describe('AutoSubs setting', () => {
     expect(DEFAULT_SETTINGS.autoSubsPerWeek).toBe(0);
   });
 });
+
+describe('wave 4 settings', () => {
+  it('defaults to one week per playoff round', () => {
+    expect(DEFAULT_SETTINGS.playoffRoundFormat).toBe('one');
+  });
+
+  it('defaults to no positional limits', () => {
+    expect(DEFAULT_SETTINGS.positionLimits).toEqual({});
+  });
+
+  // ⚠️ Same trap as `scoring`: a shared reference means one league's edit
+  // silently edits every league seeded from the default.
+  it('never shares the positionLimits reference with the defaults', () => {
+    const a = normalizeSettings({});
+    a.positionLimits.QB = 99;
+    expect(DEFAULT_SETTINGS.positionLimits.QB).toBeUndefined();
+    expect(normalizeSettings({}).positionLimits).toEqual({});
+  });
+});

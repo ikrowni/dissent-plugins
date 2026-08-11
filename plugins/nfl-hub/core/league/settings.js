@@ -56,6 +56,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   // A consolation bracket added later would be seeded from standings that
   // already include playoff weeks — a different table to the one it belongs to.
   playoffConsolation: true,
+  // How long each playoff round runs: 'one' | 'two_week_championship' | 'two'.
+  // Sleeper's three options, captured from the live settings screen.
+  playoffRoundFormat: 'one',
   // Play the league median as a second weekly result, Sleeper's league_average_match.
   medianMatchup: false,
 
@@ -88,6 +91,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
   // kickoff times (see core/league/autosubs.js and score-backoff.js). Adding the
   // toggle without the data would be a setting that silently does nothing.
   autoSubsPerWeek: 0,
+  // Max ACTIVE players per position, e.g. { QB: 4 }. Empty means uncapped,
+  // which is the default and by far the common case. IR and taxi are exempt —
+  // see overPositionLimit in rosters.js for why.
+  positionLimits: {},
   irSlots: 0,
   taxiSlots: 0,
   taxiYears: 0,
@@ -122,6 +129,9 @@ export function normalizeSettings(partial = {}) {
     ...merged,
     rosterPositions: [...(partial.rosterPositions ?? DEFAULT_SETTINGS.rosterPositions)],
     scoring: { ...(partial.scoring ?? DEFAULT_SETTINGS.scoring) },
+    // ⚠️ Copied for the same reason as `scoring`: a league editing its limits in
+    // place would otherwise edit every league seeded from the frozen default.
+    positionLimits: { ...(partial.positionLimits ?? DEFAULT_SETTINGS.positionLimits) },
   };
 }
 

@@ -71,6 +71,10 @@ export function startPlayoffs({ p, payload }) {
     startedBy: p.userId,
     playoffWeekStart: meta.settings?.playoffWeekStart ?? 15,
     reseed: meta.settings?.playoffReseed !== false,
+    // ⚠️ Recorded ON THE BRACKET, like reseed and the seeds themselves. A
+    // league that changed this mid-playoffs would otherwise re-interpret which
+    // weeks a round already occupied and move a finished game.
+    roundFormat: meta.settings?.playoffRoundFormat ?? "one",
     // The seeds AS THEY WERE when the bracket was built. Standings keep moving if
     // a week is rescored, and a bracket must not silently reseed itself.
     seeds,

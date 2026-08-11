@@ -3,6 +3,7 @@ import {
   emptyRoster, emptyRosters, allPlayers, ownerOf,
   addPlayer, dropPlayer, moveCompartment, executeTrade,
   validateRosters, rosterCapacity,
+  positionCounts, overPositionLimit, mayAddAtPosition,
 } from './rosters.js';
 import { normalizeSettings, FORMAT } from './settings.js';
 
@@ -263,5 +264,61 @@ describe('a sequence of real operations keeps the invariant', () => {
     // Every player is owned exactly once.
     const all = [...allPlayers(r.t1), ...allPlayers(r.t2)];
     expect(new Set(all).size).toBe(all.length);
+  });
+});
+
+describe('positional limits', () => {
+  const positionOf = (id) => ({
+    q1: 'QB', q2: 'QB', q3: 'QB', r1: 'RB', r2: 'RB',
+  }[id] ?? null);
+
+  it('counts only ACTIVE players — IR and taxi are exempt', () => {
+    const roster = { players: ['q1', 'q2'], ir: ['q3'], taxi: ['r1'] };
+    expect(positionCounts(roster, positionOf)).toEqual({ QB: 2 });
+  });
+
+  it('reports nothing over when there are no limits', () => {
+    const roster = { players: ['q1', 'q2', 'q3'], ir: [], taxi: [] };
+    expect(overPositionLimit(roster, {}, positionOf)).toEqual([]);
+  });
+
+  it('reports the position that is over', () => {
+    const roster = { players: ['q1', 'q2', 'q3'], ir: [], taxi: [] };
+    const out = overPositionLimit(roster, { positionLimits: { QB: 2 } }, positionOf);
+    expect(out).toEqual([{ position: 'QB', have: 3, max: 2 }]);
+  });
+
+  // ⚠️ IR is the whole reason that compartment exists — an injured QB must not
+  // count against the limit, or a league with a QB cap cannot use IR at all.
+  it('does not count an IR player against the limit', () => {
+    const roster = { players: ['q1', 'q2'], ir: ['q3'], taxi: [] };
+    expect(overPositionLimit(roster, { positionLimits: { QB: 2 } }, positionOf)).toEqual([]);
+  });
+
+  it('allows an add that stays inside the limit', () => {
+    const roster = { players: ['q1'], ir: [], taxi: [] };
+    expect(mayAddAtPosition(roster, 'q2', { positionLimits: { QB: 2 } }, positionOf).ok).toBe(true);
+  });
+
+  it('refuses an add that would breach the limit', () => {
+    const roster = { players: ['q1', 'q2'], ir: [], taxi: [] };
+    const res = mayAddAtPosition(roster, 'q3', { positionLimits: { QB: 2 } }, positionOf);
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/at most 2 QB/i);
+  });
+
+  it('allows any add when the position has no limit', () => {
+    const roster = { players: ['r1', 'r2'], ir: [], taxi: [] };
+    expect(mayAddAtPosition(roster, 'q1', { positionLimits: { QB: 2 } }, positionOf).ok).toBe(true);
+  });
+
+  it('allows an add for an unknown position rather than guessing', () => {
+    const roster = { players: [], ir: [], taxi: [] };
+    expect(mayAddAtPosition(roster, 'mystery', { positionLimits: { QB: 1 } }, positionOf).ok).toBe(true);
+  });
+
+  it('is empty-safe', () => {
+    expect(positionCounts(null, positionOf)).toEqual({});
+    expect(overPositionLimit(null, { positionLimits: { QB: 1 } }, positionOf)).toEqual([]);
   });
 });

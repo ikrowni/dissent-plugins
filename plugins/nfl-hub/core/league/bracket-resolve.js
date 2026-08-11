@@ -29,6 +29,13 @@ export function resolveBracket(bracket, scoresFor) {
     playoffWeekStart: bracket.playoffWeekStart ?? 15,
     reseed: bracket.reseed,
     scoresFor,
+    // ⚠️ READ FROM THE BRACKET, not from live settings. A commissioner who
+    // changed the format mid-playoffs would otherwise re-interpret which weeks
+    // an already-finished round occupied and move a decided game.
+    format: bracket.roundFormat,
+    // The MAIN side's round count decides where the championship is. A
+    // consolation bracket is shorter and must not double its own last round.
+    totalRounds: (bracket.rounds ?? []).length,
   };
 
   const main = advanceSide({
@@ -52,14 +59,76 @@ export function resolveBracket(bracket, scoresFor) {
 }
 
 /** The week a given round is played in. */
-export function weekForRound(playoffWeekStart, roundIndex) {
-  return (playoffWeekStart ?? 15) + roundIndex;
+/**
+ * How long each playoff round runs.
+ *
+ * Sleeper offers exactly these three, captured from the live settings screen:
+ * "One week per round · Two week championship round · Two weeks per round".
+ */
+export const PLAYOFF_ROUND_FORMAT = Object.freeze({
+  ONE: 'one',
+  TWO_WEEK_CHAMPIONSHIP: 'two_week_championship',
+  TWO: 'two',
+});
+
+/**
+ * How many weeks round `roundIndex` spans.
+ *
+ * ⚠️ AN UNKNOWN FORMAT IS ONE WEEK. Guessing "two" for a typo would silently
+ * double the length of somebody's playoffs.
+ */
+export function weeksInRound(roundIndex, { format, totalRounds } = {}) {
+  if (format === PLAYOFF_ROUND_FORMAT.TWO) return 2;
+  if (format === PLAYOFF_ROUND_FORMAT.TWO_WEEK_CHAMPIONSHIP
+    && Number.isInteger(totalRounds) && roundIndex === totalRounds - 1) return 2;
+  return 1;
+}
+
+/**
+ * The week a round STARTS in.
+ *
+ * ⚠️ Rounds no longer sit one week apart, so this accumulates the lengths of
+ * the rounds before it rather than adding the index. The two-argument form is
+ * preserved exactly — every existing caller means one week per round.
+ */
+export function weekForRound(playoffWeekStart, roundIndex, opts = {}) {
+  let week = playoffWeekStart ?? 15;
+  for (let i = 0; i < roundIndex; i++) week += weeksInRound(i, opts);
+  return week;
+}
+
+/** Every week a round occupies, in order. */
+export function roundWeeks(playoffWeekStart, roundIndex, opts = {}) {
+  const start = weekForRound(playoffWeekStart, roundIndex, opts);
+  const n = weeksInRound(roundIndex, opts);
+  return Array.from({ length: n }, (_, i) => start + i);
+}
+
+/**
+ * Add up a multi-week round into one score record.
+ *
+ * ⚠️ RETURNS NULL IF ANY WEEK IS MISSING. A two-week round decided on week one
+ * alone would hand the title to whoever led at half-time — the round is not a
+ * result until every week of it is in.
+ */
+function aggregateWeeks(weeks, scoresFor) {
+  const totals = {};
+  for (const w of weeks) {
+    const s = scoresFor(w);
+    if (!s) return null;
+    for (const [teamId, rec] of Object.entries(s.teams ?? {})) {
+      const t = Number(rec?.total);
+      if (!Number.isFinite(t)) continue;
+      totals[teamId] = (totals[teamId] ?? 0) + t;
+    }
+  }
+  return { teams: Object.fromEntries(Object.entries(totals).map(([k, v]) => [k, { total: v }])) };
 }
 
 /**
  * One side — `{ rounds, byes, champion }` — advanced as far as the scores allow.
  */
-export function advanceSide(side, { playoffWeekStart, reseed, scoresFor }) {
+export function advanceSide(side, { playoffWeekStart, reseed, scoresFor, format, totalRounds }) {
   if (!side || side.champion) return side;
 
   let state = side;
@@ -78,7 +147,10 @@ export function advanceSide(side, { playoffWeekStart, reseed, scoresFor }) {
       continue;
     }
 
-    const scores = scoresFor(weekForRound(playoffWeekStart, roundIndex));
+    const scores = aggregateWeeks(
+      roundWeeks(playoffWeekStart, roundIndex, { format, totalRounds }),
+      scoresFor,
+    );
     if (!scores) break; // not played yet — nothing to decide
 
     const decided = round.map((g) => decide(g, scores));

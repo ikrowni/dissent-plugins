@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveBracket, advanceSide, weekForRound } from './bracket-resolve.js';
+import {
+  resolveBracket, advanceSide, weekForRound, roundWeeks, PLAYOFF_ROUND_FORMAT,
+} from './bracket-resolve.js';
 import { buildBracket, consolationSeeds } from './schedule.js';
 
 const table = (n) => Array.from({ length: n }, (_, i) => ({
@@ -208,5 +210,110 @@ describe('resolveBracket', () => {
     }));
     expect(out.rounds).toHaveLength(2);
     expect(out.consolation).toBe(null);
+  });
+});
+
+describe('playoff round formats', () => {
+  it('defaults to one week per round, unchanged', () => {
+    expect(weekForRound(15, 0)).toBe(15);
+    expect(weekForRound(15, 2)).toBe(17);
+  });
+
+  it('keeps the old two-argument call working', () => {
+    expect(weekForRound(15, 1)).toBe(16);
+  });
+
+  // Two weeks per round: every round spans two, so each round start advances by 2.
+  it('spaces rounds two weeks apart when every round is two weeks', () => {
+    const o = { format: PLAYOFF_ROUND_FORMAT.TWO, totalRounds: 3 };
+    expect(weekForRound(15, 0, o)).toBe(15);
+    expect(weekForRound(15, 1, o)).toBe(17);
+    expect(weekForRound(15, 2, o)).toBe(19);
+  });
+
+  // ⚠️ Only the FINAL round doubles here, so earlier rounds stay one week and
+  // the championship is the only one that spans two.
+  it('doubles only the last round in a two-week championship', () => {
+    const o = { format: PLAYOFF_ROUND_FORMAT.TWO_WEEK_CHAMPIONSHIP, totalRounds: 3 };
+    expect(weekForRound(15, 0, o)).toBe(15);
+    expect(weekForRound(15, 1, o)).toBe(16);
+    expect(weekForRound(15, 2, o)).toBe(17);
+    expect(roundWeeks(15, 2, o)).toEqual([17, 18]);
+    expect(roundWeeks(15, 0, o)).toEqual([15]);
+  });
+
+  it('lists both weeks of every round when all rounds are two weeks', () => {
+    const o = { format: PLAYOFF_ROUND_FORMAT.TWO, totalRounds: 2 };
+    expect(roundWeeks(15, 0, o)).toEqual([15, 16]);
+    expect(roundWeeks(15, 1, o)).toEqual([17, 18]);
+  });
+
+  it('lists a single week by default', () => {
+    expect(roundWeeks(15, 1)).toEqual([16]);
+  });
+
+  it('treats an unknown format as one week per round', () => {
+    expect(roundWeeks(15, 1, { format: 'nonsense', totalRounds: 3 })).toEqual([16]);
+  });
+});
+
+describe('multi-week rounds in advanceSide', () => {
+  const side = () => ({
+    rounds: [[{ home: { teamId: 'a', seed: 1 }, away: { teamId: 'b', seed: 2 }, winner: null }]],
+    byes: [],
+    champion: null,
+  });
+  const wk = (a, b) => ({ teams: { a: { total: a }, b: { total: b } } });
+
+  // ⚠️ A two-week round is decided on the SUM. Deciding on week one alone would
+  // hand the title to whoever led at half-time.
+  it('sums both weeks before deciding', () => {
+    const scores = { 15: wk(100, 120), 16: wk(90, 50) };
+    const out = advanceSide(side(), {
+      playoffWeekStart: 15,
+      scoresFor: (w) => scores[w] ?? null,
+      format: PLAYOFF_ROUND_FORMAT.TWO,
+      totalRounds: 1,
+    });
+    // a: 190, b: 170 — a wins on aggregate despite losing week one.
+    expect(out.rounds[0][0].winner.teamId).toBe('a');
+  });
+
+  it('waits when only the first week is scored', () => {
+    const scores = { 15: wk(100, 120) };
+    const out = advanceSide(side(), {
+      playoffWeekStart: 15,
+      scoresFor: (w) => scores[w] ?? null,
+      format: PLAYOFF_ROUND_FORMAT.TWO,
+      totalRounds: 1,
+    });
+    expect(out.rounds[0][0].winner).toBe(null);
+  });
+});
+
+describe('roundFormat is read from the bracket', () => {
+  const bracket = (over = {}) => ({
+    playoffWeekStart: 15,
+    reseed: false,
+    roundFormat: PLAYOFF_ROUND_FORMAT.TWO,
+    rounds: [[{ home: { teamId: 'a', seed: 1 }, away: { teamId: 'b', seed: 2 }, winner: null }]],
+    byes: [],
+    champion: null,
+    ...over,
+  });
+  const wk = (a, b) => ({ teams: { a: { total: a }, b: { total: b } } });
+
+  it('honours a two-week round recorded on the bracket', () => {
+    const scores = { 15: wk(100, 120), 16: wk(90, 50) };
+    const out = resolveBracket(bracket(), (w) => scores[w] ?? null);
+    expect(out.rounds[0][0].winner.teamId).toBe('a');
+  });
+
+  // ⚠️ Without the format on the bracket this decides on week 15 alone and
+  // crowns b — the half-time leader.
+  it('does not decide on week one alone', () => {
+    const scores = { 15: wk(100, 120) };
+    const out = resolveBracket(bracket(), (w) => scores[w] ?? null);
+    expect(out.rounds[0][0].winner).toBe(null);
   });
 });

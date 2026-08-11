@@ -13,7 +13,7 @@ import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "..
 import { generateRegularSeason } from "../core/league/schedule.js";
 import { positionMap, injuryMap } from "./ops-scoring.js";
 import { validateAutoSubs } from "../core/league/autosubs.js";
-import { rosterCapacity } from "../core/league/rosters.js";
+import { rosterCapacity, mayAddAtPosition } from "../core/league/rosters.js";
 import { setBlock, setInterest, interestCounts } from "../core/league/trade-block.js";
 
 const refuse = (msg) => { throw new Error(msg); };
@@ -443,6 +443,16 @@ export function addFreeAgent({ p, payload }) {
 
     const owner = ownerOf(rosters, playerId);
     if (owner) refuse(`player ${playerId} is owned by team ${owner}`);
+
+    // ⚠️ CHECKED AFTER THE DROP, INSIDE THE SWAP. An add-with-drop that swaps
+    // one QB for another must pass even at the cap, and checking before the
+    // drop would refuse it. Positions come from the cached index, never the
+    // payload — the rule setLineup already encodes.
+    const positions = positionMap();
+    const limitCheck = mayAddAtPosition(
+      rosters?.[teamId], playerId, meta.settings, (id) => positions[String(id)] ?? null,
+    );
+    if (!limitCheck.ok) refuse(limitCheck.error);
 
     const added = addPlayer(rosters, teamId, playerId);
     if (!added.ok) refuse(added.error);
