@@ -117,10 +117,32 @@ describe('the standings tab before a season starts', () => {
     expect(html).toMatch(/AFC|NFC/);
   });
 
-  it('restores the playoff picture as soon as one game has been played', () => {
+  it('restores the playoff picture as soon as one REGULAR-season game has been played', () => {
     const t = zeroed(table);
     const firstDiv = Object.keys(t)[0];
     t[firstDiv][0] = { ...t[firstDiv][0], wins: 1, record: '1-0' };
-    expect(renderStandings({ loading: false, error: null, table: t })).toContain('playoff picture');
+    expect(renderStandings({ loading: false, error: null, table: t, seasonType: 'regular' }))
+      .toContain('playoff picture');
+  });
+
+  // ⚠️ THE BUG THE FIRST VERSION SHIPPED WITH. ESPN's preseason standings carry
+  // preseason results, so on 2026-08-11 Carolina sat at 1-0 from the Hall of Fame
+  // game and a records-only check said the season had started. Preseason results
+  // have no bearing on seeding, so the picture was just as meaningless.
+  it('draws no playoff picture in preseason even when a game has been played', () => {
+    const t = zeroed(table);
+    const firstDiv = Object.keys(t)[0];
+    t[firstDiv][0] = { ...t[firstDiv][0], wins: 1, record: '1-0' };
+    const html = renderStandings({ loading: false, error: null, table: t, seasonType: 'pre' });
+    expect(html).not.toContain('AFC playoff picture');
+    expect(html).toMatch(/preseason results do not count/i);
+  });
+
+  it('still draws it in the postseason', () => {
+    const t = zeroed(table);
+    const firstDiv = Object.keys(t)[0];
+    t[firstDiv][0] = { ...t[firstDiv][0], wins: 12, record: '12-5' };
+    expect(renderStandings({ loading: false, error: null, table: t, seasonType: 'post' }))
+      .toContain('playoff picture');
   });
 });

@@ -4,7 +4,7 @@ import { cache, TTL } from '../core/cache.js';
 import { urls, fetchStandings } from '../core/espn-client.js';
 import { parseStandings } from '../core/espn-league.js';
 
-const state = { loading: true, error: null, table: {} };
+const state = { loading: true, error: null, table: {}, seasonType: null };
 
 const COLS = [
   ['W', 'wins'], ['L', 'losses'], ['T', 'ties'], ['PCT', 'pct'],
@@ -83,6 +83,23 @@ export function seasonStarted(table) {
     .some((r) => (Number(r?.wins) || 0) + (Number(r?.losses) || 0) + (Number(r?.ties) || 0) > 0);
 }
 
+/**
+ * Is a playoff picture worth drawing at all?
+ *
+ * ⚠️ RECORDS ALONE ARE NOT ENOUGH, and assuming they were is how the first
+ * version of this shipped broken. ESPN's preseason standings carry preseason
+ * results — on 2026-08-11 the Hall of Fame game had been played, so Carolina sat
+ * at 1-0 and "has anybody played?" answered yes. Preseason results have no
+ * bearing on seeding whatsoever, so the picture stayed just as meaningless.
+ *
+ * The season TYPE is the real gate; the record check then covers the days
+ * between the regular season opening and its first game finishing.
+ */
+export function playoffPictureWorthDrawing(table, seasonType) {
+  if (seasonType === 'pre') return false;
+  return seasonStarted(table);
+}
+
 export function renderStandings(s = state) {
   if (s.loading) return stateMsg('Loading standings…', { spinner: true });
   if (s.error) return errorPane(s.error, 'Could not load standings.');
@@ -92,7 +109,7 @@ export function renderStandings(s = state) {
 
   // Before kickoff the seeds are noise; say what the tab is showing instead of
   // dressing division order up as a race.
-  let html = seasonStarted(s.table)
+  let html = playoffPictureWorthDrawing(s.table, s.seasonType)
     ? panel({
       title: 'Playoff picture',
       body: '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">'
@@ -102,8 +119,11 @@ export function renderStandings(s = state) {
     })
     : panel({
       title: 'Standings',
-      body: '<p class="muted">The season has not started, so there is no playoff picture yet — '
-        + 'every team is 0-0. The divisions below are the league as it stands.</p>',
+      body: `<p class="muted">${s.seasonType === 'pre'
+        ? 'It is preseason, so there is no playoff picture yet — preseason results do not count '
+          + 'towards seeding. The divisions below are the league as it stands.'
+        : 'The season has not started, so there is no playoff picture yet — every team is 0-0. '
+          + 'The divisions below are the league as it stands.'}</p>`,
     });
   for (const d of divisions.sort()) html += divisionTable(d, s.table[d]);
   return html;
@@ -123,6 +143,7 @@ export async function enter() {
     const raw = await cache.get(urls.standings(season), () => fetchStandings(season),
       TTL.STANDINGS, { staleOnError: true });
     state.table = parseStandings(raw);
+    state.seasonType = app.seasonType ?? null;
     state.error = null;
   } catch (err) {
     state.error = err?.message ?? 'failed';
