@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  recentPicks, detectRun, scarcityAt, tickerLine,
+  recentPicks, detectRun, scarcityAt, tickerLine, feedItems,
   RUN_WINDOW, RUN_THRESHOLD, SCARCITY_TIER,
 } from './draft-intel.js';
 
@@ -154,5 +154,48 @@ describe('tickerLine', () => {
     const pool = [poolEntry('e1', 'TE', 2)];
     const line = tickerLine({ picks, positionOf: (id) => map[id] ?? null, pool });
     expect(line.text).toBe('4 of the last 6 picks were TE — 1 top-12 tight end left');
+  });
+});
+
+describe('feedItems', () => {
+  const feedIndex = {
+    a: { n: 'B. Robinson', p: 'RB', t: 'ATL' },
+    b: { n: 'J. Chase', p: 'WR', t: 'CIN' },
+    c: { n: 'J. Gibbs', p: 'RB', t: 'DET' },
+  };
+  const playerOf = (id) => feedIndex[id] ?? null;
+  const teamLabel = (t) => `Team ${t}`;
+
+  it('lists picks newest first', () => {
+    const items = feedItems({ picks: picksOf('a', 'b', 'c'), playerOf, teamLabel });
+    expect(items.map((i) => i.name)).toEqual(['J. Gibbs', 'J. Chase', 'B. Robinson']);
+  });
+
+  it('carries the position and its colour key so the rail can tint it', () => {
+    const [first] = feedItems({ picks: picksOf('a'), playerOf, teamLabel });
+    expect(first).toMatchObject({ kind: 'pick', name: 'B. Robinson', pos: 'RB', team: 'Team t0' });
+  });
+
+  it('falls back to the raw id rather than rendering "undefined"', () => {
+    // ⚠️ ~5% of active players have no index record at all.
+    const [first] = feedItems({ picks: picksOf('zzz'), playerOf, teamLabel });
+    expect(first.name).toBe('zzz');
+    expect(first.pos).toBe('');
+  });
+
+  it('marks an auto-pick, because a lapsed clock is the news on that row', () => {
+    const picks = { 1: { playerId: 'a', teamId: 't0', at: 1, auto: true } };
+    expect(feedItems({ picks, playerOf, teamLabel })[0].auto).toBe(true);
+  });
+
+  it('caps the rail so a fifteen-round draft does not render 180 rows', () => {
+    const picks = {};
+    for (let i = 1; i <= 40; i += 1) picks[i] = { playerId: 'a', teamId: 't', at: i, auto: false };
+    expect(feedItems({ picks, playerOf, teamLabel })).toHaveLength(8);
+    expect(feedItems({ picks, playerOf, teamLabel, limit: 3 })).toHaveLength(3);
+  });
+
+  it('is empty before the first pick', () => {
+    expect(feedItems({ picks: {}, playerOf, teamLabel })).toEqual([]);
   });
 });

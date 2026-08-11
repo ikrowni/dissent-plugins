@@ -120,3 +120,31 @@ export function tickerLine({ picks = {}, positionOf = () => null, pool = [] } = 
 
   return { flag: 'RUN', pos: run.pos, text };
 }
+
+/** How many rows the live rail holds. Past this it is a transaction log, not news. */
+export const FEED_LIMIT = 8;
+
+/**
+ * The live rail: picks as they land, newest first.
+ *
+ * ⚠️ DERIVED, NOT RECORDED. There is no event log and this does not add one — the
+ * picks object IS the history, and reading it backwards is the whole feature. A
+ * stored log would be a second source of truth that could disagree with the board
+ * it sits beside.
+ */
+export function feedItems({
+  picks = {}, playerOf = () => null, teamLabel = (t) => String(t), limit = FEED_LIMIT,
+} = {}) {
+  return recentPicks(picks, limit).map((pick) => {
+    const p = playerOf(pick.playerId);
+    return {
+      kind: 'pick',
+      overall: pick.overall,
+      playerId: String(pick.playerId),
+      name: p?.n ?? String(pick.playerId),
+      pos: String(p?.p ?? '').toUpperCase(),
+      team: teamLabel(pick.teamId),
+      auto: Boolean(pick.auto),
+    };
+  });
+}
