@@ -362,6 +362,44 @@ describe('the motion contract', () => {
     expect(css).not.toMatch(/\binfinite\b/);
   });
 
+  // ⚠️ THE REGRESSION THIS EXISTS FOR. `body.motion-idle` first shipped as a
+  // blanket `body.motion-idle *` and it made the WHOLE HUB INVISIBLE: entrances
+  // use `animation-fill-mode: both`, which holds the FROM state until the
+  // animation runs, and `.section-body > *` fades a panel in from opacity 0.
+  // Pausing everything froze that panel at zero, so any view rendered while the
+  // window was unfocused painted nothing at all. Found only in live QA — a
+  // standalone render cannot reproduce it, because motion.js applies the class.
+  it('the idle rule never pauses animations with a blanket selector', () => {
+    const css = readFileSync(join(root, 'styles', 'motion.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(css).not.toMatch(/body\.motion-idle\s*\*/);
+  });
+
+  // The other half of the same contract: the named list must actually cover the
+  // ambient loops, or the focus gate silently stops gating them.
+  it('the idle rule names every infinite animation the plugin ships', () => {
+    const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '');
+    const sheets = readdirSync(join(root, 'styles')).filter((f) => f.endsWith('.css'));
+
+    const idleBlock = strip(readFileSync(join(root, 'styles', 'motion.css'), 'utf8'))
+      .split(/body\.motion-idle/).slice(1).join(' ');
+
+    const missing = [];
+    for (const f of sheets) {
+      const css = strip(readFileSync(join(root, 'styles', f), 'utf8'));
+      for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        if (!/\banimation\b[^;]*\binfinite\b/.test(m[2])) continue;
+        for (const sel of m[1].split(',').map((s) => s.trim()).filter(Boolean)) {
+          // Reduced-motion overrides and keyframe steps are not ambient loops.
+          if (/^\d|^from$|^to$|reduce-motion/.test(sel)) continue;
+          const bare = sel.replace(/^body\./, '').trim();
+          if (!idleBlock.includes(bare)) missing.push(`${f}: ${sel}`);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
   it('the guard tells a bare timer apart from a method that shares its name', () => {
     // ⚠️ THE FALSE POSITIVE THAT ALMOST WIDENED THE ALLOWLIST. views/league.js calls
     // app.scheduler.setInterval(ms) to set the poll cadence. Excusing that file

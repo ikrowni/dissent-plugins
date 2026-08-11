@@ -135,21 +135,25 @@ body.reduce-motion *::after {
 /* ── Idle ──────────────────────────────────────────────────────────────────────
  *
  * ⚠️ THIS IS THE HALF OF THE MOTION BUDGET core/motion.js CANNOT REACH. That module
- * gates `motion.loop()`, but the ambient effects here are CSS `animation: … infinite`
- * — .sweep, .vs-pulse, .spinner. A rAF gate alone would gate none of them.
+ * gates `motion.loop()`, but the ambient effects here are CSS `animation: … infinite`.
  *
  * core/motion.js stamps `motion-idle` on <body> whenever the frame is hidden OR the
  * window is merely behind another application — the case visibilitychange never
  * fires for, and the one all three of this project's GPU incidents were.
  *
  * ⚠️ `paused`, NOT `none`. Pausing keeps the current frame, so alt-tabbing back
- * resumes where it was instead of snapping everything to frame zero at once — which
- * would be a whole-surface repaint on every focus.
+ * resumes where it was instead of repainting every layer at once.
  *
- * Kept byte-for-byte in step with plugins/nfl-hub/styles/motion.css. */
-body.motion-idle *,
-body.motion-idle *::before,
-body.motion-idle *::after {
+ * ⚠️ NAMED SELECTORS, NEVER A BLANKET `*`. This shipped once as `body.motion-idle *`
+ * and it made the hub INVISIBLE: entrances use `animation-fill-mode: both`, which
+ * holds the FROM state (`opacity: 0`) until the animation runs, so anything rendered
+ * while unfocused painted nothing. Pause the AMBIENT loops only.
+ *
+ * Kept in step with plugins/nfl-hub/styles/motion.css. */
+body.motion-idle .sweep,
+body.motion-idle .spinner,
+body.motion-idle .vs-pulse,
+body.motion-idle .ambient {
   animation-play-state: paused !important;
 }
 

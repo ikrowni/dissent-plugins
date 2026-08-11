@@ -126,7 +126,7 @@
 /* ── Idle ──────────────────────────────────────────────────────────────────
  *
  * ⚠️ THIS IS THE HALF OF THE MOTION BUDGET core/motion.js CANNOT REACH. That
- * module gates `motion.loop()`, but every ambient effect in this hub is a CSS
+ * module gates `motion.loop()`, but the ambient effects in this hub are CSS
  * `animation: … infinite`: .sweep, .db-live::after, .live-dot::after,
  * .m-skel::after, .spinner. A rAF gate alone would gate none of them.
  *
@@ -137,9 +137,23 @@
  * ⚠️ `paused`, NOT `none`. Pausing keeps the current frame, so alt-tabbing back
  * resumes where it was instead of snapping everything to frame zero at once —
  * which would be a whole-surface repaint on every focus.
+ *
+ * ⚠️ NAMED SELECTORS, NEVER A BLANKET `*`. This shipped once as
+ * `body.motion-idle *` and it made the whole hub INVISIBLE. Entrances here use
+ * `animation-fill-mode: both`, which holds the FROM state until the animation
+ * runs — and `.section-body > *` fades a panel in from `opacity: 0`. Pausing
+ * everything froze that panel at zero, so any view rendered while the window was
+ * unfocused painted nothing at all and stayed blank until the user clicked back.
+ * Caught in live QA; a standalone render cannot catch it, because motion.js is
+ * what applies the class.
+ *
+ * So: pause the AMBIENT loops only. A guard test in core/motion.test.js asserts
+ * this list covers every `infinite` animation the plugin ships.
  */
-body.motion-idle *,
-body.motion-idle *::before,
-body.motion-idle *::after {
+body.motion-idle .sweep,
+body.motion-idle .spinner,
+body.motion-idle .m-skel::after,
+body.motion-idle .live-dot::after,
+body.motion-idle .db-live::after {
   animation-play-state: paused !important;
 }
