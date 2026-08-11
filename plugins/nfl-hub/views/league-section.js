@@ -312,6 +312,10 @@ export async function onAction(act, target) {
         });
       });
       return;
+    case 'roster-autosub':
+      roster.setAutoSub(app, target.dataset.starter, target.value);
+      return;
+
     case 'roster-slot':
       roster.setSlot(app, target.dataset.index, target.value);
       return;

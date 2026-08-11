@@ -505,3 +505,23 @@ h4 {
 .db-q-divider::before, .db-q-divider::after {
   content: ''; flex: 1; height: 1px; background: rgba(255,182,18,0.35);
 }
+
+/* ── AutoSubs ─────────────────────────────────────────────────────────────────
+ * A designated backup for a starter who does not play. The note is the point:
+ * a manager has to see the arrangement without opening anything, which is why
+ * it reads as a sentence rather than a second dropdown value. */
+.autosub { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.autosub select {
+  font: inherit; font-size: 10.5px; padding: 2px 6px;
+  border-radius: var(--r-sm); background: var(--ink-2);
+  border: 1px solid var(--line); color: var(--text-3);
+}
+.autosub-note {
+  position: relative; padding-left: 12px;
+  font-size: 10.5px; color: var(--text-3); letter-spacing: 0.02em;
+}
+/* The dashed elbow linking the sub back to the starter it covers. */
+.autosub-note::before {
+  content: ''; position: absolute; left: 0; top: 50%;
+  width: 8px; border-top: 1px dashed var(--text-3); opacity: 0.5;
+}

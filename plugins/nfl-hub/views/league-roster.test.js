@@ -220,3 +220,54 @@ describe('injured reserve', () => {
     expect(render()).toMatch(/Nobody on your roster is IR-eligible/);
   });
 });
+
+describe('AutoSubs on the roster', () => {
+  const enable = (n = 2) => {
+    _state.league.settings.autoSubsPerWeek = n;
+    Object.assign(_state, { lineup: ['qb1', 'rb1', 'wr1'] });
+  };
+
+  it('offers no AutoSub control when the league has them off', () => {
+    Object.assign(_state, { lineup: ['qb1', 'rb1', 'wr1'] });
+    expect(render()).not.toContain('roster-autosub');
+  });
+
+  it('offers a sub picker per starter when enabled', () => {
+    enable();
+    expect(render()).toContain('roster-autosub');
+  });
+
+  // ⚠️ The whole point of the row treatment: a manager must be able to see the
+  // designation without opening anything.
+  it('shows who backs up a starter, in words', () => {
+    enable();
+    _state.subs = { rb1: 'rb2' };
+    const html = render();
+    expect(html).toContain('Sub Rob Bee, if out');
+  });
+
+  it('shows nothing extra for a starter with no sub', () => {
+    enable();
+    _state.subs = {};
+    expect(render()).not.toContain('if out');
+  });
+
+  // Eligibility is against the SLOT — a flex starter can be backed by a WR
+  // even though the starter is a WR and the bench player is an RB.
+  it('offers only slot-eligible bench players as subs', () => {
+    enable();
+    _state.subs = {};
+    const html = render();
+    // The QB slot (index 0) must not offer an RB as a backup.
+    const qbBlock = html.slice(html.indexOf('data-index="0"'), html.indexOf('data-index="1"'));
+    expect(qbBlock).not.toContain('Ray Bee');
+  });
+
+  it('does not offer a player who is already starting', () => {
+    enable();
+    _state.subs = {};
+    const html = render();
+    const rbBlock = html.slice(html.indexOf('data-sub-index="1"'));
+    expect(rbBlock.slice(0, 400)).not.toContain('Quinn Back');
+  });
+});

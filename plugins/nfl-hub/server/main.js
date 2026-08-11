@@ -14,7 +14,7 @@ import { principal } from "./auth.js";
 import { storage } from "./sdk/server-sdk.js";
 import {
   createLeague, listLeagues, getLeague, joinLeague, updateSettings,
-  setLineup, getLineup, addFreeAgent, dropFreeAgent, movePlayer,
+  setLineup, getLineup, setAutoSubs, getAutoSubs, addFreeAgent, dropFreeAgent, movePlayer,
   generateSchedule, getSchedule,
 } from "./ops-league.js";
 import {
@@ -76,6 +76,8 @@ const OPS = {
   // Rosters and lineups
   "lineup:set": setLineup,
   "lineup:get": getLineup,
+  "autosub:set": setAutoSubs,
+  "autosub:get": getAutoSubs,
   "roster:add": addFreeAgent,
   "roster:drop": dropFreeAgent,
   "roster:move": movePlayer,

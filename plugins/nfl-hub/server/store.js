@@ -29,6 +29,10 @@ export const KEY = {
   trade: (lg, id) => `fl:${lg}:trade:${id}`,
   tradeIndex: (lg) => `fl:${lg}:trades`,
   lineup: (lg, season, week, team) => `fl:${lg}:lineup:${season}:w${week}:${team}`,
+  // AutoSub designations, alongside the lineup they modify. Same shape of key
+  // and the same one-writer-per-key property, so a plain write is correct here
+  // exactly as it is for a lineup.
+  autosubs: (lg, season, week, team) => `fl:${lg}:autosub:${season}:w${week}:${team}`,
   scores: (lg, season, week) => `fl:${lg}:scores:${season}:w${week}`,
   bracket: (lg, season) => `fl:${lg}:bracket:${season}`,
   audit: (lg, chunk) => `fl:${lg}:audit:${chunk}`,

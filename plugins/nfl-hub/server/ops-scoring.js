@@ -16,6 +16,7 @@ import { requireScheduled, requireCommissioner } from "./auth.js";
 import { scoreStatLine } from "../core/league/scoring.js";
 import { splitRosterPositions } from "../core/league/slots.js";
 import { weeklyPoints } from "../core/league/lineup.js";
+import { resolveAutoSubs } from "../core/league/autosubs.js";
 import { buildStandings, seedTeams } from "../core/league/schedule.js";
 import { shouldAdvance } from "../core/league/season-clock.js";
 // ⚠️ The refresh rule lives in core/league so it can be unit-tested — server/*.js
@@ -165,9 +166,35 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
   for (const teamId of Object.keys(teams)) {
     const roster = assets.rosters?.[teamId] ?? { players: [], ir: [], taxi: [] };
     const stored = read(KEY.lineup(lg, season, week, teamId), { lineup: [] });
+
+    // ⚠️ AUTOSUBS ARE APPLIED BEFORE SCORING, NEVER AFTER. They change WHICH
+    // players count, so resolving them after the fact would score the lineup as
+    // submitted and then disagree with itself.
+    //
+    // ⚠️ NOT IN BEST BALL. Best ball already scores the optimal lineup from the
+    // whole roster, so a substitution cannot improve it and would only make the
+    // result harder to explain.
+    //
+    // ⚠️ `applied` IS PERSISTED. An automatic change nobody can see is
+    // indistinguishable from a bug — the UI has to be able to say why a bench
+    // player scored.
+    let lineup = stored.lineup ?? [];
+    let applied = [];
+    if (!meta.settings?.bestBall && Number(meta.settings?.autoSubsPerWeek ?? 0) > 0) {
+      const designations = read(KEY.autosubs(lg, season, week, teamId), { subs: {} }).subs ?? {};
+      const resolved = resolveAutoSubs({
+        lineup,
+        starterSlots: starters,
+        subs: designations,
+        statsOf: (id) => stats?.[String(id)] ?? null,
+      });
+      lineup = resolved.lineup;
+      applied = resolved.applied;
+    }
+
     const out = weeklyPoints({
       players: roster.players ?? [],
-      lineup: stored.lineup ?? [],
+      lineup,
       starterSlots: starters,
       pointsOf,
       positionOf,
@@ -177,6 +204,7 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
       total: out.total,
       bestBall: out.bestBall,
       rows: out.rows.map((r) => ({ slot: r.slot, playerId: r.playerId, points: r.points })),
+      ...(applied.length > 0 ? { autoSubs: applied } : {}),
     };
   }
 

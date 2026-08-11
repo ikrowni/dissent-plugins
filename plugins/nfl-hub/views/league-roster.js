@@ -8,7 +8,9 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import { playerChip, positionColor } from '../core/player-visuals.js';
 import { getIndex } from '../core/player-index.js';
-import { setLineup, getLineup, dropPlayer, movePlayer } from '../core/league-api.js';
+import {
+  setLineup, getLineup, setAutoSubs, getAutoSubs, dropPlayer, movePlayer,
+} from '../core/league-api.js';
 import { splitRosterPositions, slotAccepts, irEligible } from '../core/league/slots.js';
 import { describe } from './league-home.js';
 
@@ -18,6 +20,7 @@ const state = {
   teamId: null,
   week: null,
   lineup: [],       // positional, may contain nulls
+  subs: {},         // { [starterPlayerId]: subPlayerId }
   loaded: false,
   error: null,
   busy: false,
@@ -27,7 +30,7 @@ const state = {
 export function reset() {
   Object.assign(state, {
     leagueId: null, league: null, teamId: null, week: null,
-    lineup: [], loaded: false, error: null, busy: false, notice: null,
+    lineup: [], subs: {}, loaded: false, error: null, busy: false, notice: null,
   });
 }
 
@@ -152,8 +155,52 @@ function slotRow(slot, index, current, bench) {
     <td class="lineup-pick">
       ${chosen ? playerChip(chosen, { size: 30, compact: true }) : '<span class="db-slot-empty">Empty</span>'}
       <select data-act="roster-slot" data-index="${index}">${options.join('')}</select>
+      ${autoSubCell(slot, index, current, bench)}
     </td>
   </tr>`;
+}
+
+/**
+ * The AutoSub designation for one starting slot.
+ *
+ * ⚠️ ELIGIBILITY IS AGAINST THE SLOT, not the starter's position — a flex
+ * starter may be backed by anything the flex accepts. Mirrors `subEligible`
+ * in core/league/autosubs.js; the module validates for real, so a disagreement
+ * here surfaces as a refused save rather than an illegal designation.
+ *
+ * ⚠️ Renders NOTHING when the league has AutoSubs off. A control for a setting
+ * that does nothing is worse than no control.
+ */
+// ⚠️ THE SLOT INDEX PARAMETER IS NOT CALLED `index`. The module-level player map
+// is called `index`, and naming the parameter the same thing shadows it — the
+// name lookup then indexes a NUMBER and every designation renders as a raw
+// player id. That shipped for exactly as long as it took a test to run.
+function autoSubCell(slot, slotIndex, current, bench) {
+  const maxSubs = Number(state.league?.settings?.autoSubsPerWeek ?? 0);
+  if (!Number.isInteger(maxSubs) || maxSubs <= 0) return '';
+  if (!current) return '';
+
+  const starting = new Set((state.lineup ?? []).filter(Boolean).map(String));
+  const chosenSub = state.subs?.[String(current)] ?? '';
+
+  const options = ['<option value="">— no AutoSub —</option>'];
+  for (const id of [...new Set(bench.map(String))]) {
+    if (starting.has(id)) continue;                       // already playing
+    const pos = positionOf(id);
+    if (pos && !slotAccepts(slot, pos)) continue;         // slot eligibility
+    const sel = String(chosenSub) === id ? ' selected' : '';
+    options.push(`<option value="${esc(id)}"${sel}>${esc(playerLabel(id))}</option>`);
+  }
+
+  // ⚠️ THE LOCAL INDEX, not getIndex(). This file resolves names through the map
+  // injected by `useIndex`, and mixing the two sources gives a row that renders
+  // a raw player id in exactly the environments where the injected map is the
+  // only one populated.
+  const subName = chosenSub ? (index?.[String(chosenSub)]?.n ?? `#${chosenSub}`) : null;
+  return `<div class="autosub">
+    <select data-act="roster-autosub" data-sub-index="${slotIndex}" data-starter="${esc(String(current))}">${options.join('')}</select>
+    ${subName ? `<span class="autosub-note">Sub ${esc(subName)}, if out</span>` : ''}
+  </div>`;
 }
 
 /**
@@ -234,8 +281,16 @@ export async function load(app, { leagueId, league, teamId, week }) {
       const saved = stored?.lineup ?? [];
       // Normalise to exactly one entry per slot, preserving holes.
       state.lineup = starters.map((_, i) => (saved[i] ? String(saved[i]) : null));
+
+      // ⚠️ Only fetched when the league actually has AutoSubs on. Asking a
+      // league that does not for designations it cannot have is a request per
+      // roster view for nothing.
+      state.subs = Number(league?.settings?.autoSubsPerWeek ?? 0) > 0
+        ? ((await getAutoSubs(leagueId, teamId, week).catch(() => null))?.subs ?? {})
+        : {};
     } else {
       state.lineup = starters.map(() => null);
+      state.subs = {};
     }
   } catch (err) {
     state.error = describe(err);
@@ -255,6 +310,42 @@ export async function load(app, { leagueId, league, teamId, week }) {
  * picked again; the state deduped it silently underneath, so the screen showed
  * one lineup and the save sent a different one.
  */
+/**
+ * Designate (or clear) an AutoSub for one starter, and save it immediately.
+ *
+ * ⚠️ SAVED ON CHANGE, unlike the lineup. A lineup is edited slot by slot and
+ * saved once because the slots constrain each other; a designation is a single
+ * independent fact, and holding it unsaved would let a manager close the screen
+ * believing a backup is in place when nothing was ever sent.
+ */
+export async function setAutoSub(app, starterId, subId) {
+  const starter = String(starterId ?? '');
+  if (!starter) return;
+
+  const next = { ...(state.subs ?? {}) };
+  if (subId) next[starter] = String(subId);
+  else delete next[starter];
+
+  const previous = state.subs;
+  state.subs = next;
+  state.error = null;
+  state.notice = null;
+  app?.router?.refresh();
+
+  try {
+    await setAutoSubs(state.leagueId, state.teamId, state.week, next);
+    state.notice = 'AutoSub saved.';
+  } catch (err) {
+    // ⚠️ ROLL BACK ON REFUSAL. The module is the authority on eligibility and
+    // the per-week limit; leaving the rejected designation on screen would show
+    // a backup that does not exist.
+    state.subs = previous;
+    state.error = describe(err);
+  } finally {
+    app?.router?.refresh();
+  }
+}
+
 export function setSlot(app, index_, playerId) {
   const i = Number(index_);
   if (!Number.isInteger(i) || i < 0 || i >= state.lineup.length) return;

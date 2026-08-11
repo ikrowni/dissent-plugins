@@ -12,6 +12,8 @@ import { splitRosterPositions, validateLineup, irEligible } from "../core/league
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
 import { generateRegularSeason } from "../core/league/schedule.js";
 import { positionMap, injuryMap } from "./ops-scoring.js";
+import { validateAutoSubs } from "../core/league/autosubs.js";
+import { rosterCapacity } from "../core/league/rosters.js";
 
 const refuse = (msg) => { throw new Error(msg); };
 
@@ -240,6 +242,92 @@ export function getLineup({ payload }) {
   const week = Number(payload?.week);
   const teamId = String(payload?.teamId ?? "");
   return read(KEY.lineup(lg, season, week, teamId), { lineup: [], setAt: null, setBy: null });
+}
+
+/**
+ * Designate AutoSubs for one team and week.
+ *
+ * ⚠️ Uncontended by construction — one team, one week, one writer — so a plain
+ * write is correct, exactly as for a lineup.
+ *
+ * ⚠️ THE ROSTER LIMIT IS CHECKED HERE AND NOWHERE ELSE. Sleeper refuses to SET
+ * subs while a roster is over its limit, but HONOURS subs set while it was legal
+ * and only later breached by a mid-week trade. `resolveAutoSubs` therefore never
+ * re-checks it — moving this check into scoring would silently break that rule.
+ */
+export function setAutoSubs({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams, assets } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamControl(p, teams, meta, teamId);
+  if (err) refuse(err);
+
+  const week = Number(payload?.week);
+  const season = Number(payload?.season ?? meta.season);
+  if (!Number.isInteger(week) || week < 1) refuse("week must be a positive integer");
+
+  const maxSubs = Number(meta.settings?.autoSubsPerWeek ?? 0);
+  if (!Number.isInteger(maxSubs) || maxSubs <= 0) {
+    refuse("AutoSubs are not enabled in this league");
+  }
+
+  const raw = payload?.subs && typeof payload.subs === "object" ? payload.subs : {};
+  const subs = {};
+  for (const [starterId, subId] of Object.entries(raw)) {
+    if (starterId == null || subId == null) continue;
+    subs[String(starterId)] = String(subId);
+  }
+
+  const roster = assets.rosters?.[teamId] ?? { players: [], ir: [], taxi: [] };
+
+  // ⚠️ Over the limit means no NEW designations. Clearing them must still work,
+  // or a manager who goes over is stuck with subs they cannot remove.
+  if (Object.keys(subs).length > 0) {
+    const held = (roster.players ?? []).length;
+    const capacity = rosterCapacity(meta.settings);
+    if (capacity > 0 && held > capacity) {
+      refuse(`roster is over the limit (${held}/${capacity}) — clear it before setting AutoSubs`);
+    }
+  }
+
+  const stored = read(KEY.lineup(lg, season, week, teamId), { lineup: [] });
+  const { starters } = splitRosterPositions(meta.settings?.rosterPositions);
+
+  // ⚠️ POSITIONS COME FROM THE CACHED INDEX, NEVER FROM THE PAYLOAD — the same
+  // rule `setLineup` encodes. A caller that supplied positions could declare a
+  // QB an RB and back up an RB slot with him.
+  const positions = positionMap();
+  if (Object.keys(positions).length === 0) {
+    refuse("player positions are not loaded yet — try again shortly");
+  }
+
+  const check = validateAutoSubs({
+    subs,
+    lineup: stored.lineup ?? [],
+    starterSlots: starters,
+    positionOf: (id) => positions[String(id)] ?? null,
+    roster: [...(roster.players ?? []), ...(roster.ir ?? [])],
+    maxSubs,
+  });
+  if (!check.ok) refuse(check.error);
+
+  writeUncontended(KEY.autosubs(lg, season, week, teamId), {
+    subs, setAt: Date.now(), setBy: p.userId,
+  });
+  return { leagueId: lg, teamId, season, week, subs };
+}
+
+/** Read AutoSub designations back. */
+export function getAutoSubs({ payload }) {
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const season = Number(payload?.season ?? meta.season);
+  const week = Number(payload?.week);
+  const teamId = String(payload?.teamId ?? "");
+  return read(KEY.autosubs(lg, season, week, teamId), { subs: {}, setAt: null, setBy: null });
 }
 
 /**

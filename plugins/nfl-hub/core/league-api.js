@@ -60,6 +60,13 @@ export const setLineup = (leagueId, teamId, week, lineup) =>
   call('lineup:set', { leagueId, teamId, week, lineup });
 export const getLineup = (leagueId, teamId, week) =>
   call('lineup:get', { leagueId, teamId, week });
+// ⚠️ `subs` is { [starterPlayerId]: subPlayerId }. Wire every binding to a
+// caller when you add it — `setQueue` shipped here unused for a whole release
+// and every autodraft silently fell through to the league ranking.
+export const setAutoSubs = (leagueId, teamId, week, subs) =>
+  call('autosub:set', { leagueId, teamId, week, subs });
+export const getAutoSubs = (leagueId, teamId, week) =>
+  call('autosub:get', { leagueId, teamId, week });
 export const addPlayer = (leagueId, teamId, playerId, dropPlayerId = null) =>
   call('roster:add', { leagueId, teamId, playerId, dropPlayerId });
 export const dropPlayer = (leagueId, teamId, playerId) =>
