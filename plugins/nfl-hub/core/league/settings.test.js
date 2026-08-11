@@ -174,3 +174,10 @@ describe('playoff bracket default', () => {
     expect(DEFAULT_SETTINGS.playoffReseed).toBe(false);
   });
 });
+
+describe('AutoSubs setting', () => {
+  // Sleeper offers OFF/1/2/3 and defaults to OFF.
+  it('ships with AutoSubs off', () => {
+    expect(DEFAULT_SETTINGS.autoSubsPerWeek).toBe(0);
+  });
+});

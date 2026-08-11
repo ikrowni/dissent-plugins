@@ -72,6 +72,14 @@ export const DEFAULT_SETTINGS = Object.freeze({
   addsEnabled: true,
 
   // Roster extras
+  // AutoSubs: 0 = off, otherwise how many substitutions a manager may designate
+  // per week. Sleeper offers OFF/1/2/3 and defaults to OFF.
+  //
+  // ⚠️ Sleeper's companion toggle "Require AutoSub To Not Play Before Starter"
+  // is DELIBERATELY ABSENT — it is a kickoff-time rule and this module has no
+  // kickoff times (see core/league/autosubs.js and score-backoff.js). Adding the
+  // toggle without the data would be a setting that silently does nothing.
+  autoSubsPerWeek: 0,
   irSlots: 0,
   taxiSlots: 0,
   taxiYears: 0,
