@@ -20,8 +20,10 @@
 import { esc, panel, stateMsg } from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
-  renderQueue, picksUntilTurn, rosterNeeds,
+  renderQueue, picksUntilTurn, rosterNeeds, renderStage, renderHero, renderTicker, renderFeed,
 } from './draft-board.js';
+import { tickerLine, feedItems } from '../core/draft-intel.js';
+import { motion } from '../core/motion.js';
 import { getIndex } from '../core/player-index.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft, setQueue,
@@ -150,13 +152,18 @@ function completePane(d) {
   const playerOf = (id) => getIndex()?.[String(id)] ?? null;
   return panel({
     title: 'Draft complete',
+    flush: true,
     body: `
-      ${renderOnTheClock({ onClock: null, complete: true })}
-      ${renderBoard({
-    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-    playerOf,
+      ${renderStage({
+    hero: renderHero({ onClock: null, complete: true }),
+    ticker: renderTicker(null),
+    board: renderBoard({
+      order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      playerOf,
+    }),
+    feed: renderFeed(feedItems({ picks: d.picks, playerOf, teamLabel: (t) => teamName(t) })),
   })}
       ${d.isCommissioner
     ? `<button class="btn primary" data-act="draft-finalize" ${state.busy ? 'disabled' : ''}>
@@ -273,17 +280,38 @@ function livePane(d) {
   const slots = state.league?.settings?.rosterPositions?.filter((x) => x !== 'BN' && x !== 'IR' && x !== 'TAXI') ?? [];
   const paused = d.status === 'paused';
 
+  // ⚠️ THE POOL THE TICKER READS IS THE ONE THE BOARD ALREADY BUILT. Rebuilding it
+  // here would be a second answer to "who is left", and the two would drift.
+  const positionOf = (id) => getIndex()?.[String(id)]?.p ?? null;
+  const pool = availablePool({ ranking: state.ranking, taken: takenIds(), positionOf });
+  const remaining = remainingMs();
+
+  const stage = renderStage({
+    hero: renderHero({
+      onClock: clock,
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      clockText: clockText(),
+      urgent: remaining !== null && remaining > 0 && remaining < 15000,
+      queued: state.queue.length || null,
+    }),
+    ticker: renderTicker(tickerLine({ picks: d.picks, positionOf, pool })),
+    board: renderBoard({
+      order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
+      teamLabel: (t) => teamName(t),
+      isMine: (t) => String(t) === String(state.teamId),
+      onClock: clock, playerOf,
+    }),
+    feed: renderFeed(feedItems({ picks: d.picks, playerOf, teamLabel: (t) => teamName(t) })),
+  });
+
   return panel({
     title: 'Draft',
-    right: `<span class="clock${paused ? ' paused' : ''}" data-draft-clock>${esc(clockText())}</span>`,
+    flush: true,
     body: `
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
       ${paused ? '<p class="notice">The draft is paused. The clock resumes where it stopped.</p>' : ''}
-      ${renderOnTheClock({
-    onClock: clock,
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-  })}
+      ${stage}
       <div class="mock-cols">
         <div class="mock-pool-col">
           ${pickPool(mine && !paused)}
@@ -304,14 +332,7 @@ function livePane(d) {
               </button>
             </div>` : ''}
         </div>
-      </div>
-      <h4>Board</h4>
-      ${renderBoard({
-    order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
-    teamLabel: (t) => teamName(t),
-    isMine: (t) => String(t) === String(state.teamId),
-    onClock: clock, playerOf,
-  })}`,
+      </div>`,
   });
 }
 

@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, reset, remainingMs, _state } from './league-draft.js';
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  render, reset, remainingMs, _state, startGlow, stopGlow, flashSweep, bindParallax,
+} from './league-draft.js';
 import * as draftQueue from './league-draft.js';
 import { setIndex } from '../core/player-index.js';
+import { motion } from '../core/motion.js';
+
+const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
 const league = (teamCount = 4, over = {}) => ({
   id: 'lg',
@@ -107,7 +113,11 @@ describe('the live board', () => {
     setupLive();
     const html = render();
     expect(html).toContain('db-made');
-    expect(html).toContain('Board');
+    // ⚠️ The board used to sit under an <h4>Board</h4>. It is now inside the stage,
+    // where the hero above it already says what it is — a heading there would be
+    // labelling the only thing on the surface.
+    expect(html).toContain('gr-stage');
+    expect(html).toContain('gr-board');
   });
 
   // ⚠️ THE SHAPE MISMATCH THIS EXISTS FOR. The module sends `teamId`, the board
@@ -357,5 +367,70 @@ describe('draft queue mutations', () => {
     Object.assign(_state, { teamId: null, queue: [] });
     expect(() => draftQueue.queueAdd(null, 'p1')).not.toThrow();
     expect(_state.queue).toEqual(['p1']);
+  });
+});
+
+describe('the live draft renders on the stage', () => {
+  const liveDraft = {
+    status: 'active',
+    rounds: 2,
+    order: [
+      { overall: 1, round: 1, pickInRound: 1, owner: 't1' },
+      { overall: 2, round: 1, pickInRound: 2, owner: 't2' },
+      { overall: 3, round: 2, pickInRound: 1, owner: 't2' },
+      { overall: 4, round: 2, pickInRound: 2, owner: 't1' },
+    ],
+    picks: { 1: { playerId: 'p1', teamId: 't1', at: 1, auto: false } },
+    onClock: { overall: 2, round: 1, teamId: 't2' },
+    isCommissioner: false,
+    msRemaining: 64000,
+  };
+
+  beforeEach(() => {
+    setIndex({ p1: { n: 'B. Robinson', p: 'RB', t: 'ATL' } });
+    setup({
+      draft: liveDraft,
+      league: league(2, { settings: { rosterPositions: ['QB', 'RB', 'BN'] } }),
+      localDeadline: Date.now() + 64000,
+      frozenRemaining: null,
+      ranking: [],
+      queue: [],
+      filter: 'ALL',
+    });
+  });
+
+  it('puts the board inside a stage', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-stage')).not.toBeNull();
+    expect(el.querySelector('.gr-stage .db')).not.toBeNull();
+  });
+
+  it('shows the hero with the team on the clock', () => {
+    const el = parse(render());
+    // `league(2)` names its teams "Team 1" / "Team 2"; t2 is on the clock at #2.
+    expect(el.querySelector('.gr-team').textContent).toBe('Team 2');
+    expect(el.querySelector('.gr-overall').textContent).toBe('#2 OVERALL');
+  });
+
+  it('renders the ticker strip even with nothing to say', () => {
+    const el = parse(render());
+    const tick = el.querySelector('.gr-tick');
+    expect(tick).not.toBeNull();
+    expect(tick.classList.contains('is-quiet')).toBe(true);
+  });
+
+  it('renders the live rail with the pick that has landed', () => {
+    const el = parse(render());
+    expect(el.querySelector('.gr-feed').textContent).toContain('B. Robinson');
+  });
+
+  // ⚠️ paintClock() writes ONE TEXT NODE via [data-draft-clock]. The hero now owns
+  // that hook; if it went missing the clock would silently stop moving between
+  // polls while the board looked perfect.
+  it('keeps exactly one [data-draft-clock] hook, in the hero', () => {
+    const el = parse(render());
+    const hooks = el.querySelectorAll('[data-draft-clock]');
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0].classList.contains('gr-clock')).toBe(true);
   });
 });
