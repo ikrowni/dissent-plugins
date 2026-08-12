@@ -75,7 +75,7 @@ export function render() {
       : state.tab === 'matchup' ? matchup.render()
         : state.tab === 'moves' ? moves.render()
           : state.tab === 'mock' ? mock.render()
-            : home.render() + identityPanels() + coOwnersPanel();
+            : home.render() + coOwnersPanel() + identityPanels();
   // ⚠️ WRAPPED HERE RATHER THAN IN SIX VIEWS. The section already owns which
   // sub-tab is showing, so one wrapper lights them all identically and cannot
   // drift between them — and the views stay pure render functions that know
@@ -111,9 +111,12 @@ function coOwnersPanel() {
  * imports `describe` from league-home, so rendering it from inside league-home
  * would make that a static import cycle.
  *
- * ⚠️ ORDER IS DELIBERATE. "Your team" sits above "co-management" because it is the
- * one every manager has business with; co-management is the rarer, two-person
- * arrangement.
+ * ⚠️ ORDER CORRECTED 2026-08-12. These first shipped ABOVE the co-manager panel,
+ * on the reasoning that every manager renames a team and few share one. That was
+ * wrong in practice: it pushed "Co-managers" to the very bottom of an already long
+ * League tab, below four other panels, and the owner reported being unable to find
+ * how to add or remove one at all. Renaming a team is discoverable from the team's
+ * own name; co-management is not discoverable from anywhere else, so it goes first.
  */
 function identityPanels() {
   const { league } = home.current();
@@ -150,6 +153,11 @@ export async function enter() {
   mock.reset();
   identity.reset();
   home.load(app);
+  // ⚠️ NOT AWAITED, and it must not be. It only decides whether the co-manager
+  // panel can NAME who is able to ask; blocking the tab's first paint on a
+  // capability the viewer may not even have granted would trade the whole
+  // section for a nicety. It refreshes once the answer arrives.
+  coowners.loadMembers().then(() => app?.router?.refresh()).catch(() => {});
 }
 
 /** What the identity actions need: the league id, the payload, and a reload. */

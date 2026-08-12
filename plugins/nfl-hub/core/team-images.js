@@ -31,8 +31,17 @@ const URL_TTL_MS = 10 * 60 * 1000;
  * against the uploader's per-server quota — so an unchecked picker lets somebody
  * spend their whole allowance on one banner and discover it later. Refusing here
  * costs one message instead.
+ *
+ * Raised 4 → 20 MB on 2026-08-12 (owner). 4 MB refused ordinary phone photos and
+ * screenshots, which is what people actually reach for. Still two orders of
+ * magnitude under the node's own cap.
+ *
+ * ⚠️ A per-file limit is not the only ceiling. The node ALSO enforces a
+ * role-derived per-file limit and a per-member quota and answers
+ * `file_too_large` / `quota_exceeded` — both surface here as the module's own
+ * message, so a server with a tighter policy still wins.
  */
-export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 /** What the node will actually store. Anything else is refused after upload. */
 const ACCEPT_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
