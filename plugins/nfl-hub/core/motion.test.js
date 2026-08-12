@@ -359,7 +359,8 @@ describe('the motion contract', () => {
   // ⚠️ THE LIST IS THE POINT. podium.css was added later and would have inherited
   // none of this if the rule had stayed named after one file — a second cinematic
   // sheet is exactly where a backdrop-filter or a decorative loop gets in.
-  const CINEMATIC = ['gridiron.css', 'podium.css', 'booth.css', 'wire.css', 'marquee.css'];
+  const CINEMATIC = ['gridiron.css', 'podium.css', 'booth.css', 'wire.css', 'marquee.css',
+    'ledger.css'];
   it.each(CINEMATIC)('%s has no backdrop-filter and no infinite animation', (sheet) => {
     const css = readFileSync(join(root, 'styles', sheet), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, ''); // their own docs name both; read the rules

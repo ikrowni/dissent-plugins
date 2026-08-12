@@ -161,7 +161,7 @@ describe('the standings visual pass', () => {
   const s = { loading: false, error: null, table, seasonType: 'regular' };
 
   it('groups the divisions by conference instead of stacking eight panels', () => {
-    const html = renderStandings(s);
+    const html = renderStandings({ table });
     expect(html).toContain('st-conf');
     // Both conferences get their own column.
     expect((html.match(/st-conf-col/g) ?? []).length).toBe(2);
@@ -171,14 +171,14 @@ describe('the standings visual pass', () => {
   // the fantasy teams that needed managerColor(). It already lifts dark primaries
   // (Raiders and Steelers are #000000) until they are legible on near-black.
   it('accents every row with its own team colour', () => {
-    const html = renderStandings(s);
+    const html = renderStandings({ table });
     expect(html).toContain('--tc:');
     expect(html).toContain('st-row');
   });
 
   // W, L and T as three separate columns is not how a record is read.
   it('renders the record as one unit rather than three columns', () => {
-    const html = renderStandings(s);
+    const html = renderStandings({ table });
     expect(html).toContain('st-rec');
     expect(html).not.toMatch(/<th[^>]*>W<\/th>/);
   });
@@ -187,16 +187,47 @@ describe('the standings visual pass', () => {
   // bar in league-home and the score bar in matchups. A column of raw
   // differentials makes the reader do the comparison themselves.
   it('draws a point-differential bar scaled within the division', () => {
-    const html = renderStandings(s);
+    const html = renderStandings({ table });
     expect(html).toContain('st-diff-bar');
   });
 
   it('still lets a team be clicked through to its page', () => {
-    expect(renderStandings(s)).toContain('data-act="team"');
+    expect(renderStandings({ table })).toContain('data-act="team"');
   });
 
   it('still shows every division', () => {
-    const html = renderStandings(s);
+    const html = renderStandings({ table });
     for (const d of Object.keys(table)) expect(html).toContain(d);
+  });
+
+  /**
+   * ⚠️ STANDINGS GOT THE WORKHORSE PASS AND NOT THE CINEMATIC ONE, and the gap was
+   * visible the moment the other five tabs were lit. It already had two columns, a
+   * club rail per row, the record as one unit and a differential bar — and no
+   * stage, no lit cards and not one entrance. Measured on the live tab before this:
+   * `stage: false, entrances: 0`.
+   */
+  it('stands the whole league on one stage, not one per conference', () => {
+    const el = parse(renderStandings({ table }));
+    const stages = el.querySelectorAll('.stage');
+    expect(stages).toHaveLength(1);
+    expect(stages[0].classList.contains('st-stage')).toBe(true);
+    // Both conferences live inside it.
+    expect(stages[0].querySelectorAll('.st-conf-col')).toHaveLength(2);
+    expect(stages[0].querySelectorAll('.st-div').length).toBe(Object.keys(table).length);
+  });
+
+  it('cascades each conference in', () => {
+    const el = parse(renderStandings({ table }));
+    const cols = [...el.querySelectorAll('.st-conf-col')];
+    expect(cols).toHaveLength(2);
+    for (const c of cols) expect(c.querySelector('.st-divs.m-stagger')).not.toBeNull();
+  });
+
+  it('keeps the club rail the workhorse pass added', () => {
+    const el = parse(renderStandings({ table }));
+    const rows = [...el.querySelectorAll('.st-row')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.getAttribute('style')).toMatch(/--tc:\s*\S/);
   });
 });

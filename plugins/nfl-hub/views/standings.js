@@ -154,11 +154,23 @@ export function renderStandings(s = state) {
   // ⚠️ TWO COLUMNS, BY CONFERENCE. Eight stacked panels meant the NFC began
   // roughly two screens below the AFC, so the two halves of the league could
   // never be compared without scrolling between them.
-  const col = (conf) => divisions.filter((d) => d.startsWith(conf)).sort()
-    .map((d) => divisionTable(d, s.table[d])).join('');
-  html += `<div class="st-conf">
-    <div class="st-conf-col"><h3 class="st-conf-h">AFC</h3>${col('AFC')}</div>
-    <div class="st-conf-col"><h3 class="st-conf-h">NFC</h3>${col('NFC')}</div>
+  //
+  // ⚠️ ONE STAGE FOR BOTH, not one each. The standings are a single table split
+  // down the middle, and two lit surfaces side by side would read as two boards
+  // that happen to be adjacent. The conference headings divide it from inside.
+  //
+  // ⚠️ THIS VIEW DOES NOT POLL — enter() returns early on a revisit inside the
+  // TTL and registers no scheduler task — so the entrances need no `is-first`
+  // gate, unlike Around the League and Game Center.
+  const col = (conf) => `<div class="st-conf-col">
+      <h4 class="st-conf-h">${esc(conf)}</h4>
+      <div class="st-divs m-stagger">${divisions.filter((d) => d.startsWith(conf)).sort()
+    .map((d) => divisionTable(d, s.table[d])).join('')}</div>
+    </div>`;
+  html += `<div class="stage st-stage">
+    <div class="stage-head"><h3>The league</h3>
+      <span class="stage-sub">${divisions.length} divisions</span></div>
+    <div class="st-conf">${col('AFC')}${col('NFC')}</div>
   </div>`;
   return html;
 }

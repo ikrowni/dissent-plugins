@@ -1,0 +1,76 @@
+/* styles/ledger.css — the standings board.
+ *
+ * ⚠️ STANDINGS GOT THE WORKHORSE PASS AND NOT THE CINEMATIC ONE, and the gap was
+ * visible the moment the other five tabs were lit. It already had the things that
+ * make a table READ — two columns by conference, a club rail on every row, the
+ * record as one unit, a differential bar scaled within its division — and none of
+ * the things that make a surface look built: no stage, no lit cards, and not one
+ * entrance. Measured against the live tab before this sheet existed:
+ * `stage: false, entrances: 0, running: 0`.
+ *
+ * That is why it looked untouched next to Leaders and Game Center even though it
+ * had been worked on. The information design was done; the surface was not.
+ *
+ * ⚠️ ONE STAGE FOR BOTH CONFERENCES, not one each. The standings are a single
+ * table split down the middle — two lit surfaces side by side would read as two
+ * boards that happen to be adjacent. The conference headings divide it from
+ * inside instead.
+ *
+ * ⚠️ NO backdrop-filter AND NOTHING THAT LOOPS, the contract every per-tab sheet
+ * holds, enforced by core/motion.test.js.
+ *
+ * ⚠️ NO `.is-first` GATE HERE, and that is deliberate rather than an omission:
+ * views/standings.js registers no scheduler task and its enter() returns early on
+ * a revisit inside the TTL, so it paints twice — the spinner, then the table.
+ * Around the League and Game Center need the gate because they re-render on a
+ * timer; this one does not.
+ *
+ * The layout lives in controlroom.css; the stage surface in primetime.css. This
+ * sheet is only the light.
+ */
+
+.st-stage { margin: 14px 20px 0; }
+
+/* The conference headings sit INSIDE the stage, so they are a division of one
+ * board rather than two floating labels above the background — which is what they
+ * were: bare 12px text on the page with nothing behind it. */
+.st-stage .st-conf-h {
+  margin: 0 0 9px 2px;
+  font-family: var(--f-display); font-size: 12px; font-weight: 800;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--text-2);
+}
+.st-divs { display: grid; gap: 10px; }
+
+/* Lit objects on the surface — the same treatment a draft cell, a featured
+ * leaders card and a game card all get. Without it a division is a hole cut into
+ * the stage rather than a card standing on it. */
+.st-stage .st-div {
+  margin-bottom: 0;
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+.st-stage .mod-head { background: rgba(255,255,255,.045); }
+
+/* ⚠️ THE ROW RAIL WAS ALREADY THERE AND ALREADY CORRECT — teamColor() per row,
+ * shipped with the workhorse pass. It is only widened a little here, because on a
+ * lit card a 3px rail against a brighter background reads weaker than the same
+ * rail did on flat near-black. */
+.st-stage .st-row { border-left-width: 4px; }
+
+/* ── Entrances ─────────────────────────────────────────────────────────────
+ * One cascade per conference column, so the board arrives as two halves rather
+ * than eight unrelated boxes. .m-stagger caps at ten steps; there are four. */
+.st-stage { animation: mRise var(--dur) var(--ease-out) both; }
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ * Transform only. A standings table is thirty-two rows a pointer sweeps across,
+ * which is the worst possible place for a hover that repaints. */
+.st-stage .st-row { transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out); }
+.st-stage .st-row:hover { transform: translate3d(3px, 0, 0); }
+
+body.reduce-motion .st-stage .st-row:hover { transform: none; }
+
+@media (max-width: 560px) {
+  .st-stage .st-conf-h { font-size: 11px; letter-spacing: .14em; }
+}
