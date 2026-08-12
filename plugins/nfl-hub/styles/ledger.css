@@ -31,6 +31,23 @@
 
 .st-stage { margin: 14px 20px 0; }
 
+/* 🔴 THE STAGE'S OWN PADDING COLLAPSED THE TWO COLUMNS INTO ONE, and that undid
+ * the single most valuable thing the standings pass ever did.
+ *
+ * `.st-conf` is `repeat(auto-fit, minmax(420px, 1fr))`. The plugin frame measures
+ * 890px on a 1500px desktop; the panel margin takes 40 and the stage padding
+ * another 28, leaving 822 — and 2 x 420 + gap is 854. One pixel of padding either
+ * side of that threshold is the difference between "the whole league on a screen"
+ * and "the NFC two screens below the AFC", which is the exact complaint the
+ * workhorse pass existed to fix.
+ *
+ * ⚠️ IT LOOKED FINE IN EVERY UNIT TEST — jsdom has no layout, so nothing in the
+ * suite can see a grid fall back to one track. It was caught by counting the
+ * rendered columns in the live client, and that is the only place it is visible.
+ *
+ * Scoped to the stage, because outside it the wider minimum is still right. */
+.st-stage .st-conf { grid-template-columns: repeat(auto-fit, minmax(352px, 1fr)); }
+
 /* The conference headings sit INSIDE the stage, so they are a division of one
  * board rather than two floating labels above the background — which is what they
  * were: bare 12px text on the page with nothing behind it. */
