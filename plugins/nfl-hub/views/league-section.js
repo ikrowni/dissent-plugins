@@ -148,6 +148,7 @@ export function onSubmit(event) {
   const data = Object.fromEntries(new FormData(form).entries());
   const act = form.dataset.act;
   if (act === 'league-create-form') home.create(app, data);
+  else if (act === 'league-settings-form') home.saveSettings(app, data);
   else if (act === 'league-join-form') home.join(app, data.teamName);
   else if (act === 'draft-pick-form') draft.pick(app, data.playerId);
 }

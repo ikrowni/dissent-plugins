@@ -11,12 +11,13 @@ import { esc, panel, stateMsg, tile } from '../core/ui.js';
 import { managerColor } from '../core/player-visuals.js';
 import {
   listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
-  myTeam, canManage, setCurrentWeek,
+  myTeam, canManage, setCurrentWeek, updateSettings,
 } from '../core/league-api.js';
 // ⚠️ The SAME scoring presets the module uses. Imported rather than duplicated:
 // core/league/* is pure and shared by both halves of the plugin precisely so the
 // client cannot disagree with the server about what "PPR" means.
 import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
+import { WAIVER_TYPE } from '../core/league/settings.js';
 import { latestRecap } from '../core/league/recap.js';
 import { toScoredWeeks, toRosters, hasEnoughForPower } from '../core/league/power-adapter.js';
 import { powerRankings } from '../core/power.js';
@@ -38,6 +39,9 @@ const state = {
   weekScores: {},     // week -> stored score record, for the recap only
   error: null,
   busy: false,
+  // ⚠️ Kept apart from `error`, which blanks the whole tab. A refused settings
+  // save must leave the form you are standing in on screen.
+  setErr: null,
 };
 
 export function reset() {
@@ -139,6 +143,7 @@ function leaguePane(league, scores, standings) {
       ${powerPanel(league)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
+      ${settingsPane(league, week)}
       ${table}
       <div class="row-actions">
         <button class="btn" data-act="league-refresh">Refresh</button>
@@ -258,6 +263,86 @@ function rosterCallout(league, teamCount) {
  * live NFL state is preseason, and it never moves backwards. So the first week
  * is always a person's decision.
  */
+/**
+ * The commissioner's settings form.
+ *
+ * ⚠️ `league:settings` HAS EXISTED AND WORKED SINCE THE ENGINE SHIPPED, AND
+ * NOTHING COULD REACH IT. The op takes the whole settings object, is
+ * commissioner-gated, normalised and validated — and `updateSettings` in
+ * core/league-api.js had no caller, so a commissioner could not change their
+ * league's NAME, let alone its rules. Exactly the shape `fromSleeperSettings` was
+ * in: a tested capability nobody could use.
+ *
+ * ⚠️ STRUCTURAL SETTINGS ARE DELIBERATELY ABSENT. `numTeams` and
+ * `rosterPositions` are not offered here. The op would accept them —
+ * `validateSettings` only checks a config is internally coherent, not that it is
+ * safe to apply to a season already in progress — and shrinking a roster under a
+ * drafted team, or a league under a generated schedule, is not a settings change,
+ * it is a migration. Anything that cannot be changed safely mid-season should not
+ * be one input away from it.
+ *
+ * The rest are rules a commissioner legitimately tunes, and the module refuses
+ * any combination that does not hold together.
+ */
+function settingsPane(league, week) {
+  if (!league.isCommissioner) return '';
+  const st = league.settings ?? {};
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(label)}</option>`;
+  const started = week !== null;
+  return panel({
+    title: 'League settings',
+    right: '<span class="muted">commissioner</span>',
+    body: `
+      ${state.setErr ? `<p class="imp-bad">${esc(state.setErr)}</p>` : ''}
+      <form data-act="league-settings-form" class="lg-set">
+        <label>League name
+          <input name="name" value="${esc(st.name ?? '')}" maxlength="60" required>
+        </label>
+        <label>Scoring
+          <select name="scoring">
+            ${opt('keep', '', 'Leave as it is')}
+            ${opt('ppr', '', 'PPR')}${opt('half', '', 'Half PPR')}${opt('std', '', 'Standard')}
+          </select>
+        </label>
+        <label>Playoff teams
+          <input name="playoffTeams" type="number" min="2" max="16" value="${esc(st.playoffTeams ?? 6)}">
+        </label>
+        <label>Playoffs start week
+          <input name="playoffWeekStart" type="number" min="2" max="22" value="${esc(st.playoffWeekStart ?? 15)}">
+        </label>
+        <label>Trade deadline week
+          <input name="tradeDeadlineWeek" type="number" min="1" max="22" value="${esc(st.tradeDeadlineWeek ?? 12)}">
+        </label>
+        <label>Waivers
+          <select name="waiverType">
+            ${opt(WAIVER_TYPE.FAAB, st.waiverType, 'FAAB bidding')}
+            ${opt(WAIVER_TYPE.ROLLING, st.waiverType, 'Rolling priority')}
+            ${opt(WAIVER_TYPE.REVERSE_STANDINGS, st.waiverType, 'Reverse standings')}
+          </select>
+        </label>
+        <label>FAAB budget
+          <input name="waiverBudget" type="number" min="1" max="1000" value="${esc(st.waiverBudget ?? 100)}">
+        </label>
+        <label>AutoSubs per week
+          <select name="autoSubsPerWeek">
+            ${[0, 1, 2, 3].map((n) => opt(n, st.autoSubsPerWeek ?? 0, n === 0 ? 'Off' : String(n))).join('')}
+          </select>
+        </label>
+        <label class="inline"><input type="checkbox" name="tradesEnabled"${st.tradesEnabled !== false ? ' checked' : ''}> Trades allowed</label>
+        <label class="inline"><input type="checkbox" name="addsEnabled"${st.addsEnabled !== false ? ' checked' : ''}> Free-agent adds allowed</label>
+        <button class="btn primary" type="submit" ${state.busy ? 'disabled' : ''}>
+          ${state.busy ? 'Saving…' : 'Save settings'}
+        </button>
+      </form>
+      ${started
+    ? '<p class="tiny">⚠️ The season is under way. Moving the playoff start or the trade '
+      + 'deadline changes rules a manager may already have planned around.</p>'
+    : ''}
+      <p class="tiny">Team count and roster slots are not editable — changing either under
+        a drafted roster or a generated schedule is a migration, not a setting.</p>`,
+  });
+}
+
 function commissionerStrip(league, week) {
   if (!league.isCommissioner) return '';
   const start = league.settings?.startWeek ?? 1;
@@ -403,6 +488,48 @@ export async function create(app, form) {
     await open(app, created.leagueId);
   } catch (err) {
     state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+/**
+ * Save the commissioner's settings.
+ *
+ * ⚠️ ONLY WHAT THE FORM OFFERS IS SENT, merged server-side onto the league's
+ * existing settings. Posting the whole object back would let a stale render
+ * overwrite a field somebody else changed between load and save, and would send
+ * `numTeams` — which this form deliberately does not expose.
+ *
+ * ⚠️ "Leave as it is" IS NOT A SCORING PRESET. Sending PPR because the select
+ * happened to default to it would silently rewrite a custom scoring map that the
+ * form has no way to display.
+ */
+export async function saveSettings(app, form) {
+  const next = {
+    name: String(form.name ?? '').slice(0, 60),
+    playoffTeams: Number(form.playoffTeams),
+    playoffWeekStart: Number(form.playoffWeekStart),
+    tradeDeadlineWeek: Number(form.tradeDeadlineWeek),
+    waiverType: String(form.waiverType),
+    waiverBudget: Number(form.waiverBudget),
+    autoSubsPerWeek: Number(form.autoSubsPerWeek),
+    // ⚠️ An unchecked checkbox is ABSENT from FormData, not `false`.
+    tradesEnabled: Boolean(form.tradesEnabled),
+    addsEnabled: Boolean(form.addsEnabled),
+  };
+  const preset = SCORING_PRESETS[String(form.scoring ?? 'keep')];
+  if (preset) next.scoring = preset;
+
+  state.busy = true;
+  state.setErr = null;
+  app?.router?.refresh();
+  try {
+    await updateSettings(state.leagueId, next);
+    await open(app, state.leagueId);
+  } catch (err) {
+    state.setErr = describe(err);
   } finally {
     state.busy = false;
     app?.router?.refresh();

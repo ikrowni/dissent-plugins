@@ -357,3 +357,63 @@ describe('team colour as accent', () => {
     expect(first).toBe(second);
   });
 });
+
+describe('the commissioner settings form', () => {
+  /**
+   * ⚠️ `league:settings` HAS WORKED SINCE THE ENGINE SHIPPED AND NOTHING COULD
+   * REACH IT. The op takes the whole settings object, is commissioner-gated,
+   * normalised and validated — and `updateSettings` had no caller, so a
+   * commissioner could not change their league's NAME, let alone its rules.
+   */
+  it('offers the form to a commissioner', () => {
+    setup({ league: league({ isCommissioner: true }) });
+    const el = parse(render());
+    const form = el.querySelector('form[data-act="league-settings-form"]');
+    expect(form).not.toBeNull();
+    expect(form.querySelector('input[name="name"]')).not.toBeNull();
+    expect(form.querySelector('select[name="waiverType"]')).not.toBeNull();
+  });
+
+  it('shows it to nobody else', () => {
+    setup({ league: league({ isCommissioner: false }) });
+    const el = parse(render());
+    expect(el.querySelector('form[data-act="league-settings-form"]')).toBeNull();
+  });
+
+  /**
+   * ⚠️ STRUCTURAL SETTINGS ARE DELIBERATELY ABSENT. The op would accept them —
+   * validateSettings only checks a config is internally coherent, not that it is
+   * safe to apply to a season in progress — and shrinking a roster under a
+   * drafted team is a migration, not a setting. It must not be one input away.
+   */
+  it('never offers team count or roster slots', () => {
+    setup({ league: league({ isCommissioner: true }) });
+    const el = parse(render());
+    for (const field of ['numTeams', 'rosterPositions']) {
+      expect(el.querySelector(`[name="${field}"]`)).toBeNull();
+    }
+  });
+
+  it('carries the league’s current values, not the defaults', () => {
+    setup({ league: league({
+      isCommissioner: true,
+      settings: { name: 'Sunday Money', format: 'redraft', playoffTeams: 4,
+        waiverType: 'rolling', autoSubsPerWeek: 2 },
+    }) });
+    const el = parse(render());
+    expect(el.querySelector('input[name="name"]').value).toBe('Sunday Money');
+    expect(el.querySelector('input[name="playoffTeams"]').getAttribute('value')).toBe('4');
+    expect(el.querySelector('select[name="waiverType"] option[selected]').value).toBe('rolling');
+    expect(el.querySelector('select[name="autoSubsPerWeek"] option[selected]').value).toBe('2');
+  });
+
+  // ⚠️ Sending a preset because the select defaulted to one would silently
+  // rewrite a custom scoring map this form cannot even display.
+  it('offers leaving the scoring map alone, and defaults to that', () => {
+    setup({ league: league({ isCommissioner: true }) });
+    const el = parse(render());
+    const first = el.querySelector('select[name="scoring"] option');
+    expect(first.value).toBe('keep');
+    expect(first.textContent).toMatch(/leave/i);
+  });
+});
