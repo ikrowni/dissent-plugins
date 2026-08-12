@@ -103,9 +103,16 @@
 }
 .hero-wp .bar { flex: 1; height: 7px; border-radius: 999px; overflow: hidden; display: flex; }
 .hero-wp .bar i { display: block; transition: width var(--dur-slow) var(--ease-out); }
+/* ⚠️ NOT A FIXED WIDTH ANY MORE. This was `width: 46px`, which fitted "100%" and
+ * nothing else — so the moment the favourite's abbreviation joined it the strip
+ * wrapped to two lines inside a 40px bar and clipped. Measured live: the element
+ * computed to 46x42 for one line's worth of text. It sizes to its content now, with
+ * the old width as a floor so the bar does not jitter as the number changes. */
 .hero-wp .pct {
-  font-family: var(--f-display); font-size: 14px; font-weight: 800; width: 46px; text-align: right;
+  font-family: var(--f-display); font-size: 14px; font-weight: 800;
+  min-width: 46px; text-align: right; white-space: nowrap;
 }
+.hero-wp .pct b { font-weight: 800; color: var(--text-2); margin-right: 2px; }
 
 body.reduce-motion .hero-wp { backdrop-filter: none; background: rgba(2,4,8,.92); }
 

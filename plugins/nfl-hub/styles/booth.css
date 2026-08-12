@@ -34,12 +34,25 @@
  */
 
 /* ── The story ─────────────────────────────────────────────────────────────
- * Two graphics, side by side, because they answer the same question from two
- * directions: WHAT happened (drives) and WHAT IT WAS WORTH (win probability).
- * Stacked, the second one is below the fold and never gets read. */
+ *
+ * Two graphics that answer the same question from two directions: WHAT happened
+ * (drives) and WHAT IT WAS WORTH (win probability).
+ *
+ * ⚠️ STACKED, AND THAT IS A MEASUREMENT, NOT A PREFERENCE. This shipped first as
+ * two columns with a `max-width: 900px` fallback, which was written against the
+ * browser window. The plugin does not get the browser window: measured live, the
+ * iframe is **890px** inside a 1500px desktop viewport once the server rail, the
+ * channel list and the member list have taken their share — so the two-column
+ * rule never applied even once, and where it did apply it would have given each
+ * graphic ~410px.
+ *
+ * Both of these are horizontal TIMELINES. Halving the width of a timeline halves
+ * what it can say, and stacking them puts the same stretch of game above the same
+ * stretch of game — you can look down from a run of scores to the swing it caused.
+ * Side by side, they would be two cramped charts that no longer relate.
+ */
 .bth-stage { margin: 14px 20px 0; }
-.bth-story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-@media (max-width: 900px) { .bth-story { grid-template-columns: 1fr; } }
+.bth-story { display: grid; gap: 12px; }
 
 /* Lit objects on the surface, the same treatment a draft cell gets in
  * gridiron.css and a featured card gets in podium.css. */
