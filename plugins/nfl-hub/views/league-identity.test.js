@@ -13,9 +13,24 @@ vi.mock('../../plugin-sdk.js', () => ({
   imageUrl: (u) => u,
 }));
 
+// ⚠️ THE CROPPER IS STUBBED HERE ON PURPOSE. These tests are about what happens
+// to a chosen image — upload, store, discard, and in what order — not about
+// framing one. The real dialog needs `URL.createObjectURL` and a canvas, neither
+// of which jsdom has; its own maths is covered in core/image-crop.test.js.
+// By default it behaves as "the user accepted", returning a cropped blob.
+const openCropper = vi.fn();
+vi.mock('./crop-dialog.js', () => ({ openCropper: (...a) => openCropper(...a) }));
+
 const {
   renderTeamCard, renderLeagueCard, ownedTeam, reset, rename, pick, clear, _state,
 } = await import('./league-identity.js');
+
+/** What the cropper hands back: a WebP blob, as the real one does. */
+const cropped = (size = 4096) => ({
+  type: 'image/webp',
+  size,
+  arrayBuffer: async () => new ArrayBuffer(size),
+});
 const images = await import('../core/team-images.js');
 
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
@@ -53,6 +68,8 @@ beforeEach(() => {
   requestWithTransfer.mockReset();
   invokeModule.mockReset();
   app.router.refresh.mockReset();
+  openCropper.mockReset();
+  openCropper.mockResolvedValue(cropped());
 });
 
 describe('ownedTeam', () => {
@@ -266,6 +283,70 @@ describe('pick', () => {
 
     await pick(app, ctx(l), 'avatar', file());
     expect(_state.err).toBe(null);
+  });
+});
+
+describe('the crop step', () => {
+  it.each([
+    ['avatar', 'avatar'],
+    ['banner', 'teamBanner'],
+    ['league', 'leagueBanner'],
+  ])('opens the cropper for %s with that surface\'s own shape', async (kind, specKey) => {
+    requestWithTransfer.mockResolvedValue({ id: NEW_ID });
+    invokeModule.mockResolvedValue({});
+    request.mockResolvedValue({ url: 'u' });
+    await pick(app, ctx(league({ isCommissioner: true })), kind, file());
+    expect(openCropper.mock.calls[0][1]).toEqual(images.IMAGE_SPEC[specKey]);
+  });
+
+  // ⚠️ CANCELLING IS NOT A FAILURE. Backing out of the dialog must upload
+  // nothing, store nothing and report nothing — an error banner for "I changed
+  // my mind" is worse than silence.
+  it('uploads nothing when the cropper is dismissed', async () => {
+    openCropper.mockResolvedValue(null);
+    await pick(app, ctx(league()), 'avatar', file());
+    expect(requestWithTransfer).not.toHaveBeenCalled();
+    expect(invokeModule).not.toHaveBeenCalled();
+    expect(_state.err).toBe(null);
+    expect(_state.busy).toBe(null);
+  });
+
+  // ⚠️ THE RAW FILE IS CHECKED BEFORE THE CROPPER DECODES IT. The crop
+  // re-encodes to a small WebP, so a check afterwards never sees the original's
+  // size — and decoding a 200 MB photo hangs the tab first anyway.
+  it('refuses an oversized ORIGINAL without opening the cropper at all', async () => {
+    await pick(app, ctx(league()), 'avatar', file({ size: 21 * 1024 * 1024 }));
+    expect(openCropper).not.toHaveBeenCalled();
+    expect(_state.err).toMatch(/limit is/i);
+  });
+
+  it('refuses a non-image without opening the cropper', async () => {
+    await pick(app, ctx(league()), 'avatar', file({ type: 'application/pdf' }));
+    expect(openCropper).not.toHaveBeenCalled();
+    expect(_state.err).toMatch(/PNG/i);
+  });
+
+  // ⚠️ A Blob HAS NO `name`, and the node stores the filename it is given — a
+  // bare blob lands as "undefined". The extension has to follow the real type.
+  it('names the cropped blob before uploading it', async () => {
+    requestWithTransfer.mockResolvedValue({ id: NEW_ID });
+    invokeModule.mockResolvedValue({});
+    request.mockResolvedValue({ url: 'u' });
+    await pick(app, ctx(league()), 'avatar', file());
+    expect(requestWithTransfer.mock.calls[0][1].name).toBe('avatar.webp');
+  });
+
+  // ⚠️ The dialog waits on a PERSON. Disabling the card and showing "Uploading…"
+  // for as long as they take to frame the picture would be a lie about what is
+  // happening, and nothing is spent until they accept.
+  it('does not enter the busy state while the dialog is open', async () => {
+    let busyDuringDialog;
+    openCropper.mockImplementation(async () => { busyDuringDialog = _state.busy; return cropped(); });
+    requestWithTransfer.mockResolvedValue({ id: NEW_ID });
+    invokeModule.mockResolvedValue({});
+    request.mockResolvedValue({ url: 'u' });
+    await pick(app, ctx(league()), 'avatar', file());
+    expect(busyDuringDialog).toBe(null);
   });
 });
 

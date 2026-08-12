@@ -17,7 +17,9 @@ import { renameTeam, setTeamIdentity, setLeagueBanner } from '../core/league-api
 import { checkTeamName, MAX_TEAM_NAME } from '../core/league/team-identity.js';
 import {
   uploadImage, discard, resolve, contextFor, ACCEPT_ATTR, MAX_IMAGE_BYTES, specHint,
+  IMAGE_SPEC, assertUploadable,
 } from '../core/team-images.js';
+import { openCropper } from './crop-dialog.js';
 import { teamAvatar, banner } from '../core/team-visuals.js';
 import { describe } from './league-home.js';
 
@@ -163,7 +165,32 @@ export async function rename(app, ctx, form) {
  * if the module then refused; and only the UPLOADER may delete, so a commissioner
  * replacing somebody else's avatar gets a 403 that must stay invisible.
  */
+const SPEC_OF = { avatar: 'avatar', banner: 'teamBanner', league: 'leagueBanner' };
+
 export async function pick(app, ctx, kind, file) {
+  // ⚠️ THE CROP RUNS BEFORE `run()`, OUTSIDE THE BUSY STATE. The dialog waits on a
+  // person, not on the network — sitting there with every control disabled and
+  // "Uploading…" on the button, for as long as they take to frame the picture,
+  // would be a lie about what is happening. Nothing is spent until they accept.
+  // ⚠️ THE RAW FILE IS CHECKED BEFORE THE CROPPER TOUCHES IT. The cropper decodes
+  // the whole image into memory, so a 200 MB photo hangs the tab — and since the
+  // crop re-encodes to a small WebP, a check afterwards would never see the
+  // original's size at all.
+  try {
+    assertUploadable(file);
+  } catch (err) {
+    state.err = describe(err);
+    app?.router?.refresh();
+    return;
+  }
+
+  const spec = IMAGE_SPEC[SPEC_OF[kind]];
+  const chosen = await openCropper(file, spec, {
+    title: kind === 'avatar' ? 'Adjust avatar' : 'Adjust banner',
+  });
+  // Cancelled. Not an error, and not a state worth reporting.
+  if (!chosen) return;
+
   await run(app, ctx, kind, async (league) => {
     const team = ownedTeam(league);
     if (kind !== 'league' && !team) throw new Error('you do not own a team in this league');
@@ -171,7 +198,11 @@ export async function pick(app, ctx, kind, file) {
     const context = kind === 'league'
       ? contextFor.league(ctx.leagueId)
       : contextFor.team(ctx.leagueId, team.id);
-    const fileId = await uploadImage(file, { context });
+    // ⚠️ The cropper returns a Blob, which has no `name`. `uploadImage` reads one
+    // and the node stores it as the filename, so a bare blob would land as
+    // "undefined". Named from the kind, and the extension follows the real type.
+    const named = asNamedFile(chosen, `${kind}.${(chosen.type.split('/')[1] || 'webp')}`);
+    const fileId = await uploadImage(named, { context });
 
     const previous = kind === 'league' ? league.bannerFileId
       : kind === 'avatar' ? team.avatarFileId : team.bannerFileId;
@@ -228,3 +259,25 @@ async function run(app, ctx, kind, fn) {
 }
 
 export { state as _state };
+
+/**
+ * Give a Blob a name without assuming `File` is constructible.
+ *
+ * ⚠️ A CROPPED RESULT IS A Blob, NOT A File. `new File([blob], name)` works in
+ * every browser this ships to, but the plugin also has to survive being imported
+ * by a unit test in node, where File may be absent — so the constructor is tried
+ * and a plain shim is used when it is not there. The shim carries exactly the
+ * four fields `uploadImage` reads.
+ */
+function asNamedFile(blob, name) {
+  try {
+    return new File([blob], name, { type: blob.type });
+  } catch {
+    return {
+      name,
+      type: blob.type,
+      size: blob.size,
+      arrayBuffer: () => blob.arrayBuffer(),
+    };
+  }
+}

@@ -50,11 +50,15 @@ export const ACCEPT_ATTR = ACCEPT_MIME.join(',');
 /**
  * What shape each image is actually drawn in, and what to upload for it.
  *
- * ⚠️ EVERY BANNER IS `object-fit: cover`, so an image of the wrong shape is not
- * letterboxed — it is CROPPED, from the centre, silently. Somebody uploading a
- * portrait photo as a 6:1 team banner gets a thin horizontal slice of its middle
- * and no explanation. Telling them the ratio up front is the whole fix; there is
- * no cropping UI and this is not the round to build one.
+ * ⚠️ THESE ARE THE SHAPES `views/crop-dialog.js` CROPS TO, and the sizes it
+ * writes. The crop window is built from `ratio` and the output canvas from
+ * `best`, so what somebody frames is exactly what gets stored and exactly what
+ * gets rendered — no second, invisible crop afterwards.
+ *
+ * It still matters for the one path that skips the cropper: an ANIMATED image
+ * kept whole (cropping would flatten it to a single frame) is displayed with
+ * `object-fit: cover`, so it is centre-cropped by CSS after all. The hint says
+ * so, and the dialog says so again when it offers the choice.
  *
  * ⚠️ THE RATIOS ARE MIRRORED IN `styles/league.css` and `core/team-images.test.js`
  * asserts the two agree. A ratio changed in one place and not the other would
@@ -142,6 +146,23 @@ export async function resolve(fileIds) {
 }
 
 /**
+ * Is this file one we will accept at all? Throws with the reason if not.
+ *
+ * Separated from `uploadImage` because it has to run at TWO moments: before the
+ * cropper decodes the file, and again on whatever the cropper produced.
+ */
+export function assertUploadable(file) {
+  if (!file) throw new Error('no file chosen');
+  if (!ACCEPT_MIME.includes(file.type)) {
+    throw new Error(`${file.type || 'that file'} is not an image the server accepts — use PNG, JPEG, WebP or GIF`);
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error(`that image is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_IMAGE_BYTES / 1024 / 1024} MB`);
+  }
+  return file;
+}
+
+/**
  * Upload one image and return its file id.
  *
  * ⚠️ `attachContext` IS NOT OPTIONAL. It ties the file to the thing it belongs to,
@@ -152,14 +173,14 @@ export async function resolve(fileIds) {
  * try/catch and the place to show a message.
  */
 export async function uploadImage(file, { context }) {
-  if (!file) throw new Error('no file chosen');
+  // ⚠️ CHECKED HERE **AND** BEFORE THE CROPPER OPENS, and both are needed. The
+  // cropper re-encodes to a small WebP, so by the time a picture reaches this
+  // function it has almost always shrunk under the limit — which means checking
+  // only here stopped guarding the ORIGINAL entirely, and decoding a 200 MB
+  // photo into a canvas hangs the tab long before any limit is consulted.
+  // `views/league-identity.js` calls `assertUploadable` on the raw file first.
+  assertUploadable(file);
   if (!context) throw new Error('an upload needs a context to be attached to');
-  if (!ACCEPT_MIME.includes(file.type)) {
-    throw new Error(`${file.type || 'that file'} is not an image the server accepts — use PNG, JPEG, WebP or GIF`);
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error(`that image is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_IMAGE_BYTES / 1024 / 1024} MB`);
-  }
 
   const buf = await file.arrayBuffer();
   // ⚠️ The buffer is TRANSFERRED, not copied, and 120 s is the interactive

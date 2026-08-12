@@ -655,3 +655,47 @@ h4 {
   position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
 }
 .tm-pick-btn.is-disabled { opacity: .5; pointer-events: none; }
+
+/* ── The crop dialog ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ IT LIVES ON document.body, OUTSIDE THE ROUTER'S MOUNT, so a re-render of the
+ * League tab underneath cannot destroy the canvas mid-drag. That is also why it
+ * carries its own scrim rather than relying on a panel.
+ *
+ * ⚠️ NO backdrop-filter. league.css is not one of the sheets core/motion.test.js
+ * polices for it, but the rule exists for a reason that applies here too: a blur
+ * behind a surface that moves on every pointer event re-blurs on every frame, and
+ * a 15px animated dot under a glass panel already measured as ~68% of idle GPU.
+ */
+.cropper { position: fixed; inset: 0; z-index: 300; display: flex;
+  align-items: center; justify-content: center; }
+.cr-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.66); }
+.cr-panel {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 18px; border-radius: var(--r); background: var(--ink-1, #12161d);
+  border: 1px solid var(--line); box-shadow: 0 24px 70px rgba(0,0,0,.6);
+  max-width: min(92vw, 480px);
+}
+.cr-title { margin: 0; font-family: var(--f-display); font-size: 15px; color: var(--text); }
+.cr-hint { margin: 0; font-size: 10.5px; color: var(--text-3); }
+.cr-stage { position: relative; overflow: hidden; border-radius: var(--r-sm);
+  background: #0a0d12; max-width: 100%; }
+/* `touch-action: none` is what makes a drag work on a touchscreen — without it
+ * the browser claims the gesture for scrolling and the image never moves. */
+.cr-canvas { display: block; cursor: grab; touch-action: none; }
+.cr-canvas.is-dragging { cursor: grabbing; }
+/* The frame sits ABOVE the canvas and takes no pointer events, so it shows the
+ * crop boundary without ever swallowing a drag. */
+.cr-frame { position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.22); border-radius: var(--r-sm); }
+.cr-frame.is-circle { border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.22), 0 0 0 9999px rgba(0,0,0,.45); }
+.cr-note { margin: 0; font-size: 11px; color: var(--gold); text-align: center; max-width: 380px; }
+.cr-note.is-bad { color: var(--bad, #f2557d); }
+.cr-zoom-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.cr-zoom-label { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); }
+.cr-zoom { flex: 1; }
+.cr-actions { display: flex; gap: 8px; width: 100%; }
+.cr-actions .btn { flex: 1; }
+.cr-out { margin: 0; font-size: 10px; color: var(--text-3); }
