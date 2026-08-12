@@ -349,6 +349,29 @@ describe('the optional pick clock', () => {
     spy.mockRestore();
   });
 
+  // 🔴 THE GAP THIS CLOSES. Every other test here calls armClock/remainingMs
+  // directly and never RENDERS with a live deadline — so a missing `formatClock`
+  // import passed the whole suite and threw the moment a clock was switched on.
+  // With the clock off the ternary short-circuits and never touches it, which is
+  // why the default path looked healthy.
+  it('renders the countdown onto the board without throwing', () => {
+    _state.setup.clock = 60;
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(_state.deadline).not.toBe(null);
+    const html = render();
+    expect(html).toContain('data-draft-clock');
+    // A real mm:ss, not "undefined" or "—".
+    expect(html).toMatch(/data-draft-clock[^>]*>\s*\d+:\d{2}/);
+  });
+
+  it('renders no clock element at all when the clock is off', () => {
+    _state.setup.clock = 0;
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(render()).not.toContain('data-draft-clock');
+  });
+
   it('stops cleanly, and stopping twice is safe', () => {
     _state.setup.clock = 30;
     _state.mock = mockOnClockFor('m1');

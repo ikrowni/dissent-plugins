@@ -9,6 +9,7 @@
 // exactly like the event.
 
 import { esc, panel, stateMsg } from '../core/ui.js';
+import { formatClock } from '../core/league-api.js';
 import { loadIndex, getIndex } from '../core/player-index.js';
 import { loadRanking } from '../core/draft-ranking.js';
 import {
