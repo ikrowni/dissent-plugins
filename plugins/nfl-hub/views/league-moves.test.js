@@ -256,6 +256,22 @@ describe('the trending panel', () => {
     expect(render()).not.toContain('Trending now');
   });
 
+  /**
+   * ⚠️ THE PANEL ITS OWN COMMENT CALLS "SUPPLEMENTARY" RENDERED FIRST. It was
+   * prepended inside freeAgentPane(), so the one thing on this tab you cannot act
+   * on sat above the search box, your claims and the waiver wire. Dimming it
+   * without moving it is half a fix — weight and POSITION both say what matters.
+   */
+  it('renders last, below everything you act on', () => {
+    setup({ trending });
+    const heads = [...parse(render()).querySelectorAll('.panel-head h2')]
+      .map((h) => h.textContent);
+    expect(heads.some((h) => /trending/i.test(h))).toBe(true);
+    expect(heads.findIndex((h) => /trending/i.test(h))).toBe(heads.length - 1);
+    expect(heads.findIndex((h) => /free agents/i.test(h)))
+      .toBeLessThan(heads.findIndex((h) => /trending/i.test(h)));
+  });
+
   it('shows the most added and most dropped', () => {
     setup({ trending });
     const html = render();
@@ -386,4 +402,5 @@ describe('team accent on the trade board', () => {
       expect(s.classList.contains('team-accent')).toBe(false);
     }
   });
+
 });

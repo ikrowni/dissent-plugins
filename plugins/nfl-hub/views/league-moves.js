@@ -83,7 +83,8 @@ export function render() {
     ${waiverWirePane()}
     ${tradeBlockPane()}
     ${tradePane()}
-    ${tradeListPane()}`;
+    ${tradeListPane()}
+    ${trendingPanel()}`;
 }
 
 // ── Free agents and waiver claims ────────────────────────────────────────────
@@ -105,7 +106,7 @@ function freeAgentPane() {
     </div>`;
   }).join('');
 
-  return trendingPanel() + panel({
+  return panel({
     title: 'Free agents',
     right: faab && budget !== undefined ? `<span class="muted">$${budget} left</span>` : '',
     body: `

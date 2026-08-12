@@ -50,6 +50,9 @@ function tabsHtml() {
  */
 const OWN_STAGE = new Set(['draft', 'mock']);
 
+/** Which sub-tab is showing. Exported for tests; the UI sets it through `lg-tab`. */
+export function setTab(tab) { state.tab = tab; }
+
 export function render() {
   const body = state.tab === 'roster' ? roster.render()
     : state.tab === 'draft' ? draft.render()
