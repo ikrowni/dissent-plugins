@@ -42,6 +42,14 @@ function tabsHtml() {
   )).join('')}</div>`;
 }
 
+/**
+ * ⚠️ THE DRAFT AND THE MOCK BRING THEIR OWN STAGE, the cinematic one gridiron.css
+ * built for draft night. Wrapping those in a second lit surface would put a stage
+ * on a stage — two gradients, two vignettes, and a board that reads as a picture
+ * of a board. Every OTHER sub-tab was left flat by that pass and gets one here.
+ */
+const OWN_STAGE = new Set(['draft', 'mock']);
+
 export function render() {
   const body = state.tab === 'roster' ? roster.render()
     : state.tab === 'draft' ? draft.render()
@@ -49,7 +57,18 @@ export function render() {
         : state.tab === 'moves' ? moves.render()
           : state.tab === 'mock' ? mock.render()
             : home.render() + coOwnersPanel();
-  return `${tabsHtml()}<div class="section-body">${body}</div>`;
+  // ⚠️ WRAPPED HERE RATHER THAN IN FOUR VIEWS. The section already owns which
+  // sub-tab is showing, so one wrapper lights all four identically and cannot
+  // drift between them — and the views stay pure render functions that know
+  // nothing about the surface they land on.
+  //
+  // ⚠️ NO `is-first` GATE: none of these four registers a scheduler task, so they
+  // paint on navigation and on action, never on a timer. Around the League and
+  // Game Center need the gate; adding one here would be cargo.
+  const inner = OWN_STAGE.has(state.tab)
+    ? body
+    : `<div class="stage lg-stage"><div class="lg-stage-in m-stagger">${body}</div></div>`;
+  return `${tabsHtml()}<div class="section-body">${inner}</div>`;
 }
 
 /**

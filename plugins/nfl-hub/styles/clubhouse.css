@@ -1,0 +1,107 @@
+/* styles/clubhouse.css — the My League sub-tabs that draft night left behind.
+ *
+ * The League tab's cinematic redesign lit the DRAFT and the MOCK — gridiron.css,
+ * a stage, a hero, a ticker, a live rail. The other four sub-tabs got the parity
+ * pass instead: manager colour, position colour on slot chips, monogram player
+ * chips. Real improvements, and all of them INSIDE flat panels stacked on the
+ * page background.
+ *
+ * So League, Matchups, My Roster and Moves ended up in exactly the state
+ * Standings was in — the information design done, the surface not. Same fix.
+ *
+ * ⚠️ THIS REOPENS §8b ITEM ④, WHICH WAS CLOSED AS A NO-OP, AND THE CLOSURE WAS
+ * CORRECT AT THE TIME. It asked for "the primetime.css card treatment already
+ * used elsewhere in the hub" and the audit found there was no such treatment —
+ * `grep '\.card'` returned nothing — so building one would have meant inventing a
+ * cross-cutting visual language inside a parity pass, which that plan's own
+ * closing rule forbids. **The premise is no longer false.** `.stage` now exists
+ * in primetime.css and five sheets light cards on it. Adopting it here is
+ * following the language, not inventing one.
+ *
+ * ⚠️ NO backdrop-filter AND NOTHING THAT LOOPS — the contract every per-tab sheet
+ * holds, enforced by core/motion.test.js.
+ *
+ * ⚠️ NO `.is-first` GATE. None of these four registers a scheduler task; they
+ * paint on navigation and on action, never on a timer. Around the League and Game
+ * Center need the gate — see booth.css — and adding one here would be cargo.
+ */
+
+.lg-stage { margin: 0 0 14px; }
+.lg-stage-in { display: grid; gap: 12px; }
+
+/* ⚠️ THE PANELS LOSE THEIR OWN CHROME ON THE STAGE. `.panel` carries a margin, a
+ * border and a background designed for sitting on the page; left alone, each one
+ * would be a slab floating on a lit surface with a gap around it, which is worse
+ * than either surface on its own. On the stage they become lit cards — the same
+ * treatment a draft cell, a featured leaders card and a game card all get. */
+.lg-stage .panel {
+  margin: 0;
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(180deg, rgba(255,255,255,.058), rgba(255,255,255,.013));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.lg-stage .panel-head { background: rgba(255,255,255,.04); }
+
+/* The league's own name is the headline of its home tab, so it reads like one. */
+.lg-stage .panel-head h2 { font-size: 16px; }
+
+/* ── Blocks inside the cards ───────────────────────────────────────────────
+ *
+ * ⚠️ THESE WERE ALREADY CARDS and the §8b audit was right about that — `.matchup`,
+ * `.trade` and `.recap` each carry a background, a border, a radius and padding.
+ * The problem is that their background is `--ink-2`, which was chosen to sit on
+ * the page and reads as a HOLE punched through a lit panel. They are re-tinted to
+ * sit on top of one, not re-invented. */
+.lg-stage .matchup,
+.lg-stage .trade,
+.lg-stage .recap,
+.lg-stage .mock-grades,
+.lg-stage .fmini {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012));
+  border-color: rgba(255,255,255,.1);
+}
+
+/* Tiles are the league's vital signs and were the same weight as everything else. */
+.lg-stage .tiles .tile {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.015));
+  border-color: rgba(255,255,255,.11);
+}
+.lg-stage .tile .value { font-size: 21px; }
+
+/* ── Moves: seven panels at one weight ─────────────────────────────────────
+ *
+ * ⚠️ THE MOVES TAB STACKS SEVEN PANELS — free agents, my claims, on waivers,
+ * trade block, propose a trade, trades, trending — every one the same size and
+ * the same colour. The ones you ACT on and the ones you merely READ are
+ * indistinguishable, which is the same fault the leaders board had with sixteen
+ * identical categories.
+ *
+ * The acting surfaces keep full strength; the reference ones are turned down.
+ * Nothing is hidden and nothing moves — the weighting is the whole change, the
+ * same rule the standings and leaders passes both used.
+ *
+ * ⚠️ THE SELECTORS ARE REAL CLASSES, CHECKED. The first draft of this turned
+ * `.trending-list` and `.mv-list` down — neither exists anywhere in the plugin,
+ * so both rules would have matched nothing and the tab would have shipped looking
+ * exactly as before, with no error and no failing test. The trending panel's body
+ * is `.trend-cols`; the trades panel's rows are `.trade`. */
+.lg-stage .panel:has(.trend-cols) {
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+}
+.lg-stage .panel:has(.trend-cols) .panel-head h2 { color: var(--text-2); font-size: 13px; }
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ * Transform only. A roster or a free-agent list is a long column of targets a
+ * pointer sweeps down, which is the worst place for a hover that repaints. */
+.lg-stage .row-btn, .lg-stage .fa {
+  transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+.lg-stage .row-btn:hover, .lg-stage .fa:hover { transform: translate3d(3px, 0, 0); }
+
+body.reduce-motion .lg-stage .row-btn:hover,
+body.reduce-motion .lg-stage .fa:hover { transform: none; }
+
+@media (max-width: 560px) {
+  .lg-stage .panel-head h2 { font-size: 14px; }
+  .lg-stage .tile .value { font-size: 18px; }
+}

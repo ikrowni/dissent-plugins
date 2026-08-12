@@ -120,7 +120,7 @@
  * this graphic is FOR — it replays the game in one second. It is a single path,
  * once, on a first paint only; the alternative (scaling a transform) would stretch
  * the stroke and skew every scoring mark with it. The same precedent gridiron.css
- * set with `grTickFlash`, which animates `background` one-shot. */
+ * set with `grTickFlash`, which animates `background` one-shot.
  *
  * ⚠️ IT IS NORMALISED WITH `pathLength="1"`, NOT A GUESSED DASH LENGTH. The first
  * attempt hard-coded `stroke-dasharray: 1400`, which is only solid while the real

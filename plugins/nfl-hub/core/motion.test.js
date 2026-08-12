@@ -360,7 +360,7 @@ describe('the motion contract', () => {
   // none of this if the rule had stayed named after one file — a second cinematic
   // sheet is exactly where a backdrop-filter or a decorative loop gets in.
   const CINEMATIC = ['gridiron.css', 'podium.css', 'booth.css', 'wire.css', 'marquee.css',
-    'ledger.css'];
+    'ledger.css', 'clubhouse.css'];
   it.each(CINEMATIC)('%s has no backdrop-filter and no infinite animation', (sheet) => {
     const css = readFileSync(join(root, 'styles', sheet), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, ''); // their own docs name both; read the rules
@@ -446,6 +446,46 @@ describe('the motion contract', () => {
         expect(`${f}: ${decl.trim()}`).not.toMatch(/\b(both|forwards)\b/);
       }
     }
+  });
+
+  //
+  // 🔴 A STRAY COMMENT-CLOSE SILENTLY DELETES THE RULE AFTER IT, and one shipped.
+  //
+  // booth.css closed a comment, then kept writing prose that ended with a SECOND
+  // close marker. CSS has no syntax errors — the parser discards what it cannot
+  // read and carries on — so the sheet loaded, every rule after the damage worked,
+  // and exactly one rule was swallowed: `.wp-line { stroke-dasharray: 1 }`.
+  //
+  // ⚠️ THE SYMPTOM WAS INVISIBLE IN EVERY WAY WE CHECK. Nothing threw. The suite
+  // was green. `getAnimations()` reported the draw-in as `finished`, because the
+  // animation genuinely RAN — it animated `stroke-dashoffset` on a line with no
+  // dash pattern, which has no visual effect whatsoever. So the win-probability
+  // line never once drew itself, and every check we had said it did.
+  //
+  // ⚠️ AND THIS COMMENT IS DELIBERATELY `//` RATHER THAN A BLOCK. Writing it as a
+  // JSDoc block meant quoting the close marker inside a block comment, which
+  // closed THIS comment early and broke the test file — the identical bug, in the
+  // guard against it, within a minute of writing it.
+  it('every stylesheet has balanced comments and braces', () => {
+    const problems = [];
+    for (const f of readdirSync(join(root, 'styles')).filter((n) => n.endsWith('.css'))) {
+      const css = readFileSync(join(root, 'styles', f), 'utf8');
+      let depth = 0;
+      for (let i = 0; i < css.length; i += 1) {
+        if (css.startsWith('/*', i)) { depth += 1; i += 1; continue; }
+        if (css.startsWith('*/', i)) {
+          depth -= 1;
+          if (depth < 0) { problems.push(`${f}: a */ with no /* before it`); break; }
+          i += 1;
+        }
+      }
+      if (depth > 0) problems.push(`${f}: unterminated /*`);
+      const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      const open = (rules.match(/\{/g) ?? []).length;
+      const close = (rules.match(/\}/g) ?? []).length;
+      if (open !== close) problems.push(`${f}: ${open} { vs ${close} }`);
+    }
+    expect(problems).toEqual([]);
   });
 
   it('the guard tells a bare timer apart from a method that shares its name', () => {
