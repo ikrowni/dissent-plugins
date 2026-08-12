@@ -37,6 +37,17 @@
   background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text-2);
   transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
 }
+/* 🔴 `hidden` DOES NOTHING WITHOUT THIS, and a button shipped visible because of
+ * it. The UA stylesheet's `[hidden] { display: none }` is a bare attribute
+ * selector; `.btn` above is a CLASS selector and therefore more specific, so its
+ * `display: inline-flex` wins and the attribute is silently ignored. The crop
+ * dialog's "Use whole image" is meant to appear only for animated images and was
+ * showing for every one of them — offering to upload the original uncropped,
+ * right after the user had finished framing a crop.
+ *
+ * ⚠️ This applies to EVERY `.btn` in the plugin, not just that one. Anything
+ * setting an explicit `display` needs its own `[hidden]` override. */
+.btn[hidden] { display: none; }
 .btn:hover:not(:disabled) { background: var(--panel); color: var(--text); border-color: var(--text-3); }
 /* ⚠️ A disabled control must LOOK disabled. Half this UI disables buttons while
  * a call is in flight, and without this they stay bright and invite a second

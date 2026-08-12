@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   coverScale, offsetLimit, clampOffset, cropRect, previewBox,
   outputSize, parseRatio, isAnimatedWebp, isAnimatedImage,
@@ -201,5 +202,32 @@ describe('animated detection', () => {
   it('treats an unreadable file as still rather than throwing', async () => {
     const file = { type: 'image/webp', slice: () => ({ arrayBuffer: async () => { throw new Error('nope'); } }) };
     expect(await isAnimatedImage(file)).toBe(false);
+  });
+});
+
+describe('the dialog\'s CSS contract', () => {
+  const css = readFileSync(new URL('../styles/league.css', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // 🔴 THE BUG THIS EXISTS FOR, found by looking at a screenshot rather than by
+  // any assertion. `.btn` sets `display: inline-flex`, and a CLASS selector beats
+  // the UA stylesheet's bare `[hidden] { display: none }` — so the `hidden`
+  // attribute was silently ignored and the crop dialog's "Use whole image"
+  // button, which must appear only for animated images, was visible for every
+  // image. It offered to upload the original uncropped, directly beside the
+  // button that uses the crop the user had just framed.
+  it('makes [hidden] actually hide a .btn', () => {
+    expect(css).toMatch(/\.btn\[hidden\]\s*\{[^}]*display:\s*none/);
+  });
+
+  // The frame must never eat a drag — it sits over the canvas by design.
+  it('keeps the crop frame out of the pointer path', () => {
+    expect(css).toMatch(/\.cr-frame\s*\{[^}]*pointer-events:\s*none/);
+  });
+
+  // Without this a touch drag is claimed by the browser for scrolling and the
+  // image never moves on a phone.
+  it('lets the canvas own touch gestures', () => {
+    expect(css).toMatch(/\.cr-canvas\s*\{[^}]*touch-action:\s*none/);
   });
 });
