@@ -30,7 +30,14 @@ import { urlFor } from './team-images.js';
  */
 export function teamAvatar(team, { size = 26 } = {}) {
   const color = managerColor(team?.id);
-  const box = `width:${size}px;height:${size}px`;
+  // ⚠️ `font-size` IS PART OF THE BOX, and leaving it out shipped an illegible
+  // monogram to production. The ring is sized in px from `size`, but `.tm-mono`
+  // is sized in `em` — so without a font-size here the initials inherit the
+  // SURROUNDING text instead, and a 26px ring in a 13px table row rendered them
+  // at about 5px. They were in the DOM, correct and escaped, and every unit test
+  // passed; jsdom has no layout, so nothing could see it. Found by driving the
+  // live app and cropping the screenshot.
+  const box = `width:${size}px;height:${size}px;font-size:${size}px`;
   const url = urlFor(team?.avatarFileId);
   const mono = `<span class="tm-mono">${esc(initials(team?.name ?? ''))}</span>`;
   if (url) {

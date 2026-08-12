@@ -600,9 +600,13 @@ h4 {
 .tm-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 /* Under the image, never instead of it: when a signed URL expires the img
  * removes itself and the initials are already in place. */
+/* ⚠️ `em` HERE IS RELATIVE TO THE RING, NOT TO THE PAGE, and that only holds
+ * because teamAvatar() sets `font-size:<size>px` on .tm-avatar itself. Without
+ * that inline value these initials inherit whatever text surrounds them — which
+ * shipped a ~5px monogram inside a 26px standings ring. Change one, change both. */
 .tm-mono {
-  font-family: var(--f-display); font-size: 0.44em; font-weight: 800;
-  letter-spacing: 0.02em; color: var(--tm, var(--text-2));
+  font-family: var(--f-display); font-size: 0.4em; font-weight: 800;
+  letter-spacing: 0.02em; color: var(--tm, var(--text-2)); line-height: 1;
 }
 .tm-mark { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .tm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

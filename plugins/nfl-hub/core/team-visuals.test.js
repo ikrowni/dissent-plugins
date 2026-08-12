@@ -83,6 +83,25 @@ describe('teamAvatar', () => {
     }
   });
 
+  // ⚠️ THE DEFECT THIS EXISTS FOR, found in live QA and invisible to every other
+  // test here. `.tm-mono` is sized in `em`, so unless the ring carries its own
+  // font-size the initials inherit the SURROUNDING text — a 26px ring in a 13px
+  // standings row rendered them at about 5px. The markup was correct, the text
+  // was present and escaped, and jsdom has no layout, so nothing could see it.
+  // Remove `font-size` from the box in teamAvatar() and this fails.
+  it('sizes the monogram from the ring, not from the surrounding text', () => {
+    for (const size of [20, 26, 56]) {
+      const el = parse(teamAvatar({ id: 't1', name: 'Sunday Scaries' }, { size }));
+      expect(el.querySelector('.tm-avatar').style.fontSize).toBe(`${size}px`);
+    }
+  });
+
+  it('carries that font-size in the image state too, so a 403 degrades legibly', async () => {
+    await withUrl(ID);
+    const el = parse(teamAvatar({ id: 't1', name: 'A B', avatarFileId: ID }, { size: 40 }));
+    expect(el.querySelector('.tm-avatar').style.fontSize).toBe('40px');
+  });
+
   it('survives a team with no name and no id', () => {
     expect(() => parse(teamAvatar(undefined))).not.toThrow();
     expect(parse(teamAvatar(undefined)).querySelector('.tm-avatar')).not.toBeNull();
