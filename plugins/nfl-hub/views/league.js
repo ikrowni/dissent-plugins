@@ -11,7 +11,8 @@ import { parseScoreboard } from '../core/espn-game.js';
 import { renderHero } from './game-scorebug.js';
 
 const state = {
-  loading: true, error: null, games: [], week: null, season: null, heroId: null,
+  loading: true, error: null, games: [], week: null, season: null, seasonType: null,
+  heroId: null,
   // ⚠️ This tab shares its hero with Game Center AND polls on the same cadence, so
   // it needs the same first-paint gate. Without it the two team crests spring-scale
   // in on every tick — measured live before the gate existed. See views/game.js.
@@ -85,11 +86,23 @@ export function gameRow(g) {
     + '</button>';
 }
 
-/** "Week 1 · preseason", or just the week when the type is unremarkable. */
+/**
+ * "Week 1 · preseason", or just the week when the type is unremarkable.
+ *
+ * ⚠️ TWO DIFFERENT SEASON-TYPE CONVENTIONS EXIST IN THIS PLUGIN AND THEY DO NOT
+ * COMPARE. ESPN's scoreboard says `season.type` as a NUMBER — 1 preseason,
+ * 2 regular, 3 post — while `app.seasonType`, which comes from
+ * core/nfl-state.js, is a STRING: 'pre' / 'regular' / 'post'. views/standings.js
+ * gates on the string; this view has the number, from the same payload as the
+ * games. Comparing one against the other silently matches nothing, which is a
+ * gate that never fires rather than an error anybody sees — so this accepts both.
+ */
 export function slotLabel(s) {
   const week = s?.week ?? null;
-  const type = s?.seasonType ?? null;
-  const kind = type === 'pre' ? 'preseason' : type === 'post' ? 'postseason' : '';
+  const t = s?.seasonType;
+  const pre = t === 1 || t === 'pre';
+  const post = t === 3 || t === 'post';
+  const kind = pre ? 'preseason' : post ? 'postseason' : '';
   if (!week) return kind || 'this week';
   return kind ? `Week ${week} · ${kind}` : `Week ${week}`;
 }
@@ -145,6 +158,11 @@ async function load({ force = false } = {}) {
     state.games = parsed.games;
     state.week = parsed.week;
     state.season = parsed.season;
+    // ⚠️ In August "Week 1" alone is ambiguous — it reads as the opener when it is
+    // preseason, the exact class of lie two earlier sessions removed from
+    // standings and leaders. The scoreboard already carries the answer, so this
+    // costs no extra fetch.
+    state.seasonType = parsed.seasonType;
     state.error = null;
   } catch (err) {
     state.error = err?.message ?? 'failed';

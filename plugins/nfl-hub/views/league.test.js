@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseScoreboard } from '../core/espn-game.js';
-import { renderLeague, pickHeroGame, gameRow } from './league.js';
+import { renderLeague, pickHeroGame, gameRow, slotLabel } from './league.js';
 
 // fileURLToPath rather than a URL object: under jsdom the global URL is jsdom's and
 // node:fs does not recognise it as a file URL.
@@ -154,6 +154,34 @@ describe('renderLeague', () => {
     expect(heads.some((h) => /Sunday|Thursday|Monday/.test(h))).toBe(true);
     // Every game still renders, whichever slot it is in.
     expect(el.querySelectorAll('.game-card').length).toBe(games.length);
+  });
+
+  /**
+   * ⚠️ TWO SEASON-TYPE CONVENTIONS EXIST AND THEY DO NOT COMPARE. ESPN's
+   * scoreboard says `season.type` as a NUMBER (1 pre, 2 regular, 3 post);
+   * `app.seasonType`, from core/nfl-state.js, is a STRING ('pre'/'regular'/
+   * 'post'). views/standings.js gates on the string, this view has the number.
+   * Comparing one against the other matches nothing — a gate that never fires
+   * rather than an error anybody sees.
+   */
+  it('names the season type from either convention', () => {
+    expect(slotLabel({ week: 1, seasonType: 1 })).toBe('Week 1 · preseason');
+    expect(slotLabel({ week: 1, seasonType: 'pre' })).toBe('Week 1 · preseason');
+    expect(slotLabel({ week: 3, seasonType: 3 })).toBe('Week 3 · postseason');
+    expect(slotLabel({ week: 3, seasonType: 'post' })).toBe('Week 3 · postseason');
+  });
+
+  // ⚠️ A LIVE SEASON NEEDS NO QUALIFIER — the same rule the leaders season label
+  // follows. "Week 5 · regular season" is noise every week from September.
+  it('says nothing extra during the regular season', () => {
+    expect(slotLabel({ week: 5, seasonType: 2 })).toBe('Week 5');
+    expect(slotLabel({ week: 5, seasonType: 'regular' })).toBe('Week 5');
+    expect(slotLabel({ week: 5 })).toBe('Week 5');
+  });
+
+  it('degrades rather than printing "Week null"', () => {
+    expect(slotLabel({})).toBe('this week');
+    expect(slotLabel({ seasonType: 1 })).toBe('preseason');
   });
 
   // ⚠️ THE SLATE IS ON THE STAGE, under the hero it belongs to. This tab had the
