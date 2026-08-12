@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { render, setTab } from './league-section.js';
+import { render, setTab, wrapBody } from './league-section.js';
 
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
@@ -26,15 +26,36 @@ describe('the sub-tab stage', () => {
   });
 
   /**
-   * ⚠️ THE DRAFT AND THE MOCK BRING THEIR OWN. gridiron.css built them a stage for
-   * draft night; wrapping either in a second one puts a stage on a stage — two
-   * gradients, two vignettes, and a board that reads as a picture of a board.
+   * ⚠️ THE RULE IS READ FROM THE OUTPUT, NOT FROM A LIST OF TAB NAMES, and that
+   * distinction is the whole fix. This started as `new Set(['draft', 'mock'])` on
+   * the reasoning that those two bring their own stage — true, but only once a
+   * BOARD IS UP. Their setup screen and empty states are ordinary panels, so the
+   * name list left exactly those two screens unlit: "Start mock draft" and "No
+   * draft has been set up for this league yet".
    */
-  it('leaves the draft and the mock alone, because they bring their own stage', () => {
+  it('leaves a view that already lit itself alone', () => {
+    const own = '<div class="gr-stage">a board</div>';
+    expect(wrapBody(own)).toBe(own);
+    expect(parse(wrapBody(own)).querySelector('.lg-stage')).toBeNull();
+  });
+
+  it('lights a view that did not, whatever tab it is on', () => {
+    const bare = '<section class="panel">Start mock draft</section>';
+    const el = parse(wrapBody(bare));
+    expect(el.querySelector('.stage.lg-stage')).not.toBeNull();
+    expect(el.querySelector('.lg-stage-in.m-stagger')).not.toBeNull();
+    expect(el.textContent).toContain('Start mock draft');
+  });
+
+  // ⚠️ THE CASE THE NAME LIST GOT WRONG. Both of these render an ordinary panel
+  // until somebody starts something, and both were the only unlit screens left.
+  it('lights the draft and mock SETUP screens, which carry no board', () => {
     for (const tab of ['draft', 'mock']) {
       setTab(tab);
       const el = parse(render());
-      expect(`${tab}: ${!!el.querySelector('.lg-stage')}`).toBe(`${tab}: false`);
+      expect(`${tab}: ${!!el.querySelector('.stage.lg-stage')}`).toBe(`${tab}: true`);
+      // ...and never both surfaces at once.
+      expect(`${tab}: ${!!el.querySelector('.lg-stage .gr-stage')}`).toBe(`${tab}: false`);
     }
   });
 

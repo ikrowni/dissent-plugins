@@ -43,15 +43,29 @@ function tabsHtml() {
 }
 
 /**
- * ⚠️ THE DRAFT AND THE MOCK BRING THEIR OWN STAGE, the cinematic one gridiron.css
- * built for draft night. Wrapping those in a second lit surface would put a stage
- * on a stage — two gradients, two vignettes, and a board that reads as a picture
- * of a board. Every OTHER sub-tab was left flat by that pass and gets one here.
+ * Does this sub-view already stand on a lit surface?
+ *
+ * ⚠️ DECIDED FROM THE OUTPUT, NOT FROM A LIST OF TAB NAMES. This began as
+ * `new Set(['draft', 'mock'])`, on the reasoning that those two bring their own
+ * stage from gridiron.css — which is true, but only once a BOARD IS UP. Their
+ * setup screen and their empty states are ordinary panels, so the name list left
+ * exactly those two screens as the only unlit surfaces left in the hub: "Start
+ * mock draft" and "No draft has been set up for this league yet".
+ *
+ * Reading the rendered output instead is self-correcting. A view that lights
+ * itself is left alone; a view that does not gets the section's stage, whatever
+ * tab it happens to be on and whatever state it is in.
+ *
+ * ⚠️ A stage inside a stage is the thing being avoided — two gradients, two
+ * vignettes, and a board that reads as a picture of a board.
  */
-const OWN_STAGE = new Set(['draft', 'mock']);
-
 /** Which sub-tab is showing. Exported for tests; the UI sets it through `lg-tab`. */
 export function setTab(tab) { state.tab = tab; }
+
+export function wrapBody(body) {
+  if (body.includes('gr-stage')) return body;
+  return `<div class="stage lg-stage"><div class="lg-stage-in m-stagger">${body}</div></div>`;
+}
 
 export function render() {
   const body = state.tab === 'roster' ? roster.render()
@@ -60,18 +74,15 @@ export function render() {
         : state.tab === 'moves' ? moves.render()
           : state.tab === 'mock' ? mock.render()
             : home.render() + coOwnersPanel();
-  // ⚠️ WRAPPED HERE RATHER THAN IN FOUR VIEWS. The section already owns which
-  // sub-tab is showing, so one wrapper lights all four identically and cannot
+  // ⚠️ WRAPPED HERE RATHER THAN IN SIX VIEWS. The section already owns which
+  // sub-tab is showing, so one wrapper lights them all identically and cannot
   // drift between them — and the views stay pure render functions that know
   // nothing about the surface they land on.
   //
-  // ⚠️ NO `is-first` GATE: none of these four registers a scheduler task, so they
-  // paint on navigation and on action, never on a timer. Around the League and
-  // Game Center need the gate; adding one here would be cargo.
-  const inner = OWN_STAGE.has(state.tab)
-    ? body
-    : `<div class="stage lg-stage"><div class="lg-stage-in m-stagger">${body}</div></div>`;
-  return `${tabsHtml()}<div class="section-body">${inner}</div>`;
+  // ⚠️ NO `is-first` GATE: none of these registers a scheduler task, so they paint
+  // on navigation and on action, never on a timer. Around the League and Game
+  // Center need the gate; adding one here would be cargo.
+  return `${tabsHtml()}<div class="section-body">${wrapBody(body)}</div>`;
 }
 
 /**
