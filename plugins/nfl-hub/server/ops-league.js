@@ -7,6 +7,11 @@ import { KEY, read, mutate, writeUncontended, leagueIndex, loadLeague } from "./
 import {
   requireUser, requireCommissioner, requireTeamControl, isCommissioner, teamsOf,
 } from "./auth.js";
+// ⚠️ THE SAME two-teams-cannot-share-a-name RULE the rename op enforces, applied
+// at the other door. Enforcing it only on rename would make it decorative: two
+// managers could still join as "The Commish", and the trade UI nobody can read is
+// the same UI whether the collision arrived by join or by rename.
+import { checkTeamName, nameTaken } from "../core/league/team-identity.js";
 import { normalizeSettings, validateSettings } from "../core/league/settings.js";
 import { splitRosterPositions, validateLineup, irEligible } from "../core/league/slots.js";
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
@@ -90,6 +95,11 @@ export function getLeague({ p, payload }) {
     // The UI renders the week and every week-scoped call is keyed on it, so
     // omitting it made every league look like it was in preseason forever.
     currentWeek: meta.currentWeek ?? null,
+    // ⚠️ RETURNED EXPLICITLY. `meta` is not spread into this payload — it carries
+    // the commissioner list and creation provenance — so a field added to meta and
+    // not added here is stored, never read, and looks broken from the browser.
+    // That is the `fromSleeperSettings` shape of bug: a capability with no caller.
+    bannerFileId: meta.bannerFileId ?? null,
     commissioners: meta.commissioners,
     teams: redactRequests(teams, meta, p.userId),
     assets,
@@ -139,7 +149,14 @@ export function joinLeague({ p, payload }) {
   const meta = read(KEY.meta(lg), null);
   if (!meta) refuse(`no such league: ${lg}`);
 
-  const name = String(payload?.teamName ?? "").trim() || `Team ${p.userId.slice(0, 6)}`;
+  // ⚠️ The DEFAULT carries the user id, so it cannot collide with another
+  // default — which matters now that a clash is refused below.
+  let name = `Team ${p.userId.slice(0, 6)}`;
+  if (String(payload?.teamName ?? "").trim()) {
+    const check = checkTeamName(payload.teamName);
+    if (!check.ok) refuse(check.error);
+    name = check.name;
+  }
   let assigned = null;
 
   mutate(KEY.teams(lg), (teams) => {
@@ -152,6 +169,11 @@ export function joinLeague({ p, payload }) {
     if (Object.keys(current).length >= (meta.settings?.numTeams ?? 12)) {
       refuse("this league is full");
     }
+    // ⚠️ INSIDE THE SWAP, like every other check here: two people joining with
+    // the same name at the same moment is exactly the case that must not both
+    // succeed, and checking outside would let it.
+    const clash = nameTaken(current, name);
+    if (clash) refuse(`"${name}" clashes with team ${clash} ("${current[clash].name}") — pick another`);
     const teamId = `t${Object.keys(current).length + 1}`;
     assigned = teamId;
     return { ...current, [teamId]: { id: teamId, name, ownerId: p.userId, coOwners: [] } };

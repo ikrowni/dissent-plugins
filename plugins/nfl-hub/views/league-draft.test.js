@@ -408,8 +408,21 @@ describe('the live draft renders on the stage', () => {
   it('shows the hero with the team on the clock', () => {
     const el = parse(render());
     // `league(2)` names its teams "Team 1" / "Team 2"; t2 is on the clock at #2.
-    expect(el.querySelector('.gr-team').textContent).toBe('Team 2');
+    // ⚠️ The NAME SPAN, not `.gr-team` itself: the team's mark now sits beside the
+    // name inside that element, so its textContent also carries the monogram.
+    expect(el.querySelector('.gr-team .tm-name').textContent).toBe('Team 2');
     expect(el.querySelector('.gr-overall').textContent).toBe('#2 OVERALL');
+  });
+
+  // ⚠️ THE MARK IS THE MONOGRAM HERE, and that is the case worth pinning. No team
+  // in this fixture has uploaded an avatar, which is the state most teams are in
+  // for most of a season — the hero must still be a picture of a team, not a gap.
+  it('marks the team on the clock even with no avatar uploaded', () => {
+    const el = parse(render());
+    const mark = el.querySelector('.gr-team .tm-avatar');
+    expect(mark).not.toBeNull();
+    expect(mark.querySelector('img')).toBeNull();
+    expect(mark.textContent.trim()).toBe('TE');
   });
 
   it('renders the ticker strip even with nothing to say', () => {

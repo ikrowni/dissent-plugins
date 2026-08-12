@@ -578,3 +578,72 @@ h4 {
 .ww-when { font-family: var(--f-mono); font-size: 10px; color: var(--gold); }
 .ww-by { font-size: 10px; color: var(--text-3); margin-left: auto; }
 
+
+/* ── Team identity ────────────────────────────────────────────────────────────
+ *
+ * A franchise's own picture, and the controls that set it.
+ *
+ * ⚠️ THE MARK IS THE SAME BOX WHETHER OR NOT THERE IS AN IMAGE. The monogram is
+ * not a placeholder waiting on a load — for every team that never uploads
+ * anything it IS the final state — so a standings table must not reflow as
+ * avatars resolve. Exactly the rule .pv-avatar already holds for headshots.
+ *
+ * ⚠️ THE MANAGER COLOUR SURVIVES. --tm tints the ring and the monogram, and the
+ * row's left accent border is untouched, so a league where nobody has uploaded
+ * anything looks precisely as it did. An avatar is an upgrade on the colour.
+ */
+.tm-avatar {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--tm, var(--line-2));
+}
+.tm-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+/* Under the image, never instead of it: when a signed URL expires the img
+ * removes itself and the initials are already in place. */
+.tm-mono {
+  font-family: var(--f-display); font-size: 0.44em; font-weight: 800;
+  letter-spacing: 0.02em; color: var(--tm, var(--text-2));
+}
+.tm-mark { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.tm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ⚠️ THE HEADER IS A COLUMN NOW, not a line of text. A 22px mark beside an
+ * uppercase 10px name in a board column ~90px wide leaves no room for the name;
+ * stacked, both are legible and the row height is set by the mark either way. */
+.db-th { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.db-th .tm-name { max-width: 100%; }
+/* The hero's team line keeps its display face and gains a mark beside it. */
+.gr-team { display: flex; align-items: center; gap: 10px; }
+/* The trade board's per-team heading. */
+.tb-team h5 { display: flex; align-items: center; gap: 7px; }
+
+/* ── Banners ──────────────────────────────────────────────────────────────────
+ * Absent rather than empty: a league with no banner renders no band at all, so
+ * there is never a grey scar where a picture is not. */
+.tm-banner {
+  margin: 0 0 12px; border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--line); background: var(--ink-2);
+}
+.tm-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tm-banner-league { aspect-ratio: 5 / 1; }
+.tm-banner-team { aspect-ratio: 6 / 1; }
+
+/* ── The identity card ──────────────────────────────────────────────────────── */
+.tm-id { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.tm-rename { display: flex; align-items: flex-end; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.tm-rename label { flex: 1; min-width: 160px; }
+.tm-pick { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.tm-pick-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); min-width: 96px;
+}
+/* ⚠️ THE FILE INPUT IS INSIDE THE LABEL AND HIDDEN, so the label IS the button
+ * and the browser's own "no file chosen" text never appears. Clicking the label
+ * opens the picker natively — no click handler, which matters because this view
+ * re-renders on every refresh and a bound handler would be gone by the time the
+ * dialog returned. */
+.tm-pick-btn { position: relative; overflow: hidden; cursor: pointer; }
+.tm-pick-btn input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+}
+.tm-pick-btn.is-disabled { opacity: .5; pointer-events: none; }

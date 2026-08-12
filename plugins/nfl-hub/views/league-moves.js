@@ -16,6 +16,7 @@ import {
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-index.js';
 import { playerChip, managerColor } from '../core/player-visuals.js';
+import { teamAvatar } from '../core/team-visuals.js';
 import { loadTrending, formatCount } from '../core/trending.js';
 import { getJson } from '../core/http.js';
 import { describe } from './league-home.js';
@@ -200,7 +201,7 @@ function tradeBlockPane() {
   // mid-sentence span reads as damage.
   const theirRows = othersBlocking.map(([t, e]) => `
     <div class="tb-team team-accent" style="--mgr:${esc(managerColor(t))}">
-      <h5>${esc(teams[t]?.name ?? t)}</h5>
+      <h5>${teamAvatar(teams[t] ?? { id: t, name: String(t) }, { size: 22 })}<span class="tm-name">${esc(teams[t]?.name ?? t)}</span></h5>
       ${e.players.map((id) => `<label class="check">
         <input type="checkbox" data-act="moves-interest-toggle" data-player="${esc(String(id))}"
                ${myInterest.includes(String(id)) ? 'checked' : ''}>

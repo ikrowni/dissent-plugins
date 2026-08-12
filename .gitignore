@@ -5,3 +5,6 @@ node_modules/
 *.log
 dist/
 build/
+
+# Local agent scratch — worktrees are their own repos and must never be committed.
+.claude/

@@ -20,6 +20,8 @@ import * as matchup from './league-matchup.js';
 import * as moves from './league-moves.js';
 import * as coowners from './league-coowners.js';
 import * as mock from './league-mock.js';
+import * as identity from './league-identity.js';
+import * as teamImages from '../core/team-images.js';
 
 const TABS = [
   ['home', 'League'],
@@ -73,7 +75,7 @@ export function render() {
       : state.tab === 'matchup' ? matchup.render()
         : state.tab === 'moves' ? moves.render()
           : state.tab === 'mock' ? mock.render()
-            : home.render() + coOwnersPanel();
+            : home.render() + identityPanels() + coOwnersPanel();
   // ⚠️ WRAPPED HERE RATHER THAN IN SIX VIEWS. The section already owns which
   // sub-tab is showing, so one wrapper lights them all identically and cannot
   // drift between them — and the views stay pure render functions that know
@@ -102,6 +104,23 @@ function coOwnersPanel() {
   return league ? coowners.render(league) : '';
 }
 
+/**
+ * Naming and picturing a franchise, above co-management.
+ *
+ * ⚠️ Rendered from HERE for the same reason the co-owner panel is: league-identity
+ * imports `describe` from league-home, so rendering it from inside league-home
+ * would make that a static import cycle.
+ *
+ * ⚠️ ORDER IS DELIBERATE. "Your team" sits above "co-management" because it is the
+ * one every manager has business with; co-management is the rarer, two-person
+ * arrangement.
+ */
+function identityPanels() {
+  const { league } = home.current();
+  if (!league) return '';
+  return identity.renderTeamCard(league) + identity.renderLeagueCard(league);
+}
+
 // The app singleton, resolved on enter and kept for the actions. Imported
 // dynamically for the same reason every other view does it: a static cycle
 // between app.js and its views is fragile, and this module must stay importable
@@ -118,11 +137,31 @@ export async function enter() {
   // listener is the view's own, and leave() removes it.
   document.addEventListener('submit', onSubmit, true);
 
+  // ⚠️ ITS OWN LISTENER, AND `change` RATHER THAN `input`. A file input is the
+  // only control in this section whose value arrives from a dialog rather than a
+  // keystroke, and core/app.js already delegates `input` to onAction — so putting
+  // `data-act` on a file input would deliver the same chosen file twice and
+  // upload it twice. See `pickerRow` in league-identity.js.
+  document.addEventListener('change', onChange, true);
+
   // A stale notice or a half-finished ask from a previous visit must not greet
   // the next one.
   coowners.reset();
   mock.reset();
+  identity.reset();
   home.load(app);
+}
+
+/** What the identity actions need: the league id, the payload, and a reload. */
+function idCtx() {
+  const { leagueId } = home.current();
+  return {
+    leagueId,
+    // A GETTER, not the value: the actions run after an await, by which point the
+    // league captured at click time may already have been replaced by a reload.
+    league: () => home.current().league,
+    reload: () => home.open(app, leagueId),
+  };
 }
 
 /** What the co-owner actions need: the league id, and how to reload it. */
@@ -137,7 +176,29 @@ export function leave() {
   // is finite.
   draft.stopPolling();
   document.removeEventListener('submit', onSubmit, true);
+  document.removeEventListener('change', onChange, true);
+  // ⚠️ The resolved image URLs go too. They are signed and expiring, so a cache
+  // kept across a visit hands the next render URLs that have already died — and
+  // the ids they were resolved from may belong to a league this user has since
+  // left, where the node would now refuse them anyway.
+  teamImages.reset();
   if (app?.onAction === onAction) app.onAction = null;
+}
+
+/**
+ * Route a file choice to the picker that made it.
+ *
+ * ⚠️ THE INPUT IS CLEARED IMMEDIATELY. Without it, choosing the same file twice
+ * in a row fires no second `change` — the value has not changed — so a failed
+ * upload could not be retried with the same image.
+ */
+export function onChange(event) {
+  const input = event.target?.closest?.('input[data-pick]');
+  if (!input) return;
+  const file = input.files?.[0];
+  const kind = input.dataset.pick;
+  input.value = '';
+  if (file) identity.pick(app, idCtx(), kind, file);
 }
 
 /** Route a form submit to the action named on the form itself. */
@@ -150,6 +211,7 @@ export function onSubmit(event) {
   if (act === 'league-create-form') home.create(app, data);
   else if (act === 'league-settings-form') home.saveSettings(app, data);
   else if (act === 'league-join-form') home.join(app, data.teamName);
+  else if (act === 'team-rename-form') identity.rename(app, idCtx(), data);
   else if (act === 'draft-pick-form') draft.pick(app, data.playerId);
 }
 
@@ -312,6 +374,13 @@ export async function onAction(act, target) {
       return;
     case 'moves-trade-act':
       moves.respond(app, target.dataset.trade, target.dataset.action);
+      return;
+
+    // ── Identity ──
+    // ⚠️ Only the CLEAR is an action. The upload arrives on `change`, from a file
+    // input that deliberately carries no data-act — see onChange above.
+    case 'tm-clear':
+      identity.clear(app, idCtx(), target.dataset.kind);
       return;
 
     // ── Co-management ──

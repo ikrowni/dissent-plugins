@@ -40,7 +40,7 @@ const isFlexish = (slot) => eligiblePositions(slot).length > 1;
  */
 export function renderBoard({
   order = [], picks = {}, teamIds = [], teamLabel = (t) => t, isMine = () => false,
-  onClock = null, playerOf = () => null, maxRounds = null,
+  onClock = null, playerOf = () => null, maxRounds = null, teamMark = () => '',
 } = {}) {
   if (order.length === 0 || teamIds.length === 0) {
     return '<p class="muted">The board appears once the draft order is set.</p>';
@@ -53,7 +53,7 @@ export function renderBoard({
 
   const head = `<div class="db-row db-head">
     <div class="db-rd"></div>
-    ${teamIds.map((t) => `<div class="db-th${isMine(t) ? ' mine' : ''}">${esc(teamLabel(t))}</div>`).join('')}
+    ${teamIds.map((t) => `<div class="db-th${isMine(t) ? ' mine' : ''}">${teamMark(t)}<span class="tm-name">${esc(teamLabel(t))}</span></div>`).join('')}
   </div>`;
 
   const body = rounds.map((round) => {
@@ -160,6 +160,7 @@ export function renderOnTheClock({ onClock, teamLabel = (t) => t, isMine = () =>
 export function renderHero({
   onClock = null, teamLabel = (t) => String(t), isMine = () => false,
   clockText = null, urgent = false, complete = false, queued = null,
+  teamMark = () => '',
 } = {}) {
   if (complete) {
     return `<div class="gr-hero" style="--gr-team:${esc(NEUTRAL_DUOTONE)}">
@@ -189,7 +190,7 @@ export function renderHero({
     <div class="gr-hero-in">
       <div>
         <div class="gr-label">${mine ? 'YOU ARE ON THE CLOCK' : 'ON THE CLOCK'}</div>
-        <div class="gr-team">${esc(teamLabel(onClock.owner))}</div>
+        <div class="gr-team">${teamMark(onClock.owner)}<span class="tm-name">${esc(teamLabel(onClock.owner))}</span></div>
         <div class="gr-meta">${esc(meta)}</div>
       </div>
       <div class="gr-clock-wrap">

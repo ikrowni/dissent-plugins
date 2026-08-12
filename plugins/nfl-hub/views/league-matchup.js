@@ -14,6 +14,10 @@ import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import { getScores, getSchedule, generateSchedule, getPlayoffs, startPlayoffs } from '../core/league-api.js';
 import { loadIndex, getIndex, playerLabel } from '../core/player-index.js';
 import { playerChip, positionColor, managerColor } from '../core/player-visuals.js';
+// ⚠️ The avatar sits BESIDE `.team`, never inside it — that span carries the
+// ellipsis that keeps a long franchise name from pushing the score off the card,
+// and an image inside it would be what got clipped.
+import { teamAvatar } from '../core/team-visuals.js';
 import { eligiblePositions } from '../core/league/slots.js';
 import { describe } from './league-home.js';
 
@@ -189,6 +193,7 @@ function bracketGame(g) {
   const seat = (t) => `<span class="side team-accent ${won(t) ? 'winning' : ''}"
       style="--mgr:${esc(managerColor(t.teamId))}">
       <span class="seed">#${esc(String(t.overallSeed ?? t.seed))}</span>
+      ${teamAvatar(teamOf(t.teamId), { size: 20 })}
       <span class="team">${esc(teamName(t.teamId))}${isMine(t.teamId) ? ' <span class="you">you</span>' : ''}</span>
     </span>`;
   return `<div class="matchup bracket-game">
@@ -202,7 +207,7 @@ function matchupCard(m) {
   // rendering half a card.
   if (m.bye || !m.away) {
     return `<div class="matchup bye">
-      <div class="side team-accent" style="--mgr:${esc(managerColor(m.home))}">${esc(teamName(m.home))} <span class="muted">— bye</span></div>
+      <div class="side team-accent" style="--mgr:${esc(managerColor(m.home))}">${teamAvatar(teamOf(m.home), { size: 22 })}<span class="team">${esc(teamName(m.home))}</span> <span class="muted">— bye</span></div>
     </div>`;
   }
 
@@ -230,6 +235,7 @@ function side(teamId, points, winning, best = null) {
   return `<button class="side team-accent ${winning ? 'winning' : ''}"
     style="--mgr:${esc(managerColor(teamId))}"
     data-act="matchup-expand" data-team="${esc(teamId)}">
+    ${teamAvatar(teamOf(teamId), { size: 22 })}
     <span class="team">${esc(teamName(teamId))}${isMine(teamId) ? ' <span class="you">you</span>' : ''}</span>
     <span class="pts">${points === null ? '—' : points.toFixed(2)}</span>
     ${points === null ? '' : `<span class="mu-bar"><span class="mu-bar-fill" style="width:${pct}%"></span></span>`}
@@ -271,6 +277,18 @@ function teamScore(teamId) {
 
 function teamName(teamId) {
   return state.league?.teams?.[String(teamId)]?.name ?? String(teamId);
+}
+
+/**
+ * The team RECORD, which is what carries the avatar.
+ *
+ * ⚠️ Falls back to a record shaped like a team rather than to null, so
+ * `teamAvatar` still draws the monogram and the manager colour for a team that a
+ * stale schedule references and the current league payload does not.
+ */
+function teamOf(teamId) {
+  const id = String(teamId);
+  return state.league?.teams?.[id] ?? { id, name: id };
 }
 
 function isMine(teamId) {

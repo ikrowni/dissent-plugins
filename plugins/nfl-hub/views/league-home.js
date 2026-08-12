@@ -9,6 +9,8 @@
 
 import { esc, panel, stateMsg, tile } from '../core/ui.js';
 import { managerColor } from '../core/player-visuals.js';
+import { teamMark, banner, imageIdsOf } from '../core/team-visuals.js';
+import { resolve as resolveImages } from '../core/team-images.js';
 import {
   listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
   myTeam, canManage, setCurrentWeek, updateSettings,
@@ -133,6 +135,7 @@ function leaguePane(league, scores, standings) {
     title: esc(league.settings?.name ?? 'League'),
     right: league.isCommissioner ? '<span class="muted">commissioner</span>' : '',
     body: `
+      ${banner(league.bannerFileId, { className: 'tm-banner-league' })}
       <div class="tiles">
         ${tile('Format', esc(league.settings?.format ?? '—'))}
         ${tile('Teams', String(teams.length))}
@@ -382,7 +385,7 @@ function standingsTable(league, standings, scores) {
       <thead><tr><th>Team</th><th class="num">Roster</th><th class="num">Points</th></tr></thead>
       <tbody>${teams.map((t) => `
         <tr data-team="${esc(t.id)}" class="team-accent" style="--mgr:${esc(managerColor(t.id))}">
-          <td>${esc(t.name)}${league.myTeams.includes(t.id) ? ' <span class="you">you</span>' : ''}</td>
+          <td>${teamMark(t, { extra: league.myTeams.includes(t.id) ? ' <span class="you">you</span>' : '' })}</td>
           <td class="num">${(league.assets?.rosters?.[t.id]?.players ?? []).length}</td>
           <td class="num">${scores?.teams?.[t.id]?.total === undefined ? '—' : scores.teams[t.id].total.toFixed(2)}</td>
         </tr>`).join('')}</tbody>
@@ -401,7 +404,11 @@ function standingsTable(league, standings, scores) {
       <th class="num">PF</th><th class="num">PA</th>
     </tr></thead>
     <tbody>${rows.map((r) => {
-    const name = league.teams?.[r.teamId]?.name ?? r.teamId;
+    // ⚠️ The standings row is keyed on `teamId` and the TEAM RECORD is what
+    // carries the avatar, so it is looked up rather than reconstructed — a team
+    // that has been renamed since the week was scored still shows its real name
+    // and its real picture.
+    const team = league.teams?.[r.teamId] ?? { id: r.teamId, name: r.teamId };
     const isMine = (league.myTeams ?? []).includes(r.teamId);
     // The line sits AFTER the last qualifying seed, not on it.
     const lastIn = cut > 0 && r.seed === cut;
@@ -412,7 +419,7 @@ function standingsTable(league, standings, scores) {
         style="--mgr:${esc(managerColor(r.teamId))}">
         <td class="num"><span class="seed-badge${inPlayoffs ? ' in' : ''}">${r.seed}</span></td>
         <td>
-          <span class="std-team">${esc(name)}${isMine ? ' <span class="you">you</span>' : ''}</span>
+          <span class="std-team">${teamMark(team, { extra: isMine ? ' <span class="you">you</span>' : '' })}</span>
           <span class="std-bar"><span class="std-bar-fill" style="width:${pct}%"></span></span>
         </td>
         <td class="num">${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ''}</td>
@@ -444,6 +451,14 @@ export async function open(app, leagueId) {
     state.error = null;
     state.leagueId = leagueId;
     state.league = await getLeague(leagueId);
+    // ⚠️ STARTED HERE, AWAITED AT THE END. The module stores a file id and the
+    // node has to be asked for a signed URL per id, which is a round trip the
+    // render cannot make — so it happens during load, overlapping the score
+    // fetches below rather than adding its latency to them.
+    //
+    // ⚠️ NEVER REJECTS, by construction (core/team-images.js). A deleted banner
+    // must not blank a league.
+    const images = resolveImages(imageIdsOf(state.league));
     const week = state.league.currentWeek ?? null;
     // Scores are optional: a league in preseason has none, and failing to load
     // them must not blank the whole pane.
@@ -468,6 +483,7 @@ export async function open(app, leagueId) {
         .then((rec) => [w, rec]).catch(() => [w, null])));
       for (const [w, rec] of records) if (rec) state.weekScores[w] = rec;
     }
+    await images;
   } catch (err) {
     state.error = describe(err);
   }

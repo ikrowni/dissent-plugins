@@ -26,6 +26,23 @@ export const updateSettings = (leagueId, settings) =>
 export const setCurrentWeek = (leagueId, week) =>
   call('league:week', { leagueId, week });
 
+// ── Identity ─────────────────────────────────────────────────────────────────
+//
+// ⚠️ IMAGES ARE FILE IDS, NEVER URLS. The module refuses anything that is not a
+// node-minted id, and `core/team-images.js` redeems one for a signed, expiring
+// node URL at render time. The reasoning is in server/ops-identity.js: a URL in
+// a team record is rendered into every other manager's DOM.
+//
+// ⚠️ ABSENT AND EMPTY DIFFER. Omit a field to leave it alone; send '' to CLEAR
+// it. That is what makes it possible to drop an avatar without also dropping the
+// banner, so these bindings pass only the fields they were given.
+export const renameTeam = (leagueId, teamId, name) =>
+  call('team:rename', { leagueId, teamId, name });
+export const setTeamIdentity = (leagueId, teamId, patch) =>
+  call('team:identity', { leagueId, teamId, ...patch });
+export const setLeagueBanner = (leagueId, bannerFileId) =>
+  call('league:identity', { leagueId, bannerFileId });
+
 // ── Co-ownership ─────────────────────────────────────────────────────────────
 //
 // ⚠️ A HANDSHAKE, NOT AN INVITE, and the reason is worth knowing before reading

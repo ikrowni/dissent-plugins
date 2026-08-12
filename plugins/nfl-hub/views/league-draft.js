@@ -26,6 +26,7 @@ import {
 import { tickerLine, feedItems } from '../core/draft-intel.js';
 import { motion } from '../core/motion.js';
 import { getIndex } from '../core/player-index.js';
+import { teamAvatar } from '../core/team-visuals.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft, setQueue,
 } from '../core/league-api.js';
@@ -172,6 +173,7 @@ function completePane(d) {
     board: renderBoard({
       order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
       teamLabel: (t) => teamName(t),
+      teamMark,
       isMine: (t) => String(t) === String(state.teamId),
       playerOf,
     }),
@@ -302,6 +304,7 @@ function livePane(d) {
     hero: renderHero({
       onClock: clock,
       teamLabel: (t) => teamName(t),
+      teamMark,
       isMine: (t) => String(t) === String(state.teamId),
       clockText: clockText(),
       urgent: remaining !== null && remaining > 0 && remaining < 15000,
@@ -325,6 +328,7 @@ function livePane(d) {
     board: renderBoard({
       order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
       teamLabel: (t) => teamName(t),
+      teamMark,
       isMine: (t) => String(t) === String(state.teamId),
       onClock: clock, playerOf,
     }),
@@ -365,6 +369,18 @@ function livePane(d) {
 
 function teamName(teamId) {
   return state.league?.teams?.[String(teamId)]?.name ?? String(teamId);
+}
+
+/**
+ * The board's and the hero's team picture.
+ *
+ * ⚠️ PASSED IN RATHER THAN IMPORTED BY draft-board.js, because that module is
+ * shared with the MOCK draft, whose teams are simulated and have no records at
+ * all. A default of '' there leaves the mock exactly as it was.
+ */
+function teamMark(teamId) {
+  const id = String(teamId);
+  return teamAvatar(state.league?.teams?.[id] ?? { id, name: teamName(id) }, { size: 22 });
 }
 
 // ── The clock ────────────────────────────────────────────────────────────────
