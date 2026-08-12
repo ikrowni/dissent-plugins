@@ -1,6 +1,7 @@
 import {
   describe, it, expect, beforeEach, vi,
 } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 // ⚠️ THE HOST IS STUBBED FROM ITS REAL CONTRACT, not invented. `request` resolves
 // the `data` half of the capability reply and REJECTS on refusal — that is what
@@ -15,7 +16,7 @@ vi.mock('../../plugin-sdk.js', () => ({
 
 const {
   resolve, urlFor, reset, uploadImage, discard, contextFor,
-  MAX_IMAGE_BYTES, ACCEPT_ATTR,
+  MAX_IMAGE_BYTES, ACCEPT_ATTR, IMAGE_SPEC, specHint,
 } = await import('./team-images.js');
 
 const ID = '3f2b1a90-7c4d-4e11-9b2a-5d6e7f801234';
@@ -195,6 +196,48 @@ describe('discard', () => {
   it('does nothing for an empty id', async () => {
     await discard('');
     expect(request).not.toHaveBeenCalled();
+  });
+});
+
+describe('IMAGE_SPEC', () => {
+  // ⚠️ THE RATIO IS STATED TWICE — once here for the copy, once in league.css for
+  // the layout — and if they disagree the hint advertises a size that then gets
+  // cropped, which is precisely the failure the hint exists to prevent. Same
+  // mirrored-list hazard scripts/audit/mirrored-lists.mjs guards elsewhere.
+  const css = readFileSync(
+    new URL('../styles/league.css', import.meta.url), 'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it.each([
+    ['tm-banner-league', 'leagueBanner'],
+    ['tm-banner-team', 'teamBanner'],
+  ])('%s matches IMAGE_SPEC.%s', (cls, key) => {
+    const rule = new RegExp(`\\.${cls}\\s*\\{[^}]*aspect-ratio:\\s*([^;}]+)`).exec(css);
+    expect(rule, `no aspect-ratio rule for .${cls}`).not.toBeNull();
+    expect(rule[1].trim()).toBe(IMAGE_SPEC[key].ratio);
+  });
+
+  // The recommended pixel size must actually BE the ratio it is sold as.
+  it.each(Object.entries(IMAGE_SPEC))('%s: the recommended size is that ratio', (_k, spec) => {
+    const [w, h] = spec.best.split('×').map((n) => Number(n.trim()));
+    const [rw, rh] = spec.ratio.split('/').map((n) => Number(n.trim()));
+    expect(w / h).toBeCloseTo(rw / rh, 2);
+  });
+
+  // ⚠️ The frame is ~1530px wide with the member list collapsed, so a banner
+  // narrower than that is visibly soft on the surface it was made for.
+  it.each(['teamBanner', 'leagueBanner'])('%s is wide enough for the real frame', (key) => {
+    expect(Number(IMAGE_SPEC[key].best.split('×')[0].trim())).toBeGreaterThanOrEqual(1530);
+  });
+
+  it('gives every picker a hint naming both the shape and the crop', () => {
+    for (const key of Object.keys(IMAGE_SPEC)) {
+      const hint = specHint(key);
+      expect(hint).toContain(IMAGE_SPEC[key].best);
+      expect(hint).toMatch(/cropped/i);
+    }
+    // An unknown key must render nothing rather than "undefined".
+    expect(specHint('nope')).toBe('');
   });
 });
 

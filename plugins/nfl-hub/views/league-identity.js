@@ -16,7 +16,7 @@ import { esc, panel } from '../core/ui.js';
 import { renameTeam, setTeamIdentity, setLeagueBanner } from '../core/league-api.js';
 import { checkTeamName, MAX_TEAM_NAME } from '../core/league/team-identity.js';
 import {
-  uploadImage, discard, resolve, contextFor, ACCEPT_ATTR, MAX_IMAGE_BYTES,
+  uploadImage, discard, resolve, contextFor, ACCEPT_ATTR, MAX_IMAGE_BYTES, specHint,
 } from '../core/team-images.js';
 import { teamAvatar, banner } from '../core/team-visuals.js';
 import { describe } from './league-home.js';
@@ -68,10 +68,11 @@ export function renderTeamCard(league) {
           </button>
         </form>
       </div>
-      ${pickerRow('Avatar', 'avatar', team.avatarFileId)}
-      ${pickerRow('Banner', 'banner', team.bannerFileId)}
+      ${pickerRow('Avatar', 'avatar', team.avatarFileId, 'avatar')}
+      ${pickerRow('Banner', 'banner', team.bannerFileId, 'teamBanner')}
       <p class="tiny">Images stay on this server and are visible to its members.
         PNG, JPEG, WebP or GIF, up to ${MAX_IMAGE_BYTES / 1024 / 1024} MB.
+        Anything not the stated shape is cropped from the centre to fit.
         Your colour is kept either way — it is what keeps the standings readable
         before anybody has uploaded anything.</p>`,
   });
@@ -91,7 +92,7 @@ export function renderLeagueCard(league) {
     right: '<span class="muted">commissioner</span>',
     body: `
       ${banner(league.bannerFileId, { className: 'tm-banner-league' })}
-      ${pickerRow('League banner', 'league', league.bannerFileId)}
+      ${pickerRow('League banner', 'league', league.bannerFileId, 'leagueBanner')}
       <p class="tiny">Shown at the top of the League tab for everybody in
         ${esc(league.settings?.name ?? 'this league')}.</p>`,
   });
@@ -112,7 +113,7 @@ export function renderLeagueCard(league) {
  * twice. The section owns a `change` listener for these, exactly as it already
  * owns one for `submit`.
  */
-function pickerRow(label, kind, currentFileId) {
+function pickerRow(label, kind, currentFileId, specKey) {
   const working = state.busy === kind;
   return `<div class="tm-pick">
     <span class="tm-pick-label">${esc(label)}</span>
@@ -125,6 +126,7 @@ function pickerRow(label, kind, currentFileId) {
     ? `<button class="btn" data-act="tm-clear" data-kind="${esc(kind)}"
                ${state.busy ? 'disabled' : ''}>Remove</button>`
     : ''}
+    <span class="tm-pick-hint">${esc(specHint(specKey))}</span>
   </div>`;
 }
 

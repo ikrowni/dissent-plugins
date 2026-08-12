@@ -47,6 +47,37 @@ export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const ACCEPT_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 export const ACCEPT_ATTR = ACCEPT_MIME.join(',');
 
+/**
+ * What shape each image is actually drawn in, and what to upload for it.
+ *
+ * ⚠️ EVERY BANNER IS `object-fit: cover`, so an image of the wrong shape is not
+ * letterboxed — it is CROPPED, from the centre, silently. Somebody uploading a
+ * portrait photo as a 6:1 team banner gets a thin horizontal slice of its middle
+ * and no explanation. Telling them the ratio up front is the whole fix; there is
+ * no cropping UI and this is not the round to build one.
+ *
+ * ⚠️ THE RATIOS ARE MIRRORED IN `styles/league.css` and `core/team-images.test.js`
+ * asserts the two agree. A ratio changed in one place and not the other would
+ * advertise a size that then gets cropped — the failure being described above,
+ * caused by the fix for it.
+ *
+ * The widths come from the real frame: the plugin is ~890px with the member list
+ * open and ~1530px with it collapsed, so a banner has to look sharp at ~1530 CSS
+ * px. These are comfortably above that without being absurd under a 20 MB cap.
+ */
+export const IMAGE_SPEC = Object.freeze({
+  avatar: { ratio: '1 / 1', label: 'square', best: '512 × 512' },
+  teamBanner: { ratio: '6 / 1', label: '6:1 (wide)', best: '1800 × 300' },
+  leagueBanner: { ratio: '5 / 1', label: '5:1 (wide)', best: '1600 × 320' },
+});
+
+/** One line of guidance for a picker, e.g. "Square · 512 × 512 works best". */
+export function specHint(key) {
+  const s = IMAGE_SPEC[key];
+  if (!s) return '';
+  return `${s.label} · ${s.best} works best — anything else is cropped to fit`;
+}
+
 // fileId -> { url, at }. Module-scoped, so every view shares one resolution.
 const cache = new Map();
 // fileId -> in-flight promise, so twelve standings rows asking at once make one
