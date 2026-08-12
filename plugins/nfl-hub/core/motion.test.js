@@ -320,6 +320,15 @@ const INTERVAL_OWNERS = [
   // manager alt-tabbed. Its sibling 250ms tick writes one text node and paints
   // nothing else, which is why it is not worth gating either.
   join('views', 'league-draft.js'),
+  // The MOCK's optional pick clock, added 2026-08-12. Same 250ms tick as the live
+  // draft's and for the same reason — it writes one text node rather than
+  // re-rendering, because a refresh four times a second destroys the search box
+  // being typed into.
+  //
+  // ⚠️ It only runs while a clock is ARMED, which needs the setting to be on AND
+  // the human to be on the clock, so the default configuration opens no timer at
+  // all. `stopClock()` clears it on expiry, on leaving the tab and on reset.
+  join('views', 'league-mock.js'),
 ];
 
 describe('the motion contract', () => {

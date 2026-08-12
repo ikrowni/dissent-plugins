@@ -1,6 +1,19 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, reset, setField, take, simulate, setFilter, restart, _state, DEFAULT_SLOTS } from './league-mock.js';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import {
+  render,
+  reset,
+  setField,
+  take,
+  simulate,
+  setFilter,
+  restart,
+  _state,
+  DEFAULT_SLOTS,
+  armClock,
+  stopClock,
+  remainingMs,
+} from './league-mock.js';
 import { setIndex } from '../core/player-index.js';
 import { createMock, runBotsUntilMyTurn, onTheClock, availableIn, pick } from '../core/mock-draft.js';
 
@@ -259,5 +272,87 @@ describe('the mock renders on the same stage as the live draft', () => {
     const hero = el.querySelector('.gr-stage:not(.gr-stage-board)');
     expect(hero.querySelector('.gr-hero')).not.toBeNull();
     expect(hero.querySelector('.gr-cols')).toBeNull();
+  });
+});
+
+function mockOnClockFor(team) {
+  // Shaped so `currentPick` reports `team` on the clock with nothing picked yet.
+  return {
+    myTeam: team,
+    rosterPositions: ['QB', 'RB', 'BN'],
+    ranking: ['a', 'b', 'c'],
+    positionOf: () => 'RB',
+    draft: { picks: {}, order: [{ overall: 1, round: 1, pickInRound: 1, slot: team, owner: team }] },
+  };
+}
+
+describe('the optional pick clock', () => {
+  beforeEach(() => { reset(); vi.useRealTimers(); });
+  afterEach(() => { stopClock(); vi.useRealTimers(); });
+
+  // ⚠️ OFF BY DEFAULT. A mock is a rehearsal, and thinking time is most of what
+  // it is for — the clock is offered, not imposed.
+  it('is off unless it is turned on', () => {
+    expect(_state.setup.clock).toBe(0);
+    // Your turn, on a real board — the only reason no clock runs is the setting.
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(_state.deadline).toBe(null);
+    expect(remainingMs()).toBe(null);
+  });
+
+  it('offers the setting on the setup screen, defaulting to Off', () => {
+    const html = render();
+    expect(html).toContain('data-field="clock"');
+    expect(html).toMatch(/<option value="0" selected>Off<\/option>/);
+  });
+
+  it('arms only for YOUR turn, never a bot\'s', () => {
+    _state.setup.clock = 60;
+    // A bot on the clock: no countdown, because a bot answers instantly and a
+    // timer for it could never run out.
+    _state.mock = { myTeam: 'm1', draft: { picks: {}, order: [{ overall: 1, owner: 'm2' }] } };
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    armClock();
+    expect(_state.deadline).toBe(null);
+  });
+
+  it('counts down from the configured seconds when it is your pick', () => {
+    _state.setup.clock = 60;
+    const now = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(_state.deadline).toBe(now + 60_000);
+    expect(remainingMs()).toBe(60_000);
+    Date.now.mockReturnValue(now + 45_000);
+    expect(remainingMs()).toBe(15_000);
+    // Never negative — a clock reading "-0:03" is worse than one reading 0:00.
+    Date.now.mockReturnValue(now + 99_000);
+    expect(remainingMs()).toBe(0);
+  });
+
+  it('clears the countdown once the board is finished', () => {
+    _state.setup.clock = 60;
+    _state.mock = { myTeam: 'm1', draft: { picks: {}, order: [] } }; // nobody on the clock
+    armClock();
+    expect(_state.deadline).toBe(null);
+  });
+
+  // ⚠️ The whole point of the setting. With it off, no timer is ever opened.
+  it('opens no timer at all while the clock is off', () => {
+    const spy = vi.spyOn(globalThis, 'setInterval');
+    _state.setup.clock = 0;
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('stops cleanly, and stopping twice is safe', () => {
+    _state.setup.clock = 30;
+    _state.mock = mockOnClockFor('m1');
+    armClock();
+    expect(() => { stopClock(); stopClock(); }).not.toThrow();
   });
 });

@@ -178,6 +178,9 @@ export function leave() {
   // module from a view nobody is looking at, and the install's daily allowance
   // is finite.
   draft.stopPolling();
+  // ⚠️ The mock's optional pick clock is a timer too. A leaked one keeps counting
+  // down a board nobody is looking at and auto-picks into it.
+  mock.stopClock();
   document.removeEventListener('submit', onSubmit, true);
   document.removeEventListener('change', onChange, true);
   // ⚠️ The resolved image URLs go too. They are signed and expiring, so a cache
@@ -228,6 +231,7 @@ export async function onAction(act, target) {
       app.router.refresh();
       // Leaving the draft tab must stop its poll, whichever tab is next.
       if (state.tab !== 'draft') draft.stopPolling();
+      if (state.tab !== 'mock') mock.stopClock();
       if (state.tab === 'roster') {
         roster.load(app, { leagueId, league, teamId, week: league?.currentWeek ?? null });
       } else if (state.tab === 'draft') {

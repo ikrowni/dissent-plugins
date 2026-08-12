@@ -33,13 +33,31 @@ const state = {
   error: null,
   filter: 'ALL',
   query: '',
-  setup: { teams: 12, rounds: 15, slot: 1, scoring: 'ppr' },
+  setup: { teams: 12, rounds: 15, slot: 1, scoring: 'ppr', clock: 0 },
+  // Epoch ms your current pick expires, or null when the clock is off, it is not
+  // your turn, or the board is finished.
+  deadline: null,
 };
 
+/**
+ * The optional pick clock.
+ *
+ * ⚠️ OFF BY DEFAULT, and that was the original design rather than an oversight:
+ * a mock is a rehearsal, and being able to sit and think about a pick is most of
+ * what it is for. But rehearsing UNDER the clock is the other half — the live
+ * draft has one, and a manager who has only ever mocked without it meets the
+ * deadline for the first time on the night. So it is offered, not imposed.
+ */
+const TICK_MS = 250;
+let tickTimer = null;
+let lastClockText = null;
+
 export function reset() {
+  stopClock();
   Object.assign(state, {
     mock: null, loading: false, error: null, filter: 'ALL', query: '',
-    setup: { teams: 12, rounds: 15, slot: 1, scoring: 'ppr' },
+    setup: { teams: 12, rounds: 15, slot: 1, scoring: 'ppr', clock: 0 },
+    deadline: null,
   });
 }
 
@@ -99,6 +117,11 @@ function setupPane() {
             ${Array.from({ length: s.teams }, (_, i) => opt(i + 1, s.slot, `#${i + 1}`)).join('')}
           </select>
         </label>
+        <label class="inline">Pick clock
+          <select data-act="mock-set" data-field="clock">
+            ${opt(0, s.clock, 'Off')}${opt(30, s.clock, '30s')}${opt(60, s.clock, '60s')}${opt(90, s.clock, '90s')}${opt(120, s.clock, '2 min')}
+          </select>
+        </label>
         <label class="inline">Scoring
           <select data-act="mock-set" data-field="scoring">
             ${opt('ppr', s.scoring, 'PPR')}${opt('half', s.scoring, 'Half PPR')}${opt('std', s.scoring, 'Standard')}
@@ -141,9 +164,11 @@ function boardPane() {
   const stage = renderStage({
     hero: renderHero({
       onClock: clock, teamLabel, isMine, complete: done,
-      // ⚠️ NO CLOCK. A mock is turn-based against bots — there is no deadline to
-      // count down, and a hero showing "—" would be the rehearsal lying.
-      clockText: null,
+      // ⚠️ NULL WHEN THE CLOCK IS OFF, never "—". With no deadline there is
+      // nothing to count down, and a hero showing a dash would be the rehearsal
+      // pretending to a rule it does not have.
+      clockText: state.deadline === null ? null : formatClock(remainingMs()),
+      urgent: isUrgent(),
     }),
     ticker: renderTicker(tickerLine({ picks: m.draft.picks, positionOf, pool: all })),
   });
@@ -251,6 +276,8 @@ export async function start(app) {
     }));
     state.filter = 'ALL';
     state.query = '';
+    clockApp = app;
+    armClock();
   } catch (err) {
     state.error = `Could not start the mock: ${String(err?.message ?? err)}`;
   } finally {
@@ -259,12 +286,105 @@ export async function start(app) {
   }
 }
 
+// ── The pick clock ───────────────────────────────────────────────────────────
+
+/** Milliseconds left on your pick, or null when no clock is running. */
+export function remainingMs() {
+  if (state.deadline === null) return null;
+  return Math.max(0, state.deadline - Date.now());
+}
+
+/** Under fifteen seconds is when the hero turns red. Matches the live draft. */
+function isUrgent() {
+  const ms = remainingMs();
+  return ms !== null && ms > 0 && ms < 15000;
+}
+
+/**
+ * Start (or clear) the countdown for whoever is on the clock now.
+ *
+ * ⚠️ ONLY FOR YOUR OWN TURN. Bots answer the instant they are asked, so there is
+ * never a moment where a bot is "on the clock" with time ticking — arming one for
+ * them would show a countdown that could not run out.
+ */
+export function armClock() {
+  const m = state.mock;
+  const secs = Number(state.setup.clock) || 0;
+  const cur = m ? onTheClock(m) : null;
+  const mine = Boolean(cur) && cur.owner === m.myTeam;
+  state.deadline = secs > 0 && mine && !isComplete(m) ? Date.now() + secs * 1000 : null;
+  lastClockText = null;
+  if (state.deadline === null) stopClock(); else startClock();
+}
+
+/**
+ * Repaint the clock alone, and take a pick for the manager when it runs out.
+ *
+ * ⚠️ ONE TEXT NODE, NEVER `router.refresh()`. A refresh replaces the section's
+ * whole innerHTML — four times a second that destroys the search box being typed
+ * into and resets the board's scroll. The live draft learned this first; the
+ * mock renders the same board and has to hold the same rule.
+ */
+export function paintClock(app) {
+  if (state.deadline === null) return;
+  const ms = remainingMs();
+  if (typeof document !== 'undefined') {
+    const el = document.querySelector('[data-draft-clock]');
+    if (el) {
+      const text = formatClock(ms);
+      if (text !== lastClockText) { el.textContent = text; lastClockText = text; }
+      el.classList.toggle('urgent', isUrgent());
+    }
+  }
+  // ⚠️ EXPIRY AUTO-PICKS RATHER THAN STALLING. A clock that runs out and does
+  // nothing teaches the opposite of what it is for, and the pick it makes is the
+  // same need-aware one `Simulate` makes — running out of time should cost you
+  // the CHOICE, not the roster.
+  if (ms === 0) autoPick(app);
+}
+
+function startClock() {
+  if (tickTimer !== null || typeof window === 'undefined') return;
+  tickTimer = setInterval(() => paintClock(clockApp), TICK_MS);
+}
+
+/** Stop the countdown. Called on expiry, on leaving the tab, and on reset. */
+export function stopClock() {
+  if (tickTimer !== null) { clearInterval(tickTimer); tickTimer = null; }
+}
+
+// The app singleton the ticking callback needs. Captured on start rather than
+// threaded through the timer, which has no caller to take it from.
+let clockApp = null;
+
+/** The pick the clock makes for you: the same one Simulate would. */
+function autoPick(app) {
+  stopClock();
+  state.deadline = null;
+  if (!state.mock || isComplete(state.mock)) return;
+  const avail = availableIn(state.mock);
+  if (avail.length === 0) return;
+  const mine = rosterOf(state.mock, state.mock.myTeam);
+  const chosen = bestPickFor(avail, {
+    need: remainingNeed(state.mock.rosterPositions, mine.map((o) => o.pos)),
+    owned: mine,
+  });
+  if (!chosen) return;
+  state.mock = runBotsUntilMyTurn(makeMockPick(state.mock, chosen));
+  armClock();
+  app?.router?.refresh();
+}
+
 /** Take a player, then let the bots run back round to you. */
 export function take(app, playerId) {
   if (!state.mock) return;
   const clock = onTheClock(state.mock);
   if (!clock || clock.owner !== state.mock.myTeam) return;
   state.mock = runBotsUntilMyTurn(makeMockPick(state.mock, playerId));
+  // ⚠️ RE-ARMED ON EVERY PICK. A clock that kept counting from the previous turn
+  // would expire seconds into the next one; one that was never re-armed would run
+  // for exactly one pick and then quietly stop being a rule.
+  armClock();
   app?.router?.refresh();
 }
 
@@ -289,6 +409,7 @@ export function simulate(app) {
   });
   if (!chosen) return;
   state.mock = runBotsUntilMyTurn(makeMockPick(state.mock, chosen));
+  armClock();
   app?.router?.refresh();
 }
 
@@ -313,7 +434,9 @@ export function search(app, query, caret = null) {
 }
 
 export function restart(app) {
+  stopClock();
   state.mock = null;
+  state.deadline = null;
   state.error = null;
   app?.router?.refresh();
 }
