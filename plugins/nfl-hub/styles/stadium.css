@@ -56,10 +56,15 @@
 }
 .hero-row { display: flex; align-items: center; gap: 34px; }
 .hero-side { text-align: center; width: 200px; }
-.hero-side img {
-  width: 74px; height: 74px; filter: drop-shadow(0 10px 26px rgba(0,0,0,.85));
-  animation: heroLogo var(--dur-slow) var(--ease-spring) both;
-}
+.hero-side img { width: 74px; height: 74px; filter: drop-shadow(0 10px 26px rgba(0,0,0,.85)); }
+/* ⚠️ GATED ON THE FIRST PAINT, and it was not always. Both surfaces that use this
+ * hero re-render on a timer — Game Center every 20 s during a live game, Around
+ * the League on the same cadence — and each poll rebuilds the whole hero, so an
+ * ungated entrance replays forever. Confirmed live before the gate existed:
+ * `heroLogo` went from `finished` back to `running` on every refresh, i.e. both
+ * crests spring-scaled in from 0.62 every twenty seconds for a whole game.
+ * renderHero() emits `is-first` only on the paint that is genuinely an arrival. */
+.hero.is-first .hero-side img { animation: heroLogo var(--dur-slow) var(--ease-spring) both; }
 @keyframes heroLogo { from { transform: scale(.62); opacity: 0; } to { transform: none; opacity: 1; } }
 .hero-side .abbr {
   font-family: var(--f-display); font-size: 15px; font-weight: 800; letter-spacing: 0.2em;

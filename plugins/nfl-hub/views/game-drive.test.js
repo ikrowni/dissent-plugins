@@ -125,4 +125,30 @@ describe('renderPlayByPlay', () => {
     expect(parse(renderPlayByPlay([])).textContent).toMatch(/no plays/i);
     expect(parse(renderPlayByPlay(null)).textContent).toMatch(/no plays/i);
   });
+
+  // ⚠️ POSSESSION WAS THE MISSING HALF OF THIS CHART. The fill is the OUTCOME and
+  // stays the primary encoding — but without knowing whose drive it was, a run of
+  // three scores reads as one team pulling away when it may be two teams trading.
+  // Alternation gives possession away for free right up until a turnover on downs,
+  // which is exactly when it matters.
+  it('carries the possessing team as a colour, without touching the outcome fill', () => {
+    const el = parse(renderDriveChart([
+      { id: 'a', result: 'TD', teamAbbr: 'PHI' },
+      { id: 'b', result: 'PUNT', teamAbbr: 'DAL' },
+    ]));
+    const [a, b] = el.querySelectorAll('.drives button');
+    expect(a.getAttribute('style')).toMatch(/--dt:\s*#[0-9a-f]{6}/i);
+    expect(a.getAttribute('style')).not.toBe(b.getAttribute('style'));
+    // The class is still the outcome. Recolouring the block by team would replace
+    // the encoding this chart exists for.
+    expect(a.className).toBe('td');
+    expect(b.className).toBe('punt');
+  });
+
+  // ⚠️ A drive with no team must not emit `--dt:` pointing at nothing — that would
+  // paint the rail in the fallback grey and assert a possession we do not know.
+  it('omits the possession colour rather than guessing one', () => {
+    const el = parse(renderDriveChart([{ id: 'a', result: 'TD', teamAbbr: null }]));
+    expect(el.querySelector('.drives button').getAttribute('style')).toBeNull();
+  });
 });

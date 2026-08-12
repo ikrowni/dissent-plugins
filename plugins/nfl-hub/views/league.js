@@ -11,6 +11,10 @@ import { renderHero } from './game-scorebug.js';
 
 const state = {
   loading: true, error: null, games: [], week: null, season: null, heroId: null,
+  // ⚠️ This tab shares its hero with Game Center AND polls on the same cadence, so
+  // it needs the same first-paint gate. Without it the two team crests spring-scale
+  // in on every tick — measured live before the gate existed. See views/game.js.
+  settled: false,
 };
 
 /** Live-first hero priority: red zone → closest live → next scheduled → anything. */
@@ -91,7 +95,7 @@ export function renderLeague(s = state) {
   const hero = s.games.find((g) => g.id === s.heroId) ?? pickHeroGame(s.games);
   const groups = groupByTimeslot(s.games);
 
-  let html = hero ? renderHero(hero, { siblings: s.games }) : '';
+  let html = hero ? renderHero(hero, { siblings: s.games, entrance: !s.settled }) : '';
   for (const [slot, list] of groups) {
     html += panel({
       title: slot,
@@ -146,9 +150,12 @@ export async function enter() {
   // re-derive it here, or the two drift.
   app.scheduler.setInterval(liveCadence(state.games));
   app.router.refresh();
+  // ⚠️ AFTER the paint. That render is the arrival; every poll after it is not.
+  state.settled = true;
 }
 
 export function leave() {
   unregister?.();
   unregister = null;
+  state.settled = false;
 }

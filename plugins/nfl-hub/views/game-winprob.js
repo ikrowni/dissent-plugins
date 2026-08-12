@@ -25,6 +25,22 @@ export function wpPath(samples, w = W, h = H) {
     .join(' ');
 }
 
+/**
+ * The same line, closed down to the baseline so it can be filled.
+ *
+ * ⚠️ A 2px stroke on an empty box is a squiggle; the fill is what makes it read as
+ * "how much of this game did the home side own". It is the area under the SAME
+ * points — deriving it separately would let the two disagree by a rounding step
+ * and draw a fill that does not meet its own line.
+ */
+export function wpArea(samples, w = W, h = H) {
+  const pts = wpPath(samples, w, h);
+  if (!pts) return '';
+  const last = pts.slice(pts.lastIndexOf(' ') + 1);
+  const lastX = last.split(',')[0];
+  return `0,${h} ${pts} ${lastX},${h}`;
+}
+
 export function renderWinProb(samples, teams, { scoringSeqs = [] } = {}) {
   const list = samples ?? [];
   const head = '<div class="mod"><div class="mod-head"><span class="t">Win probability</span>';
@@ -61,10 +77,16 @@ export function renderWinProb(samples, teams, { scoringSeqs = [] } = {}) {
     + '</div>'
     + `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"`
       + ' style="width:100%;height:120px;display:block;margin-top:6px">'
+      + `<polyline class="wp-area" points="${wpArea(list)}" fill="${esc(homeCol)}"`
+        + ' fill-opacity="0.16" stroke="none"/>'
       + `<line class="mid" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}"`
         + ' stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="3 3"/>'
-      + `<polyline points="${wpPath(list)}" fill="none" stroke="${esc(homeCol)}"`
-        + ' stroke-width="2" stroke-linejoin="round"/>'
+      // ⚠️ pathLength="1" NORMALISES THE LINE so booth.css can draw it in with a
+      // dash of 1 whatever the real geometry. A hard-coded dash length only stays
+      // solid while the path is shorter than it, and this path's length depends on
+      // how volatile the game was — a close one would leave a permanent gap.
+      + `<polyline class="wp-line" points="${wpPath(list)}" pathLength="1"`
+        + ` fill="none" stroke="${esc(homeCol)}" stroke-width="2" stroke-linejoin="round"/>`
       + marks
     + '</svg>'
     + `<p class="sr-only">${esc(homeAbbr)} win probability is `

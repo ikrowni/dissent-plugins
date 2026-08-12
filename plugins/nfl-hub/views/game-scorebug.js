@@ -15,6 +15,29 @@ export function wpSplit(winProb) {
   return { home: Math.round(last.homePct), away: Math.round(last.awayPct) };
 }
 
+/**
+ * Whose win probability is that?
+ *
+ * ⚠️ THE BAR USED TO READ "WIN PROBABILITY · 100%" AND NAME NOBODY. It printed
+ * `max(home, away)` with no team beside it, so on the one screen where the number
+ * matters most a reader could not tell whether the favourite was the side leading
+ * on the scoreboard or the other one. Measured live on CAR 33 · ARI 30: the whole
+ * strip's text content was exactly `Win probability100%`.
+ *
+ * ⚠️ A DEAD HEAT HAS NO LEADER. Printing one team at 50% would invent a favourite
+ * out of a coin flip, so an exact tie says `Even` and names neither.
+ */
+export function wpLead(split, teams) {
+  if (!split) return null;
+  if (split.home === split.away) return { label: 'Even', pct: split.home, abbr: null };
+  const homeAhead = split.home > split.away;
+  return {
+    abbr: (homeAhead ? teams?.home?.abbr : teams?.away?.abbr) ?? null,
+    pct: homeAhead ? split.home : split.away,
+    label: null,
+  };
+}
+
 function half(side, which) {
   const c = side?.primary ?? '#12161f';
   const dir = which === 'l' ? '105deg' : '255deg';
@@ -37,6 +60,20 @@ export function renderHero(game, {
   // Named `motion` by the caller; aliased because the imported motion module is
   // already in scope here.
   motion: motionOverride = null,
+  /**
+   * ⚠️ IS THIS THE FIRST PAINT, or a poll landing on a surface already on screen?
+   *
+   * Both callers of this hero re-render on a timer — Game Center every 20 s during
+   * a live game, Around the League on the same cadence — and the whole hero is
+   * rebuilt each time, so an entrance animation with no gate REPLAYS FOREVER.
+   * Measured live before this existed: `heroLogo` on the two team crests went from
+   * `finished` back to `running` on every refresh, i.e. both logos spring-scaled in
+   * from 0.62 every twenty seconds for the length of a game.
+   *
+   * ⚠️ IT DEFAULTS TO TRUE. A caller that does not poll wants the entrance, and
+   * making it opt-in would silently strip the arrival from every static use.
+   */
+  entrance = true,
 } = {}) {
   if (!game) return '';
   const g = game;
@@ -46,6 +83,7 @@ export function renderHero(game, {
   const homeLead = (g.home?.score ?? 0) >= (g.away?.score ?? 0);
   const banner = [g.timeslot, g.broadcast, g.venue].filter(Boolean).map(esc).join(' · ');
   const wp = wpSplit(winProb);
+  const lead = wpLead(wp, { home: g.home, away: g.away });
 
   const clockText = preGame
     ? 'Kickoff'
@@ -59,7 +97,7 @@ export function renderHero(game, {
     )).join('')}</div>`
     : '';
 
-  return '<div class="hero">'
+  return `<div class="hero${entrance ? ' is-first' : ''}">`
     + half(g.away, 'l') + half(g.home, 'r')
     + `<img class="hero-mark l" src="${esc(g.away?.logo)}" alt="" aria-hidden="true">`
     + `<img class="hero-mark r" src="${esc(g.home?.logo)}" alt="" aria-hidden="true">`
@@ -92,7 +130,9 @@ export function renderHero(game, {
           + `<i style="width:${wp.away}%;background:${esc(g.away?.primary ?? '#888')}"></i>`
           + `<i style="width:${wp.home}%;background:${esc(g.home?.primary ?? '#555')}"></i>`
         + '</span>'
-        + `<span class="pct num">${esc(fmtPct(Math.max(wp.home, wp.away)))}</span></div>`
+        + '<span class="pct num">'
+          + (lead?.abbr ? `<b>${esc(lead.abbr)}</b> ` : '')
+          + `${esc(lead?.label ?? fmtPct(lead?.pct ?? 0))}</span></div>`
       : '')
     + '</div>';
 }

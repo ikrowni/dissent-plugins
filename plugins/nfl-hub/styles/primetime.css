@@ -17,6 +17,58 @@
 /* One gold hairline is the only ornament in this layer. */
 .rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,182,18,.5), transparent); }
 
+/* ── The stage ─────────────────────────────────────────────────────────────
+ *
+ * One lit surface with content standing ON it rather than slabs stacked over a
+ * flat background — the difference between a broadcast set and a page of boxes.
+ * It is what separates the part of a tab that carries the story from the part
+ * that carries the reference data.
+ *
+ * ⚠️ IT LIVES HERE BECAUSE THREE SHEETS WANT IT. podium.css introduced it for
+ * Leaders and booth.css needed the identical thirty lines for Game Center; a
+ * third copy is how two surfaces end up lit slightly differently for no reason
+ * anybody can explain later. The per-tab sheets specialise it — what stands ON
+ * the stage is theirs, the surface is this.
+ *
+ * ⚠️ NO backdrop-filter AND NOTHING THAT LOOPS. The lines and the vignette are
+ * pseudo-elements, so a stage costs no DOM, and the whole surface is painted
+ * once. Everything that moves on a stage is an entrance owned by the tab.
+ */
+.stage {
+  position: relative; overflow: hidden;
+  border-radius: var(--r); padding: 16px 14px 18px;
+  background: radial-gradient(120% 105% at 50% -25%, #17364f 0%, #0a1119 55%, #05070c 100%);
+}
+.stage::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 72px);
+}
+.stage::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(115% 75% at 50% 0%, transparent 42%, rgba(0,0,0,.6) 100%);
+}
+/* Everything real sits above both washes. */
+.stage > * { position: relative; z-index: 1; }
+
+/* The stage says what it is before its contents do. */
+.stage-head { display: flex; align-items: baseline; gap: 12px; margin: 0 4px 13px; }
+.stage-head h3 {
+  font-family: var(--f-display); font-size: 13px; font-weight: 800;
+  letter-spacing: .22em; text-transform: uppercase; color: #fff;
+}
+.stage-head .stage-sub {
+  font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold);
+}
+/* The same single gold hairline `.rule` allows itself, earned by the layout. */
+.stage-head::after {
+  content: ''; flex: 1; height: 1px; align-self: center;
+  background: linear-gradient(90deg, rgba(255,182,18,.45), transparent);
+}
+@media (max-width: 560px) {
+  .stage { padding: 12px 9px 13px; }
+  .stage-head h3 { font-size: 11.5px; letter-spacing: .16em; }
+}
+
 .badge {
   display: inline-flex; align-items: center;
   font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;

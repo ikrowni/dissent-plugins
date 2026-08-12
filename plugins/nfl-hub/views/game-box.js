@@ -4,6 +4,7 @@
 // (empty pregame, partial in-progress), so every accessor is defensive and each
 // renderer degrades to its own empty state rather than throwing.
 import { esc, stateMsg, cmpRow } from '../core/ui.js';
+import { teamColor } from '../core/player-visuals.js';
 
 /** Stats worth comparing side by side, in broadcast order. Names verified against the
  *  real summary payload on 2026-08-08. */
@@ -76,7 +77,14 @@ export function renderBoxScore(summary) {
       )).join('');
       // A category with no athletes would render as a header with no body.
       if (!rows) continue;
-      body += '<div style="padding:10px 12px">'
+      // ⚠️ SIX TABLES, TWO TEAMS, NOTHING SEPARATING THEM. The box score runs for
+      // several screens as `CAR · passing`, `CAR · rushing`, … then the same again
+      // for the other side, and the only thing distinguishing the halves is three
+      // letters in a 9px kicker. A hairline in the club's own colour is enough to
+      // find your team without reading every heading. teamColor() lifts near-black
+      // primaries, which is why it is used rather than the raw value.
+      body += '<div class="box-team" style="padding:10px 12px'
+        + `${abbr ? `;--bt:${esc(teamColor(abbr))}` : ''}">`
         + `<div class="kicker" style="margin-bottom:6px">${esc(abbr)} · ${esc(cat.name ?? '')}</div>`
         + '<table class="grid"><thead><tr><th>Player</th>'
         + labels.map((l) => `<th>${esc(l)}</th>`).join('')

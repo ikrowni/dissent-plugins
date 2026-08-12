@@ -159,9 +159,9 @@ export function renderLeaders(s = state) {
     // ⚠️ THE STAGE HOLDS THE FEATURED SIX AND NOTHING ELSE. Lighting all sixteen
     // would light nothing — the surface is the hierarchy, the same way the draft
     // board's stage is what separates the board from the panels around it.
-    body: `<div class="pod-stage">
-      <div class="pod-head"><h3>Leading the league</h3>
-        <span class="pod-sub">Top 3</span></div>
+    body: `<div class="stage pod-stage">
+      <div class="stage-head"><h3>Leading the league</h3>
+        <span class="stage-sub">Top 3</span></div>
       <div class="ld-grid m-stagger">${
   featured.map((c) => categoryPanel(c, { featured: true })).join('')}</div>
     </div>`

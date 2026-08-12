@@ -3,6 +3,7 @@
 // The drive chart is the single highest-value graphic in Game Center: it turns a score
 // into a narrative at a glance. Each block is one possession, coloured by outcome.
 import { esc, stateMsg } from '../core/ui.js';
+import { teamColor } from '../core/player-visuals.js';
 import { fmtClock } from '../core/format.js';
 
 const TURNOVER = /INT|FUMBLE|DOWNS|INTERCEPT|TURNOVER|SAFETY/i;
@@ -32,9 +33,18 @@ export function renderDriveChart(drives, { selectedId = null } = {}) {
     ? `<div class="drives">${list.map((d) => {
       const label = [d.teamAbbr, d.resultText ?? d.result, d.description]
         .filter(Boolean).join(' — ');
+      // ⚠️ POSSESSION IS THE MISSING HALF OF THIS CHART. The block's fill is the
+      // OUTCOME and stays the primary encoding — but without knowing whose drive
+      // it was, a run of three scores reads as one team pulling away when it may
+      // be two teams trading. Possession is inferable from alternation only until
+      // the first turnover on downs, which is precisely when it matters.
+      //
+      // ⚠️ A rail UNDER the block, never the fill. Recolouring the block by team
+      // would replace the outcome encoding this chart exists for.
+      const tc = d.teamAbbr ? ` style="--dt:${esc(teamColor(d.teamAbbr))}"` : '';
       return `<button class="${driveClass(d)}" data-act="drive" data-drive="${esc(d.id)}"`
         + ` aria-current="${String(d.id === selectedId)}" aria-label="${esc(label)}"`
-        + ` title="${esc(label)}"></button>`;
+        + `${tc} title="${esc(label)}"></button>`;
     }).join('')}</div>`
       + `<div class="drive-legend">${LEGEND.map(([c, t]) => (
         `<span><i class="${c}"></i>${esc(t)}</span>`

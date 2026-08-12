@@ -20,6 +20,20 @@ const state = {
   loading: true, error: null, game: null, siblings: null,
   plays: [], drives: [], winProb: [], summary: {},
   selectedDrive: null, replay: null, replayPlaying: false,
+  /**
+   * ⚠️ HAS THIS TAB ALREADY PAINTED ITS DATA ONCE?
+   *
+   * This is the only view in the plugin that BOTH carries entrance animations and
+   * re-renders on the scheduler — every 20 s while a game is live. Every render
+   * replaces the DOM wholesale, so an ungated entrance does not play once, it
+   * plays every twenty seconds for three hours. `heroLogo` was exactly that bug
+   * until this session, measured going `finished` -> `running` on every refresh.
+   *
+   * So the entrance classes are emitted only while this is false. repaint() sets
+   * it after the first paint; leave() clears it, because coming back to the tab is
+   * a genuine arrival again.
+   */
+  settled: false,
 };
 
 export function renderReplayBar(rs, isPlaying) {
@@ -44,16 +58,32 @@ export function renderGame(s = state) {
 
   const teams = { home: s.game.home, away: s.game.away };
   const scoringSeqs = (s.plays ?? []).filter((p) => p.scoring).map((p) => p.seq);
+  const first = !s.settled;
+  const drives = s.drives?.length ?? 0;
 
+  // ⚠️ THE STORY, THEN THE DETAIL. These five modules used to sit in one flat
+  // panel at identical weight, so the drive chart — which game-drive.js's own
+  // header calls the single highest-value graphic here — carried exactly as much
+  // as the box score. The drive chart and the win-probability graph answer the
+  // same question from two directions (what happened, and what it was worth), so
+  // they go together on a stage under the hero; everything you consult afterwards
+  // reads like it. Same rule as the standings and leaders passes.
   return '<div class="game-center">'
     + '<div style="padding:10px 20px 0">'
       + '<button class="badge" data-act="nav" data-view="league">← Around the League</button>'
     + '</div>'
     + (s.replay ? renderReplayBar(s.replay, s.replayPlaying) : '')
-    + renderHero(s.game, { winProb: s.winProb, siblings: s.siblings })
-    + '<div class="panel"><div class="panel-body" style="display:grid;gap:12px">'
-      + renderDriveChart(s.drives, { selectedId: s.selectedDrive })
-      + renderWinProb(s.winProb, teams, { scoringSeqs })
+    + renderHero(s.game, { winProb: s.winProb, siblings: s.siblings, entrance: first })
+    + `<div class="stage bth-stage${first ? ' is-first' : ''}">`
+      + '<div class="stage-head"><h3>How it happened</h3>'
+        + `<span class="stage-sub">${drives} drive${drives === 1 ? '' : 's'}</span></div>`
+      + '<div class="bth-story">'
+        + renderDriveChart(s.drives, { selectedId: s.selectedDrive })
+        + renderWinProb(s.winProb, teams, { scoringSeqs })
+      + '</div>'
+    + '</div>'
+    + '<div class="kicker bth-more-h">The detail</div>'
+    + '<div class="panel bth-detail"><div class="panel-body" style="display:grid;gap:12px">'
       + renderPlayByPlay(s.plays)
       + renderComparison(parseTeamStats(s.summary), teams)
       + renderBoxScore(s.summary)
@@ -128,6 +158,10 @@ export async function enter() {
     app.router.refresh();
     applyScoreFlip(document.getElementById('main'), next, prevScore);
     prevScore = next;
+    // ⚠️ AFTER the paint, never before. The render that is happening on the line
+    // above IS the entrance; every one after it is a poll landing on a surface
+    // already on screen, and must arrive without animating.
+    state.settled = true;
   };
 
   app.onAction = (act, el) => {
@@ -172,4 +206,6 @@ export function leave() {
   unsubscribe?.();
   unregister = null;
   unsubscribe = null;
+  // Coming back to this tab is a genuine arrival, so it gets its entrance again.
+  state.settled = false;
 }

@@ -1,0 +1,138 @@
+/* styles/booth.css — Game Center's broadcast layer.
+ *
+ * The third and last of these, after gridiron.css (League) and podium.css
+ * (Leaders). Game Center already had the best surface in the plugin — the
+ * stadium hero — and then dropped five identically-weighted modules underneath
+ * it in one flat panel. The drive chart, which game-drive.js's own header calls
+ * "the single highest-value graphic in Game Center", carried exactly the weight
+ * of the box score.
+ *
+ * So this sheet is about one distinction: THE STORY versus THE DETAIL. The drive
+ * chart and the win-probability graph together are how the game went; they go on
+ * a stage directly under the hero. Play-by-play, the comparison and the box score
+ * are what you consult afterwards, and they read like it.
+ *
+ * ⚠️ THIS IS THE ONLY ONE OF THE THREE ON A POLLING SURFACE, and it changes
+ * everything about the motion. views/game.js re-renders on the scheduler — every
+ * 20 s while a game is live (POLL_LIVE_MS) — and every render replaces the DOM
+ * wholesale. An ungated entrance therefore does not play once, it plays every
+ * twenty seconds for three hours.
+ *
+ * That is not hypothetical: `heroLogo` in stadium.css was exactly this bug until
+ * this session, measured going from `finished` back to `running` on every
+ * refresh. So EVERY animation in this file hangs off `.bth-stage.is-first`, and
+ * views/game.js sets that class only on the paint that is genuinely an arrival.
+ * Delete the gate and the whole tab twitches on a timer.
+ *
+ * ⚠️ NO backdrop-filter and NOTHING THAT LOOPS — the same contract gridiron.css
+ * and podium.css hold, enforced by the same guard in core/motion.test.js. (The
+ * hero above this is the exception the plugin already accepts: `.sweep` and
+ * `.hero-wp` live in stadium.css and are documented there as the two things that
+ * need measuring.)
+ *
+ * The stage surface itself is `.stage`, in primetime.css.
+ */
+
+/* ── The story ─────────────────────────────────────────────────────────────
+ * Two graphics, side by side, because they answer the same question from two
+ * directions: WHAT happened (drives) and WHAT IT WAS WORTH (win probability).
+ * Stacked, the second one is below the fold and never gets read. */
+.bth-stage { margin: 14px 20px 0; }
+.bth-story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 900px) { .bth-story { grid-template-columns: 1fr; } }
+
+/* Lit objects on the surface, the same treatment a draft cell gets in
+ * gridiron.css and a featured card gets in podium.css. */
+.bth-story > .mod {
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(180deg, rgba(255,255,255,.062), rgba(255,255,255,.014));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* ── The drive chart, promoted ─────────────────────────────────────────────
+ *
+ * ⚠️ THE BLOCK'S FILL IS STILL THE OUTCOME. That is the encoding this chart
+ * exists for and it does not move. The rail underneath is POSSESSION, which the
+ * chart never carried — and without it a run of three scores reads as one team
+ * pulling away when it may be two teams trading. Alternation gives possession
+ * away for free right up until a turnover on downs, which is the moment it
+ * actually matters. */
+.bth-story .drives { gap: 4px; }
+.bth-story .drives button { position: relative; height: 40px; border-radius: 3px; }
+.bth-story .drives button::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  border-radius: 0 0 3px 3px; background: var(--dt, transparent);
+}
+.bth-story .drives button[aria-current='true'] { outline: 1px solid var(--gold); outline-offset: 2px; }
+
+/* ── The win-probability graph ─────────────────────────────────────────────
+ * The area fill is emitted by the view in the home team's own colour; this only
+ * has to keep the line above it and the scoring marks above that. */
+.bth-story .wp-area { pointer-events: none; }
+.bth-story svg { overflow: visible; }
+
+/* ── The detail ────────────────────────────────────────────────────────────
+ * Deliberately NOT lit. It is the reference half of the tab and reads like it —
+ * the same rule the standings and leaders passes both used: everything consulted
+ * second is weighted like it. */
+.bth-more-h { margin: 20px 20px 0; }
+.bth-detail .mod-head .t { font-size: 9px; color: var(--text-3); }
+
+/* The box score is two teams' worth of tables with nothing separating them. A
+ * hairline in the club's own colour is enough to find your team's half without
+ * reading every heading — teamColor(), lifted, so near-black primaries survive. */
+.bth-detail .box-team { border-left: 2px solid var(--bt, var(--line)); }
+
+/* ── Entrances — ALL OF THEM GATED ─────────────────────────────────────────
+ *
+ * ⚠️ `.is-first` IS LOAD-BEARING, not decoration. Without it every rule below
+ * fires on every poll: the stage rises, eighteen drive blocks pop in sequence and
+ * the win-probability line redraws itself, every twenty seconds, for the length
+ * of a game. views/game.js flips its `settled` flag after the first paint and
+ * clears it in leave(), so coming back to the tab is an arrival again. */
+.bth-stage.is-first { animation: mRise var(--dur) var(--ease-out) both; }
+.bth-stage.is-first .drives button { animation: mPop 300ms var(--ease-spring) both; }
+.bth-stage.is-first .drives button:nth-child(1)  { animation-delay: 120ms; }
+.bth-stage.is-first .drives button:nth-child(2)  { animation-delay: 150ms; }
+.bth-stage.is-first .drives button:nth-child(3)  { animation-delay: 180ms; }
+.bth-stage.is-first .drives button:nth-child(4)  { animation-delay: 210ms; }
+.bth-stage.is-first .drives button:nth-child(5)  { animation-delay: 240ms; }
+.bth-stage.is-first .drives button:nth-child(6)  { animation-delay: 270ms; }
+.bth-stage.is-first .drives button:nth-child(7)  { animation-delay: 300ms; }
+.bth-stage.is-first .drives button:nth-child(8)  { animation-delay: 330ms; }
+.bth-stage.is-first .drives button:nth-child(n+9) { animation-delay: 360ms; }
+
+/* ⚠️ THE ONE PAINT-PROPERTY ANIMATION IN ANY OF THESE SHEETS, and it is
+ * deliberate. A win-probability line drawing itself left to right is the gesture
+ * this graphic is FOR — it replays the game in one second. It is a single path,
+ * once, on a first paint only; the alternative (scaling a transform) would stretch
+ * the stroke and skew every scoring mark with it. The same precedent gridiron.css
+ * set with `grTickFlash`, which animates `background` one-shot. */
+ *
+ * ⚠️ IT IS NORMALISED WITH `pathLength="1"`, NOT A GUESSED DASH LENGTH. The first
+ * attempt hard-coded `stroke-dasharray: 1400`, which is only solid while the real
+ * path is SHORTER than that — and this path is a 188-sample jagged line whose
+ * length depends entirely on how volatile the game was. A close game would have
+ * exceeded it and left a permanent gap in the line, on the finished chart, with
+ * nothing animating. `pathLength` makes the declared length exactly 1 whatever the
+ * geometry, so a dash of 1 always covers it. */
+.wp-line { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.bth-stage.is-first .wp-line { animation: bthDraw 900ms var(--ease-out) both; }
+@keyframes bthDraw { from { stroke-dashoffset: 1; } }
+
+.bth-stage.is-first .score-mark { animation: mPop 260ms var(--ease-spring) both; animation-delay: 900ms; }
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ * Transform only. A drive chart is a row of small targets a pointer sweeps
+ * across, which is the worst possible place for a hover that repaints. */
+.bth-story .drives button { transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast); }
+.bth-story .drives button:hover { transform: translate3d(0, -3px, 0); filter: brightness(1.35); }
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * ⚠️ FINISHED, NOT STRIPPED. The stage, the possession rails and the area fill
+ * are all painted once, so what is left when the movement goes is the complete
+ * design. The line needs its dash explicitly cleared: motion.css collapses the
+ * duration but the static `stroke-dasharray` above would still be in force, and a
+ * 1400-unit dash on a 600-unit path is an invisible line. */
+body.reduce-motion .wp-line { stroke-dasharray: none; }
+body.reduce-motion .bth-story .drives button:hover { transform: none; }

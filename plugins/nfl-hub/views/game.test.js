@@ -97,4 +97,49 @@ describe('renderReplayBar', () => {
   it('survives a null replay state rather than throwing', () => {
     expect(() => renderReplayBar(null, false)).not.toThrow();
   });
+
+  // ⚠️ THE STORY, THEN THE DETAIL. These five modules sat in one flat panel at
+  // identical weight, so the drive chart — game-drive.js's own header calls it the
+  // single highest-value graphic here — carried exactly as much as the box score.
+  it('stands the drive chart and win probability on a stage, and nothing else', () => {
+    const el = parse(renderGame({ ...base, drives: [{ id: 'd1', result: 'TD', teamAbbr: 'PHI' }] }));
+    const stage = el.querySelector('.bth-stage');
+    expect(stage).not.toBeNull();
+    const onStage = [...stage.querySelectorAll('.mod-head .t')].map((t) => t.textContent);
+    expect(onStage).toEqual(['Drive chart', 'Win probability']);
+    const detail = [...el.querySelectorAll('.bth-detail .mod-head .t')].map((t) => t.textContent);
+    expect(detail).toEqual(['Play by play', 'Team comparison', 'Box score']);
+  });
+
+  it('carries the shared stage surface, not a second copy of it', () => {
+    const stage = parse(renderGame(base)).querySelector('.bth-stage');
+    expect(stage.classList.contains('stage')).toBe(true);
+  });
+
+  // ⚠️ THIS IS THE ONLY TAB THAT BOTH ANIMATES AND POLLS. views/game.js re-renders
+  // every 20s while a game is live and every render replaces the DOM, so an
+  // ungated entrance does not play once — it plays every twenty seconds for three
+  // hours. `heroLogo` was exactly that bug until this session.
+  it('marks the first paint as an arrival', () => {
+    const el = parse(renderGame({ ...base, settled: false }));
+    expect(el.querySelector('.bth-stage').classList.contains('is-first')).toBe(true);
+    expect(el.querySelector('.hero').classList.contains('is-first')).toBe(true);
+  });
+
+  it('withholds every entrance once settled, which is what a poll renders', () => {
+    const el = parse(renderGame({ ...base, settled: true }));
+    expect(el.querySelector('.bth-stage').classList.contains('is-first')).toBe(false);
+    expect(el.querySelector('.hero').classList.contains('is-first')).toBe(false);
+    // The gate must cost the tab nothing but motion.
+    expect(el.querySelectorAll('.mod').length)
+      .toBe(parse(renderGame({ ...base, settled: false })).querySelectorAll('.mod').length);
+  });
+
+  it('counts the drives on the stage head', () => {
+    const drives = [{ id: 'a', result: 'TD' }, { id: 'b', result: 'PUNT' }];
+    expect(parse(renderGame({ ...base, drives })).querySelector('.stage-head').textContent)
+      .toContain('2 drives');
+    expect(parse(renderGame({ ...base, drives: [drives[0]] })).querySelector('.stage-head').textContent)
+      .toContain('1 drive');
+  });
 });

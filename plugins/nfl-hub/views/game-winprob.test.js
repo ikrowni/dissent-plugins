@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseProbabilities } from '../core/espn-game.js';
-import { wpPath, renderWinProb } from './game-winprob.js';
+import { wpPath, wpArea, renderWinProb } from './game-winprob.js';
 
 // fileURLToPath rather than a URL object: under jsdom the global URL is jsdom's and
 // node:fs does not recognise it as a file URL.
@@ -51,8 +51,50 @@ describe('renderWinProb', () => {
   it('renders an svg with the real 164-sample series', () => {
     const el = parse(renderWinProb(wp, teams));
     expect(el.querySelector('svg')).not.toBeNull();
-    const pts = el.querySelector('polyline').getAttribute('points').trim().split(/\s+/);
+    // ⚠️ NAMED, not "the first polyline". There are two now — the filled area sits
+    // behind the line — and taking whichever came first silently measured the
+    // area's extra baseline anchors instead of the series.
+    const pts = el.querySelector('.wp-line').getAttribute('points').trim().split(/\s+/);
     expect(pts).toHaveLength(164);
+  });
+
+  // ⚠️ THE FILL IS WHAT MAKES IT A CHART. A 2px stroke on an empty box is a
+  // squiggle; the area under it is "how much of this game did the home side own".
+  it('fills the area under the line in the home team’s colour', () => {
+    const el = parse(renderWinProb(wp, teams));
+    const area = el.querySelector('.wp-area');
+    expect(area).not.toBeNull();
+    expect(area.getAttribute('fill')).not.toBe('none');
+    expect(Number(area.getAttribute('fill-opacity'))).toBeLessThan(0.3);
+  });
+
+  // ⚠️ DERIVED FROM THE SAME POINTS. Computing the area separately lets the two
+  // disagree by a rounding step and draws a fill that does not meet its own line.
+  it('closes the area onto the identical series, plus two baseline anchors', () => {
+    const line = wpPath(wp);
+    const area = wpArea(wp);
+    expect(area).toContain(line);
+    expect(area.trim().split(/\s+/)).toHaveLength(line.trim().split(/\s+/).length + 2);
+  });
+
+  it('anchors the area on the baseline at both ends', () => {
+    const pts = wpArea([{ homePct: 100 }, { homePct: 0 }], 600, 120).trim().split(/\s+/);
+    expect(pts[0]).toBe('0,120');
+    expect(pts.at(-1)).toBe('600,120');
+  });
+
+  it('has no area to draw when there are no samples', () => {
+    expect(wpArea([])).toBe('');
+    expect(wpArea(null)).toBe('');
+  });
+
+  // ⚠️ pathLength NORMALISES THE DRAW-IN. booth.css animates a dash of 1; without
+  // this the dash length would have to be guessed against a path whose real length
+  // depends on how volatile the game was, and a guess that is too short leaves a
+  // permanent gap in the finished line.
+  it('normalises the line’s length so it can be drawn in', () => {
+    const el = parse(renderWinProb(wp, teams));
+    expect(el.querySelector('.wp-line').getAttribute('pathLength')).toBe('1');
   });
 
   it('draws a 50% midline so the swing is readable', () => {

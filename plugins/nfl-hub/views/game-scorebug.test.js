@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { renderHero, wpSplit } from './game-scorebug.js';
+import { renderHero, wpSplit, wpLead } from './game-scorebug.js';
 
 const parse = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 
@@ -127,5 +127,56 @@ describe('renderHero', () => {
 
   it('survives a game missing a side rather than throwing', () => {
     expect(() => renderHero({ ...g, home: null })).not.toThrow();
+  });
+
+  // ⚠️ THE BUG THIS EXISTS FOR, and it was measured live before the fix: both
+  // callers of this hero re-render on the scheduler, and every render rebuilds
+  // the hero, so `heroLogo` went from `finished` back to `running` on EVERY
+  // refresh — both crests spring-scaling in from 0.62 every twenty seconds for a
+  // whole game. stadium.css scopes that animation to `.hero.is-first`.
+  it('marks the first paint so the crest entrance can be scoped to it', () => {
+    expect(parse(renderHero(g)).querySelector('.hero').classList.contains('is-first')).toBe(true);
+  });
+
+  it('withholds it on a repaint, which is what a poll produces', () => {
+    const el = parse(renderHero(g, { entrance: false }));
+    expect(el.querySelector('.hero').classList.contains('is-first')).toBe(false);
+    // Everything else is identical — the gate must cost the hero nothing but motion.
+    expect(el.querySelectorAll('.hero-side img')).toHaveLength(2);
+    expect(el.querySelector('.hero-score').textContent).toBe('24');
+  });
+});
+
+describe('whose win probability is it', () => {
+  const teams = { home: { abbr: 'PHI' }, away: { abbr: 'DAL' } };
+
+  // ⚠️ THE STRIP USED TO READ "Win probability100%" AND NAME NOBODY. Measured
+  // live on CAR 33 - ARI 30: that was the entire text content. It printed
+  // max(home, away) with no team beside it, so on the one screen where the number
+  // matters a reader could not tell which side it belonged to.
+  it('names the favourite rather than printing a bare percentage', () => {
+    expect(wpLead({ home: 82, away: 18 }, teams)).toEqual({ abbr: 'PHI', pct: 82, label: null });
+    expect(wpLead({ home: 18, away: 82 }, teams)).toEqual({ abbr: 'DAL', pct: 82, label: null });
+  });
+
+  // ⚠️ A COIN FLIP HAS NO FAVOURITE. Naming one at 50% invents information.
+  it('refuses to name a favourite in a dead heat', () => {
+    expect(wpLead({ home: 50, away: 50 }, teams))
+      .toEqual({ label: 'Even', pct: 50, abbr: null });
+  });
+
+  it('says nothing at all when there is no probability', () => {
+    expect(wpLead(null, teams)).toBeNull();
+  });
+
+  it('survives a team with no abbreviation rather than printing undefined', () => {
+    expect(wpLead({ home: 70, away: 30 }, {})).toEqual({ abbr: null, pct: 70, label: null });
+  });
+
+  it('puts the favourite into the rendered hero', () => {
+    const el = parse(renderHero(g, { winProb: [{ homePct: 82, awayPct: 18 }] }));
+    const pct = el.querySelector('.hero-wp .pct');
+    expect(pct.textContent).toContain('PHI');
+    expect(pct.textContent).toContain('82');
   });
 });
