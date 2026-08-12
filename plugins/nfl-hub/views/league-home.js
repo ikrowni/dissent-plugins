@@ -3,10 +3,9 @@
 // Pure render functions plus a small amount of state, matching the rest of the
 // hub: the view owns what it is showing, app.js owns the DOM and the events.
 //
-// ⚠️ THIS IS THE NATIVE LEAGUE, not the Sleeper mirror. The existing
-// views/fantasy*.js render a league that lives on Sleeper and can only be read;
-// this one renders a league that lives here and can be played. They coexist
-// because a native league is identified by its own `leagueId`.
+// ⚠️ THIS IS THE LEAGUE. A Sleeper mirror used to render a league that lived
+// elsewhere and could only be read; it was removed on 2026-08-12, unused on every
+// install. This one lives here and can be played.
 
 import { esc, panel, stateMsg, tile } from '../core/ui.js';
 import { managerColor } from '../core/player-visuals.js';

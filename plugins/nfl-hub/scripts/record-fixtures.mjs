@@ -79,25 +79,12 @@ const TARGETS = {
   'athlete-overview.json':    `${WEB}/athletes/3139477/overview`,
   'sleeper-state.json':       'https://api.sleeper.app/v1/state/nfl',
 
-  // ── Wave 3A: the fantasy league ──────────────────────────────────────────────
+  // ⚠️ ONLY WHAT THE NATIVE LEAGUE STILL READS. The Sleeper MIRROR was removed on
+  // 2026-08-12, and with it the rosters/users/matchups/projections recordings that
+  // fed it. What is left is not the mirror: `sleeper-league.json` is the shape
+  // `fromSleeperSettings` reads, and the stats below are what the native engine
+  // scores from every week.
   'sleeper-league.json':       `${SLEEPER}/league/${LEAGUE}`,
-  'sleeper-rosters.json':      `${SLEEPER}/league/${LEAGUE}/rosters`,
-  'sleeper-users.json':        `${SLEEPER}/league/${LEAGUE}/users`,
-  'sleeper-matchups-w14.json': `${SLEEPER}/league/${LEAGUE}/matchups/${FWEEK}`,
-
-  // Sleeper's projections are UNDOCUMENTED but live on api.sleeper.app, which is already
-  // in allowed_fetch_domains — so "actual vs projected" costs no migration.
-  //
-  // This is the /v1/ form: 545 KB (45% headroom under the 1 MB fetch:external cap), a dict
-  // keyed by Sleeper player_id, carrying pts_ppr / pts_half_ppr / pts_std. That key is
-  // exactly what matchups.starters and matchups.players_points use, so projections need no
-  // name join and ONE fetch covers every roster in the league.
-  //
-  // NOT the query-param form. Measured 2026-08-08:
-  //   /projections/nfl/2025/14?season_type=regular&position[]=QB…&position[]=DEF  = 2.05 MB
-  // twice the cap, and a fifth over-cap endpoint after the four found in waves 1A and 2.
-  // One position alone (QB) is 217 KB. The narrower-looking URL is the unusable one.
-  'sleeper-projections-w14.json': `${SLEEPER}/projections/nfl/regular/2025/${FWEEK}`,
 
   // ACTUAL stats, same shape as projections but with what really happened.
   //

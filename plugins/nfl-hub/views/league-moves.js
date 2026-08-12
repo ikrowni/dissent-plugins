@@ -151,7 +151,7 @@ function claimsPane() {
  * Who is offering what, and who wants mine.
  *
  * ⚠️ THIS IS THE LEAGUE ENGINE'S BLOCK, not the Fantasy tab's. Here a blocked
- * player leads somewhere — the propose form below is ours. On the Sleeper mirror
+ * player leads somewhere — the propose form below is ours. On a read-only mirror
  * it could only ever be a noticeboard, because Sleeper cannot be written to.
  */
 /**

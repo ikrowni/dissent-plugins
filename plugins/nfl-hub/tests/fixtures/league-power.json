@@ -1,0 +1,223 @@
+{
+ "_note": "Derived once from a real 12-team, 3-week season (the retired Sleeper fixtures) and reshaped into the native league's stored form. Real scores, real records — not hand-invented.",
+ "standings": [
+  {
+   "teamId": "1",
+   "wins": 5,
+   "losses": 9,
+   "ties": 0,
+   "pointsFor": 1802.08,
+   "pointsAgainst": 2017.38
+  },
+  {
+   "teamId": "2",
+   "wins": 8,
+   "losses": 6,
+   "ties": 0,
+   "pointsFor": 2015,
+   "pointsAgainst": 1901.78
+  },
+  {
+   "teamId": "3",
+   "wins": 9,
+   "losses": 5,
+   "ties": 0,
+   "pointsFor": 2205.62,
+   "pointsAgainst": 1890.18
+  },
+  {
+   "teamId": "4",
+   "wins": 6,
+   "losses": 8,
+   "ties": 0,
+   "pointsFor": 1913.54,
+   "pointsAgainst": 1993.04
+  },
+  {
+   "teamId": "5",
+   "wins": 9,
+   "losses": 5,
+   "ties": 0,
+   "pointsFor": 2098.88,
+   "pointsAgainst": 1974.48
+  },
+  {
+   "teamId": "6",
+   "wins": 4,
+   "losses": 10,
+   "ties": 0,
+   "pointsFor": 1593.8,
+   "pointsAgainst": 2036.74
+  },
+  {
+   "teamId": "7",
+   "wins": 9,
+   "losses": 5,
+   "ties": 0,
+   "pointsFor": 2229.66,
+   "pointsAgainst": 2003.74
+  },
+  {
+   "teamId": "8",
+   "wins": 11,
+   "losses": 3,
+   "ties": 0,
+   "pointsFor": 2146.3,
+   "pointsAgainst": 1862.52
+  },
+  {
+   "teamId": "9",
+   "wins": 3,
+   "losses": 11,
+   "ties": 0,
+   "pointsFor": 1718.4,
+   "pointsAgainst": 2097.72
+  },
+  {
+   "teamId": "10",
+   "wins": 0,
+   "losses": 14,
+   "ties": 0,
+   "pointsFor": 1510.02,
+   "pointsAgainst": 2119.86
+  },
+  {
+   "teamId": "11",
+   "wins": 10,
+   "losses": 4,
+   "ties": 0,
+   "pointsFor": 2277.32,
+   "pointsAgainst": 1942.5
+  },
+  {
+   "teamId": "12",
+   "wins": 10,
+   "losses": 4,
+   "ties": 0,
+   "pointsFor": 2299.9,
+   "pointsAgainst": 1970.58
+  }
+ ],
+ "weekScores": {
+  "1": {
+   "teams": {
+    "1": {
+     "total": 148.98
+    },
+    "2": {
+     "total": 160.98
+    },
+    "3": {
+     "total": 144.34
+    },
+    "4": {
+     "total": 110.06
+    },
+    "5": {
+     "total": 162.22
+    },
+    "6": {
+     "total": 116
+    },
+    "7": {
+     "total": 191
+    },
+    "8": {
+     "total": 128.64
+    },
+    "9": {
+     "total": 103.44
+    },
+    "10": {
+     "total": 90.36
+    },
+    "11": {
+     "total": 165.46
+    },
+    "12": {
+     "total": 146.34
+    }
+   }
+  },
+  "2": {
+   "teams": {
+    "1": {
+     "total": 152.7
+    },
+    "2": {
+     "total": 139.48
+    },
+    "3": {
+     "total": 122.52
+    },
+    "4": {
+     "total": 129.4
+    },
+    "5": {
+     "total": 144.56
+    },
+    "6": {
+     "total": 137.68
+    },
+    "7": {
+     "total": 184.98
+    },
+    "8": {
+     "total": 163.38
+    },
+    "9": {
+     "total": 115.96
+    },
+    "10": {
+     "total": 116.26
+    },
+    "11": {
+     "total": 183.8
+    },
+    "12": {
+     "total": 198.42
+    }
+   }
+  },
+  "3": {
+   "teams": {
+    "1": {
+     "total": 116.82
+    },
+    "2": {
+     "total": 126.64
+    },
+    "3": {
+     "total": 171.22
+    },
+    "4": {
+     "total": 153.84
+    },
+    "5": {
+     "total": 123.82
+    },
+    "6": {
+     "total": 121.96
+    },
+    "7": {
+     "total": 149.68
+    },
+    "8": {
+     "total": 143.7
+    },
+    "9": {
+     "total": 139.62
+    },
+    "10": {
+     "total": 121.08
+    },
+    "11": {
+     "total": 143.98
+    },
+    "12": {
+     "total": 195
+    }
+   }
+  }
+ }
+}

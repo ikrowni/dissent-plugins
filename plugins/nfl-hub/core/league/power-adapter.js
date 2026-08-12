@@ -2,7 +2,8 @@
 //
 // ⚠️ AN ADAPTER, NOT A SECOND IMPLEMENTATION. `core/power.js` already computes
 // all-play records, luck and rankings, and it is already tested; it was written
-// for the Sleeper mirror's shapes. Reimplementing that maths for the native
+// for the Sleeper mirror's shapes, and outlived it — the mirror was removed on
+// 2026-08-12 and this is now power.js's only caller. Reimplementing that maths for the native
 // league would give the league two answers to "who is actually best", which is
 // precisely the argument a power ranking exists to settle.
 //

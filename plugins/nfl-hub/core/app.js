@@ -119,11 +119,13 @@ async function applyStoredMotionPref() {
 }
 
 async function applySeasonLabel() {
-  // Season/week comes from Sleeper's state endpoint, which is authoritative and tiny.
-  // The old plugin hardcoded 2024.
+  // ⚠️ Season/week comes from core/nfl-state.js, and it is load-bearing well
+  // outside the header: the standings tab refuses to draw a playoff picture when
+  // `seasonType === 'pre'`, and the leaders tab labels last season's finals as
+  // final. Nothing throws if this stops working — the surfaces just start lying.
   const label = document.getElementById('season-label');
   try {
-    const { fetchState } = await import('./sleeper.js');
+    const { fetchState } = await import('./nfl-state.js');
     const st = await fetchState();
     if (!st) { if (label) label.textContent = ''; return; }
     app.season = st.season ?? null;
@@ -154,7 +156,7 @@ async function boot() {
 
   const [
     leagueView, gameView, standingsView, leadersView, newsView, teamView, playerView,
-    fantasyView, myLeagueView,
+    myLeagueView,
   ] = await Promise.all([
     import('../views/league.js'),
     import('../views/game.js'),
@@ -163,7 +165,6 @@ async function boot() {
     import('../views/news.js'),
     import('../views/team.js'),
     import('../views/player.js'),
-    import('../views/fantasy.js'),
     import('../views/league-section.js'),
   ]);
 
@@ -173,8 +174,10 @@ async function boot() {
     views: {
       league: leagueView, game: gameView, standings: standingsView,
       leaders: leadersView, news: newsView, team: teamView, player: playerView,
-      fantasy: fantasyView,
-      // The NATIVE league, distinct from `fantasy` which mirrors Sleeper.
+      // ⚠️ THE ONLY LEAGUE NOW. A `fantasy` view used to sit beside this one,
+      // mirroring a league that lived on Sleeper and could only be read. It was
+      // removed on 2026-08-12 — never configured on any install, no stored state
+      // on any of them — once this native engine shipped and could be played.
       myleague: myLeagueView,
     },
   });

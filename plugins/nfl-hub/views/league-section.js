@@ -2,13 +2,15 @@
 //
 // Owns which sub-view is showing and routes every league action to it. The hub's
 // router only knows about this one view; the sub-views are plain modules it
-// renders into its own body, which is the same shape views/fantasy.js uses for
-// the Sleeper mirror.
+// renders into its own body.
 //
-// ⚠️ THE SLEEPER MIRROR STAYS. views/fantasy*.js render a league that lives on
-// Sleeper and can only be read. This section renders a league that lives here
-// and can be played. Both are legitimate and they do not interfere: a native
-// league is identified by its own leagueId in plugin storage.
+// ⚠️ THIS IS THE ONLY LEAGUE NOW. A `fantasy` view used to sit beside it,
+// mirroring a league that lived on Sleeper and could only be READ — this one
+// lives here and can be PLAYED. The mirror was removed on 2026-08-12: it had
+// never been configured on any install and no install held a single row of its
+// state. If a read-only view of an external league is ever wanted again, it is a
+// new feature, not a revert — `fromSleeperSettings` in core/league/settings.js is
+// the closer idea and it still has no caller.
 
 import { esc } from '../core/ui.js';
 import * as home from './league-home.js';

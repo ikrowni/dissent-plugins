@@ -12,7 +12,6 @@ export const KEY = {
   picks: (season, week) => `pickem:${season}:w${week}`,
   pickemStandings: (season) => `pickem:standings:${season}`,
   powerBallots: (season, week) => `power:${season}:w${week}`,
-  tradeBlock: (season) => `tradeblock:${season}`,
   bets: (season) => `bets:${season}`,
   awards: (season) => `awards:${season}`,
   // Derived, not authored — sharded by week so a settled sim is never shown against a

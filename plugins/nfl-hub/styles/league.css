@@ -8,8 +8,8 @@
  *
  * Tokens come from base.css. Nothing here invents a colour.
  *
- * ⚠️ Scoped to the league views by class name only. The Sleeper mirror
- * (views/fantasy*.js) shares this document, so a bare `button {}` or `table {}`
+ * ⚠️ Scoped to the league views by class name only. Every other tab shares this
+ * one document — it is a single-page plugin — so a bare `button {}` or `table {}`
  * rule here would restyle a surface this file has never seen.
  */
 

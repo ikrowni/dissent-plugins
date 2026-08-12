@@ -8,7 +8,11 @@ describe('KEY builders', () => {
   });
   it('keeps season-scoped keys unsharded', () => {
     expect(KEY.pickemStandings(2026)).toBe('pickem:standings:2026');
-    expect(KEY.tradeBlock(2026)).toBe('tradeblock:2026');
+    // ⚠️ `tradeBlock` was here and is gone. It was a season-scoped key belonging to
+    // the Broadcast Center's unbuilt social layer, never written by anything; the
+    // live trade block is `KEY.tradeBlock(lg)` in server/store.js, league-scoped.
+    // Removed with the Sleeper mirror on 2026-08-12.
+    expect(KEY.tradeBlock).toBeUndefined();
     expect(KEY.bets(2026)).toBe('bets:2026');
     expect(KEY.awards(2026)).toBe('awards:2026');
   });
