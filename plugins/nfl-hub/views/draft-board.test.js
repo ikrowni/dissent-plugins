@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   matchesFilter, renderBoard, renderOnTheClock, renderFilters, renderPool,
   renderRosterProgress, POOL_FILTERS, picksUntilTurn, renderQueue, roundArrow, rosterNeeds,
-  renderHero, renderTicker, renderFeed, renderStage,
+  renderHero, renderTicker, renderFeed, renderStage, renderBoardStage,
 } from './draft-board.js';
 
 // ⚠️ views/game-scorebug.js ALSO exports a renderHero. Different module, no clash —
@@ -610,5 +610,34 @@ describe('the run-detected flash', () => {
   it('never flashes a quiet strip', () => {
     const el = parse(renderTicker(null, { isNew: true }));
     expect(el.querySelector('.gr-tick').classList.contains('is-new')).toBe(false);
+  });
+
+  /**
+   * ⚠️ WHAT YOU DO COMES BEFORE WHAT YOU HAVE DONE. The picked-players grid is a
+   * RECORD you glance at between picks; the pool is the only thing on the screen
+   * you can act on. Ordering the record first put fifteen rounds of mostly-empty
+   * cells between a manager and the one control they came for.
+   */
+  it('renders the board on a stage of its own, for placing below the pool', () => {
+    const html = renderBoardStage({ board: '<i class="board"></i>', feed: '<i class="feed"></i>' });
+    const el = parse(html);
+    expect(el.querySelector('.gr-stage.gr-stage-board')).not.toBeNull();
+    expect(el.querySelector('.gr-board .board')).not.toBeNull();
+    expect(el.querySelector('.feed')).not.toBeNull();
+  });
+
+  it('renders nothing at all without a board, rather than an empty lit band', () => {
+    expect(renderBoardStage({})).toBe('');
+    expect(renderBoardStage({ board: '' })).toBe('');
+  });
+
+  // ⚠️ The hero stage must not leave `.gr-cols` behind when the board moves out —
+  // an empty column strip under the ticker reads as a panel still loading.
+  it('drops the column strip when the stage carries no board', () => {
+    const el = parse(renderStage({ hero: '<i class="h"></i>', ticker: '<i class="t"></i>' }));
+    expect(el.querySelector('.h')).not.toBeNull();
+    expect(el.querySelector('.gr-cols')).toBeNull();
+    // ...and keeps it when it does.
+    expect(parse(renderStage({ board: '<i></i>' })).querySelector('.gr-cols')).not.toBeNull();
   });
 });

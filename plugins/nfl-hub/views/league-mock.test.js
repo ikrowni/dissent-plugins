@@ -237,4 +237,27 @@ describe('the mock renders on the same stage as the live draft', () => {
     const el = parse(render());
     expect(el.querySelector('.gr-stage')).not.toBeNull();
   });
+
+  // ⚠️ THE BOARD IS THE LAST THING ON THE PAGE. It is a record; the pool is the
+  // control. Ordering them the other way put fifteen rounds of empty cells
+  // between a manager and the only button they came for.
+  it('puts the board below the pool and the roster', () => {
+    _state.mock = startedMock();
+    const html = render();
+    const board = html.indexOf('gr-stage-board');
+    const pool = html.indexOf('mock-pool-col');
+    const side = html.indexOf('mock-side');
+    expect(board).toBeGreaterThan(-1);
+    expect(pool).toBeGreaterThan(-1);
+    expect(board).toBeGreaterThan(pool);
+    expect(board).toBeGreaterThan(side);
+  });
+
+  it('keeps the hero and ticker in a band with no empty column strip', () => {
+    _state.mock = startedMock();
+    const el = parse(render());
+    const hero = el.querySelector('.gr-stage:not(.gr-stage-board)');
+    expect(hero.querySelector('.gr-hero')).not.toBeNull();
+    expect(hero.querySelector('.gr-cols')).toBeNull();
+  });
 });

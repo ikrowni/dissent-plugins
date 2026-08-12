@@ -270,3 +270,47 @@ body.reduce-motion .gr-glow { opacity: .12; }
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
   background: var(--gold);
 }
+
+/* ── The pool is a list of ten, not a list of sixty ────────────────────────
+ *
+ * ⚠️ IT RENDERED SIXTY ROWS AND THE COLUMN BESIDE IT RENDERED TEN SLOTS, so the
+ * pool ran roughly 3,100px while "Your roster" finished in about 380 and left
+ * two thousand pixels of nothing beside it. A draft pool is not something you
+ * read top to bottom — you look at the next few names, or you filter. Ten is what
+ * fits beside the roster without the page becoming a scroll to nowhere.
+ *
+ * ⚠️ THE CAP IS ON WHAT YOU SEE, NOT ON WHAT IS THERE. `renderPool` still emits
+ * its full list; this scrolls it. Trimming the markup instead would break the
+ * filter counts, which are computed from the same list, and would make "150 WRs"
+ * a lie about a list of ten.
+ *
+ * The height is measured in rows rather than pixels so it survives a change to
+ * the row's own padding: --db-row is one row, and the cap is ten of them.
+ */
+.mock-pool-col { --db-row: 52px; }
+.mock-pool-col .db-pool {
+  max-height: calc(var(--db-row) * 10);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  /* A hairline so the cut edge reads as "more below" rather than as the end. */
+  border-bottom: 1px solid var(--line);
+}
+
+/* ── The roster column fills the space it was given ────────────────────────
+ *
+ * ⚠️ `align-items: start` on `.mock-cols` let the roster keep its natural height
+ * and leave the rest blank. It stretches now, and the slot list takes the slack —
+ * so an empty QB slot beside a full pool is a target you can actually hit rather
+ * than a 5px line at the top of a void.
+ */
+.mock-cols { align-items: stretch; }
+.mock-side { display: flex; flex-direction: column; }
+.mock-side .db-roster { flex: 1; justify-content: space-evenly; }
+.mock-side .db-slot { padding: 7px 9px; }
+/* The actions stay at the bottom of the column rather than floating mid-air. */
+.mock-side .row-actions { margin-top: auto; padding-top: 12px; }
+
+/* ── The board, now that it sits at the bottom ─────────────────────────────
+ * It keeps its own stage so the hero and ticker stay a tight band at the top
+ * instead of a lit surface with a hole in the middle. */
+.gr-stage-board { margin-top: 14px; }

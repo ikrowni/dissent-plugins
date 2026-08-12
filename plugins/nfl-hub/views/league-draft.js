@@ -20,7 +20,8 @@
 import { esc, panel, stateMsg, noLeaguePane} from '../core/ui.js';
 import {
   renderBoard, renderOnTheClock, renderRosterProgress, renderFilters, renderPool,
-  renderQueue, picksUntilTurn, rosterNeeds, renderStage, renderHero, renderTicker, renderFeed,
+  renderQueue, picksUntilTurn, rosterNeeds, renderStage, renderBoardStage, renderHero,
+  renderTicker, renderFeed,
 } from './draft-board.js';
 import { tickerLine, feedItems } from '../core/draft-intel.js';
 import { motion } from '../core/motion.js';
@@ -166,6 +167,8 @@ function completePane(d) {
       ${renderStage({
     hero: renderHero({ onClock: null, complete: true }),
     ticker: renderTicker(null),
+  })}
+      ${renderBoardStage({
     board: renderBoard({
       order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
       teamLabel: (t) => teamName(t),
@@ -313,6 +316,12 @@ function livePane(d) {
       lastRunPos = line?.pos ?? null;
       return renderTicker(line, { isNew });
     })(),
+  });
+
+  // ⚠️ THE BOARD GOES LAST, exactly as in the mock — two boards that read
+  // differently would make the rehearsal worthless. It is a RECORD; the pool is
+  // the only thing on the screen you can act on.
+  const boardStage = renderBoardStage({
     board: renderBoard({
       order: d.order, picks: d.picks, teamIds: boardTeamIds(d),
       teamLabel: (t) => teamName(t),
@@ -349,7 +358,8 @@ function livePane(d) {
               </button>
             </div>` : ''}
         </div>
-      </div>`,
+      </div>
+      ${boardStage}`,
   });
 }
 

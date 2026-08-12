@@ -431,10 +431,39 @@ export function renderFeed(items = []) {
  * both are gated by motion.js (capped, hidden-gated, focus-gated).
  */
 export function renderStage({ hero = '', ticker = '', board = '', feed = '' } = {}) {
+  // ⚠️ THE BOARD IS OPTIONAL, and when it is absent so is the whole column strip.
+  // Rendering `.gr-cols` around nothing leaves an empty lit band under the ticker
+  // that reads as a panel still loading.
+  const cols = board || feed
+    ? `<div class="gr-cols">
+      <div class="gr-board">${board}</div>
+      ${feed}
+    </div>`
+    : '';
   return `<div class="gr-stage" data-gr-stage>
     <div class="gr-lines"></div>
     ${hero}
     ${ticker}
+    ${cols}
+    <div class="gr-vig"></div>
+  </div>`;
+}
+
+/**
+ * The board on its own stage, for placing BELOW the pool.
+ *
+ * ⚠️ WHAT YOU DO COMES BEFORE WHAT YOU HAVE DONE. The picked-players grid is a
+ * record — you glance at it between picks to read the run. The pool is the only
+ * thing on the screen you can act on. Ordering the record first put fifteen rounds
+ * of mostly-empty cells between a manager and the one control they came for.
+ *
+ * It keeps its own stage rather than joining the hero's, so the hero and ticker
+ * stay a tight band at the top instead of a lit surface with a hole in the middle.
+ */
+export function renderBoardStage({ board = '', feed = '' } = {}) {
+  if (!board) return '';
+  return `<div class="gr-stage gr-stage-board" data-gr-stage>
+    <div class="gr-lines"></div>
     <div class="gr-cols">
       <div class="gr-board">${board}</div>
       ${feed}

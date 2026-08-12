@@ -19,7 +19,7 @@ import {
   renderBoard, renderOnTheClock, renderFilters, renderPool, renderRosterProgress,
   rosterNeeds,
   matchesFilter,
-  renderStage, renderHero, renderTicker, renderFeed,
+  renderStage, renderBoardStage, renderHero, renderTicker, renderFeed,
 } from './draft-board.js';
 import { tickerLine, feedItems } from '../core/draft-intel.js';
 import { PPR_SCORING } from '../core/league/scoring.js';
@@ -146,6 +146,13 @@ function boardPane() {
       clockText: null,
     }),
     ticker: renderTicker(tickerLine({ picks: m.draft.picks, positionOf, pool: all })),
+  });
+
+  // ⚠️ THE BOARD GOES LAST. It is a RECORD — you glance at it between picks to
+  // read the run — while the pool is the only thing on this screen you can act
+  // on. Ordering the record first put fifteen rounds of mostly-empty cells
+  // between a manager and the one control they came for.
+  const boardStage = renderBoardStage({
     board: renderBoard({
       order: m.draft.order, picks: m.draft.picks, teamIds: m.teamIds,
       teamLabel, isMine, onClock: clock, playerOf,
@@ -186,7 +193,8 @@ function boardPane() {
             <button class="btn" data-act="mock-reset">New mock</button>
           </div>
         </div>
-      </div>`,
+      </div>
+      ${boardStage}`,
   });
 }
 
