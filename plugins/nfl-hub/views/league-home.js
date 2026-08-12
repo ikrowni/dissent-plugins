@@ -21,6 +21,9 @@ import { latestRecap } from '../core/league/recap.js';
 import { toScoredWeeks, toRosters, hasEnoughForPower } from '../core/league/power-adapter.js';
 import { powerRankings } from '../core/power.js';
 import { getSchedule } from '../core/league-api.js';
+import {
+  parseLeagueInput, fetchSleeperLeagues, fetchSleeperLeague, planImport,
+} from '../core/sleeper-import.js';
 
 const SCORING_PRESETS = {
   ppr: PPR_SCORING,
@@ -38,6 +41,20 @@ const state = {
   weekScores: {},     // week -> stored score record, for the recap only
   error: null,
   busy: false,
+  /**
+   * The Sleeper import, which replaced the read-only mirror.
+   *
+   * `found`   — leagues returned for a username, or the single league behind a
+   *             pasted id/URL. null until somebody looks.
+   * `plan`    — the chosen league mapped onto our settings, with everything the
+   *             mapping changed and everything it cannot bring.
+   * `impErr`  — kept separate from `error` so a failed lookup does not blank the
+   *             create form the user is standing in.
+   */
+  found: null,
+  plan: null,
+  impBusy: false,
+  impErr: null,
 };
 
 export function reset() {
@@ -74,11 +91,76 @@ function errorPane(message) {
   });
 }
 
+/**
+ * Bring a Sleeper league's RULES across.
+ *
+ * ⚠️ THIS IS WHAT REPLACED THE SLEEPER MIRROR. That tab showed a league living
+ * somewhere else that could only be READ; this reads one ONCE and creates a
+ * native league you can play. There is no sync afterwards and no way to write
+ * back — importing is a starting point, not a connection.
+ */
+function importPane() {
+  const p = state.plan;
+  const found = state.found;
+
+  const list = found?.length
+    ? `<div class="stack imp-list">${found.map((l) => `
+        <button class="row-btn" data-act="lg-import-pick" data-league="${esc(l.league_id)}">
+          <span class="row-main">${esc(l.name ?? l.league_id)}</span>
+          <span class="muted">${esc(String(l.total_rosters ?? '?'))} teams · ${esc(String(l.status ?? ''))}</span>
+        </button>`).join('')}</div>`
+    : found
+      // ⚠️ An empty array is an ANSWER, not a failure — the account exists and has
+      // no leagues this season. Saying "not found" would send somebody hunting a
+      // typo that is not there.
+      ? '<p class="muted">That account has no NFL leagues this season.</p>'
+      : '';
+
+  const plan = p
+    ? `<div class="imp-plan">
+        <h4>${esc(p.settings.name)}</h4>
+        <p class="muted">${esc(String(p.settings.numTeams))} teams · ${esc(String(p.settings.format))}
+          · ${esc(String(p.settings.rosterPositions.length))} roster slots
+          · playoffs week ${esc(String(p.settings.playoffWeekStart))}</p>
+        ${p.errors?.length
+    ? `<p class="imp-bad">This league cannot be imported: ${esc(p.errors.join('; '))}</p>`
+    : ''}
+        ${p.adjustments?.length
+    ? `<div class="imp-note"><b>Adjusted on the way in</b><ul>${
+      p.adjustments.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></div>`
+    : ''}
+        <div class="imp-note"><b>Not imported</b><ul>${
+  p.notImported.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></div>
+        ${p.ok
+    ? `<button class="btn primary" data-act="lg-import-create" ${state.busy ? 'disabled' : ''}>
+             ${state.busy ? 'Creating…' : `Create “${esc(p.settings.name)}” here`}</button>`
+    : ''}
+      </div>`
+    : '';
+
+  return `
+    <div class="imp">
+      <h4>Import from Sleeper</h4>
+      <p class="muted">Copies the rules — scoring, roster slots, waivers, playoffs — into a new league here.</p>
+      <form data-act="league-import-form" class="imp-form">
+        <input name="query" placeholder="Sleeper username, or a league link" maxlength="120" required>
+        <button class="btn" type="submit" ${state.impBusy ? 'disabled' : ''}>
+          ${state.impBusy ? 'Looking…' : 'Look up'}
+        </button>
+      </form>
+      ${state.impErr ? `<p class="imp-bad">${esc(state.impErr)}</p>` : ''}
+      ${list}
+      ${plan}
+    </div>`;
+}
+
 function emptyPane() {
   return panel({
     title: 'Fantasy League',
     body: `
       <p class="muted">No league on this server yet.</p>
+      ${importPane()}
+      <div class="imp-or">or set one up from scratch</div>
       <form data-act="league-create-form" class="stack">
         <label>League name
           <input name="name" value="Our League" maxlength="60" required>
@@ -400,6 +482,77 @@ export async function create(app, form) {
       scoring: SCORING_PRESETS[scoringChoice] ?? PPR_SCORING,
     });
     state.leagues = await listLeagues();
+    await open(app, created.leagueId);
+  } catch (err) {
+    state.error = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+/**
+ * Look up whatever the user pasted: a league link, or a Sleeper username.
+ *
+ * ⚠️ A LINK IS TRIED FIRST, and the order matters. A Sleeper username may be all
+ * digits, so a bare numeric string is ambiguous — but an 18-digit one is a league
+ * id and nobody's username, and a URL is never a username. Trying the league
+ * reading first means a paste always resolves to the thing it obviously is.
+ */
+export async function importLookup(app, query) {
+  const text = String(query ?? '').trim();
+  Object.assign(state, { impBusy: true, impErr: null, found: null, plan: null });
+  app?.router?.refresh();
+  try {
+    const leagueId = parseLeagueInput(text);
+    if (leagueId) {
+      const league = await fetchSleeperLeague(leagueId);
+      state.plan = planImport(league);
+      state.found = null;
+    } else {
+      const season = app?.season ?? new Date().getUTCFullYear();
+      const leagues = await fetchSleeperLeagues(text, season);
+      if (leagues === null) {
+        state.impErr = `No Sleeper account called “${text}”.`;
+      } else {
+        state.found = leagues;
+        // One league is not a choice. Skip the picker and show the plan.
+        if (leagues.length === 1) state.plan = planImport(leagues[0]);
+      }
+    }
+  } catch (err) {
+    state.impErr = describe(err);
+  } finally {
+    state.impBusy = false;
+    app?.router?.refresh();
+  }
+}
+
+/** Choose one of the listed leagues. Its settings are already in hand. */
+export function importPick(app, leagueId) {
+  const league = (state.found ?? []).find((l) => String(l.league_id) === String(leagueId));
+  state.plan = league ? planImport(league) : null;
+  state.impErr = league ? null : 'That league is no longer in the list — look it up again.';
+  app?.router?.refresh();
+}
+
+/**
+ * Create the native league from the plan.
+ *
+ * ⚠️ It goes through the SAME `createLeague` as the from-scratch form, so the
+ * module normalises and validates it exactly once more on the way in. An import
+ * is not a privileged path — it is the ordinary one with the settings pre-filled.
+ */
+export async function importCreate(app) {
+  const plan = state.plan;
+  if (!plan?.ok) return;
+  state.busy = true;
+  state.error = null;
+  app?.router?.refresh();
+  try {
+    const created = await createLeague(plan.settings);
+    state.leagues = await listLeagues();
+    Object.assign(state, { found: null, plan: null, impErr: null });
     await open(app, created.leagueId);
   } catch (err) {
     state.error = describe(err);

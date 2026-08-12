@@ -85,6 +85,10 @@ const TARGETS = {
   // `fromSleeperSettings` reads, and the stats below are what the native engine
   // scores from every week.
   'sleeper-league.json':       `${SLEEPER}/league/${LEAGUE}`,
+  // The import path's real input: this endpoint returns FULL league objects —
+  // settings, scoring_settings and roster_positions — so one request lists a
+  // user's leagues AND carries everything fromSleeperSettings reads.
+  'sleeper-user-leagues.json': `${SLEEPER}/user/1347854124514816000/leagues/nfl/2026`,
 
   // ACTUAL stats, same shape as projections but with what really happened.
   //

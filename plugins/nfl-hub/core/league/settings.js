@@ -206,10 +206,38 @@ export function validateSettings(settings) {
  * ⚠️ SLEEPER'S NUMERIC ENUMS ARE NOT GUESSES — they are read from a recorded
  * league: `type` 0/1/2 is redraft/keeper/dynasty, and `waiver_type` 2 is FAAB.
  * Anything unrecognised falls back to the default rather than inventing meaning.
+ *
+ * ⚠️ THIS PRODUCED SETTINGS THE SERVER REFUSES, on every real league tried, until
+ * 2026-08-12. It had no caller, so nothing had ever run its output through
+ * `validateSettings` — which `league:create` does, and then refuses on. Measured
+ * against the two live leagues on the QA account, BOTH came back invalid:
+ *
+ *   'maxKeepers has no meaning in a redraft league'   ← both
+ *   'vetoVotesNeeded (6) exceeds numTeams (4)'        ← the 4-team league
+ *
+ * Both were faults here, not in the validator, and both are fixed inline below.
+ * The lesson is the general one: a mapper with no caller has never been checked
+ * against the thing it maps INTO.
  */
 export function fromSleeperSettings(sleeperLeague) {
   const s = sleeperLeague?.settings ?? {};
   const format = { 0: FORMAT.REDRAFT, 1: FORMAT.KEEPER, 2: FORMAT.DYNASTY }[s.type] ?? FORMAT.REDRAFT;
+  const multiSeason = format === FORMAT.KEEPER || format === FORMAT.DYNASTY;
+
+  // ⚠️ SLEEPER SHIPS `max_keepers: 1` ON REDRAFT LEAGUES, where it means nothing —
+  // measured on both live leagues, each `type: 0` and each carrying it. Copying
+  // that residue through is what made every import invalid, because a redraft
+  // league with keepers is a contradiction `validateSettings` rightly rejects.
+  const maxKeepers = multiSeason ? (s.max_keepers ?? 0) : 0;
+
+  // ⚠️ CLAMPED, AND THE OVERFLOW WAS OURS. Sleeper omits `veto_votes_needed`
+  // entirely on both live leagues, so the fallback below is what produced 6 — in a
+  // 4-team league, a veto threshold nobody can ever reach. Importing a rule that
+  // cannot be satisfied is not fidelity; it silently turns trade vetoes off.
+  const vetoVotesNeeded = Math.min(
+    s.veto_votes_needed ?? DEFAULT_SETTINGS.vetoVotesNeeded,
+    s.num_teams ?? DEFAULT_SETTINGS.numTeams,
+  );
   const waiverType = { 0: WAIVER_TYPE.ROLLING, 1: WAIVER_TYPE.REVERSE_STANDINGS, 2: WAIVER_TYPE.FAAB }[s.waiver_type]
     ?? DEFAULT_SETTINGS.waiverType;
 
@@ -232,7 +260,7 @@ export function fromSleeperSettings(sleeperLeague) {
     waiverDayOfWeek: s.waiver_day_of_week ?? DEFAULT_SETTINGS.waiverDayOfWeek,
     tradeDeadlineWeek: s.trade_deadline ?? DEFAULT_SETTINGS.tradeDeadlineWeek,
     tradeReviewDays: s.trade_review_days ?? DEFAULT_SETTINGS.tradeReviewDays,
-    vetoVotesNeeded: s.veto_votes_needed ?? DEFAULT_SETTINGS.vetoVotesNeeded,
+    vetoVotesNeeded,
     tradesEnabled: !s.disable_trades,
     pickTradingEnabled: Boolean(s.pick_trading),
     addsEnabled: !s.disable_adds,
@@ -240,7 +268,7 @@ export function fromSleeperSettings(sleeperLeague) {
     irSlots: s.reserve_slots ?? 0,
     taxiSlots: s.taxi_slots ?? 0,
     taxiYears: s.taxi_years ?? 0,
-    maxKeepers: s.max_keepers ?? 0,
+    maxKeepers,
     draftRounds: s.draft_rounds ?? DEFAULT_SETTINGS.draftRounds,
   });
 }
