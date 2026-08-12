@@ -371,6 +371,22 @@ describe('the motion contract', () => {
   // ⚠️ A SHEET IS NOT LOADED BECAUSE IT EXISTS. Every rule in podium.css is inert
   // until plugin.html links it, and nothing else in the plugin would fail — the
   // board would simply render unlit and no test would notice.
+  // ⚠️ THE NAV IS THE ONE PIECE OF THIS PLUGIN WITH NO VIEW BEHIND IT. Every tab
+  // is a hand-written button in plugin.html whose `data-view` must match a key in
+  // the router's `views` map — a typo there is a tab that silently does nothing
+  // when clicked, with no error anywhere.
+  //
+  // It nearly happened renaming "My League" to "Fantasy" on 2026-08-12: the label
+  // and the key sit on the same line, and changing both is the obvious edit.
+  it('every nav tab points at a view the router actually registers', () => {
+    const html = readFileSync(join(root, 'plugin.html'), 'utf8');
+    const app = readFileSync(join(root, 'core', 'app.js'), 'utf8');
+    const views = app.slice(app.indexOf('views: {'), app.indexOf('});', app.indexOf('views: {')));
+    const tabs = [...html.matchAll(/data-act="nav"\s+data-view="([\w-]+)"/g)].map((m) => m[1]);
+    expect(tabs.length).toBeGreaterThan(4);
+    expect(tabs.filter((t) => !new RegExp(`\\b${t}\\s*:`).test(views))).toEqual([]);
+  });
+
   it('every stylesheet in styles/ is actually linked by plugin.html', () => {
     const html = readFileSync(join(root, 'plugin.html'), 'utf8');
     const missing = readdirSync(join(root, 'styles'))

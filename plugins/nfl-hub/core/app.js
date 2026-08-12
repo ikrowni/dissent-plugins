@@ -174,10 +174,16 @@ async function boot() {
     views: {
       league: leagueView, game: gameView, standings: standingsView,
       leaders: leadersView, news: newsView, team: teamView, player: playerView,
-      // ⚠️ THE ONLY LEAGUE NOW. A `fantasy` view used to sit beside this one,
-      // mirroring a league that lived on Sleeper and could only be read. It was
-      // removed on 2026-08-12 — never configured on any install, no stored state
-      // on any of them — once this native engine shipped and could be played.
+      // ⚠️ THE ONLY LEAGUE NOW, and it is the tab LABELLED "Fantasy". A separate
+      // `fantasy` view used to sit beside this one, mirroring a league that lived
+      // on Sleeper and could only be read; it was removed on 2026-08-12 — never
+      // configured on any install, no stored state on any of them — and the name
+      // is now free for the native engine that replaced it.
+      //
+      // ⚠️ The KEY stays `myleague`. Nothing routes by name (the nav handler reads
+      // `dataset.view` off the button), so renaming it would be churn — and old
+      // commits saying "the Fantasy tab" mean the deleted mirror, so leaving the
+      // key distinct keeps those two searchable apart.
       myleague: myLeagueView,
     },
   });

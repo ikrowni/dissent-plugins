@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="nfl-hub/styles/marquee.css">
   <!-- The standings board. -->
   <link rel="stylesheet" href="nfl-hub/styles/ledger.css">
-  <!-- The My League sub-tabs draft night left flat. After league.css and
+  <!-- The Fantasy sub-tabs draft night left flat. After league.css and
        gridiron.css, both of which it re-tints rather than replaces. -->
   <link rel="stylesheet" href="nfl-hub/styles/clubhouse.css">
   <!-- Movement last: it overrides durations for reduced motion, and that must
@@ -56,7 +56,15 @@
         <button data-act="nav" data-view="standings" aria-current="false">Standings</button>
         <button data-act="nav" data-view="leaders" aria-current="false">Leaders</button>
         <button data-act="nav" data-view="news" aria-current="false">News &amp; Odds</button>
-        <button data-act="nav" data-view="myleague" aria-current="false">My League</button>
+        <!-- ⚠️ THE LABEL IS "Fantasy", THE ROUTE KEY IS STILL `myleague`, and that is
+             deliberate: nothing navigates by name (core/app.js reads
+             `t.dataset.view` off the button), so renaming the key would be churn
+             for no user-visible gain.
+
+             ⚠️ "Fantasy" was ALSO the name of the Sleeper mirror tab, removed on
+             2026-08-12. Old commits and docs saying "the Fantasy tab" mean that
+             read-only mirror, not this native league. -->
+        <button data-act="nav" data-view="myleague" aria-current="false">Fantasy</button>
       </nav>
     </header>
     <main id="main">
