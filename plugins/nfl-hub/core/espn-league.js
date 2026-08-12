@@ -227,6 +227,12 @@ export function parseLeaders(json) {
         position: a.position?.abbreviation ?? null,
         teamAbbr: l.team?.abbreviation ?? a.team?.abbreviation ?? null,
         value: l.displayValue ?? String(l.value ?? ''),
+        // ⚠️ `value` IS NOT THE NUMBER, it is what ESPN chose to print — and the
+        // two disagree. 16.5 sacks arrives as `value: 16.5, displayValue: "16"`,
+        // and a passer rating of 113.482 prints as "113". Anything that measures
+        // one leader against another has to use this, and anything the reader
+        // sees has to keep using `value`, or the board contradicts itself.
+        amount: num(l.value),
         headshot: id ? urls.headshot(id, 100) : null,
       };
     }).filter((l) => l.name !== 'Unknown');

@@ -152,3 +152,86 @@
   .st-row { grid-template-columns: minmax(0, 1.4fr) 58px 44px minmax(60px, 1fr); }
   .st-sec, .st-strk { display: none; }
 }
+
+/* ── League leaders ────────────────────────────────────────────────────────
+ *
+ * ⚠️ SIXTEEN CATEGORIES RENDERED IDENTICALLY IS NO ANSWER TO "who is leading the
+ * league". A fan looks for passing yards, not punt yards, and the board gave both
+ * the same size, the same weight and — because a flat auto-fit grid reflows to
+ * whatever the width allows — no reliable reading order either. The six a fan
+ * looks for first are now the board; the other ten keep every number in a denser
+ * tier below it. Same rule as the standings pass: everything consulted second is
+ * weighted like it.
+ *
+ * Nothing here is a new visual idea. The position scale, the portrait-or-monogram
+ * and the share-of-the-leader bar are all vocabulary the hub already owns.
+ */
+.ld-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.ld-grid-more { grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 10px; }
+.ld-more-h { margin: 20px 0 9px 2px; }
+
+.ld-body { padding: 6px 6px 8px; }
+/* The featured tier states its name louder and sits inside a brighter frame; the
+ * second tier is deliberately quieter than the .mod default rather than smaller. */
+.ld-feat { border-color: var(--line-2); }
+.ld-feat .mod-head .t { color: var(--text-2); font-size: 10px; }
+.ld-cat:not(.ld-feat) .mod-head .t { font-size: 9px; color: var(--text-3); }
+
+.ld-row {
+  display: grid; align-items: center;
+  grid-template-columns: 15px auto minmax(0, 1fr) auto;
+  column-gap: 9px; row-gap: 5px;
+  width: 100%; padding: 6px; border: 0; border-bottom: 1px solid rgba(255,255,255,.045);
+  background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast);
+}
+/* The second tier drops the portrait, not the information. */
+.ld-row.dense { grid-template-columns: 15px minmax(0, 1fr) auto; padding: 5px 6px; }
+.ld-row:last-child { border-bottom: 0; }
+.ld-row:hover { background: rgba(255,255,255,.04); }
+
+.ld-rank { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); }
+.ld-hero .ld-rank { color: var(--gold); font-weight: 700; }
+
+.ld-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ld-name {
+  font-family: var(--f-display); font-weight: 700; font-size: 13.5px; letter-spacing: .01em;
+  color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ld-hero .ld-name { font-size: 18px; color: var(--text); }
+.ld-row:hover .ld-name { color: var(--text); }
+.ld-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ld-row.dense .ld-meta { gap: 5px; }
+
+.ld-val { font-family: var(--f-display); font-weight: 800; font-size: 15px; color: var(--text-2); }
+.ld-hero .ld-val { font-size: 23px; color: var(--text); line-height: 1; }
+
+/* ⚠️ THE GAP BETWEEN #1 AND #3, as a share of the leader — the standings
+ * differential bar's rule applied to a category. It is what tells a runaway
+ * (46 · 34 · 31) apart from a dead heat (19 · 19 · 18) at a glance, which three
+ * bare numbers never do.
+ *
+ * ⚠️ TINTED BY THE POSITION SCALE, which is the point of tinting it at all: the
+ * third-best rusher for touchdowns being a QUARTERBACK is now visible without
+ * reading a name and knowing who he is. */
+.ld-bar {
+  grid-column: 1 / -1; height: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.06); overflow: hidden;
+}
+.ld-bar i {
+  display: block; height: 100%; background: var(--pc, var(--text-3));
+  transition: width var(--dur) var(--ease-out);
+}
+.ld-hero .ld-bar { height: 4px; }
+/* Behind the leader is the quieter statement, so the trailing bars are quieter.
+ * ⚠️ KEYED ON BEING FIRST IN THE CATEGORY, not on .ld-hero. Only the featured
+ * tier has a hero, so hanging this off it dimmed all three rows of the other ten
+ * categories equally — which is where the defensive grey is already the faintest
+ * colour on the board, and it took the leader's emphasis with it. */
+.ld-row:not(:first-child) .ld-bar i { opacity: .7; }
+
+@media (max-width: 560px) {
+  .ld-hero .ld-name { font-size: 16px; }
+  .ld-hero .ld-val { font-size: 19px; }
+}

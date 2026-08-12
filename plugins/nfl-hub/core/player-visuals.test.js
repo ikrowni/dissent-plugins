@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   initials, positionColor, teamColor, avatar, teamMark, positionPill, playerChip, playerNote,
-  managerColor, MANAGER_PALETTE, NEUTRAL_DUOTONE, POSITION_COLORS,
+  managerColor, MANAGER_PALETTE, NEUTRAL_DUOTONE, POSITION_COLORS, POSITION_GROUP,
 } from './player-visuals.js';
 
 // Index records, the shape assets/players.index.json actually stores.
@@ -42,6 +42,34 @@ describe('colours', () => {
   it('falls back rather than returning undefined for an unknown position', () => {
     expect(positionColor('XYZ')).toBeTruthy();
     expect(positionColor(undefined)).toBeTruthy();
+  });
+
+  // ⚠️ THE POSITIONS THE LEADERS BOARD ACTUALLY CARRIES. Measured live
+  // 2026-08-11: these five appear across six of the sixteen categories and none
+  // of them is a key of POSITION_COLORS, so every one used to render grey.
+  it('colours the real positions ESPN publishes, not just the fantasy buckets', () => {
+    for (const p of ['DE', 'PK', 'S', 'CB', 'P']) {
+      expect(positionColor(p)).not.toBe(positionColor('XYZ'));
+    }
+  });
+
+  it('folds a real position onto the bucket it belongs to, inventing no new hue', () => {
+    expect(positionColor('DE')).toBe(POSITION_COLORS.DL);
+    expect(positionColor('CB')).toBe(POSITION_COLORS.DB);
+    expect(positionColor('OLB')).toBe(POSITION_COLORS.LB);
+    expect(positionColor('PK')).toBe(POSITION_COLORS.K);
+    expect(positionColor('HB')).toBe(POSITION_COLORS.RB);
+    // Every mapped value must already be a key of the scale, or the fold has
+    // quietly become an invention.
+    for (const bucket of Object.values(POSITION_GROUP)) {
+      expect(POSITION_COLORS[bucket]).toBeTruthy();
+    }
+  });
+
+  // ⚠️ An offensive lineman has no bucket. Guessing one is worse than grey.
+  it('leaves a position it genuinely has no bucket for alone', () => {
+    expect(positionColor('OT')).toBe('var(--text-3)');
+    expect(positionColor('C')).toBe('var(--text-3)');
   });
 
   // ⚠️ Raw team primaries include #0b1c3a and #002a5c, which are invisible on a

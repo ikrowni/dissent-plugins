@@ -39,8 +39,42 @@ export const POSITION_COLORS = Object.freeze({
   DB: '#8d97ab',
 });
 
+/**
+ * The positions the real world uses, folded into the buckets the scale above owns.
+ *
+ * ⚠️ WITHOUT THIS THE SCALE IS MISSING FROM MOST OF THE LEADERS BOARD. Measured
+ * against the live leaders payload on 2026-08-11: ten distinct positions appear
+ * across the sixteen categories and `POSITION_COLORS` names only five of them, so
+ * `DE`, `PK`, `S`, `CB` and `P` all fell through to the unknown grey. That left
+ * kickoff yards, total points, punt yards and passes defended entirely colourless,
+ * and took the colour off two thirds of sacks and of interceptions.
+ *
+ * ⚠️ IT IS NOT ONLY AN NFL-SIDE FIX. An IDP fantasy league lists players as DE, DT,
+ * CB and S as well, so the draft board and the roster had the identical hole.
+ *
+ * ⚠️ FOLDING, NOT INVENTING. Every value here is a key `POSITION_COLORS` already
+ * has, so nothing gains a hue the hub did not own — DL, LB and DB share one colour
+ * today, and if that ever splits this table already records which is which.
+ *
+ * ⚠️ A PUNTER IS NOT A KICKER, and mapping `P` onto `K` says they are. It is
+ * deliberate: they are the one kicking-specialists group, the pill beside the
+ * colour still reads `P`, and the alternative is punt yards being the only
+ * category on the board with no colour at all.
+ */
+export const POSITION_GROUP = Object.freeze({
+  HB: 'RB', FB: 'RB',
+  PK: 'K', P: 'K', LS: 'K',
+  DE: 'DL', DT: 'DL', NT: 'DL', EDGE: 'DL',
+  ILB: 'LB', OLB: 'LB', MLB: 'LB',
+  CB: 'DB', S: 'DB', FS: 'DB', SS: 'DB',
+  DST: 'DEF',
+});
+
 export function positionColor(pos) {
-  return POSITION_COLORS[String(pos ?? '').toUpperCase()] ?? 'var(--text-3)';
+  const p = String(pos ?? '').toUpperCase();
+  // ⚠️ Unknown stays grey rather than being guessed at — an offensive lineman has
+  // no bucket here and should not borrow one. Same reasoning as injuryMap().
+  return POSITION_COLORS[POSITION_GROUP[p] ?? p] ?? 'var(--text-3)';
 }
 
 /** A player's team colour, lifted to stay legible on the dark surface. */
