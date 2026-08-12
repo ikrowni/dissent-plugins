@@ -102,6 +102,38 @@ describe('planImport against the real leagues', () => {
     expect(plan.adjustments.join(' ')).not.toMatch(/keepers turned off/i);
   });
 
+  /**
+   * ⚠️ THE CASE THE UNIT TESTS MISSED AND THE LIVE APP CAUGHT. Sleeper omits
+   * `veto_votes_needed` on both real leagues. The first version compared the
+   * clamped value against `rawVeto ?? Infinity` — and `n < Infinity` is ALWAYS
+   * true — so an 8-team league reported "Veto votes reduced to 6 — null is more
+   * teams than the league has": an adjustment that never happened, naming `null`.
+   */
+  it('reports no veto change when our default already fits', () => {
+    expect(big.settings.veto_votes_needed).toBeUndefined();
+    const plan = planImport(big);
+    expect(plan.settings.vetoVotesNeeded).toBe(6);
+    expect(plan.adjustments.join(' ')).not.toMatch(/veto/i);
+    expect(plan.adjustments.join(' ')).not.toMatch(/null|undefined|NaN/);
+  });
+
+  it('distinguishes a reduction from a default that did not fit', () => {
+    const specified = { ...small, settings: { ...small.settings, veto_votes_needed: 9 } };
+    expect(adjustments(specified, planImport(specified).settings).join(' '))
+      .toMatch(/Sleeper had 9/);
+    // small omits it, so the message must blame our default, not Sleeper.
+    expect(adjustments(small, planImport(small).settings).join(' '))
+      .toMatch(/did not specify/i);
+  });
+
+  // No adjustment message may ever print a placeholder.
+  it('never renders null or undefined into an adjustment', () => {
+    for (const l of leagues) {
+      const text = planImport(l).adjustments.join(' ');
+      expect(text).not.toMatch(/null|undefined|NaN/);
+    }
+  });
+
   it('says nothing was adjusted when nothing was', () => {
     const clean = {
       ...big,

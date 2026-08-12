@@ -16,7 +16,12 @@
 // `validateSettings`, so the whole import is: fetch → map → create. Nothing in
 // server/ changes and no module needs rebuilding.
 import { getJson } from './http.js';
-import { fromSleeperSettings, validateSettings, FORMAT } from './league/settings.js';
+import {
+  fromSleeperSettings, validateSettings, FORMAT, DEFAULT_SETTINGS,
+} from './league/settings.js';
+
+/** What our own default veto threshold is, so an adjustment can name it. */
+const DEFAULT_VETO = DEFAULT_SETTINGS.vetoVotesNeeded;
 
 const API = 'https://api.sleeper.app/v1';
 
@@ -97,11 +102,20 @@ export function adjustments(sleeperLeague, settings) {
   if (rawKeepers > 0 && settings.format === FORMAT.REDRAFT) {
     out.push(`Keepers turned off — Sleeper had ${rawKeepers}, which a redraft league cannot use.`);
   }
-  const rawVeto = Number(s.veto_votes_needed ?? 0) || null;
-  if (settings.vetoVotesNeeded < (rawVeto ?? Infinity)) {
-    out.push(`Veto votes reduced to ${settings.vetoVotesNeeded} — ${rawVeto} is more teams than the league has.`);
-  } else if (!rawVeto && settings.vetoVotesNeeded < 6) {
-    out.push(`Veto votes set to ${settings.vetoVotesNeeded} — Sleeper did not specify one and the league is smaller than our default.`);
+  // ⚠️ THE TWO VETO CASES ARE DIFFERENT AND MUST NOT BE COLLAPSED. Sleeper either
+  // specified a threshold we had to reduce, or specified nothing and OUR default
+  // did not fit — the sentence is different because the cause is.
+  //
+  // ⚠️ The first version compared against `rawVeto ?? Infinity`, and `n < Infinity`
+  // is ALWAYS true — so every league with no `veto_votes_needed` reported a
+  // reduction that never happened, printing "reduced to 6 — null is more teams
+  // than the league has". Live-driving the real import is what showed it; the
+  // unit tests only covered leagues where Sleeper DID specify one.
+  const rawVeto = Number.isFinite(Number(s.veto_votes_needed)) ? Number(s.veto_votes_needed) : null;
+  if (rawVeto !== null && settings.vetoVotesNeeded < rawVeto) {
+    out.push(`Veto votes reduced to ${settings.vetoVotesNeeded} — Sleeper had ${rawVeto}, more than the league has teams.`);
+  } else if (rawVeto === null && settings.vetoVotesNeeded < DEFAULT_VETO) {
+    out.push(`Veto votes set to ${settings.vetoVotesNeeded} — Sleeper did not specify one and the league is smaller than our default of ${DEFAULT_VETO}.`);
   }
   return out;
 }
