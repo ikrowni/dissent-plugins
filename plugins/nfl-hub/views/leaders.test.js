@@ -155,6 +155,77 @@ describe('renderLeaders', () => {
     expect(FEATURED.length).toBeGreaterThan(3);
   });
 
+  // ⚠️ THE STAGE IS THE HIERARCHY, not decoration. Lighting all sixteen would
+  // light nothing.
+  it('stands the featured six on the stage and leaves the rest off it', () => {
+    const el = parse(renderLeaders({ cats }));
+    const stage = el.querySelector('.pod-stage');
+    expect(stage).not.toBeNull();
+    expect(stage.querySelectorAll('.ld-cat').length).toBe(FEATURED.length);
+    expect(el.querySelectorAll('.ld-cat:not(.ld-feat)').length)
+      .toBe(cats.length - FEATURED.length);
+    expect(stage.querySelectorAll('.ld-cat:not(.ld-feat)').length).toBe(0);
+  });
+
+  it('cascades both tiers in, and fills every bar it drew', () => {
+    const el = parse(renderLeaders({ cats }));
+    expect(el.querySelectorAll('.ld-grid.m-stagger').length).toBe(2);
+    const bars = el.querySelectorAll('.ld-bar i');
+    expect(bars.length).toBeGreaterThan(0);
+    for (const b of bars) expect(b.classList.contains('m-grow')).toBe(true);
+  });
+
+  // ⚠️ ONE LIGHT PASS PER FEATURED CARD, and none in the dense tier — six sheens
+  // is an arrival, sixteen is a strobe.
+  it('sweeps the featured cards only', () => {
+    const el = parse(renderLeaders({ cats }));
+    expect(el.querySelectorAll('.m-sheen').length).toBe(FEATURED.length);
+    expect(el.querySelectorAll('.ld-cat:not(.ld-feat) .m-sheen').length).toBe(0);
+  });
+
+  it('accents each featured card with its own leader’s position colour', () => {
+    const el = parse(renderLeaders({ cats }));
+    const sacks = [...el.querySelectorAll('.ld-cat')]
+      .find((c) => /^sacks$/i.test(c.querySelector('.mod-head .t').textContent));
+    // Myles Garrett is a DE, so the card's edge must read as the D-line colour.
+    expect(sacks.getAttribute('style')).toContain(`--cat:${POSITION_COLORS.DL}`);
+    const pass = [...el.querySelectorAll('.ld-feat')]
+      .find((c) => /passing yards/i.test(c.querySelector('.mod-head .t').textContent));
+    expect(pass.getAttribute('style')).toContain(`--cat:${POSITION_COLORS.QB}`);
+    // ⚠️ THE DENSE TIER CARRIES IT TOO. It is turned down there, not withheld —
+    // the encoding is already true in those cards' bars, and withholding it made
+    // the second tier read as a different component rather than the quiet half of
+    // one board.
+    const punt = [...el.querySelectorAll('.ld-cat:not(.ld-feat)')]
+      .find((c) => /punt yards/i.test(c.querySelector('.mod-head .t').textContent));
+    expect(punt.getAttribute('style')).toContain(`--cat:${POSITION_COLORS.K}`);
+  });
+
+  it('watermarks a featured card with its leader’s club, and only featured', () => {
+    const el = parse(renderLeaders({ cats }));
+    const wm = el.querySelectorAll('.pod-wm');
+    expect(wm.length).toBe(FEATURED.length);
+    expect(el.querySelectorAll('.ld-cat:not(.ld-feat) .pod-wm').length).toBe(0);
+    for (const i of wm) expect(i.getAttribute('loading')).toBe('lazy');
+    // ⚠️ A 404 must cost the card its dressing, not put a torn-page icon on it at
+    // 6% opacity where it reads as an unexplainable grey smudge.
+    for (const i of wm) expect(i.getAttribute('onerror')).toBe('this.remove()');
+  });
+
+  // ⚠️ A LEADER WITH NO CLUB MUST NOT PRODUCE A BROKEN IMAGE. logoPath(null) is
+  // a path to nothing, and an alt-less <img> that 404s renders as a torn icon.
+  it('omits the watermark rather than pointing it at nothing', () => {
+    const el = parse(renderLeaders({
+      cats: [{
+        key: 'passingYards',
+        label: 'Passing Yards',
+        leaders: [{ athleteId: 1, name: 'A B', value: '10', amount: 10, teamAbbr: null }],
+      }],
+    }));
+    expect(el.querySelectorAll('.pod-wm').length).toBe(0);
+    expect(el.querySelectorAll('.ld-feat').length).toBe(1);
+  });
+
   it('renders nothing but the featured tier when the payload has no other category', () => {
     const only = cats.filter((c) => FEATURED.includes(c.key));
     const el = parse(renderLeaders({ cats: only }));

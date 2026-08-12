@@ -355,11 +355,37 @@ describe('the motion contract', () => {
   // `infinite` is the other half: the clock glow is driven from motion.loop() so it
   // is capped and focus-gated, and a CSS infinite animation would route around that
   // entirely. Everything else on the stage is painted once or fires on change.
-  it('gridiron.css has no backdrop-filter and no infinite animation', () => {
-    const css = readFileSync(join(root, 'styles', 'gridiron.css'), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, ''); // its own docs name both; read the rules
+  //
+  // ⚠️ THE LIST IS THE POINT. podium.css was added later and would have inherited
+  // none of this if the rule had stayed named after one file — a second cinematic
+  // sheet is exactly where a backdrop-filter or a decorative loop gets in.
+  const CINEMATIC = ['gridiron.css', 'podium.css'];
+  it.each(CINEMATIC)('%s has no backdrop-filter and no infinite animation', (sheet) => {
+    const css = readFileSync(join(root, 'styles', sheet), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ''); // their own docs name both; read the rules
     expect(css).not.toMatch(/backdrop-filter/);
     expect(css).not.toMatch(/\binfinite\b/);
+  });
+
+  // ⚠️ A SHEET IS NOT LOADED BECAUSE IT EXISTS. Every rule in podium.css is inert
+  // until plugin.html links it, and nothing else in the plugin would fail — the
+  // board would simply render unlit and no test would notice.
+  it('every stylesheet in styles/ is actually linked by plugin.html', () => {
+    const html = readFileSync(join(root, 'plugin.html'), 'utf8');
+    const missing = readdirSync(join(root, 'styles'))
+      .filter((f) => f.endsWith('.css'))
+      .filter((f) => !html.includes(`styles/${f}`));
+    expect(missing).toEqual([]);
+  });
+
+  // ⚠️ ORDER DECIDES WHO WINS. motion.css collapses every duration for reduced
+  // motion, so it has to be the last sheet on the page; a cinematic layer linked
+  // after it would reinstate its own durations for exactly the users who asked
+  // for none.
+  it('links motion.css last, so reduced motion can override every other sheet', () => {
+    const html = readFileSync(join(root, 'plugin.html'), 'utf8');
+    const links = [...html.matchAll(/styles\/([\w-]+\.css)/g)].map((m) => m[1]);
+    expect(links[links.length - 1]).toBe('motion.css');
   });
 
   // ⚠️ THE REGRESSION THIS EXISTS FOR. `body.motion-idle` first shipped as a

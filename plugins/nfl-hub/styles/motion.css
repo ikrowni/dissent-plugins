@@ -47,6 +47,41 @@
 .m-fade { animation: mFade var(--dur) var(--ease-out) both; }
 .m-pop  { animation: mPop var(--dur) var(--ease-spring) both; }
 
+/* ── Bars that fill ────────────────────────────────────────────────────────
+ *
+ * ⚠️ scaleX, NOT width. A bar that animates its width relayouts its own row on
+ * every frame, and a leaderboard has forty-eight of them arriving at once. The
+ * fill keeps its final width as an inline style and is scaled in from zero, so
+ * the whole gesture stays on the compositor.
+ *
+ * ⚠️ THE ORIGIN IS THE POINT. Without `transform-origin: left` the bar grows out
+ * of its own middle, which reads as a pulse rather than a measurement.
+ */
+@keyframes mGrow { from { transform: scaleX(0); } }
+.m-grow { transform-origin: left center; animation: mGrow 640ms var(--ease-out) both; }
+
+/* ── Sheen ─────────────────────────────────────────────────────────────────
+ *
+ * One light pass across a surface, ONCE, on arrival. Same gesture as
+ * stadium.css's `.sweep` and gridiron.css's `.gr-sweep` — the difference is that
+ * `.sweep` runs forever (and is documented there as the first thing to cut),
+ * `.gr-sweep` is stage-sized and fires per draft pick, and this one is
+ * card-sized and fires when a card arrives.
+ *
+ * ⚠️ THE PARENT MUST CLIP IT. Without `overflow: hidden` on the container the
+ * band travels across everything to its right.
+ */
+.m-sheen {
+  position: absolute; top: -30%; bottom: -30%; left: -40%; width: 38%;
+  pointer-events: none; will-change: transform; z-index: 2;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.10), transparent);
+  animation: mSheen 1100ms var(--ease-out) 1 both;
+}
+@keyframes mSheen {
+  from { transform: translate3d(0, 0, 0) skewX(-14deg); }
+  to   { transform: translate3d(420%, 0, 0) skewX(-14deg); }
+}
+
 /* ── Stagger ───────────────────────────────────────────────────────────────
  *
  * A cascade turns a list into an arrival. Capped at ten steps: past ~250 ms the

@@ -7,6 +7,7 @@ import { avatar, positionColor, positionPill, teamMark } from '../core/player-vi
 import { cache, TTL } from '../core/cache.js';
 import { urls, fetchLeaders } from '../core/espn-client.js';
 import { parseLeaders, leadersSeason} from '../core/espn-league.js';
+import { logoPath } from '../core/config.js';
 
 const state = { loading: true, error: null, cats: [], season: null };
 
@@ -75,7 +76,7 @@ function leaderRow(l, rank, { bar = null, portrait = 0, hero = false } = {}) {
       <span class="ld-meta">${positionPill(l.position)}${teamMark(l.teamAbbr)}</span>
     </span>
     <span class="ld-val">${esc(l.value)}</span>
-    ${bar === null ? '' : `<span class="ld-bar"><i style="width:${bar}%"></i></span>`}
+    ${bar === null ? '' : `<span class="ld-bar"><i class="m-grow" style="width:${bar}%"></i></span>`}
   </button>`;
 }
 
@@ -96,7 +97,27 @@ function categoryPanel(c, { featured = false } = {}) {
     portrait: featured ? (i === 0 ? 40 : 28) : 0,
     hero: featured && i === 0,
   })).join('');
-  return `<div class="mod ld-cat${featured ? ' ld-feat' : ''}">`
+  const top = c.leaders[0];
+  // ⚠️ THE CARD'S ACCENT IS THE LEADER'S POSITION, so the top edge and the bars
+  // below it carry the same encoding. `--cat` is separate from the per-row `--pc`
+  // on purpose: a row must always win for its own bar, and sharing one name would
+  // make that depend on cascade order.
+  const cat = top ? ` style="--cat:${esc(positionColor(top.position))}"` : '';
+  // ⚠️ SET DRESSING, NOT INFORMATION. The club is already named in the leader's
+  // row; at 6% this is the surface behind him. Featured only — in the dense tier
+  // it would compete with the numbers for the same pixels.
+  // ⚠️ IT REMOVES ITSELF IF IT 404s. A broken <img> renders the browser's torn-page
+  // icon, and at 6% opacity in a card corner that is a grey smudge nobody can
+  // explain. `avatar()` has carried the same one-liner since it shipped, for the
+  // same reason. An abbreviation with no asset — a relocated club, a new code —
+  // must cost the card its dressing, not put a defect on it.
+  const wm = featured && top?.teamAbbr
+    ? `<img class="pod-wm" src="${esc(logoPath(top.teamAbbr))}" alt="" loading="lazy"`
+      + ' onerror="this.remove()">'
+    : '';
+  return `<div class="mod ld-cat${featured ? ' ld-feat pod-card' : ''}"${cat}>`
+    + (featured ? '<span class="m-sheen"></span>' : '')
+    + wm
     + `<div class="mod-head"><span class="t">${esc(c.label)}</span></div>`
     + `<div class="mod-body ld-body">${rows}</div>`
     + '</div>';
@@ -135,11 +156,18 @@ export function renderLeaders(s = state) {
     // 2026-08-11: current 2026 Preseason, requested 2025 Regular Season), and
     // without the year a reader cannot tell those totals from a live race.
     right: `<span class="kicker">${seasonLabel(s.season)}${s.cats.length} categories</span>`,
-    body: `<div class="ld-grid">${
-      featured.map((c) => categoryPanel(c, { featured: true })).join('')}</div>`
+    // ⚠️ THE STAGE HOLDS THE FEATURED SIX AND NOTHING ELSE. Lighting all sixteen
+    // would light nothing — the surface is the hierarchy, the same way the draft
+    // board's stage is what separates the board from the panels around it.
+    body: `<div class="pod-stage">
+      <div class="pod-head"><h3>Leading the league</h3>
+        <span class="pod-sub">Top 3</span></div>
+      <div class="ld-grid m-stagger">${
+  featured.map((c) => categoryPanel(c, { featured: true })).join('')}</div>
+    </div>`
       + (rest.length
         ? `<div class="kicker ld-more-h">More categories</div>
-           <div class="ld-grid ld-grid-more">${
+           <div class="ld-grid ld-grid-more m-stagger">${
   rest.map((c) => categoryPanel(c)).join('')}</div>`
         : ''),
   });

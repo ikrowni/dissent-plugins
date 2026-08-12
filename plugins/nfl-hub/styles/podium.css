@@ -1,0 +1,187 @@
+/* styles/podium.css — the Leaders tab's broadcast layer.
+ *
+ * The same move gridiron.css made for the League tab, for the same reason: the
+ * leaders board was dense chrome doing an honest job, and a leaderboard is one of
+ * the two or three screens a sports app is JUDGED on. This dresses it as a
+ * broadcast set — one lit surface, the featured six standing on it, the rest laid
+ * out below as a reference table.
+ *
+ * ⚠️ NOT AN EXTENSION OF controlroom.css. That sheet's own header promises
+ * "effectively free to run: nothing here animates except row hover", and it is
+ * shared with the box score, the drive chart and the play-by-play. Putting a
+ * stage and six sheens in it would quietly break that promise for four other
+ * surfaces. The layout still lives there; only the theatre lives here.
+ *
+ * ⚠️ NO backdrop-filter, exactly as in gridiron.css. It re-blurs whenever
+ * anything behind it moves. A guard test in core/motion.test.js asserts it, and
+ * asserts the second half of the same rule too:
+ *
+ * ⚠️ NOTHING IN THIS FILE LOOPS. Every animation here is an ENTRANCE — the cards
+ * arrive, the bars fill, one band of light crosses each card, and then the whole
+ * screen is still. A leaderboard is read, not watched; anything still moving
+ * thirty seconds later is a laptop fan and nothing else. That is also why there
+ * is no `body.motion-idle` entry for this sheet: there is nothing to pause.
+ *
+ * Tokens come from base.css. The only colours introduced are the stage gradient
+ * itself. Position colour arrives as --pc (per row) and --cat (per category, the
+ * leader's), both set by views/leaders.js.
+ */
+
+/* ── The stage ─────────────────────────────────────────────────────────────
+ *
+ * One continuous lit surface with the featured cards standing ON it. Painted
+ * once; the lines and the vignette are pseudo-elements so this costs no DOM.
+ * ⚠️ Its own gradient, not gridiron's. Coupling the two sheets would mean the
+ * draft board could never be re-lit without also re-lighting this. */
+.pod-stage {
+  position: relative; overflow: hidden;
+  border-radius: var(--r); padding: 16px 14px 18px;
+  background: radial-gradient(120% 105% at 50% -25%, #17364f 0%, #0a1119 55%, #05070c 100%);
+}
+.pod-stage::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    rgba(255,255,255,.04) 0 1px, transparent 1px 72px);
+}
+.pod-stage::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(115% 75% at 50% 0%, transparent 42%, rgba(0,0,0,.6) 100%);
+}
+/* The grid has to sit above both washes. */
+.pod-stage > .ld-grid { position: relative; z-index: 1; }
+
+/* The stage's own title strip — the board says what it is before the cards do. */
+.pod-head {
+  position: relative; z-index: 1;
+  display: flex; align-items: baseline; gap: 12px; margin: 0 4px 13px;
+}
+.pod-head h3 {
+  font-family: var(--f-display); font-size: 13px; font-weight: 800;
+  letter-spacing: .22em; text-transform: uppercase; color: #fff;
+}
+.pod-head .pod-sub {
+  font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold);
+}
+/* One gold hairline, the same ornament primetime.css allows itself. */
+.pod-head::after {
+  content: ''; flex: 1; height: 1px; align-self: center;
+  background: linear-gradient(90deg, rgba(255,182,18,.45), transparent);
+}
+
+/* ── Cards on the stage ────────────────────────────────────────────────────
+ * Lit objects on a surface rather than holes cut into it — the same treatment
+ * gridiron.css gives a draft cell, for the same reason. */
+.ld-cat { position: relative; }
+.pod-stage .ld-feat {
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(180deg, rgba(255,255,255,.062), rgba(255,255,255,.014));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* ⚠️ THE ACCENT IS THE LEADER'S POSITION, not a house colour. It is the same
+ * encoding as the bars below it, so the card reads as "this is a quarterback
+ * category" from the top edge down. A category whose leader plays a position the
+ * scale has no bucket for falls back to the hairline and says nothing false. */
+.ld-feat::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 3;
+  background: linear-gradient(90deg, var(--cat, var(--line-2)), transparent 72%);
+}
+
+/* The same accent, turned down, on the dense tier. Without it the second tier
+ * read as a different component sitting under a lit one rather than the quiet
+ * half of the same board — and the encoding is already true there, since the
+ * bars below carry it. A rail rather than a top edge, because that is the axis a
+ * dense grid is scanned along. */
+.ld-cat:not(.ld-feat)::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; z-index: 3;
+  background: linear-gradient(180deg, var(--cat, var(--line-2)), transparent 78%);
+  opacity: .55;
+}
+
+/* ⚠️ MADE-PICK LOGIC, APPLIED HERE: a watermark only where it is texture rather
+ * than a second signal. The leader's club is already named in his row, so at 6%
+ * this is the set dressing behind him and never something to read. Featured only
+ * — in the dense tier it would be competing with the numbers for the same pixels. */
+.pod-wm {
+  position: absolute; right: -10px; bottom: -12px; width: 104px; height: 104px;
+  opacity: .06; pointer-events: none; object-fit: contain; z-index: 0;
+  transition: opacity var(--dur) var(--ease-out);
+}
+.ld-feat:hover .pod-wm { opacity: .11; }
+.ld-feat .mod-head, .ld-feat .ld-body { position: relative; z-index: 1; }
+
+/* ── The hero ──────────────────────────────────────────────────────────────
+ * The leader is the headline, so his number is lit by his own position colour.
+ * ⚠️ TABULAR NUMERALS, the same reason gridiron.css's clock has them: 4707 and
+ * 1111 must occupy the same width or six cards disagree about where their right
+ * edge is. */
+.ld-feat .ld-val { font-variant-numeric: tabular-nums; }
+.pod-stage .ld-hero .ld-val {
+  color: #fff;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--pc, var(--gold)) 42%, transparent);
+}
+.pod-stage .ld-hero .ld-rank {
+  font-family: var(--f-display); font-size: 15px; font-weight: 800; line-height: 1;
+}
+
+/* ── Entrances ─────────────────────────────────────────────────────────────
+ *
+ * ⚠️ EVERY DELAY HERE IS A ONE-SHOT AND THEY ALL END BY ~1.4s. The cards cascade
+ * (.m-stagger, motion.css), then each card's bars fill in rank order, then one
+ * band of light crosses it. Ordering them this way is what makes it read as a
+ * board being brought up rather than eleven things twitching at once.
+ *
+ * ⚠️ THE VIEW ONLY EVER RENDERS THIS TWICE — the loading state, then the data —
+ * because views/leaders.js registers no scheduler task and its enter() returns
+ * early on a revisit. A surface that re-rendered on a poll could not carry
+ * entrance animations at all; it would flicker on every tick. */
+.ld-cat .ld-row:nth-child(1) .m-grow { animation-delay: 190ms; }
+.ld-cat .ld-row:nth-child(2) .m-grow { animation-delay: 250ms; }
+.ld-cat .ld-row:nth-child(3) .m-grow { animation-delay: 310ms; }
+
+.pod-stage .ld-grid > *:nth-child(1) .m-sheen { animation-delay: 120ms; }
+.pod-stage .ld-grid > *:nth-child(2) .m-sheen { animation-delay: 200ms; }
+.pod-stage .ld-grid > *:nth-child(3) .m-sheen { animation-delay: 280ms; }
+.pod-stage .ld-grid > *:nth-child(4) .m-sheen { animation-delay: 360ms; }
+.pod-stage .ld-grid > *:nth-child(5) .m-sheen { animation-delay: 440ms; }
+.pod-stage .ld-grid > *:nth-child(6) .m-sheen { animation-delay: 520ms; }
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ *
+ * ⚠️ TRANSFORM ONLY, on both. A hover that moved a shadow would repaint the card
+ * on every mouse move, and a pointer crossing this board crosses forty-eight
+ * targets. The row slides rather than lifts: lifting a row inside a card breaks
+ * the card's own edge, and the slide reads as "this one" the way a broadcast
+ * lower-third does. */
+.pod-card { transition: transform var(--dur-fast) var(--ease-out); }
+.pod-card:hover { transform: translate3d(0, -3px, 0); }
+
+.ld-row { transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out); }
+.ld-row:hover { transform: translate3d(3px, 0, 0); }
+.ld-row:active { transform: translate3d(3px, 0, 0) scale(.995); }
+/* The bar comes up to full strength under the pointer — the trailing rows are
+ * dimmed to rank them, not to hide them. */
+.ld-row:hover .ld-bar i { opacity: 1; }
+
+/* ── Narrow ────────────────────────────────────────────────────────────────
+ * The stage stays: it is the surface, not an ornament. It just stops spending
+ * padding it does not have. */
+@media (max-width: 560px) {
+  .pod-stage { padding: 12px 9px 13px; }
+  .pod-wm { width: 76px; height: 76px; }
+  .pod-head h3 { font-size: 11.5px; letter-spacing: .16em; }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ *
+ * ⚠️ FINISHED, NOT STRIPPED — the same standard gridiron.css holds itself to.
+ * The stage, the accent, the watermark and the lit hero number are all painted
+ * once, so removing the moving parts leaves the complete design rather than a
+ * skeleton. Only the light pass has nothing to say when it cannot travel.
+ *
+ * The bars need no rule: motion.css's reduced-motion block collapses every
+ * duration to 0.01ms and `.m-grow` fills `both`, so they land at full width
+ * immediately instead of being stranded at scaleX(0). */
+body.reduce-motion .m-sheen { display: none; }
+body.reduce-motion .pod-card:hover,
+body.reduce-motion .ld-row:hover { transform: none; }
