@@ -230,6 +230,23 @@ export function rosterNeeds({ slots = [], owned = [] } = {}) {
     need[pos] ??= { have: 0, slots: 0 };
     need[pos].have += 1;
   }
+
+  // 🔴 NOBODY'S POSITION IS "FLEX". Counting `have` by position meant the FLEX
+  // pill read 0/1 for every manager on every board, permanently — including one
+  // holding six receivers. It reports an unfilled starting slot that is in fact
+  // filled, which is exactly the wrong thing to tell somebody deciding what to
+  // draft next, and it was read as the draft having skipped the slot.
+  //
+  // What actually fills a FLEX is the SURPLUS: an RB, WR or TE beyond that
+  // position's own starting slots. So the pill counts that surplus, capped at the
+  // number of FLEX slots, because a seventh receiver does not fill a second FLEX
+  // this roster does not have.
+  if (need.FLEX) {
+    const spare = ['RB', 'WR', 'TE'].reduce(
+      (n, pos) => n + Math.max(0, (need[pos]?.have ?? 0) - (need[pos]?.slots ?? 0)), 0,
+    );
+    need.FLEX.have = Math.min(spare, need.FLEX.slots);
+  }
   return need;
 }
 

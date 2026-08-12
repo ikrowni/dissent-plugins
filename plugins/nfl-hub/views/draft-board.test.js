@@ -641,3 +641,42 @@ describe('the run-detected flash', () => {
     expect(parse(renderStage({ board: '<i></i>' })).querySelector('.gr-cols')).not.toBeNull();
   });
 });
+
+describe('the FLEX pill', () => {
+  const R = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN', 'BN'];
+  const own = (spec) => Object.entries(spec)
+    .flatMap(([pos, n]) => Array.from({ length: n }, (_, i) => ({ id: `${pos}${i}`, pos })));
+
+  // 🔴 THE BUG. `have` was counted by position, and no player's position is
+  // "FLEX" — so this pill read 0/1 for everyone, forever, even holding six
+  // receivers. It reported an unfilled starting slot that was actually filled.
+  it('counts the surplus that actually fills it, not a position nobody has', () => {
+    // 2 RB fills RB/RB exactly; the 6 WR fill WR/WR/WR with three to spare.
+    const need = rosterNeeds({ slots: R, owned: own({ QB: 1, RB: 2, WR: 6, TE: 1, K: 1, DEF: 1 }) });
+    expect(need.FLEX).toEqual({ have: 1, slots: 1 });
+  });
+
+  it('is empty when every RB, WR and TE is needed by its own slot', () => {
+    const need = rosterNeeds({ slots: R, owned: own({ QB: 1, RB: 2, WR: 3, TE: 1 }) });
+    expect(need.FLEX.have).toBe(0);
+  });
+
+  // ⚠️ A seventh receiver does not fill a second FLEX this roster does not have.
+  it('never exceeds the number of FLEX slots', () => {
+    const need = rosterNeeds({ slots: R, owned: own({ RB: 8, WR: 8, TE: 4 }) });
+    expect(need.FLEX.have).toBe(1);
+  });
+
+  it('leaves a roster with no FLEX slot alone', () => {
+    const need = rosterNeeds({ slots: ['QB', 'RB', 'WR'], owned: own({ RB: 4 }) });
+    expect(need.FLEX).toBeUndefined();
+  });
+
+  // The real positions must keep reporting their true totals, bench included —
+  // the surplus is the whole point of those pills.
+  it('does not disturb the per-position counts', () => {
+    const need = rosterNeeds({ slots: R, owned: own({ RB: 4, WR: 5 }) });
+    expect(need.RB).toEqual({ have: 4, slots: 2 });
+    expect(need.WR).toEqual({ have: 5, slots: 3 });
+  });
+});
