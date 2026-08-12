@@ -216,3 +216,57 @@
 body.reduce-motion .gr-sweep { display: none; }
 body.reduce-motion .gr-glow { opacity: .12; }
 
+
+/* ── The board is a VIEWPORT, not a page ───────────────────────────────────
+ *
+ * Measured on the live mock at the plugin's real width (890px), before this:
+ *
+ *   board height   852px, unbounded, in a 959px viewport
+ *   pool top       y=1195 — a full screen BELOW the board
+ *   teams visible  4 of 12
+ *
+ * ⚠️ SO PICKING A PLAYER MEANT SCROLLING PAST THE ENTIRE BOARD. The pool is the
+ * only thing on this screen you can act on, and fifteen rounds of empty cells sat
+ * between you and it. A draft board is a thing you GLANCE at between picks; it
+ * had become the page, and the actual controls were furniture below the fold.
+ *
+ * ⚠️ IT ALREADY SCROLLED SIDEWAYS AND THAT WAS NOT THE BUG. `.db-scroll` has
+ * carried `overflow-x: auto` all along — the first reading of this measured
+ * `.gr-board`, the padding wrapper, found `overflow: visible`, and nearly filed
+ * "the board cannot scroll" as a defect. Measure the element that actually
+ * scrolls.
+ */
+.gr-stage .db-scroll {
+  max-height: min(56vh, 560px);
+  overflow: auto;
+  /* Room for the sticky column to sit against without clipping its rounding. */
+  scrollbar-gutter: stable;
+}
+
+/* ⚠️ THE HEADER AND THE ROUND COLUMN STICK, because the board is now a window
+ * onto something bigger in BOTH directions. Scrolling to team 11 without a header
+ * is reading a spreadsheet with the column names off-screen, and scrolling to
+ * round 14 without the round number is worse.
+ *
+ * `.db-row` is `display: contents`, so these are direct grid items — sticky
+ * applies to them individually and needs no extra wrapper. */
+.gr-stage .db-th {
+  position: sticky; top: 0; z-index: 3;
+  background: linear-gradient(180deg, #141a24, #10151d);
+}
+.gr-stage .db-rd {
+  position: sticky; left: 0; z-index: 2;
+  background: linear-gradient(90deg, #141a24, #10151d);
+}
+/* The corner belongs to both, so it outranks both. */
+.gr-stage .db-head .db-rd { z-index: 4; }
+
+/* ⚠️ YOUR OWN COLUMN MUST SURVIVE THE SCROLL. At four visible columns of twelve,
+ * the seat you are drafting from spends most of the draft off-screen, and the
+ * board's whole value is comparing your roster against the run. The header keeps
+ * the gold it already had and gains a rail down the cells beneath it. */
+.gr-stage .db-th.mine { color: var(--gold); }
+.gr-stage .db-th.mine::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--gold);
+}
