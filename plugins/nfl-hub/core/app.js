@@ -67,6 +67,19 @@ export function createRouter({ mount, views, nav }) {
   };
 }
 
+/**
+ * Does this element report its value through `input` rather than through a click?
+ *
+ * ⚠️ BUTTONS ARE NOT INCLUDED, and `<input type=button|submit|image>` is a button
+ * wearing an input's tag — those genuinely are clicks and must keep working.
+ */
+export function isFormControl(el) {
+  const tag = el?.tagName;
+  if (tag === 'SELECT' || tag === 'TEXTAREA') return true;
+  if (tag !== 'INPUT') return false;
+  return !/^(button|submit|image|reset)$/i.test(el.type || 'text');
+}
+
 /** Flip only the scores that changed, so an unchanged side stays still. */
 export function applyScoreFlip(root, next, prev) {
   if (!next || !prev) return;
@@ -209,6 +222,20 @@ async function boot() {
     const act = t.dataset.act;
     if (act === 'nav') { app.router.go(t.dataset.view); return; }
     if (act === 'retry') { app.router.refresh(); return; }
+    // 🔴 A FORM CONTROL REPORTS ITSELF ON `input`, NEVER ON `click`, and firing it
+    // on click made every dropdown and search box in the hub nearly unusable.
+    //
+    // Both listeners route to the same `onAction`, and almost every handler ends
+    // in `router.refresh()` — which is `mount.innerHTML = …`. So merely CLICKING
+    // INTO a control destroyed and rebuilt it mid-interaction: an open `<select>`
+    // snapped shut before a value could be chosen, and a search field lost focus
+    // on the click that was meant to focus it. Thirteen controls across the roster,
+    // moves, draft, mock and co-manager tabs behaved this way.
+    //
+    // ⚠️ Skipping them here loses nothing. `input` fires for text fields, ranges,
+    // checkboxes AND selects, so every one of these actions still arrives — once,
+    // when the value actually changes, which is the only moment it means anything.
+    if (isFormControl(t)) return;
     // Views claim their own actions via app.onAction, set in their enter().
     app.onAction?.(act, t, e);
   });

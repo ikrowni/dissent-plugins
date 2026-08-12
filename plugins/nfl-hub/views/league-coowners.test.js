@@ -80,38 +80,19 @@ describe('render', () => {
     it('says how to ADD one, even though there is no Add button', () => {
       const html = render(lg());
       expect(html).toMatch(/add a co-manager/i);
-      expect(html).toMatch(/cannot add somebody directly/i);
-      // …and tells them where the other person has to go.
-      expect(html).toMatch(/request it|asked yet/i);
+      // The mechanism, in the owner's terms: somebody else starts it.
+      expect(html).toMatch(/they ask, you approve/i);
+      // …and where they have to go to do it.
+      expect(html).toMatch(/Fantasy → League/);
+      // ⚠️ It must NOT list the server's members. That was tried and the owner
+      // asked for it gone — a wall of names is not an instruction.
+      expect(html).not.toMatch(/request it:/i);
     });
 
     // The remove control is real, but only exists once somebody IS a co-manager,
     // which is exactly why the empty state has to explain itself.
     it('offers no remove control while there is nobody to remove', () => {
       expect(render(lg())).not.toContain('co-remove');
-    });
-
-    it('names who is free to ask, once the member list has loaded', () => {
-      _state.members = [
-        { id: 'u_t1', username: 'owner', display_name: 'Owner' },
-        { id: 'u_free', username: 'bob_qa', display_name: 'Bob' },
-        { id: 'u_helper', username: 'helper', display_name: 'Helper' },
-      ];
-      // u_helper already co-manages, and u_t1 is the owner asking — neither is free.
-      const html = render(lg({ coOwners: ['u_helper'] }));
-      expect(html).toContain('Bob');
-      expect(html).not.toMatch(/>Owner</);
-      _state.members = null;
-    });
-
-    // ⚠️ members:list is a PERMISSION the viewer may not have granted. A refused
-    // capability must leave the panel working, just less specific.
-    it('still explains the flow when the member list is unavailable', () => {
-      _state.members = [];
-      const html = render(lg());
-      expect(html).toMatch(/add a co-manager/i);
-      expect(html).toMatch(/already manages a team/i);
-      _state.members = null;
     });
 
     it('lists co-managers with a way to remove them', () => {

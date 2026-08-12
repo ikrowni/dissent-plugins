@@ -13,7 +13,7 @@ import { loadIndex, getIndex } from '../core/player-index.js';
 import { loadRanking } from '../core/draft-ranking.js';
 import {
   createMock, availableIn, rosterOf, onTheClock, pick as makeMockPick,
-  runBotsUntilMyTurn, isComplete, gradeDrafts,
+  runBotsUntilMyTurn, isComplete, gradeDrafts, bestPickFor, remainingNeed,
 } from '../core/mock-draft.js';
 import {
   renderBoard, renderOnTheClock, renderFilters, renderPool, renderRosterProgress,
@@ -279,7 +279,16 @@ export function simulate(app) {
   if (!state.mock || isComplete(state.mock)) return;
   const avail = availableIn(state.mock);
   if (avail.length === 0) return;
-  state.mock = runBotsUntilMyTurn(makeMockPick(state.mock, avail[0].id));
+  // 🔴 THE SAME NEED-AWARE LOGIC THE BOTS USE. This was `avail[0]` — the raw top
+  // of the ranking — so simulating filled the human's roster with the kickers and
+  // defences that survive to the late rounds, and never filled WR/TE/FLEX.
+  const mine = rosterOf(state.mock, state.mock.myTeam);
+  const chosen = bestPickFor(avail, {
+    need: remainingNeed(state.mock.rosterPositions, mine.map((o) => o.pos)),
+    owned: mine,
+  });
+  if (!chosen) return;
+  state.mock = runBotsUntilMyTurn(makeMockPick(state.mock, chosen));
   app?.router?.refresh();
 }
 

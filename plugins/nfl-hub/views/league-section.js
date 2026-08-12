@@ -153,11 +153,6 @@ export async function enter() {
   mock.reset();
   identity.reset();
   home.load(app);
-  // ⚠️ NOT AWAITED, and it must not be. It only decides whether the co-manager
-  // panel can NAME who is able to ask; blocking the tab's first paint on a
-  // capability the viewer may not even have granted would trade the whole
-  // section for a nicety. It refreshes once the answer arrives.
-  coowners.loadMembers().then(() => app?.router?.refresh()).catch(() => {});
 }
 
 /** What the identity actions need: the league id, the payload, and a reload. */

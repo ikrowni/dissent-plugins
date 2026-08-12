@@ -387,6 +387,18 @@ describe('the motion contract', () => {
     expect(tabs.filter((t) => !new RegExp(`\\b${t}\\s*:`).test(views))).toEqual([]);
   });
 
+  // ⚠️ THE OTHER HALF OF THE FORM-CONTROL FIX. `core/app.js` deliberately skips
+  // form controls in its CLICK delegation, because clicking into a <select> or a
+  // search box was destroying it mid-interaction via router.refresh(). That skip
+  // is only safe because the INPUT listener still delivers those same actions —
+  // drop that listener and all thirteen controls go dead silently, with nothing
+  // else failing.
+  it('app.js still delegates input, which is what makes the click skip safe', () => {
+    const src = readFileSync(join(root, 'core', 'app.js'), 'utf8');
+    expect(src).toMatch(/addEventListener\('input'/);
+    expect(src).toMatch(/isFormControl\(t\)\)\s*return/);
+  });
+
   it('every stylesheet in styles/ is actually linked by plugin.html', () => {
     const html = readFileSync(join(root, 'plugin.html'), 'utf8');
     const missing = readdirSync(join(root, 'styles'))

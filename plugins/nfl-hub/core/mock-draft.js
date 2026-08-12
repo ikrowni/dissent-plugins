@@ -124,6 +124,32 @@ export function botPick(available, { need, owned, rng = Math.random, window = 8 
 }
 
 /**
+ * The pick to make on the HUMAN's behalf when they ask to simulate.
+ *
+ * 🔴 THIS EXISTS BECAUSE "Simulate" USED TO TAKE `available[0]` — the raw top of
+ * the ranking, with no notion of need and no position caps, while every bot at
+ * the same table picked through `botPick`. Kickers and defences sit at the BOTTOM
+ * of a value ranking, so they are exactly what survives into the late rounds; by
+ * then `available[0]` IS a kicker, on every click. A simulated roster came out
+ * with six kickers and four defences, no second or third receiver, no tight end
+ * and an empty FLEX — which is the report that produced this function.
+ *
+ * ⚠️ NO RANDOMNESS, unlike a bot. A bot reaches a little so twelve of them do not
+ * draft the board in order; a human asking the computer to pick FOR them wants
+ * the best available answer, not a plausible one. `rng: () => 0` makes it the
+ * deterministic best rather than a sample.
+ *
+ * ⚠️ A WIDER WINDOW than a bot's, deliberately. Eight is enough to notice a need
+ * at the top of the board; filling the LAST unmet slot late in a draft means
+ * looking further down, because by then everything nearby is a position already
+ * filled. The rank baseline still dominates early, so this reaches for a need
+ * without reaching in round two.
+ */
+export function bestPickFor(available, { need, owned, window = 20 }) {
+  return botPick(available, { need, owned, rng: () => 0, window });
+}
+
+/**
  * Set up a mock.
  *
  * `ranking` is an ordered list of player ids; `positionOf` resolves one to a

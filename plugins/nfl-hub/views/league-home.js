@@ -146,7 +146,7 @@ function leaguePane(league, scores, standings) {
       ${powerPanel(league)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
-      ${settingsPane(league, week)}
+      ${settingsPane(league)}
       ${table}
       <div class="row-actions">
         <button class="btn" data-act="league-refresh">Refresh</button>
@@ -287,11 +287,10 @@ function rosterCallout(league, teamCount) {
  * The rest are rules a commissioner legitimately tunes, and the module refuses
  * any combination that does not hold together.
  */
-function settingsPane(league, week) {
+function settingsPane(league) {
   if (!league.isCommissioner) return '';
   const st = league.settings ?? {};
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(label)}</option>`;
-  const started = week !== null;
   return panel({
     title: 'League settings',
     right: '<span class="muted">commissioner</span>',
@@ -337,12 +336,7 @@ function settingsPane(league, week) {
           ${state.busy ? 'Saving…' : 'Save settings'}
         </button>
       </form>
-      ${started
-    ? '<p class="tiny">⚠️ The season is under way. Moving the playoff start or the trade '
-      + 'deadline changes rules a manager may already have planned around.</p>'
-    : ''}
-      <p class="tiny">Team count and roster slots are not editable — changing either under
-        a drafted roster or a generated schedule is a migration, not a setting.</p>`,
+`,
   });
 }
 

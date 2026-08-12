@@ -16,7 +16,7 @@ import { esc, panel } from '../core/ui.js';
 import { renameTeam, setTeamIdentity, setLeagueBanner } from '../core/league-api.js';
 import { checkTeamName, MAX_TEAM_NAME } from '../core/league/team-identity.js';
 import {
-  uploadImage, discard, resolve, contextFor, ACCEPT_ATTR, MAX_IMAGE_BYTES, specHint,
+  uploadImage, discard, resolve, contextFor, ACCEPT_ATTR, specHint,
   IMAGE_SPEC, assertUploadable,
 } from '../core/team-images.js';
 import { openCropper } from './crop-dialog.js';
@@ -71,12 +71,7 @@ export function renderTeamCard(league) {
         </form>
       </div>
       ${pickerRow('Avatar', 'avatar', team.avatarFileId, 'avatar')}
-      ${pickerRow('Banner', 'banner', team.bannerFileId, 'teamBanner')}
-      <p class="tiny">Images stay on this server and are visible to its members.
-        PNG, JPEG, WebP or GIF, up to ${MAX_IMAGE_BYTES / 1024 / 1024} MB.
-        Anything not the stated shape is cropped from the centre to fit.
-        Your colour is kept either way — it is what keeps the standings readable
-        before anybody has uploaded anything.</p>`,
+      ${pickerRow('Banner', 'banner', team.bannerFileId, 'teamBanner')}`,
   });
 }
 

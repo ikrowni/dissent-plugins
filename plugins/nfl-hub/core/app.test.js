@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRouter, liveCadence, applyScoreFlip } from './app.js';
+import { createRouter, liveCadence, applyScoreFlip , isFormControl } from './app.js';
 import { POLL_LIVE_MS, POLL_IDLE_MS } from './config.js';
 
 describe('liveCadence', () => {
@@ -161,4 +161,40 @@ describe('router — fantasy', () => {
     expect(router.current).toBe('fantasy');
     expect(mount.querySelector('#f')).toBeTruthy();
   });
+});
+
+describe('click delegation and form controls', () => {
+  // 🔴 THE BUG THIS EXISTS FOR. `click` and `input` both route to `onAction`, and
+  // almost every handler ends in `router.refresh()` — `mount.innerHTML = …`. So
+  // clicking INTO a control destroyed and rebuilt it mid-interaction: an open
+  // <select> snapped shut before a value could be picked, and a search box lost
+  // the focus the click had just given it. Reported across several tabs.
+  const el = (tag, type) => ({ tagName: tag, type });
+
+  it('treats value-reporting controls as form controls', () => {
+    expect(isFormControl(el('SELECT'))).toBe(true);
+    expect(isFormControl(el('TEXTAREA'))).toBe(true);
+    for (const t of ['text', 'search', 'number', 'range', 'checkbox', 'radio', 'file', 'color', 'date']) {
+      expect(isFormControl(el('INPUT', t))).toBe(true);
+    }
+    // An <input> with no type attribute is a text field.
+    expect(isFormControl(el('INPUT', ''))).toBe(true);
+  });
+
+  // ⚠️ An <input type=button|submit> is a BUTTON wearing an input's tag. Excluding
+  // these would have swapped one dead interaction for another.
+  it('leaves real buttons alone', () => {
+    expect(isFormControl(el('BUTTON'))).toBe(false);
+    expect(isFormControl(el('A'))).toBe(false);
+    expect(isFormControl(el('DIV'))).toBe(false);
+    for (const t of ['button', 'submit', 'image', 'reset']) {
+      expect(isFormControl(el('INPUT', t))).toBe(false);
+    }
+  });
+
+  it('survives a missing element', () => {
+    expect(isFormControl(null)).toBe(false);
+    expect(isFormControl(undefined)).toBe(false);
+  });
+
 });

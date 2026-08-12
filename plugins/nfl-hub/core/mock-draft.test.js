@@ -1,8 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import {
-  rngFrom, startingNeed, remainingNeed, botPick, createMock, availableIn,
-  rosterOf, onTheClock, pick, runBotsUntilMyTurn, isComplete, POSITION_CAP, gradeDrafts,
-} from './mock-draft.js';
+import {rngFrom, startingNeed, remainingNeed, botPick, createMock, availableIn, rosterOf, onTheClock, pick, runBotsUntilMyTurn, isComplete, POSITION_CAP, gradeDrafts, bestPickFor} from './mock-draft.js';
 
 const ROSTER = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN', 'BN', 'BN'];
 
@@ -231,5 +229,118 @@ describe('gradeDrafts', () => {
   it('gives everyone the same grade when every draft is identical', () => {
     const g = graded(() => 1);
     expect(new Set(g.map((x) => x.grade)).size).toBe(1);
+  });
+});
+
+describe('simulating on the human\'s behalf', () => {
+  // ⚠️ THE REAL RANKING AND THE REAL PLAYER INDEX, not an invented board. A
+  // hand-built fixture hid this bug once already: given 40 kickers against 120
+  // skill players it is the BOARD that forces kicker picks, and the test measures
+  // the fixture rather than the code.
+  //
+  // The shipped ranking is 400 players — WR 150, TE 75, RB 73, K 42, DEF 32,
+  // QB 28 — and the detail that matters is where the junk sits: the first KICKER
+  // is at index 25 and the first DEFENCE at 26. So in a 12-team draft the raw
+  // top of the board IS a kicker by round three, which is exactly how a roster
+  // ended up with six of them.
+  const rankFile = JSON.parse(readFileSync(new URL('../assets/draft-ranking.json', import.meta.url), 'utf8'));
+  const index = JSON.parse(readFileSync(new URL('../assets/players.index.json', import.meta.url), 'utf8'));
+  const ranking = rankFile.ppr;
+  const positionOf = (id) => (index[String(id)] || {}).p ?? null;
+
+  const ROSTER = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN', 'BN'];
+
+  const makeMock = () => createMock({
+    teams: 12, rounds: ROSTER.length, slot: 1, rosterPositions: ROSTER,
+    ranking, positionOf, seed: 7,
+  });
+
+  /** Drive a whole draft the way the Simulate button does. */
+  const runWholeDraft = () => {
+    let m = runBotsUntilMyTurn(makeMock());
+    for (let guard = 0; guard < 400 && !isComplete(m); guard += 1) {
+      const avail = availableIn(m);
+      if (avail.length === 0) break;
+      const mine = rosterOf(m, m.myTeam);
+      const chosen = bestPickFor(avail, {
+        need: remainingNeed(m.rosterPositions, mine.map((o) => o.pos)),
+        owned: mine,
+      });
+      if (!chosen) break;
+      m = runBotsUntilMyTurn(pick(m, chosen));
+    }
+    return m;
+  };
+
+  const countBy = (roster) => roster.reduce((acc, r) => {
+    acc[r.pos] = (acc[r.pos] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  // 🔴 THE REPORTED FAILURE. "Simulate" took `available[0]` while every bot at the
+  // same table picked through botPick. With a kicker sitting 25th on the real
+  // board, the human's roster came back with six kickers and four defences.
+  it('never stockpiles kickers or defences', () => {
+    const counts = countBy(rosterOf(runWholeDraft(), 'm1'));
+    expect(counts.K ?? 0).toBeLessThanOrEqual(POSITION_CAP.K);
+    expect(counts.DEF ?? 0).toBeLessThanOrEqual(POSITION_CAP.DEF);
+  });
+
+  // The other half of the same report: WR/WR, TE and FLEX were left empty.
+  it('fills every starting slot the roster asks for', () => {
+    const roster = rosterOf(runWholeDraft(), 'm1');
+    const counts = countBy(roster);
+    expect(counts.QB ?? 0).toBeGreaterThanOrEqual(1);
+    expect(counts.RB ?? 0).toBeGreaterThanOrEqual(2);
+    expect(counts.WR ?? 0).toBeGreaterThanOrEqual(3);
+    expect(counts.TE ?? 0).toBeGreaterThanOrEqual(1);
+    expect(counts.K ?? 0).toBe(1);
+    expect(counts.DEF ?? 0).toBe(1);
+    // …and something spare for the FLEX, over and above those starters.
+    const flexEligible = (counts.RB ?? 0) + (counts.WR ?? 0) + (counts.TE ?? 0);
+    expect(flexEligible).toBeGreaterThanOrEqual(2 + 3 + 1 + 1);
+    expect(roster.length).toBe(ROSTER.length);
+  });
+
+  // The bench has to be worth something: every pick after the starters are full
+  // should be a player who can actually score, not the dregs of the board.
+  it('spends the whole bench on scoring positions', () => {
+    const roster = rosterOf(runWholeDraft(), 'm1');
+    const junk = roster.filter((r) => r.pos === 'K' || r.pos === 'DEF').length;
+    expect(junk).toBe(2); // exactly the one starting K and the one starting DEF
+  });
+
+  // ⚠️ THE OLD BEHAVIOUR, PINNED AS A COUNTER-EXAMPLE. If `available[0]` were
+  // still good enough there would be nothing to fix — this proves the naive pick
+  // really does produce the reported roster on the real board.
+  it('beats the naive available[0] it replaced', () => {
+    let m = runBotsUntilMyTurn(makeMock());
+    for (let guard = 0; guard < 400 && !isComplete(m); guard += 1) {
+      const avail = availableIn(m);
+      if (avail.length === 0) break;
+      m = runBotsUntilMyTurn(pick(m, avail[0].id));
+    }
+    const naive = countBy(rosterOf(m, 'm1'));
+    expect((naive.K ?? 0) + (naive.DEF ?? 0)).toBeGreaterThan(2);
+  });
+
+  // ⚠️ DETERMINISTIC, unlike a bot's. Somebody asking the computer to pick for
+  // them wants the best answer available, not a plausible sample of one.
+  it('makes the same choice every time for the same board', () => {
+    const avail = availableIn(makeMock());
+    const args = { need: remainingNeed(ROSTER, []), owned: [] };
+    const first = bestPickFor(avail, args);
+    for (let i = 0; i < 5; i += 1) expect(bestPickFor(avail, args)).toBe(first);
+  });
+
+  // Early on there is no reason to reach — the best player available IS the pick.
+  it('takes the best available with an empty roster', () => {
+    const avail = availableIn(makeMock());
+    expect(bestPickFor(avail, { need: remainingNeed(ROSTER, []), owned: [] })).toBe(avail[0].id);
+  });
+
+  it('refuses to invent a pick from an empty board', () => {
+    expect(bestPickFor([], { need: {}, owned: [] })).toBe(null);
   });
 });

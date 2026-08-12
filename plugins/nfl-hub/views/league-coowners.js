@@ -16,54 +16,17 @@ import {
   requestCoOwnership, withdrawCoOwnershipRequest, respondToCoOwnerRequest, removeCoOwner,
 } from '../core/league-api.js';
 import { describe } from './league-home.js';
-import { getIdentity, request } from '../../plugin-sdk.js';
+import { getIdentity } from '../../plugin-sdk.js';
 
 const state = {
   busy: null,     // the userId or teamId currently being acted on
   error: null,
   notice: null,
   askTeam: '',    // the team selected in the ask form
-  // Server members, for naming who could ask. null = not loaded, [] = loaded empty.
-  members: null,
 };
 
 export function reset() {
   Object.assign(state, { busy: null, error: null, notice: null, askTeam: '' });
-}
-
-/**
- * Load the server's members, so "somebody can ask you" can name actual people.
- *
- * ⚠️ NOT IDENTITY, AND NOT AUTHORISATION. This is `members:list` (permission
- * `members:read`, already declared in the manifest) and it exists here purely so
- * the owner is told WHO to go and ask. Nothing is decided from it — the module
- * still only ever acts on a request that carries the asker's own verified
- * session.
- *
- * ⚠️ NEVER REJECTS. A refused or ungranted capability must leave the panel
- * working, just less specific — the flow does not depend on it.
- */
-export async function loadMembers() {
-  try {
-    const res = await request('members:list', {});
-    state.members = Array.isArray(res?.members) ? res.members : [];
-  } catch {
-    state.members = [];
-  }
-}
-
-/** Members who hold no team in this league, and so are free to ask for one. */
-function couldAsk(league) {
-  if (!state.members?.length) return [];
-  const taken = new Set();
-  for (const t of Object.values(league?.teams ?? {})) {
-    if (t.ownerId) taken.add(t.ownerId);
-    for (const c of t.coOwners ?? []) taken.add(c);
-  }
-  return state.members
-    .filter((m) => m.id !== league?.me && !taken.has(m.id))
-    .map((m) => m.display_name || m.username)
-    .filter(Boolean);
 }
 
 /** Who am I to this team? */
@@ -153,19 +116,12 @@ function ownerFace(league, team) {
   // ⚠️ There is deliberately no Add button and there cannot be one — see
   // server/ops-coowners.js. So the honest thing is to say so, say why in one
   // line, and name the exact people who are able to ask.
-  const candidates = couldAsk(league);
-  const who = candidates.length === 0
-    ? `<p class="muted">Everyone on this server already manages a team here.</p>`
-    : `<p>Ask one of them to open <strong>NFL Hub → Fantasy → League</strong> and
-         request it: <strong>${candidates.slice(0, 12).map(esc).join('</strong>, <strong>')}</strong>${
-  candidates.length > 12 ? ` <span class="muted">and ${candidates.length - 12} more</span>` : ''}.</p>`;
-
   return `
     <h4>Add a co-manager</h4>
-    <p class="muted">You cannot add somebody directly, and that is deliberate: this
-       plugin can only ever act on a person's own verified session, so THEY ask and
-       you approve. It means nobody is ever attached to your team by a mistyped name.</p>
-    ${state.members === null ? '<p class="muted">Checking who can ask…</p>' : who}
+    <p class="muted">They ask, you approve. Anyone on this server without a team can
+       request it from <strong>Fantasy → League</strong>, and it appears below for you
+       to accept. Nobody can be added directly, so nobody ends up on your team by
+       mistake.</p>
     <h4>Co-managers of ${esc(team.name)}</h4>
     ${current}
     <h4>Requests to approve</h4>
