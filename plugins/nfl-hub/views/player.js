@@ -8,6 +8,7 @@ import { cache, TTL } from '../core/cache.js';
 import { urls, fetchAthlete, fetchAthleteBio } from '../core/espn-client.js';
 import { parseAthlete, parseAthleteBio } from '../core/espn-league.js';
 import { teamByAbbr, logoPath } from '../core/config.js';
+import { teamColor, positionPill } from '../core/player-visuals.js';
 import { imageUrl } from '../../plugin-sdk.js';
 
 const state = { loading: true, error: null, athleteId: null, bio: null, overview: null };
@@ -38,26 +39,30 @@ export function renderPlayer(s = state) {
   let html = '<div style="padding:10px 20px 0">'
     + '<button class="badge" data-act="nav" data-view="leaders">← Leaders</button></div>';
 
-  html += '<div class="panel"><div class="panel-body" '
-    + 'style="display:flex;align-items:center;gap:16px">'
-    + (b.headshot
-      ? `<img src="${esc(imageUrl(b.headshot))}" alt="" style="width:78px;height:78px;`
-        + 'border-radius:50%;object-fit:cover;background:var(--ink-2)">'
-      : '')
-    + '<div>'
-      + '<div style="font-family:var(--f-display);font-size:24px;font-weight:800">'
-        + `${esc(b.name)}</div>`
-      + '<div style="font-size:12px;color:var(--text-3)">'
-        + [b.position, b.jersey ? `#${b.jersey}` : null, b.height, b.weight,
-          b.age ? `${b.age} yrs` : null, b.college]
-          .filter(Boolean).map(esc).join(' · ')
-      + '</div>'
-      + (team
-        ? `<div style="margin-top:6px">${chip(
-          { abbr: team.abbr, fullName: team.fullName, logo: logoPath(team.abbr) },
-          { clickable: true, showRecord: false })}</div>`
+  // ⚠️ THE PAGE KNEW HIS CLUB AND HIS POSITION AND USED NEITHER — both were already
+  // on it as plain text. The band tints by CLUB and the pill carries the
+  // categorical POSITION scale: the same two encodings the leaders board settled
+  // on, for the same reason. You should know what somebody plays before you read
+  // a word.
+  const vitals = [b.jersey ? `#${b.jersey}` : null, b.height, b.weight,
+    b.age ? `${b.age} yrs` : null, b.college].filter(Boolean).map(esc).join(' · ');
+  html += `<div class="pl-band" style="--tc:${esc(teamColor(b.teamAbbr))}">`
+    + '<div class="pl-band-in">'
+      + (b.headshot
+        ? `<img class="pl-shot" src="${esc(imageUrl(b.headshot))}" alt="" onerror="this.remove()">`
         : '')
-    + '</div></div></div>';
+      + '<div class="pl-id">'
+        + `<div class="pl-name">${esc(b.name)}</div>`
+        + '<div class="pl-meta">'
+          + positionPill(b.position)
+          + (team
+            ? chip({ abbr: team.abbr, fullName: team.fullName, logo: logoPath(team.abbr) },
+              { clickable: true, showRecord: false })
+            : '')
+          + (vitals ? `<span class="pl-vitals">${vitals}</span>` : '')
+        + '</div>'
+      + '</div>'
+    + '</div></div>';
 
   const f = s.overview?.fantasy;
   if (f && (f.draftRank || f.positionRank || f.percentOwned)) {

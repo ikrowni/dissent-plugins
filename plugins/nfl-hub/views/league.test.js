@@ -145,11 +145,52 @@ describe('renderLeague', () => {
     expect(el.querySelectorAll('.game-card')).toHaveLength(16);
   });
 
+  // Asserts the intent rather than the old `.panel-head h2`: the slate moved onto
+  // one stage with a heading per timeslot, instead of one panel per timeslot.
   it('groups games by broadcast timeslot', () => {
     const el = parse(renderLeague({ games, week: 1, season: 2025 }));
-    const heads = [...el.querySelectorAll('.panel-head h2')].map((h) => h.textContent);
+    const heads = [...el.querySelectorAll('.gm-slot-head h4')].map((h) => h.textContent);
     expect(heads.length).toBeGreaterThan(1);
     expect(heads.some((h) => /Sunday|Thursday|Monday/.test(h))).toBe(true);
+    // Every game still renders, whichever slot it is in.
+    expect(el.querySelectorAll('.game-card').length).toBe(games.length);
+  });
+
+  // ⚠️ THE SLATE IS ON THE STAGE, under the hero it belongs to. This tab had the
+  // best surface in the plugin and then dropped to flat panels — the same cliff
+  // Game Center had, on the tab people land on first.
+  it('stands the whole slate on one stage', () => {
+    const el = parse(renderLeague({ games, week: 1, season: 2025 }));
+    const stage = el.querySelector('.stage.gm-stage');
+    expect(stage).not.toBeNull();
+    expect(stage.querySelectorAll('.game-card').length).toBe(games.length);
+  });
+
+  // ⚠️ EACH SIDE CARRIES ITS OWN CLUB COLOUR. On a sixteen-card Sunday the
+  // abbreviation is a word you must READ; the rail is what lets somebody find
+  // their team without reading.
+  it('colours both sides of every card by club', () => {
+    const el = parse(renderLeague({ games, week: 1, season: 2025 }));
+    const sides = [...el.querySelectorAll('.gm-side')];
+    expect(sides.length).toBe(games.length * 2);
+    for (const s of sides) expect(s.getAttribute('style')).toMatch(/--tc:\s*\S/);
+    // The two sides of one game must not be the same colour.
+    const card = el.querySelector('.game-card');
+    const [a, b] = [...card.querySelectorAll('.gm-side')].map((x) => x.getAttribute('style'));
+    expect(a).not.toBe(b);
+  });
+
+  // ⚠️ THIS TAB POLLS. Without the gate the whole slate re-cascades every tick —
+  // the bug stadium.css's heroLogo shipped with, on this very tab.
+  it('marks the first paint as an arrival and withholds it once settled', () => {
+    const on = parse(renderLeague({ games, week: 1, settled: false }));
+    expect(on.querySelector('.gm-stage').classList.contains('is-first')).toBe(true);
+    expect(on.querySelectorAll('.game-grid.m-stagger').length).toBeGreaterThan(0);
+    const off = parse(renderLeague({ games, week: 1, settled: true }));
+    expect(off.querySelector('.gm-stage').classList.contains('is-first')).toBe(false);
+    expect(off.querySelectorAll('.game-grid.m-stagger').length).toBe(0);
+    // The gate costs the slate nothing but motion.
+    expect(off.querySelectorAll('.game-card').length).toBe(on.querySelectorAll('.game-card').length);
   });
 
   it('honours an explicitly chosen hero game', () => {

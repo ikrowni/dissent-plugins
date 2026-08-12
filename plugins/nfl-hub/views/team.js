@@ -13,6 +13,7 @@ import {
 } from '../core/espn-team.js';
 import { parseRosterInjuries } from '../core/espn-league.js';
 import { teamByAbbr, logoPath } from '../core/config.js';
+import { teamColor } from '../core/player-visuals.js';
 import { imageUrl } from '../../plugin-sdk.js';
 
 const state = {
@@ -85,16 +86,21 @@ export function renderTeam(s = state) {
   let html = '<div style="padding:10px 20px 0">'
     + '<button class="badge" data-act="nav" data-view="standings">← Standings</button></div>';
 
-  html += `<div class="panel" style="border-color:${esc(t.primary ?? 'var(--line)')}">`
-    + '<div class="panel-body" style="display:flex;align-items:center;gap:16px">'
-      + `<img src="${esc(t.logo)}" alt="" style="width:64px;height:64px">`
+  // ⚠️ A TEAM PAGE IS THE ONE SURFACE WHERE A CLUB'S COLOUR IS THE SUBJECT, and
+  // this was a grey panel with a logo in it — the club's own primary sat in `t`
+  // and was spent on a 1px border. `teamColor()` lifts near-black primaries, so
+  // the four clubs whose primary is effectively black still get a band.
+  const meta = [t.record, t.standingSummary, t.conf ? `${t.conf} ${t.div}` : null]
+    .filter(Boolean).map(esc).join(' · ');
+  html += `<div class="tm-band" style="--tc:${esc(teamColor(t.abbr))}">`
+    // ⚠️ The badge again, big and faint, BEHIND the name. Texture, never a second
+    // signal — the same badge is already legible at full strength beside it.
+    + `<img class="tm-wm" src="${esc(t.logo)}" alt="" aria-hidden="true" onerror="this.remove()">`
+    + '<div class="tm-band-in">'
+      + `<img class="tm-badge" src="${esc(t.logo)}" alt="" onerror="this.remove()">`
       + '<div>'
-        + '<div style="font-family:var(--f-display);font-size:24px;font-weight:800">'
-          + `${esc(t.fullName)}</div>`
-        + '<div style="font-size:12px;color:var(--text-3)">'
-          + [t.record, t.standingSummary, t.conf ? `${t.conf} ${t.div}` : null]
-            .filter(Boolean).map(esc).join(' · ')
-        + '</div>'
+        + `<div class="tm-name">${esc(t.fullName)}</div>`
+        + (meta ? `<div class="tm-meta">${meta}</div>` : '')
       + '</div>'
     + '</div></div>';
 

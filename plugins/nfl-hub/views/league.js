@@ -2,7 +2,8 @@
 //
 // Pure render plus enter/leave. Data arrives via a module-level state object that
 // enter() populates through the shared cache; render() never fetches.
-import { chip, panel, badge, stateMsg, esc, errorPane} from '../core/ui.js';
+import { chip, badge, stateMsg, esc, errorPane} from '../core/ui.js';
+import { teamColor } from '../core/player-visuals.js';
 import { fmtClock, ordinalDown } from '../core/format.js';
 import { cache, TTL } from '../core/cache.js';
 import { fetchScoreboard, urls } from '../core/espn-client.js';
@@ -55,26 +56,42 @@ function statusText(g) {
   }
 }
 
+/**
+ * One game on the slate.
+ *
+ * ⚠️ EACH SIDE CARRIES ITS OWN CLUB COLOUR, which this card had none of while the
+ * hero directly above it is built almost entirely out of it. On a full Sunday
+ * slate of sixteen cards, the abbreviation is a three-letter word you have to
+ * READ; the colour is the thing that lets you find your team without reading.
+ * `teamColor()` lifts near-black primaries, which is why it is used rather than
+ * the raw value — four clubs would otherwise get an invisible rail.
+ */
 export function gameRow(g) {
   const live = g.state === 'in';
+  const side = (t, other, meta) => `<div class="sb-row gm-side" style="--tc:${esc(teamColor(t?.abbr))}">`
+    + chip(t, { showRecord: false })
+    + `<span class="sc num ${scoreCls(t, other, g.state)}">${esc(t?.score ?? '')}</span>`
+    + `<span class="sb-meta">${esc(meta)}</span>`
+    + '</div>';
   // No sparkline here: a trend needs per-game win-probability history, which is one
   // extra fetch per card and would blow the proxy budget on a 16-game slate. The trend
   // lives in Game Center, where exactly one game is open.
   return `<button class="game-card${live ? ' live' : ''}" data-act="game" data-game="${esc(g.id)}">`
-    + '<div class="sb-row">'
-      + chip(g.away, { showRecord: false })
-      + `<span class="sc num ${scoreCls(g.away, g.home, g.state)}">${esc(g.away?.score ?? '')}</span>`
-      + `<span class="sb-meta">${esc(statusText(g))}</span>`
-    + '</div>'
-    + '<div class="sb-row">'
-      + chip(g.home, { showRecord: false })
-      + `<span class="sc num ${scoreCls(g.home, g.away, g.state)}">${esc(g.home?.score ?? '')}</span>`
-      + `<span class="sb-meta">${esc(live && g.down ? ordinalDown(g.down, g.distance) : '')}</span>`
-    + '</div>'
-    + `<div style="display:flex;gap:6px;margin-top:6px">${badge(g.state)}`
+    + side(g.away, g.home, statusText(g))
+    + side(g.home, g.away, live && g.down ? ordinalDown(g.down, g.distance) : '')
+    + `<div class="gm-foot">${badge(g.state)}`
       + (g.redZone ? '<span class="badge redzone">Red zone</span>' : '')
     + '</div>'
     + '</button>';
+}
+
+/** "Week 1 · preseason", or just the week when the type is unremarkable. */
+export function slotLabel(s) {
+  const week = s?.week ?? null;
+  const type = s?.seasonType ?? null;
+  const kind = type === 'pre' ? 'preseason' : type === 'post' ? 'postseason' : '';
+  if (!week) return kind || 'this week';
+  return kind ? `Week ${week} · ${kind}` : `Week ${week}`;
 }
 
 function groupByTimeslot(games) {
@@ -95,15 +112,23 @@ export function renderLeague(s = state) {
   const hero = s.games.find((g) => g.id === s.heroId) ?? pickHeroGame(s.games);
   const groups = groupByTimeslot(s.games);
 
-  let html = hero ? renderHero(hero, { siblings: s.games, entrance: !s.settled }) : '';
-  for (const [slot, list] of groups) {
-    html += panel({
-      title: slot,
-      right: `<span class="kicker">${list.length} game${list.length === 1 ? '' : 's'}</span>`,
-      flush: true,
-      body: `<div class="game-grid">${list.map(gameRow).join('')}</div>`,
-    });
-  }
+  const first = !s.settled;
+  // ⚠️ THE SLATE GOES ON THE STAGE, under the hero it belongs to. This tab had the
+  // best surface in the plugin and then dropped straight to flat panels — the same
+  // cliff Game Center had, on the tab people land on first. One stage holds every
+  // timeslot so the day reads as one card wall rather than three stacked boxes.
+  let html = hero ? renderHero(hero, { siblings: s.games, entrance: first }) : '';
+  const slate = [...groups].map(([slot, list]) => `
+    <div class="gm-slot">
+      <div class="gm-slot-head"><h4>${esc(slot)}</h4>
+        <span class="kicker">${list.length} game${list.length === 1 ? '' : 's'}</span></div>
+      <div class="game-grid${first ? ' m-stagger' : ''}">${list.map(gameRow).join('')}</div>
+    </div>`).join('');
+  html += `<div class="stage gm-stage${first ? ' is-first' : ''}">
+    <div class="stage-head"><h3>${esc(s.games.length)} game${s.games.length === 1 ? '' : 's'}</h3>
+      <span class="stage-sub">${esc(slotLabel(s))}</span></div>
+    ${slate}
+  </div>`;
   return html;
 }
 

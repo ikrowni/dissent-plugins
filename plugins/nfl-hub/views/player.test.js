@@ -70,4 +70,28 @@ describe('renderPlayer', () => {
   it('never renders undefined', () => {
     expect(parse(renderPlayer(s)).textContent).not.toContain('undefined');
   });
+
+  // ⚠️ THE PAGE KNEW HIS CLUB AND HIS POSITION AND USED NEITHER — both were on it
+  // as plain text. The band tints by club, the pill carries the categorical
+  // position scale: the two encodings the leaders board settled on.
+  it('tints the band by club and pills the position', () => {
+    const el = parse(renderPlayer(s));
+    const band = el.querySelector('.pl-band');
+    expect(band).not.toBeNull();
+    expect(band.getAttribute('style')).toMatch(/--tc:\s*#[0-9a-f]{6}/i);
+    expect(el.querySelector('.pl-band .pv-pos')).not.toBeNull();
+    expect(el.querySelector('.pl-name').textContent).toBe(s.bio.name);
+  });
+
+  it('keeps the vitals it used to print, rather than losing them to the band', () => {
+    const txt = parse(renderPlayer(s)).querySelector('.pl-band').textContent;
+    for (const bit of [s.bio.college, s.bio.height].filter(Boolean)) {
+      expect(txt).toContain(bit);
+    }
+  });
+
+  it('survives a player with no club rather than painting an undefined colour', () => {
+    const el = parse(renderPlayer({ ...s, bio: { ...s.bio, teamAbbr: null } }));
+    expect(el.querySelector('.pl-band').getAttribute('style')).not.toMatch(/undefined/);
+  });
 });

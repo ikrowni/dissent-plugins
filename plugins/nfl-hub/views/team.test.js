@@ -102,4 +102,25 @@ describe('renderTeam', () => {
   it('never renders undefined', () => {
     expect(parse(renderTeam(s)).textContent).not.toContain('undefined');
   });
+
+  // ⚠️ A TEAM PAGE IS THE ONE SURFACE WHERE A CLUB'S COLOUR IS THE SUBJECT, and
+  // this was a grey panel with a logo in it — the club's own primary sat in the
+  // parsed team and was spent on a 1px border.
+  it('paints the band in the club’s own colour', () => {
+    const el = parse(renderTeam(s));
+    const band = el.querySelector('.tm-band');
+    expect(band).not.toBeNull();
+    expect(band.getAttribute('style')).toMatch(/--tc:\s*#[0-9a-f]{6}/i);
+    expect(el.querySelector('.tm-name').textContent).toBe(s.team.fullName);
+  });
+
+  // ⚠️ Texture, never a second signal — the same badge is legible at full
+  // strength beside it. And it removes itself rather than leaving a torn icon.
+  it('watermarks the badge behind the name, and lets it fail quietly', () => {
+    const el = parse(renderTeam(s));
+    const wm = el.querySelector('.tm-wm');
+    expect(wm).not.toBeNull();
+    expect(wm.getAttribute('aria-hidden')).toBe('true');
+    expect(wm.getAttribute('onerror')).toBe('this.remove()');
+  });
 });
