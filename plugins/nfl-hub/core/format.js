@@ -35,6 +35,34 @@ export function fmtRecord(record) {
   return record ? String(record) : '';
 }
 
+/**
+ * How long ago, in the shortest form that is still unambiguous.
+ *
+ * ⚠️ A NEWS FEED WITHOUT TIMES IS NOT A FEED. `parseNews` has always carried
+ * `published` and the view discarded it, so twenty-five headlines rendered with
+ * nothing to say whether the top one broke ten minutes or ten days ago — and in
+ * August most of them are the same syndicated "training camp: latest intel"
+ * template, which makes recency the ONLY thing distinguishing them.
+ *
+ * ⚠️ A FUTURE TIMESTAMP READS AS "just now", NOT "-3m ago". Clock skew between a
+ * viewer and ESPN's publisher is normal and small; rendering negative time makes
+ * the whole column look broken over a few seconds of drift.
+ */
+export function fmtAgo(iso, now = Date.now()) {
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const secs = Math.floor((now - t) / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
 export function fmtMoneyline(ml) {
   if (ml === null || ml === undefined) return '—';
   const n = Number(ml);

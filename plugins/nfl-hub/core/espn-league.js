@@ -115,6 +115,10 @@ export function parseNews(json) {
     headline: a.headline ?? a.title ?? '',
     blurb: a.description ?? null,
     published: a.published ?? a.lastModified ?? null,
+    // Carried because in August most of this feed is one syndicated template —
+    // "2026 <club> training camp: Latest intel" — and the writer is the only thing
+    // besides the club that distinguishes twenty of the twenty-five.
+    byline: a.byline ?? null,
     link: a.links?.web?.href ?? null,
     image: a.images?.[0]?.url ?? null,
   }));

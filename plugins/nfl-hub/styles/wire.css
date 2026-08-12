@@ -1,0 +1,166 @@
+/* styles/wire.css — News & Odds.
+ *
+ * The fourth and last of the per-tab layers, after gridiron.css (League),
+ * podium.css (Leaders) and booth.css (Game Center). The tab is two different
+ * things wearing the same chrome: a BOARD you read to decide something, and a
+ * WIRE you read to catch up. It shipped as a six-column table and twenty-five
+ * identical rows.
+ *
+ * ⚠️ ONLY THE BOARD IS LIT. The lines are the decision surface — it is why
+ * somebody opens this tab with a game about to start — and were the only thing
+ * here built from workhorse chrome alone. A feed is for reading and reads better
+ * quiet, so the wire deliberately stays off the stage. Same rule as every pass
+ * before it: everything consulted second is weighted like it.
+ *
+ * ⚠️ NO backdrop-filter AND NOTHING THAT LOOPS — the contract all four of these
+ * sheets hold, enforced by core/motion.test.js.
+ *
+ * ⚠️ THIS VIEW RE-RENDERS ONCE PER GAME, up to sixteen times in a burst, as the
+ * odds requests land one at a time. So it carries BOTH halves of the motion
+ * budget: entrances gated on `.is-first` (the arrival) and a one-shot flash on
+ * `.is-new` (the change). Get either wrong and the board restarts sixteen times.
+ *
+ * The stage surface itself is `.stage`, in primetime.css.
+ */
+
+.wr-stage { margin: 14px 20px 0; }
+.wr-board { display: grid; gap: 6px; }
+
+/* ── One game's line ───────────────────────────────────────────────────────
+ *
+ * ⚠️ A ROW, NOT A TABLE ROW, so the favourite can own a colour and the LINE can
+ * outweigh the book that quoted it. As six equal columns, "DraftKings" carried
+ * the same visual weight as the number the whole board exists for.
+ *
+ * ⚠️ Breakpoints here go against ~890px, which is what the plugin iframe measures
+ * inside a 1500px desktop window once the server rail, the channel list and the
+ * member list have taken their share. Writing them against the viewport is how
+ * booth.css shipped a two-column layout that never once applied. */
+.wr-odds {
+  display: grid; align-items: center; gap: 12px;
+  grid-template-columns: minmax(0, 1.5fr) 108px 78px 132px minmax(0, 88px);
+  padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid rgba(255,255,255,.09);
+  border-left: 3px solid var(--fav, var(--line));
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+.wr-teams { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wr-at { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+
+/* The line is the headline of the row. */
+.wr-line { display: flex; align-items: baseline; gap: 6px; font-family: var(--f-display); }
+.wr-line b {
+  font-size: 12px; font-weight: 800; letter-spacing: .1em;
+  color: var(--fav, var(--text-2));
+}
+.wr-line span { font-size: 21px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.wr-line .wr-none { font-size: 15px; color: var(--text-3); }
+
+/* Everything consulted second, weighted like it. */
+.wr-ou, .wr-ml, .wr-book {
+  font-family: var(--f-mono); font-size: 11px; color: var(--text-2);
+}
+.wr-ou i, .wr-ml i {
+  font-style: normal; font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-3); margin-right: 5px;
+}
+.wr-ml { display: flex; flex-direction: column; gap: 2px; }
+.wr-ml span { display: flex; justify-content: space-between; gap: 8px; }
+.wr-book { font-size: 9.5px; color: var(--text-3); text-align: right; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 720px) {
+  .wr-odds { grid-template-columns: minmax(0, 1fr) 96px 70px; }
+  .wr-ml, .wr-book { display: none; }
+}
+
+/* ── The wire ──────────────────────────────────────────────────────────────
+ *
+ * ⚠️ TWENTY-FIVE IDENTICAL ROWS IS NOT A FEED. Measured live in August: twenty of
+ * the twenty-five headlines were one syndicated template — "2026 <club> training
+ * camp: Latest intel, updates" — with the same blurb, the same thumbnail size and
+ * the same weight, so the single piece of real news sat among them looking
+ * exactly like the rest. The lead gets a lead's room; the rest get a list. */
+.wr-lead-a, .wr-a { display: flex; gap: 13px; color: inherit; text-decoration: none; min-width: 0; }
+.wr-lead { padding-bottom: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.wr-lead-img {
+  width: 208px; height: 124px; object-fit: cover; border-radius: var(--r-sm); flex: 0 0 auto;
+}
+.wr-lead-txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wr-lead-head {
+  font-family: var(--f-display); font-size: 22px; font-weight: 800; line-height: 1.15;
+  color: var(--text);
+}
+.wr-lead-blurb { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+
+.wr-list { display: grid; gap: 2px; }
+.wr-item { border-bottom: 1px solid rgba(255,255,255,.045); }
+.wr-item:last-child { border-bottom: 0; }
+.wr-a { padding: 8px 6px; border-radius: var(--r-sm); align-items: center; }
+.wr-thumb { width: 68px; height: 43px; object-fit: cover; border-radius: 5px; flex: 0 0 auto; }
+.wr-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wr-head { font-size: 13px; font-weight: 600; color: var(--text-2); line-height: 1.3; }
+
+/* ⚠️ THE TIMESTAMP IS THE POINT OF THIS WHOLE TIER. parseNews has always carried
+ * `published` and the view discarded it, so a reader could not tell whether the
+ * top headline broke ten minutes or ten days ago — and when twenty of them share
+ * one template, recency is the ONLY thing that separates them. */
+.wr-meta {
+  font-size: 10px; letter-spacing: .04em; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .wr-lead-a { flex-direction: column; }
+  .wr-lead-img { width: 100%; height: 160px; }
+  .wr-lead-head { font-size: 18px; }
+}
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ * Transform only, as everywhere else. */
+.wr-odds, .wr-a, .wr-lead-a {
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
+}
+.wr-odds:hover { transform: translate3d(0, -2px, 0); }
+.wr-a:hover { background: rgba(255,255,255,.04); transform: translate3d(3px, 0, 0); }
+.wr-a:hover .wr-head, .wr-lead-a:hover .wr-lead-head { color: var(--text); }
+
+/* ── Entrances (the arrival) ───────────────────────────────────────────────
+ * Gated, because this view repaints once per game as the odds land. */
+.wr-stage.is-first { animation: mRise var(--dur) var(--ease-out) both; }
+.wr-stage.is-first .wr-odds { animation: mRise var(--dur) var(--ease-out) both; }
+.wr-stage.is-first .wr-odds:nth-child(1)  { animation-delay: 60ms; }
+.wr-stage.is-first .wr-odds:nth-child(2)  { animation-delay: 90ms; }
+.wr-stage.is-first .wr-odds:nth-child(3)  { animation-delay: 120ms; }
+.wr-stage.is-first .wr-odds:nth-child(4)  { animation-delay: 150ms; }
+.wr-stage.is-first .wr-odds:nth-child(5)  { animation-delay: 180ms; }
+.wr-stage.is-first .wr-odds:nth-child(6)  { animation-delay: 210ms; }
+.wr-stage.is-first .wr-odds:nth-child(n+7) { animation-delay: 240ms; }
+.wr-wire.is-first .wr-lead { animation: mRise var(--dur) var(--ease-out) both; animation-delay: 80ms; }
+.wr-wire.is-first .wr-list { animation: mFade var(--dur) var(--ease-out) both; animation-delay: 200ms; }
+
+/* ── The flash (the change) ────────────────────────────────────────────────
+ *
+ * ⚠️ THIS IS THE HALF THAT MAKES A PROGRESSIVE BOARD LEGIBLE. Sixteen rows sit on
+ * em-dashes and fill in over several seconds; without a flash the numbers simply
+ * appear and nothing draws the eye to which one just arrived. views/news.js sets
+ * `fresh` to exactly one game id, refreshes, and clears it — so precisely one
+ * render carries the class and it lands on the row that actually changed.
+ *
+ * One-shot, `both` fill, on a row that has just been created by innerHTML. Same
+ * shape as gridiron.css's `.gr-tick.is-new`, which is the same idea for a draft. */
+.wr-odds.is-new { animation: wrLand 900ms var(--ease-out) 1 both; }
+@keyframes wrLand {
+  0%   { border-color: var(--fav, var(--gold)); background: rgba(255,182,18,.12); }
+  100% { border-color: rgba(255,255,255,.09);
+         background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012)); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * ⚠️ FINISHED, NOT STRIPPED. The favourite's rail, the line's weight, the lead's
+ * size and every timestamp are painted once, so what is left is the whole design.
+ * Only the flash has nothing to say when it cannot fade. */
+body.reduce-motion .wr-odds.is-new { animation: none; }
+body.reduce-motion .wr-odds:hover,
+body.reduce-motion .wr-a:hover { transform: none; }
