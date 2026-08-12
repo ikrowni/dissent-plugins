@@ -115,7 +115,6 @@ export function onSubmit(event) {
   const data = Object.fromEntries(new FormData(form).entries());
   const act = form.dataset.act;
   if (act === 'league-create-form') home.create(app, data);
-  else if (act === 'league-import-form') home.importLookup(app, data.query);
   else if (act === 'league-join-form') home.join(app, data.teamName);
   else if (act === 'draft-pick-form') draft.pick(app, data.playerId);
 }
@@ -125,13 +124,6 @@ export async function onAction(act, target) {
   const teamId = (league?.myTeams ?? [])[0] ?? null;
 
   switch (act) {
-    case 'lg-import-pick':
-      home.importPick(app, target.dataset.league);
-      return;
-    case 'lg-import-create':
-      home.importCreate(app);
-      return;
-
     case 'lg-tab':
       state.tab = target.dataset.tab;
       app.router.refresh();

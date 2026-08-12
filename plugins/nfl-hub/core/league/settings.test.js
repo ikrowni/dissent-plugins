@@ -1,13 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import {
   DEFAULT_SETTINGS, FORMAT, WAIVER_TYPE,
-  normalizeSettings, validateSettings, fromSleeperSettings,
+  normalizeSettings, validateSettings,
   isMultiSeason, requiresLineupSetting,
 } from './settings.js';
 
-const fx = (n) => JSON.parse(readFileSync(new URL(`../../tests/fixtures/${n}`, import.meta.url), 'utf8'));
-const league = fx('sleeper-league.json');
 
 describe('defaults', () => {
   it('are a valid league on their own', () => {
@@ -98,71 +95,6 @@ describe('format predicates', () => {
   it('knows best ball never asks for a lineup', () => {
     expect(requiresLineupSetting({ bestBall: false })).toBe(true);
     expect(requiresLineupSetting({ bestBall: true })).toBe(false);
-  });
-});
-
-// ⚠️ Against the REAL recorded league, so the enum mappings are read from data
-// rather than assumed. This league is a 12-team dynasty with FAAB and a taxi
-// squad — the shape most likely to expose a wrong enum.
-describe('fromSleeperSettings', () => {
-  const s = fromSleeperSettings(league);
-
-  it('reads the format from Sleeper’s numeric type', () => {
-    expect(league.settings.type).toBe(2);
-    expect(s.format).toBe(FORMAT.DYNASTY);
-  });
-
-  it('reads FAAB from waiver_type 2, with its budget', () => {
-    expect(league.settings.waiver_type).toBe(2);
-    expect(s.waiverType).toBe(WAIVER_TYPE.FAAB);
-    expect(s.waiverBudget).toBe(1000);
-  });
-
-  it('carries the dynasty-only settings across', () => {
-    expect(s.taxiSlots).toBe(5);
-    expect(s.taxiYears).toBe(2);
-    expect(s.maxKeepers).toBe(1);
-    expect(s.irSlots).toBe(3);
-  });
-
-  it('carries the season and transaction shape', () => {
-    expect(s.numTeams).toBe(12);
-    expect(s.playoffTeams).toBe(6);
-    expect(s.playoffWeekStart).toBe(15);
-    expect(s.tradeDeadlineWeek).toBe(12);
-    expect(s.tradeReviewDays).toBe(2);
-    expect(s.vetoVotesNeeded).toBe(6);
-  });
-
-  it('inverts Sleeper’s disable_ flags rather than copying them', () => {
-    expect(league.settings.disable_trades).toBe(0);
-    expect(s.tradesEnabled).toBe(true);
-    expect(s.addsEnabled).toBe(true);
-    expect(s.pickTradingEnabled).toBe(true);
-  });
-
-  it('brings the real scoring settings, not a preset', () => {
-    expect(s.scoring.pts_allow_14_20).toBe(1);
-    expect(s.scoring.rec).toBe(1);
-  });
-
-  it('imports the real roster shape including SUPER_FLEX', () => {
-    expect(s.rosterPositions).toContain('SUPER_FLEX');
-  });
-
-  it('produces a valid league from the real one', () => {
-    expect(validateSettings(s)).toEqual({ valid: true, errors: [] });
-  });
-
-  it('falls back to defaults rather than inventing meaning for an unknown enum', () => {
-    const weird = fromSleeperSettings({ settings: { type: 99, waiver_type: 99 } });
-    expect(weird.format).toBe(FORMAT.REDRAFT);
-    expect(weird.waiverType).toBe(DEFAULT_SETTINGS.waiverType);
-  });
-
-  it('survives an empty or missing league object', () => {
-    expect(fromSleeperSettings(null).numTeams).toBe(12);
-    expect(fromSleeperSettings({}).format).toBe(FORMAT.REDRAFT);
   });
 });
 

@@ -6,8 +6,9 @@
 // ⚠️ THE KNOB LIST IS TAKEN FROM A REAL SLEEPER LEAGUE, not designed from
 // scratch. Every field below exists because a recorded 12-team dynasty league
 // actually carries it, which is how we avoid discovering a missing rule in
-// week 9. Our names are our own (readable camelCase); `fromSleeperSettings`
-// maps Sleeper's snake_case onto them so an existing league can seed a new one.
+// week 9. Our names are our own (readable camelCase); the Sleeper field they came
+// from is recorded near the bottom of this file, because the parity programme
+// still reads Sleeper's settings screens even though nothing imports from them.
 
 import { PPR_SCORING } from './scoring.js';
 import { splitRosterPositions } from './slots.js';
@@ -200,75 +201,35 @@ export function validateSettings(settings) {
 }
 
 /**
- * Map a Sleeper league's `settings` + `scoring_settings` + `roster_positions`
- * onto a native config, so an existing league can seed a new one.
+ * ⚠️ `fromSleeperSettings` USED TO LIVE HERE, and it is gone deliberately.
  *
- * ⚠️ SLEEPER'S NUMERIC ENUMS ARE NOT GUESSES — they are read from a recorded
- * league: `type` 0/1/2 is redraft/keeper/dynasty, and `waiver_type` 2 is FAAB.
- * Anything unrecognised falls back to the default rather than inventing meaning.
+ * It mapped a Sleeper league's `settings` onto ours so one could seed another. It
+ * was wired to a "bring your Sleeper league across" button on 2026-08-12 and both
+ * were removed hours later by the same product decision: **Sleeper is where this
+ * hub gets its DATA — stat lines and the week — and is never something a user is
+ * asked to touch.** Everything a manager can do on Sleeper is meant to be doable
+ * here, natively. A missing rule is a feature to build, not a thing to import.
  *
- * ⚠️ THIS PRODUCED SETTINGS THE SERVER REFUSES, on every real league tried, until
- * 2026-08-12. It had no caller, so nothing had ever run its output through
- * `validateSettings` — which `league:create` does, and then refuses on. Measured
- * against the two live leagues on the QA account, BOTH came back invalid:
+ * ⚠️ IT WAS ALSO BROKEN THE ENTIRE TIME IT EXISTED, which is the better reason not
+ * to keep dead mappers around. It had no caller, so its output had never once been
+ * run through `validateSettings` — and when it finally was, EVERY real league came
+ * back invalid. **A mapper with no caller has never been checked against the thing
+ * it maps into.**
  *
- *   'maxKeepers has no meaning in a redraft league'   ← both
- *   'vetoVotesNeeded (6) exceeds numTeams (4)'        ← the 4-team league
+ * The field knowledge it encoded is kept, because the parity programme still needs
+ * to read Sleeper's own settings screens and know what they mean:
  *
- * Both were faults here, not in the validator, and both are fixed inline below.
- * The lesson is the general one: a mapper with no caller has never been checked
- * against the thing it maps INTO.
+ *   settings.type          0 redraft · 1 keeper · 2 dynasty
+ *   settings.waiver_type   0 rolling · 1 reverse standings · 2 FAAB
+ *   league_average_match   our `medianMatchup`
+ *   reserve_slots/taxi_*   our `irSlots` / `taxiSlots` / `taxiYears`
+ *   disable_trades/adds    inverted into our `tradesEnabled` / `addsEnabled`
+ *   roster_positions       our `rosterPositions`, same strings
+ *   scoring_settings       our `scoring`, same keys
+ *
+ * ⚠️ TWO TRAPS IN THAT PAYLOAD, both measured on live leagues and both worth
+ * knowing before anyone reads Sleeper's settings again:
+ *   · `max_keepers: 1` is shipped on REDRAFT leagues, where it means nothing.
+ *   · `veto_votes_needed` is often ABSENT, so a default of 6 can exceed the team
+ *     count of a small league and make a veto unreachable.
  */
-export function fromSleeperSettings(sleeperLeague) {
-  const s = sleeperLeague?.settings ?? {};
-  const format = { 0: FORMAT.REDRAFT, 1: FORMAT.KEEPER, 2: FORMAT.DYNASTY }[s.type] ?? FORMAT.REDRAFT;
-  const multiSeason = format === FORMAT.KEEPER || format === FORMAT.DYNASTY;
-
-  // ⚠️ SLEEPER SHIPS `max_keepers: 1` ON REDRAFT LEAGUES, where it means nothing —
-  // measured on both live leagues, each `type: 0` and each carrying it. Copying
-  // that residue through is what made every import invalid, because a redraft
-  // league with keepers is a contradiction `validateSettings` rightly rejects.
-  const maxKeepers = multiSeason ? (s.max_keepers ?? 0) : 0;
-
-  // ⚠️ CLAMPED, AND THE OVERFLOW WAS OURS. Sleeper omits `veto_votes_needed`
-  // entirely on both live leagues, so the fallback below is what produced 6 — in a
-  // 4-team league, a veto threshold nobody can ever reach. Importing a rule that
-  // cannot be satisfied is not fidelity; it silently turns trade vetoes off.
-  const vetoVotesNeeded = Math.min(
-    s.veto_votes_needed ?? DEFAULT_SETTINGS.vetoVotesNeeded,
-    s.num_teams ?? DEFAULT_SETTINGS.numTeams,
-  );
-  const waiverType = { 0: WAIVER_TYPE.ROLLING, 1: WAIVER_TYPE.REVERSE_STANDINGS, 2: WAIVER_TYPE.FAAB }[s.waiver_type]
-    ?? DEFAULT_SETTINGS.waiverType;
-
-  return normalizeSettings({
-    name: sleeperLeague?.name ?? DEFAULT_SETTINGS.name,
-    format,
-    bestBall: Boolean(s.best_ball),
-    numTeams: s.num_teams ?? DEFAULT_SETTINGS.numTeams,
-    rosterPositions: sleeperLeague?.roster_positions ?? DEFAULT_SETTINGS.rosterPositions,
-    scoring: sleeperLeague?.scoring_settings ?? DEFAULT_SETTINGS.scoring,
-
-    startWeek: s.start_week ?? DEFAULT_SETTINGS.startWeek,
-    playoffTeams: s.playoff_teams ?? DEFAULT_SETTINGS.playoffTeams,
-    playoffWeekStart: s.playoff_week_start ?? DEFAULT_SETTINGS.playoffWeekStart,
-    medianMatchup: Boolean(s.league_average_match),
-
-    waiverType,
-    waiverBudget: s.waiver_budget ?? DEFAULT_SETTINGS.waiverBudget,
-    waiverClearDays: s.waiver_clear_days ?? DEFAULT_SETTINGS.waiverClearDays,
-    waiverDayOfWeek: s.waiver_day_of_week ?? DEFAULT_SETTINGS.waiverDayOfWeek,
-    tradeDeadlineWeek: s.trade_deadline ?? DEFAULT_SETTINGS.tradeDeadlineWeek,
-    tradeReviewDays: s.trade_review_days ?? DEFAULT_SETTINGS.tradeReviewDays,
-    vetoVotesNeeded,
-    tradesEnabled: !s.disable_trades,
-    pickTradingEnabled: Boolean(s.pick_trading),
-    addsEnabled: !s.disable_adds,
-
-    irSlots: s.reserve_slots ?? 0,
-    taxiSlots: s.taxi_slots ?? 0,
-    taxiYears: s.taxi_years ?? 0,
-    maxKeepers,
-    draftRounds: s.draft_rounds ?? DEFAULT_SETTINGS.draftRounds,
-  });
-}
