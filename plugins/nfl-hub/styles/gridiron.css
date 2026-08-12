@@ -136,12 +136,20 @@
  * to say. Nothing is hidden with display:none — that is what would move the board. */
 .gr-tick.is-quiet { background: rgba(8,12,19,.4); }
 
-/* ⚠️ ONE-SHOT. `1` iteration, `both` fill — it lands and stays landed. The class is
- * only ever emitted on the render where the run was first detected. */
-.gr-tick.is-new { animation: grTickFlash 700ms var(--ease-out) 1 both; }
+/* ⚠️ ONE-SHOT, AND WITH NO FILL MODE. The class is only ever emitted on the render
+ * where the run was first detected.
+ *
+ * This carried `both` and a hard-coded closing background, which a filled
+ * animation then holds FOREVER — so a strip that was `is-quiet` as well as
+ * `is-new` would have had its quieter background permanently replaced by the loud
+ * one the moment the flash finished. Latent here (a new run means the ticker has
+ * something to say, so the two rarely coincide) and live in wire.css, where the
+ * identical shape erased the favourite's team rail on every odds row. Fading from
+ * a `from` keyframe with no fill lets the element return to its OWN background,
+ * whichever that is. */
+.gr-tick.is-new { animation: grTickFlash 700ms var(--ease-out) 1; }
 @keyframes grTickFlash {
-  0%   { background: rgba(139,28,43,.55); }
-  100% { background: rgba(8,12,19,.75); }
+  from { background: rgba(139,28,43,.55); }
 }
 
 /* ── Board + feed ──────────────────────────────────────────────────────────── */

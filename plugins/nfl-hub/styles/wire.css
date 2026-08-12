@@ -148,13 +148,21 @@
  * `fresh` to exactly one game id, refreshes, and clears it — so precisely one
  * render carries the class and it lands on the row that actually changed.
  *
- * One-shot, `both` fill, on a row that has just been created by innerHTML. Same
- * shape as gridiron.css's `.gr-tick.is-new`, which is the same idea for a draft. */
-.wr-odds.is-new { animation: wrLand 900ms var(--ease-out) 1 both; }
+ * ⚠️ NO FILL MODE, AND IT TOUCHES NOTHING BUT `background`. This first shipped as
+ * `1 both` with a `border-color` keyframe, and a filled animation holds its final
+ * keyframe FOREVER — so the moment a row's flash finished, that keyframe's
+ * `border-color` permanently overrode the `border-left: 3px solid var(--fav)`
+ * above and the favourite's rail went grey. It survived reduced motion (where the
+ * animation never runs) and died everywhere else, which is exactly how comparing
+ * the two live turned it up: the same row measured `rgba(255,255,255,.09)` normally
+ * and `rgb(0,133,202)` — Carolina blue — under `reduce`.
+ *
+ * Without a fill mode the row simply returns to its own styles when the flash
+ * ends, so the rail cannot be clobbered and the base rule stays the one source of
+ * the row's appearance. */
+.wr-odds.is-new { animation: wrLand 900ms var(--ease-out) 1; }
 @keyframes wrLand {
-  0%   { border-color: var(--fav, var(--gold)); background: rgba(255,182,18,.12); }
-  100% { border-color: rgba(255,255,255,.09);
-         background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012)); }
+  from { background: rgba(255,182,18,.14); }
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────────

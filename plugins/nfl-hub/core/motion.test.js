@@ -426,6 +426,27 @@ describe('the motion contract', () => {
     expect(missing).toEqual([]);
   });
 
+  // ⚠️ A FILLED ANIMATION HOLDS ITS FINAL KEYFRAME FOREVER, which makes it a way
+  // to permanently override a rule it was only meant to decorate. wire.css shipped
+  // `.wr-odds.is-new { animation: wrLand … 1 both }` with a `border-color`
+  // keyframe, and every row's rail went grey the moment its flash finished — the
+  // favourite's team colour, gone, permanently, on a one-shot "flash". It survived
+  // reduced motion, where the animation never runs, so the two states disagreed.
+  //
+  // The rule: a one-shot state flash may not carry a fill mode AND may not touch a
+  // property its own base rule sets.
+  it('no one-shot state flash holds its final keyframe over its base rule', () => {
+    const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const f of readdirSync(join(root, 'styles')).filter((n) => n.endsWith('.css'))) {
+      const css = strip(readFileSync(join(root, 'styles', f), 'utf8'));
+      for (const m of css.matchAll(/\.[\w-]+\.is-new[^{}]*\{([^{}]*)\}/g)) {
+        const decl = m[1];
+        if (!/\banimation\b/.test(decl)) continue;
+        expect(`${f}: ${decl.trim()}`).not.toMatch(/\b(both|forwards)\b/);
+      }
+    }
+  });
+
   it('the guard tells a bare timer apart from a method that shares its name', () => {
     // ⚠️ THE FALSE POSITIVE THAT ALMOST WIDENED THE ALLOWLIST. views/league.js calls
     // app.scheduler.setInterval(ms) to set the poll cadence. Excusing that file
