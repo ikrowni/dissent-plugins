@@ -6,11 +6,107 @@
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 2,
-  "context": ["channel"],
+  "context": [
+    "channel"
+  ],
   "url": "https://plugins.dissent.chat/plugins/rl-hub/plugin.html",
-  "declared_permissions": ["fetch:external"],
-  "allowed_fetch_domains": ["api.tracker.gg", "ballchasing.com"],
+  "declared_permissions": [
+    "fetch:external"
+  ],
+  "allowed_fetch_domains": [
+    "api.tracker.gg",
+    "ballchasing.com"
+  ],
   "config_schema": null,
-  "categories": ["gaming", "rocket-league"],
-  "sdk_version": "1"
+  "categories": [
+    "gaming",
+    "rocket-league"
+  ],
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "blue-team.png",
+      "sha256": "016ad667ece7190c07920e30e77b9a7e787b0f99ee940bbc2d301f03e158916d"
+    },
+    {
+      "url": "red-team.png",
+      "sha256": "b396ec19b43e6ea2b818aeb9d3b870a9f084324893b7e42ffb3efc01f2e3f419"
+    },
+    {
+      "url": "rl-companion-install.ps1",
+      "sha256": "17f3dc9d45ddb0eacd3a544cda0d26133e65a9f281389b28c046a90cd8833fa5"
+    },
+    {
+      "url": "rl-companion.js",
+      "sha256": "c76591ffd41ab9017fc887d5d71a7322941422ec821d6db4043df29ae3ddea10"
+    },
+    {
+      "url": "rl-hub-leaderboard.js",
+      "sha256": "f20abb1de3ebbd3b6b8e9d44431d37d66688358b49dcf61a18328d7b341546e7"
+    },
+    {
+      "url": "rl-hub-main.js",
+      "sha256": "a4bbdb85ebe121b58ef59ae3e37fa0ca41aec4e80a20dbc561ca9a48be16bcd8"
+    },
+    {
+      "url": "rl-hub-register.js",
+      "sha256": "1e0fa3f233daab1f0b184d0917fad2b1ed070d625e73dfd509fe0730eb6792d3"
+    },
+    {
+      "url": "rl-hub-styles.css",
+      "sha256": "e0e5289bebc5e0fc35ccff843639543c0ec85c6e2953e895805fbc89f36d5779"
+    },
+    {
+      "url": "rl-hub-tournament.js",
+      "sha256": "750054a0cc1650ad56c40e9a6cc9ddc7612defd0d6d21aaab83b67037b1d2219"
+    },
+    {
+      "url": "rl-hub-versus-overlay.js",
+      "sha256": "81bb090f78a43ff7276eb652f3948c60e0bbe853343d6313a79a543063f0a46c"
+    },
+    {
+      "url": "rl-hub-versus.js",
+      "sha256": "943cde7d6aa7d3d2593ecefb7914080a4e151033af315607213526f2b43ce952"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2",
+      "sha256": "aa01966de3f608a765a172237a3ffc6161fe4c7e3870b1a904dc6437e54c4e24"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3jWuZEC.woff2",
+      "sha256": "62fc8c02419c40cbccb8aff2de806999b1c4015936f4371d7055f7f223882f07"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3nWuZEC.woff2",
+      "sha256": "92a1a5a866f6a16935b798f5f676f55a45dc66df2b05c416fab1951e6fa7467e"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3bWuQ.woff2",
+      "sha256": "3787a5a419171630e6890cfa47c4da067474d005cd0ff8dc11ec090fdc3ee2b8"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3jWuZEC.woff2",
+      "sha256": "9d351bd9222bfab90f943850f8039aa73cdb40e0a6cfe4127308a48bef59d5f5"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3nWuZEC.woff2",
+      "sha256": "6c554f2decc277ef760244c5ee6b5a85840862966e2ad4d02a1bdcdfefb9afa2"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B47b1z3bWuQ.woff2",
+      "sha256": "2515494e8cc2ca07c86ea78766cfa104b796aa6ed5d66821c01d51dbb0b52bce"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B47b1z3jWuZEC.woff2",
+      "sha256": "22539b785b3cbcee08e0722ff37fa16a18e71e4482d9078f7da79da1258e7614"
+    },
+    {
+      "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B47b1z3nWuZEC.woff2",
+      "sha256": "87b35049bcb491c02a45d740cb88abd709e73cda023fbe5e28eefbff6649cdfe"
+    },
+    {
+      "url": "vendor/fonts/barlow-condensed.css",
+      "sha256": "69aa5cade66b51ffa47f1c30ccc74442034753ebdced9c69191cba4d7c78cd1b"
+    }
+  ]
 }

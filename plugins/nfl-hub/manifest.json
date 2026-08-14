@@ -2,7 +2,7 @@
   "id": "nfl-hub",
   "name": "NFL Hub",
   "version": "2.33.0",
-  "description": "A full NFL broadcast center \u2014 live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
+  "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -35,5 +35,539 @@
     "size": 2538136,
     "signature": "bd57e00165c969af1aa382385b95735b5c4c3e03066b2c8c6c4abf64e8d8b3a68e9174243e6f42d818f6a81fbf57814990b1b51fab2956354077055e0300bd0b"
   },
-  "sdk_version": "1"
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "assets/draft-ranking.json",
+      "sha256": "b256837dbf1a2d30f3262732397f3eba20eb522615b877d32e354c4a82bf8ad2"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-600-latin-ext.woff2",
+      "sha256": "aef7edf54f79a5329fbca9c065b56dcec3852c680d58cf89a9ef2db6940ca4b3"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-600-latin.woff2",
+      "sha256": "215a93c696f442034a46fbb382958f753fda60e30490683aeea6b235fcbb2b66"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-700-latin-ext.woff2",
+      "sha256": "9d351bd9222bfab90f943850f8039aa73cdb40e0a6cfe4127308a48bef59d5f5"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-700-latin.woff2",
+      "sha256": "3787a5a419171630e6890cfa47c4da067474d005cd0ff8dc11ec090fdc3ee2b8"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-800-latin-ext.woff2",
+      "sha256": "22539b785b3cbcee08e0722ff37fa16a18e71e4482d9078f7da79da1258e7614"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-800-latin.woff2",
+      "sha256": "2515494e8cc2ca07c86ea78766cfa104b796aa6ed5d66821c01d51dbb0b52bce"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed.css",
+      "sha256": "2145011cb12b38c5e62d8d0833963b9089b61892c76e0601e0392915ff035cb1"
+    },
+    {
+      "url": "assets/logos/ari.png",
+      "sha256": "8bbdd28d748389b22efde16cb1da4eaa6383780de9a1b2219df770166b424866"
+    },
+    {
+      "url": "assets/logos/atl.png",
+      "sha256": "57ea8604c246f931789eeabc76177534bb26bd8702346d9c1ebbaa70ce235ca1"
+    },
+    {
+      "url": "assets/logos/bal.png",
+      "sha256": "927dd2721fc700aa95fed813a3a1128f78b19a9ca054893a3f0c64a30c93ab5a"
+    },
+    {
+      "url": "assets/logos/buf.png",
+      "sha256": "f4b4b4c7ce00819afad40c83cc937f001a6730666198aec91d7c3c69f77b293b"
+    },
+    {
+      "url": "assets/logos/car.png",
+      "sha256": "150270cd73432418ffe589dbc56b3fae00ad6ea239656aeecf685aa5ca075d1c"
+    },
+    {
+      "url": "assets/logos/chi.png",
+      "sha256": "443e2b31de716abb3d16a02634bcfaf94a4d9ff162886825697b16f8868c2dee"
+    },
+    {
+      "url": "assets/logos/cin.png",
+      "sha256": "68234bf3c683099fa13fdb7c87072f07e5aa02eb8c1b3ac87013fef8c3d93b2e"
+    },
+    {
+      "url": "assets/logos/cle.png",
+      "sha256": "b42bc32a3b339d5b3b87b57dce61f35bc710fc4d5e2dbc046f2d0f9b2340458a"
+    },
+    {
+      "url": "assets/logos/dal.png",
+      "sha256": "8e13828e5576434b736e88458c94596f947a23811c5edd2fc8cf0330f0929c6e"
+    },
+    {
+      "url": "assets/logos/den.png",
+      "sha256": "efaf957b0c1222a88a2de79a5ba4748f44b386d151f10c11f346dfc484428489"
+    },
+    {
+      "url": "assets/logos/det.png",
+      "sha256": "d5ce075266074cb19b6955d766cf6d22312792610c51d4fca3da918e9489c456"
+    },
+    {
+      "url": "assets/logos/gb.png",
+      "sha256": "9fafbb0fb924dd10c262db412059a60cea1ee561b32b68f47eac7ce5ad29d799"
+    },
+    {
+      "url": "assets/logos/hou.png",
+      "sha256": "2dc9b11a0f58faceef637bbc3d21fe16b9c22fc87e8a8359c8b26a1cb526d4f5"
+    },
+    {
+      "url": "assets/logos/ind.png",
+      "sha256": "050efb9ac13a90d6c43d7bb2e810b66755cac155bf8388835c3100b4b1c55c30"
+    },
+    {
+      "url": "assets/logos/jax.png",
+      "sha256": "b7167a278f9da1d478911676478d2c994b9c99dc318351f65e338b7bd0c6df00"
+    },
+    {
+      "url": "assets/logos/kc.png",
+      "sha256": "f270415d1c637e8fa568b47a9427443d81d26a326f9b555aa47cb23b26bc122e"
+    },
+    {
+      "url": "assets/logos/lac.png",
+      "sha256": "5e7ed8ca107ff8d8979522f7c35f06938d068d969d7e5b49f2f603ccd379ef1f"
+    },
+    {
+      "url": "assets/logos/lar.png",
+      "sha256": "ea592e3a5872d18997819df33da12414474fe9498f9f6071fb978d674184d7eb"
+    },
+    {
+      "url": "assets/logos/lv.png",
+      "sha256": "38e83dfe2a6d22f635285f531fad01fa96ce64f86d2c0b475580dc86d1278b96"
+    },
+    {
+      "url": "assets/logos/mia.png",
+      "sha256": "97eef96395c6dcc30cb3888340230787b5a6ef36a8efbf8b46275d708bb7c8f8"
+    },
+    {
+      "url": "assets/logos/min.png",
+      "sha256": "65744f63fe716d938151c93ba285f431c93ce2a94c823e359cd466ad35a79f2e"
+    },
+    {
+      "url": "assets/logos/ne.png",
+      "sha256": "dc7a8e128250a77b71777e05496b527db360522d641c4e9ec435d591d2bc9b25"
+    },
+    {
+      "url": "assets/logos/no.png",
+      "sha256": "92defb44f796882b837fa9ec1f24cc7fa7f98892929908f406350cd2ca04d04e"
+    },
+    {
+      "url": "assets/logos/nyg.png",
+      "sha256": "b0959d25076b3410a5f327acab58f581f7c25bf68264f714c9b746bf7d67760e"
+    },
+    {
+      "url": "assets/logos/nyj.png",
+      "sha256": "340988e586de57806e935102de075bdc46531d31df66247ac5736a6feb2c6074"
+    },
+    {
+      "url": "assets/logos/phi.png",
+      "sha256": "7f1ea687bc59daf979bfca2f6bc3ac8e7e65ba631ae0beb01e607cb2e02378d4"
+    },
+    {
+      "url": "assets/logos/pit.png",
+      "sha256": "bacd285ba016a51b98294d8c43aec1a1d276da7c09a79396adf8341e3ebf411f"
+    },
+    {
+      "url": "assets/logos/sea.png",
+      "sha256": "871fa29fcf4aed90db2f3fe2c62f418a6d320887e09ba8f824d245c576ac3d79"
+    },
+    {
+      "url": "assets/logos/sf.png",
+      "sha256": "e2e44b6e4a14b6e6f83e0827438626a9f34668c68eb59cba8dd5b72185cb08f4"
+    },
+    {
+      "url": "assets/logos/tb.png",
+      "sha256": "3f5ad5daf40924e5ad46685dac7be91759f4aa80739ae62932e0b65279853ae0"
+    },
+    {
+      "url": "assets/logos/ten.png",
+      "sha256": "51d15368653fe3479d9a22c17a99d58c1ec0231c8b2533a9137410e03498dd16"
+    },
+    {
+      "url": "assets/logos/wsh.png",
+      "sha256": "618e1f6ec5f0114e9d7b7241941abb2d42f34c1faa0d5e0bbbf81da024e6c5a1"
+    },
+    {
+      "url": "assets/players.index.json",
+      "sha256": "460720b80c4abb7eb5e5452e95bb052f91d7c7701959922ed096e128678b7974"
+    },
+    {
+      "url": "core/app.js",
+      "sha256": "f7c9ecb997d09b0534c1633596e281004115f6e975d8a3bbb04ee22d41a888b9"
+    },
+    {
+      "url": "core/cache.js",
+      "sha256": "79814a1daa113e5f85bebc573ade2893caa99a3ef64a7e84a10a345d534c6e30"
+    },
+    {
+      "url": "core/config.js",
+      "sha256": "f0f0fb4f290d06ec3349290f0c7da425b5e5958714c1f2f3166e25c3a8d9f92a"
+    },
+    {
+      "url": "core/draft-intel.js",
+      "sha256": "7cbf38e862122ca7ce492d5ad8bcce98427b24eb29113733560c3f4c66b87e07"
+    },
+    {
+      "url": "core/draft-ranking.js",
+      "sha256": "92d59b2c567e2088f4b3e494f9863878a7a92c5534b72e192ff83dce63ceb50d"
+    },
+    {
+      "url": "core/espn-client.js",
+      "sha256": "dcc9e3a8cc0a2cf9a77508db91630f4125d63b7b7a90c0e30d396383f5b6aa50"
+    },
+    {
+      "url": "core/espn-game.js",
+      "sha256": "fefdf7d247740b80c2b9b17767a97e16ad98ed8b078a14d09015358eb252990a"
+    },
+    {
+      "url": "core/espn-league.js",
+      "sha256": "a3cfce9b367738a32a3d1cb4ddded01bb330852682e957a6c3b3b8ee920fea9d"
+    },
+    {
+      "url": "core/espn-team.js",
+      "sha256": "19c802f5ef645f7ddd70e8133456e17bac78e0cd196c4afa21c6cb5acf4c049a"
+    },
+    {
+      "url": "core/format.js",
+      "sha256": "b83ec3c843a9c1500f7b46f421dd7a97752a0ece2732d7d614967b7504833048"
+    },
+    {
+      "url": "core/http.js",
+      "sha256": "ffc12198a184ff341968599d94c02cbdbbf2f31a31b7fac564dc5a3dcfabeba8"
+    },
+    {
+      "url": "core/image-crop.js",
+      "sha256": "3bb5b5237929eca172b66266da3d7504d382d8f55fff201ca9edd942b464a6e5"
+    },
+    {
+      "url": "core/league-api.js",
+      "sha256": "d76107d86314cd25dd062566decacd24843a0515896d3f45c6b5f249402ed348"
+    },
+    {
+      "url": "core/league/autosubs.js",
+      "sha256": "49fdd787c194281abfb3423df94e6cc44172172eb40a3231bca6920e5a102f1e"
+    },
+    {
+      "url": "core/league/awards.js",
+      "sha256": "7539568ba96c847af27cb81030475f5807b1942655ea92ec9ce1013a6e173d55"
+    },
+    {
+      "url": "core/league/bracket-resolve.js",
+      "sha256": "e8dbdd8d9785b64979d36b50f1aa52e81d40cc5839d506ee8755a488bfc191d8"
+    },
+    {
+      "url": "core/league/commish.js",
+      "sha256": "76795d079f1336274afa26dcbaed81cfd63cf8029999c42ce7dde2f265ac20f6"
+    },
+    {
+      "url": "core/league/draft-order.js",
+      "sha256": "287d99e9ab3deb5f2744170489f945e26943a86f1da64615edb23aed1b4fa716"
+    },
+    {
+      "url": "core/league/draft-pool.js",
+      "sha256": "a3f0268fb0d150315444f1a04142299a30d7ef9b3531f2e77632f54787d39d25"
+    },
+    {
+      "url": "core/league/draft.js",
+      "sha256": "f98323c2646d598396086df242671d798a564e2277e6a53416fd73730e2f6bca"
+    },
+    {
+      "url": "core/league/keepers.js",
+      "sha256": "79ef1c5da7b89dfdc2e6714a1b70ff9ceb73ad72538e70cbeaf37e7b79528ace"
+    },
+    {
+      "url": "core/league/lineup.js",
+      "sha256": "bb5a6e43969279d142b9755e6e211ef23d4f6325060fa7707067ad295fd8fca9"
+    },
+    {
+      "url": "core/league/power-adapter.js",
+      "sha256": "a80c4bdfaa4848511fca24c3493a45ef2956ff6c378c47ddc657cbf2a4d0a59e"
+    },
+    {
+      "url": "core/league/recap.js",
+      "sha256": "d18abf846bb96ef80e58b747d7487c2bf69ded75d14137b1d258524379ea7616"
+    },
+    {
+      "url": "core/league/rosters.js",
+      "sha256": "436adb97e1cf56402dc0ec8fb19050f05d6c0c74c7ad2e3cd456f53880939257"
+    },
+    {
+      "url": "core/league/schedule.js",
+      "sha256": "86c5192615bd3a04a30d78d53d6b7dd7907a4fafa6351d032060b0ccc5cb39cc"
+    },
+    {
+      "url": "core/league/score-backoff.js",
+      "sha256": "ba5e5c1def0066b42e60a9db3540f577e0a491cf8fadd1c05e4452853d7ac1ed"
+    },
+    {
+      "url": "core/league/scoring.js",
+      "sha256": "529a58345f4b19b1fe40411ebc88b9d796ab908cea110ff203157c6715e6d002"
+    },
+    {
+      "url": "core/league/season-clock.js",
+      "sha256": "082d4d516d406a0e7205424822db6ddaf36d8a912bfd59ade7a6b3623ae9b7a3"
+    },
+    {
+      "url": "core/league/settings.js",
+      "sha256": "2a9b79b733d51c1d66d41ceab345ea0e047678bc5a3c83402f88da406f70738c"
+    },
+    {
+      "url": "core/league/slots.js",
+      "sha256": "3a3354f993a4a3d4c6540ba702db9cb006315c1bacf9d7eb275e389a2cda8482"
+    },
+    {
+      "url": "core/league/team-identity.js",
+      "sha256": "ffff195e8f8b00748b5d6ab077bcf1e681c179ffb31e7c59f629505ae3f4588d"
+    },
+    {
+      "url": "core/league/trade-block.js",
+      "sha256": "1c12402bd2d32631f5d31a8c9ed9ab84c350a6c97d98db18fb34aa07d248236e"
+    },
+    {
+      "url": "core/league/trades.js",
+      "sha256": "73df24ecf456e590203a6e26712615bfb92a6e659a9c76152238ccbd18917f3d"
+    },
+    {
+      "url": "core/league/waiver-wire.js",
+      "sha256": "aaef2622a8f74dddeeefb75d4ef6002365bfc3f619c0c8fdae34777ad6007c2c"
+    },
+    {
+      "url": "core/league/waivers.js",
+      "sha256": "02f2931f7b53ab01fb3cac555b7903264d6b898c76e5f11fac0f84ae5d3ebcc7"
+    },
+    {
+      "url": "core/mock-draft.js",
+      "sha256": "49ea18c3b1a2f6dad9b1c71aa7d30ea6988f692c9635ca98134d44d9aecb4935"
+    },
+    {
+      "url": "core/motion.js",
+      "sha256": "259ed91ecb948c66dcc5651d4a32bb2e15a4f430b167e2dafb801cecbcc8431c"
+    },
+    {
+      "url": "core/nfl-state.js",
+      "sha256": "acaa2b5beb215906d7f405bc4af3cd6eb1e0e9b120f929643ee58618af90d50a"
+    },
+    {
+      "url": "core/opponent-strength.js",
+      "sha256": "b5a281171ca44b0a732d2d5b9b09e76d7ac02647b9c59f4e18fcb649a8c02ec8"
+    },
+    {
+      "url": "core/player-index.js",
+      "sha256": "ce9ef25e3157c14d6ce4007ed22855f092e48b0ede5b3bea97205f307f065a05"
+    },
+    {
+      "url": "core/player-visuals.js",
+      "sha256": "9aa3d70fe7375f56dbfd7c1fe7fa690a3244deee256f89aa66abff6d0e2654bb"
+    },
+    {
+      "url": "core/players.js",
+      "sha256": "816368f30c5f98d0568eb1f6639a15ff0c5d340f6af7328ceb77b73152023671"
+    },
+    {
+      "url": "core/playoff-odds.js",
+      "sha256": "04b650515aede880b1084aa2333653e70dd30fadf2052f9e4920e5661c24f749"
+    },
+    {
+      "url": "core/power.js",
+      "sha256": "4a0cd63432b4521f499f9a0fbcafd8d4aea9acf71e5591278f83c6be4c07c96e"
+    },
+    {
+      "url": "core/replay.js",
+      "sha256": "3c80bc4905731accb5abf246a0509c802084d4e87aed5b312acf1d223c65f2e9"
+    },
+    {
+      "url": "core/scheduler.js",
+      "sha256": "82adca44bedfc03f5117621a3a6aba00af11d2d779868bb87e7cdf6734f085ab"
+    },
+    {
+      "url": "core/store.js",
+      "sha256": "249b71375d3429ac01d89e7fe5866533dcd91b5ac41811edf90d26eae51c04e6"
+    },
+    {
+      "url": "core/team-images.js",
+      "sha256": "922d3ece09ec53d2e7acdf799be034eb239508bf2da5e2044f5d5534a2d59453"
+    },
+    {
+      "url": "core/team-visuals.js",
+      "sha256": "107f22d4eabccef11133d120258e64c0990954311eea2d3f3a040325e093d496"
+    },
+    {
+      "url": "core/trending.js",
+      "sha256": "0aeca46f86462e625b6c2498c03dfe824d06f4ed50fe77ae27e3b212e8139fe2"
+    },
+    {
+      "url": "core/ui.js",
+      "sha256": "c5c57fbe93ee9f38d4f66de0a1d39efe3b3555bfcb0d360a121cf5778df1ca4c"
+    },
+    {
+      "url": "scripts/build-draft-ranking.mjs",
+      "sha256": "eec83ed8481c8586c1d052c2efe545dc0b97b246e720436be83d1ad0d1b93994"
+    },
+    {
+      "url": "scripts/build-player-index.mjs",
+      "sha256": "0d3d69318b65e60b9281e4719cb37d096bbbc8aebb8b0ed630892abf944fdc0e"
+    },
+    {
+      "url": "scripts/fetch-fonts.mjs",
+      "sha256": "e477cc8e63d30f72229a6a23d6e6526d4a65a39b13d1a52775fb3ea9acc58d4f"
+    },
+    {
+      "url": "scripts/fetch-logos.mjs",
+      "sha256": "5eea6f5004009fa638ffb2f526684feffc87262ac14a5fb05c9e20c982fff90e"
+    },
+    {
+      "url": "scripts/record-fixtures.mjs",
+      "sha256": "c4d390d399ebcbd5d4096f4fd4bb678a9d4b0207eaf9dd760a9380b9f8d9f0cb"
+    },
+    {
+      "url": "styles/base.css",
+      "sha256": "4abc063dac22f7258b508541e6607e6ea58427a50ae7be4465bb24e40707a019"
+    },
+    {
+      "url": "styles/booth.css",
+      "sha256": "5ed502a8fc2005585464a3f50b8049598d49ec3556ead0632f74b269020c4574"
+    },
+    {
+      "url": "styles/clubhouse.css",
+      "sha256": "2586fd2e0db40cb9f5ed17e8f7ae382ccda5798a9e4eca459ad83ae6cdf8a39d"
+    },
+    {
+      "url": "styles/controlroom.css",
+      "sha256": "468e174cb40fecd0c99b3351f00305aab10abafea1f93bafb9053dd764c116b7"
+    },
+    {
+      "url": "styles/gridiron.css",
+      "sha256": "4153394dfcf186a56ffe65966744094775f694ece58c173b156eab91e924d18e"
+    },
+    {
+      "url": "styles/league.css",
+      "sha256": "a5243b7aff148b2a5e76c91b23f419ac27715017aaaea412e157f7ec1f405fc2"
+    },
+    {
+      "url": "styles/ledger.css",
+      "sha256": "4d06d17ea74da1702c2d425d281fac1d50a50b4c4a23ed6af060950ed0c2d85e"
+    },
+    {
+      "url": "styles/marquee.css",
+      "sha256": "84ecdbe9b2d96da27ef7e3905c3a948a8d5be7357cd5f68dc82ba306ca511487"
+    },
+    {
+      "url": "styles/motion.css",
+      "sha256": "ac887ca299817ef61c9e590d54a032f5ea827afb6d97b84f7667797c5b7d00eb"
+    },
+    {
+      "url": "styles/podium.css",
+      "sha256": "a977ed84a8dd50119a3f5a9c7cfc9c01ab5dd81b43a887d7ab43eaa4d8f4e1cc"
+    },
+    {
+      "url": "styles/primetime.css",
+      "sha256": "1d27b5b5352870cd1cd82eacd34875fc3a9c878e3e5493d7dc95bbfb0f2a9709"
+    },
+    {
+      "url": "styles/stadium.css",
+      "sha256": "a76b1bdfd73dd64e5282d27177cb69076a7ec5cd0c9484338b6002789e20b07e"
+    },
+    {
+      "url": "styles/wire.css",
+      "sha256": "03b7aa252e1d2d43b330f01556cfec2b30ee963e0096c0b4c269a51ca3856db9"
+    },
+    {
+      "url": "views/crop-dialog.js",
+      "sha256": "0f677c299063fdd2109f3aa67e49a1f616a93829716f4fcf934db659f3bf4e7c"
+    },
+    {
+      "url": "views/draft-board.js",
+      "sha256": "6e363ce9cc3409235659a0290a5795378e8c6608c039c77a49ecf82182cb90fe"
+    },
+    {
+      "url": "views/game-box.js",
+      "sha256": "53991d83159d3477a9127ff2db43230eca6c4470a41a71cbae16495887035073"
+    },
+    {
+      "url": "views/game-drive.js",
+      "sha256": "adc054560b931a3fec798e782ec2aedeb086b08d1354b3d4f9f7f97061b9e7e8"
+    },
+    {
+      "url": "views/game-scorebug.js",
+      "sha256": "f191770ddecdec92a8074492cf692663f1678a5f0e947a30b6553ee21923ab48"
+    },
+    {
+      "url": "views/game-winprob.js",
+      "sha256": "3fe9c5698e0054b63298dd997992a6bd86fa0ccc18eea7d1d8963e8abab9e6eb"
+    },
+    {
+      "url": "views/game.js",
+      "sha256": "e3ea978867b1384bef199d940c456ce470ba56c9034ea09779fade8172123c08"
+    },
+    {
+      "url": "views/leaders.js",
+      "sha256": "75895dfe4d727bfe858e26656b5492946be36bba1ce30247c2b6e35f3249dd87"
+    },
+    {
+      "url": "views/league-coowners.js",
+      "sha256": "0bade67a9e15537a3d71e2640c2e3b03557c797eb8696c9dda18d9c14e60fda8"
+    },
+    {
+      "url": "views/league-draft.js",
+      "sha256": "666f33ff8cd562365fcde0fe776a35b0a881094c598abe647e7641a3003e5bbe"
+    },
+    {
+      "url": "views/league-home.js",
+      "sha256": "c29b0d5d6eb3f79660847ac23cd8931be06781261f396d4c7cb2afd7afde324f"
+    },
+    {
+      "url": "views/league-identity.js",
+      "sha256": "c5584b13b40b04f608b0eb072be76c80f7b4a3f59e130d5a063c87a8117218cb"
+    },
+    {
+      "url": "views/league-matchup.js",
+      "sha256": "64b806d16e0800a62a1e936cb82a35740a9f28e702edc7d65d149dc7f8d50842"
+    },
+    {
+      "url": "views/league-mock.js",
+      "sha256": "6bf0804d9c54d125dc3f4f75e9ac35f35f481ba95fa06445c41e51a6174b7f09"
+    },
+    {
+      "url": "views/league-moves.js",
+      "sha256": "d994a4d935a30c5bc36b7528c9f324f263e8c8413b8e0c8be5c6fad8469697b4"
+    },
+    {
+      "url": "views/league-roster.js",
+      "sha256": "3e11cb76d85905ef03dd361cd85958c1ac16ae1603c00c98739d56219ffe31df"
+    },
+    {
+      "url": "views/league-section.js",
+      "sha256": "0e21fed1a1c35a520b1a5aaaaa4042e7ca07141180e02806ac350f267dddd0da"
+    },
+    {
+      "url": "views/league.js",
+      "sha256": "c46bb324ca38b945612161ddd5e918229ff1ba2a92e05bc2375d0fb53b3ee9ee"
+    },
+    {
+      "url": "views/news.js",
+      "sha256": "3220828551a3a86f5c45bb8d10e8f8c37bd6cabda3f5aa186b77445c8b59e3f7"
+    },
+    {
+      "url": "views/player.js",
+      "sha256": "868f17c3a05366276c1ac8bcabbd01325fc5fbde67dde62dfdadb76ee8f1f544"
+    },
+    {
+      "url": "views/standings.js",
+      "sha256": "eefaddfe9bd516eb20de13cba092c4da0fd5c3ce3a622898dde53a0719e8daed"
+    },
+    {
+      "url": "views/team.js",
+      "sha256": "421249662c201546fabaec50a0f4960e903cb835f8cee0f6bff22c2ba8773733"
+    }
+  ]
 }

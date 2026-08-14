@@ -6,11 +6,28 @@
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 2,
-  "context": ["channel"],
+  "context": [
+    "channel"
+  ],
   "url": "https://plugins.dissent.chat/plugins/clips-gallery/plugin.html",
-  "declared_permissions": ["clips:gallery"],
+  "declared_permissions": [
+    "clips:gallery"
+  ],
   "allowed_fetch_domains": [],
   "config_schema": null,
-  "categories": ["media", "community"],
-  "sdk_version": "1"
+  "categories": [
+    "media",
+    "community"
+  ],
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "gallery-logic.mjs",
+      "sha256": "10a0cb3a4c9a8cdb75af1a01ea9e5c9e8ef9d1e2f9afdb4ea5acba4da9bc422e"
+    },
+    {
+      "url": "smoke.mjs",
+      "sha256": "b98ae9b85822a7d2eba91781a2938e7ad1b40ad9f22a21527829bb099de731d4"
+    }
+  ]
 }

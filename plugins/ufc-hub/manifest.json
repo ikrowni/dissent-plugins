@@ -37,5 +37,155 @@
     "sports",
     "mma"
   ],
-  "sdk_version": "1"
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "assets/fonts/barlow-condensed-600-latin-ext.woff2",
+      "sha256": "aef7edf54f79a5329fbca9c065b56dcec3852c680d58cf89a9ef2db6940ca4b3"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-600-latin.woff2",
+      "sha256": "215a93c696f442034a46fbb382958f753fda60e30490683aeea6b235fcbb2b66"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-700-latin-ext.woff2",
+      "sha256": "9d351bd9222bfab90f943850f8039aa73cdb40e0a6cfe4127308a48bef59d5f5"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-700-latin.woff2",
+      "sha256": "3787a5a419171630e6890cfa47c4da067474d005cd0ff8dc11ec090fdc3ee2b8"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-800-latin-ext.woff2",
+      "sha256": "22539b785b3cbcee08e0722ff37fa16a18e71e4482d9078f7da79da1258e7614"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed-800-latin.woff2",
+      "sha256": "2515494e8cc2ca07c86ea78766cfa104b796aa6ed5d66821c01d51dbb0b52bce"
+    },
+    {
+      "url": "assets/fonts/barlow-condensed.css",
+      "sha256": "2145011cb12b38c5e62d8d0833963b9089b61892c76e0601e0392915ff035cb1"
+    },
+    {
+      "url": "core/app.js",
+      "sha256": "ca33ca75739e915171fc5481b40777d5a058c485304946f31aea745cb900961c"
+    },
+    {
+      "url": "core/cache.js",
+      "sha256": "b3dfebe63de2272b719643ef31094b6c23daab9e506784244695fe92dc842cfe"
+    },
+    {
+      "url": "core/config.js",
+      "sha256": "36e60546a036ef5add07921db4581dbf92716eaeed3f978a5561b1d36014db83"
+    },
+    {
+      "url": "core/espn-athletes.js",
+      "sha256": "fbe4c675f724e1666e1662c5736dc0b56a537d0aeaa6aba0fa871e29b110af44"
+    },
+    {
+      "url": "core/event-index.js",
+      "sha256": "e04c1af2899cb9df7a2ff549fb583603ab3ef7a28d0f2ef0ea7fd8763c3168a5"
+    },
+    {
+      "url": "core/fight-state.js",
+      "sha256": "2baf5e6f40a806dae8fd2dfa9606930fc23e0cae8a63c2c615ed098c68ed54af"
+    },
+    {
+      "url": "core/fight-timeline.js",
+      "sha256": "a7e0292f713010bec128192a7c92a5c661178a50871147c515707eb04d6fe544"
+    },
+    {
+      "url": "core/format.js",
+      "sha256": "93d149b3d9c1c051fbf1221224e1c76f835d181e7faa011ac11b2e98797d3663"
+    },
+    {
+      "url": "core/http.js",
+      "sha256": "0a2ea19cc3d4782626eb28d576834be83ac85cee9cf8786b3be5e55704202f7a"
+    },
+    {
+      "url": "core/motion.js",
+      "sha256": "259ed91ecb948c66dcc5651d4a32bb2e15a4f430b167e2dafb801cecbcc8431c"
+    },
+    {
+      "url": "core/polymarket.js",
+      "sha256": "319bb0134130d638d0676667c6b677acf25e2739ee4846a9984f9880ebf47490"
+    },
+    {
+      "url": "core/schedule.js",
+      "sha256": "c30cc6d9bcf087db7e496b65e8cebde1856518b8fc540f2bc2a526d8e2fd43d5"
+    },
+    {
+      "url": "core/scheduler.js",
+      "sha256": "82adca44bedfc03f5117621a3a6aba00af11d2d779868bb87e7cdf6734f085ab"
+    },
+    {
+      "url": "core/store.js",
+      "sha256": "ed7b2dddcc3512554f91bc8525bae0042449f6c789aa5a472de09f6ad1e8c7de"
+    },
+    {
+      "url": "core/ufc-athlete.js",
+      "sha256": "80a1b8394ff28e637ad785c0a807c7d69d6462252db3eebfad06d36fc23b88a0"
+    },
+    {
+      "url": "core/ufc-cf-client.js",
+      "sha256": "ffacd7620a471e8b9a9fb998e0e4e002796a9e2f853da20e5487fa248df03d24"
+    },
+    {
+      "url": "core/ufc-cloudfront.js",
+      "sha256": "1bd7d3ce5906ae4eca4e55de56ea052286ffa0b9842f3f483a42adf6b6981611"
+    },
+    {
+      "url": "core/ufc-espn.js",
+      "sha256": "b0bfc0c2d522aebd1bdb4698fb267f6645f6593c057760db15945ebaf65732f9"
+    },
+    {
+      "url": "core/ufc-event-page.js",
+      "sha256": "ce1070b70d811cc0d18866acda2c1e8fa29908d2adb3053fa08cf8ade1100ccd"
+    },
+    {
+      "url": "core/ufc-links.js",
+      "sha256": "0e42bb551e209b82847952c77a1c9217cf7d4a954c7157d3c207485e566a295d"
+    },
+    {
+      "url": "core/ufc-news.js",
+      "sha256": "42ad206c1f96ad2d239018c4d5bcd5a240531f29a5d9b3b4a1ea861ad9e5cef0"
+    },
+    {
+      "url": "core/ui.js",
+      "sha256": "7e8d26fcf5c09875db5de8b8bd40035fa929e1412655d646338d3a694ecb8d5d"
+    },
+    {
+      "url": "styles/base.css",
+      "sha256": "4a777fc2a110cf397b1a5cfaa143465fc3544f657a0645b0d4579d26529132f0"
+    },
+    {
+      "url": "styles/fight.css",
+      "sha256": "50173764e85b10db677f7f4877878ef217e14a8d9be5425ef175a3ab7cdf0511"
+    },
+    {
+      "url": "views/card.js",
+      "sha256": "26c9506aabd0500312f21fbbd2b8e253d37e0ccb78b98e25de784dcb31a5b717"
+    },
+    {
+      "url": "views/fighter.js",
+      "sha256": "ccf2c04b12c9c13bca34ecaac1ec717e55fb8098c4d463ecda236a81a24c7b0d"
+    },
+    {
+      "url": "views/news.js",
+      "sha256": "62fe7e5d1fb433ad6e3350b5cfd7d4bc88c04b26755879249c4b317eabe729f0"
+    },
+    {
+      "url": "views/pbp.js",
+      "sha256": "9de75e5c3e2cba8f5d9c5672f93020a8c971c230bd356841da47e6491c42b5f6"
+    },
+    {
+      "url": "views/schedule.js",
+      "sha256": "1079613845ff412aac3ebc8932e96e05ab0156466bd5ac993611cd9d44e9a49a"
+    },
+    {
+      "url": "views/versus.js",
+      "sha256": "b9c37b8dce38c18d9a2305d7b15f94fa2341cc779854d6b18fc931e9399ad75d"
+    }
+  ]
 }

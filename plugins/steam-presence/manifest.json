@@ -17,5 +17,6 @@
     "gaming",
     "profile"
   ],
-  "sdk_version": "1"
+  "sdk_version": "1",
+  "resources": []
 }

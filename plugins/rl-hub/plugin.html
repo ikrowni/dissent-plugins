@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <base href="https://app.dissent.chat/plugins/">
   <title>Rocket League Hub</title>
-  <link rel="stylesheet" href="rl-hub/rl-hub-styles.css?v=16">
+  <link rel="stylesheet" href="rl-hub-styles.css?v=16">
 </head>
 <body>
   <!-- Screens -->
@@ -49,7 +48,7 @@
             <button class="btn-companion" id="btn-copy-token" onclick="copyAuthToken()">Copy Token only</button>
           </div>
           <p class="companion-hint hidden" id="install-hint">Open <strong>PowerShell</strong> (Win + R → powershell) and paste. It installs Node check, downloads the script, enables the RL Stats API, and sets it to auto-start on login.</p>
-          <p class="companion-cmd"><strong>Manual:</strong> <a class="companion-link" href="rl-hub/rl-companion.js" download="rl-companion.js">Download script</a> · then run: <code>node rl-companion.js --server … --token … --server-id … --channel-id …</code></p>
+          <p class="companion-cmd"><strong>Manual:</strong> <a class="companion-link" href="rl-companion.js" download="rl-companion.js">Download script</a> · then run: <code>node rl-companion.js --server … --token … --server-id … --channel-id …</code></p>
         </div>
       </details>
     </div>
@@ -90,6 +89,6 @@
       + (e.reason?.message||String(e.reason)) + '\n' + (e.reason?.stack||'') + '</pre>';
   });
   </script>
-  <script type="module" src="rl-hub/rl-hub-main.js?v=5"></script>
+  <script type="module" src="rl-hub-main.js?v=5"></script>
 </body>
 </html>

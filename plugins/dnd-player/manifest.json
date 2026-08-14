@@ -6,11 +6,50 @@
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
-  "context": ["sidebar"],
+  "context": [
+    "sidebar"
+  ],
   "url": "https://plugins.dissent.chat/plugins/dnd-player/plugin.html",
-  "declared_permissions": ["storage:user", "realtime", "identity"],
+  "declared_permissions": [
+    "storage:user",
+    "realtime",
+    "identity"
+  ],
   "allowed_fetch_domains": [],
   "config_schema": null,
-  "categories": ["gaming", "vtt"],
-  "sdk_version": "1"
+  "categories": [
+    "gaming",
+    "vtt"
+  ],
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "dnd-player-combat.js",
+      "sha256": "4aeeb523a3336618cb3313117ffa071ed1f1205fc56159f4ff0aab21643a3b34"
+    },
+    {
+      "url": "dnd-player-levelup.js",
+      "sha256": "5ef2d82f1c4336097d943a38bcbe3fde5c6b3af9c78eb0bdec404f0bf875a052"
+    },
+    {
+      "url": "dnd-player-main.js",
+      "sha256": "77f5611438dbeb6f4a6fe2e33d4cf4f6f48ce95c936d1c59829af7479ba7fecb"
+    },
+    {
+      "url": "dnd-player-resources.js",
+      "sha256": "d3d5c180ee08edc19a331b24f7301976d3e7091c949a324c5eb4bb195b0834ad"
+    },
+    {
+      "url": "dnd-player-sheet.js",
+      "sha256": "072382c5f9e660d90b938e9a6d696d7ba745d670d96d1616c4119345d38482d3"
+    },
+    {
+      "url": "dnd-player-spells.js",
+      "sha256": "9ee58eabb8ef345fefd129862608d8616f1e325c0e1e2583d0b3bcd1bee614b5"
+    },
+    {
+      "url": "dnd-player-styles.css",
+      "sha256": "f786a696b31b1c224ed2628cf5f3841ba0191386f0ba895c9ba2299852c86434"
+    }
+  ]
 }

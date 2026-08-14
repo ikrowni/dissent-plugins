@@ -6,11 +6,37 @@
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 2,
-  "context": ["sidebar"],
+  "context": [
+    "sidebar"
+  ],
   "url": "https://plugins.dissent.chat/plugins/polymarket-hub/plugin.html",
-  "declared_permissions": ["wallet", "storage:local", "fetch:external"],
-  "allowed_fetch_domains": ["gamma-api.polymarket.com", "clob.polymarket.com"],
+  "declared_permissions": [
+    "wallet",
+    "storage:local",
+    "fetch:external"
+  ],
+  "allowed_fetch_domains": [
+    "gamma-api.polymarket.com",
+    "clob.polymarket.com"
+  ],
   "config_schema": null,
-  "categories": ["betting", "finance"],
-  "sdk_version": "1"
+  "categories": [
+    "betting",
+    "finance"
+  ],
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "pm-clob.js",
+      "sha256": "9170161d16c5fd34f28adc63843afc18dd96e797939432d3f8f05f7b1c78f5fa"
+    },
+    {
+      "url": "vendor/coinbase.ico",
+      "sha256": "d31e282ffb3bb5dd30928d26363a710a61d3909673cfb551f10195517c34e30b"
+    },
+    {
+      "url": "vendor/metamask-fox.svg",
+      "sha256": "cd6a85f5cdc27987405eddb33f8c620f9a3701d0925704070e6b013ddd80255e"
+    }
+  ]
 }
