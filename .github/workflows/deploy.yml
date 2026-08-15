@@ -7,6 +7,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # `actions: read` is what lets the re-bless step below find the last SUCCESSFUL
+    # deploy to diff from. Without it that lookup fails and the step falls back to the
+    # previous push, which is the behaviour that let dnd-hub ship unblessed.
+    permissions:
+      contents: read
+      actions: read
     steps:
       # ⚠️ FULL HISTORY. The re-bless step diffs this push against its predecessor
       # to work out which plugin directories changed; the default shallow clone
@@ -125,8 +131,37 @@ jobs:
       # here, because a fourth step is one somebody eventually skips. It refreshes
       # only plugins already mirrored, and never starts mirroring anything.
       - name: Re-bless changed plugins in the registry
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          BEFORE="${{ github.event.before }}"
+          # ⚠️ THE BASE IS THE LAST SUCCESSFUL DEPLOY, NOT THE PREVIOUS PUSH.
+          #
+          # The rsync above ships the WHOLE tree, but this step only re-blesses what a
+          # diff says changed. Those two disagree the moment a run fails: a push that
+          # dies in the checks above still lands its commits on main, so the NEXT push
+          # diffs against them and never re-blesses the plugins they touched — whose new
+          # bytes the next successful rsync then publishes anyway.
+          #
+          # That is not hypothetical. On 2026-08-15 a push moving dnd-hub's SRD data
+          # failed the resource-declaration gate; the follow-up push fixed two other
+          # manifests, so `event.before` covered only those two. dnd-hub's new files went
+          # live with the registry still storing the OLD build's hashes — the exact state
+          # the verify job suspends a plugin for, and suspension is a one-way door
+          # (runVerifyAll selects WHERE suspended = false, so it never re-checks).
+          #
+          # Diffing from the last SUCCESSFUL run closes it: a failed run leaves the base
+          # where it was, so the next successful deploy re-blesses everything the failed
+          # one would have. Falls back to event.before if the API cannot answer, which is
+          # the old behaviour rather than a silent re-bless of everything.
+          BEFORE=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?branch=main&status=success&per_page=1" \
+            --jq '.workflow_runs[0].head_sha' 2>/dev/null || true)
+          if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "Base: last successful deploy $BEFORE"
+          else
+            BEFORE="${{ github.event.before }}"
+            echo "Base: previous push $BEFORE (no reachable last-successful-deploy sha)"
+          fi
           # First push to a branch reports an all-zero "before"; fall back to the
           # previous commit rather than diffing against nothing and re-blessing all.
           if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
