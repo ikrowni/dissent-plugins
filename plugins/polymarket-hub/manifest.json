@@ -28,7 +28,7 @@
   "resources": [
     {
       "url": "pm-clob.js",
-      "sha256": "9170161d16c5fd34f28adc63843afc18dd96e797939432d3f8f05f7b1c78f5fa"
+      "sha256": "f8dba03b77d317b5ba7a7eedcc7227f2754f535524f7b3c33a3d500eef2ef43b"
     },
     {
       "url": "vendor/coinbase.ico",

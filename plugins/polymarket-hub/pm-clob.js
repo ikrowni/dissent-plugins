@@ -1,3 +1,28 @@
+// 🔴 DO NOT PUT THIS PLUGIN IN A REGISTRY UNTIL THE NOTE BELOW IS RESOLVED.
+//
+// This file is a SECOND, DIVERGENT implementation of the Polymarket order path. It
+// duplicates getStoredCreds, clearCreds, connectAndAuth, buildOrderParams, signOrder and
+// submitOrder from the shared `plugins/polymarket.js` — and it is missing the three things
+// that make that module safe:
+//
+//     MODE      no 'link' | 'trade' switch, so a server owner cannot choose link-out
+//     VENUES    no venue selection, so `global` vs the CFTC-regulated `us` DCM is not a
+//               decision anyone gets to make — see docs/decisions.md in the meta repo
+//     placeBet  no single choke point, so nothing arbitrates between mode and grant
+//
+// That is precisely the failure the shared module's header predicts: "the third plugin
+// ships a Bet button that ignores the setting, and it moves real money."
+//
+// ⚠️ IT IS NOT LIVE, AND THAT IS THE ONLY REASON THIS IS A COMMENT AND NOT AN OUTAGE.
+// `polymarket-hub` is absent from the registry (verified against the live node
+// 2026-08-15), so nothing renders it. Registering it as-is is what makes the gap real.
+//
+// The fix is to route through the shared module — vendored into this directory by
+// `scripts/vendor-shared.mjs`, the way ufc-hub gets `core/polymarket-trade.js` — and to
+// delete the duplicated order path here rather than keeping both. Not done in this pass
+// because it is real-money code whose network path has never executed against a live
+// venue, so it wants a deliberate session and an owner decision, not a drive-by.
+//
 // pm-clob.js — Polymarket market search + CLOB auth/order flow, entirely in-plugin.
 // Uses only general capabilities: fetch:external (node proxy), wallet.connect/balance/
 // signTypedData (host-mediated, every signature behind the host's confirm modal), and
