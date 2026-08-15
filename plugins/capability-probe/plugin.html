@@ -80,11 +80,13 @@
       if (!l || !JSON.stringify(l).includes('probe-l1')) throw new Error('list missing key: ' + JSON.stringify(l));
     });
 
-    // ---- reads (granted: channel:read, profile:read, identity, members:read) ----
-    await test('channel:read', async () => {
-      const msgs = await Dissent.getMessages({ limit: 5 });
-      if (!Array.isArray(msgs)) throw new Error('not an array');
-      return `${msgs.length} msgs`;
+    // ---- reads (granted: profile:read, identity, members:read) ----
+    // channel:read was removed from the catalog 2026-08-15 — it was the message half of
+    // the exfiltration path and nothing declared it. Asserted as REMOVED rather than
+    // deleted outright, so quietly restoring it fails the probe.
+    await test('channel:read removed', async () => {
+      if (typeof Dissent.getMessages === 'function') throw new Error('getMessages is back');
+      return 'absent';
     });
     await test('profile:read', async () => {
       const u = await Dissent.getUser();

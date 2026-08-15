@@ -15,8 +15,7 @@
     "game:telemetry"
   ],
   "allowed_fetch_domains": [
-    "api.tracker.gg",
-    "ballchasing.com"
+    "rlstats.net"
   ],
   "config_schema": null,
   "categories": [
