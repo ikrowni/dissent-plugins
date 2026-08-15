@@ -186,9 +186,14 @@ jobs:
         if: always()
         run: rm -f ~/.ssh/id_ed25519
 
+      # ⚠️ THE CANARY MUST BE A PLUGIN THIS REPO STILL SHIPS. It was event-card,
+      # which was retired on 2026-08-15 — the rsync --delete above then removes the
+      # very file this step fetches, so every future deploy fails at the last step
+      # AFTER publishing, and the re-bless it precedes looks fine. Pick a plugin
+      # with live installs, and re-point this whenever that plugin is retired.
       - name: Verify deployment
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://plugins.dissent.chat/plugins/event-card/plugin.html)
+            https://plugins.dissent.chat/plugins/clips-gallery/plugin.html)
           [ "$STATUS" = "200" ] || { echo "Deployment check failed: HTTP $STATUS"; exit 1; }
           echo "Deployment verified: HTTP $STATUS"
