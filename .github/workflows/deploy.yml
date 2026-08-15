@@ -89,6 +89,15 @@ jobs:
       #
       # An id that is not in the registry is a no-op, so a new plugin directory
       # cannot fail the deploy.
+      #
+      # ⚠️ THIS STEP ALSO RE-MIRRORS. A node that mirrors a plugin serves the bytes
+      # it copied until something refreshes them, so re-blessing on its own would
+      # publish a release the node never actually serves — and it would look
+      # correct from every angle, because the registry row, the stored hashes and
+      # the mirrored bytes would all agree with each other about the OLD build.
+      # Re-mirroring is folded into the re-bless rather than added as a fourth step
+      # here, because a fourth step is one somebody eventually skips. It refreshes
+      # only plugins already mirrored, and never starts mirroring anything.
       - name: Re-bless changed plugins in the registry
         run: |
           BEFORE="${{ github.event.before }}"
