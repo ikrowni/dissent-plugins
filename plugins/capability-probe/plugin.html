@@ -171,19 +171,14 @@
     } else {
       await expectErr('media.embed denied', 'media:embed not granted', () => raw('media.embed', { url: 'https://example.com/' }));
     }
-    if (perms.includes('identity:native')) {
-      // The driver dismisses the confirm dialog → the decline path is the assertion.
-      await expectErr('identity.exportToken confirm→declined', 'user declined',
-        () => raw('identity.exportToken', {}, 30000));
-      // The driver clicks Copy & Close (or Cancel) on the visible-command modal within 30s.
-      await test('companion.install shows command modal', () =>
-        raw('companion.install', {
-          template: "$env:PROBE_T='{{TOKEN}}'; $env:PROBE_S='{{SERVER_ID}}'; irm '{{APP_ORIGIN}}/probe.ps1' | iex",
-        }, 30000));
-    } else {
-      await expectErr('identity.exportToken denied', 'identity:native not granted', () => raw('identity.exportToken', {}));
-      await expectErr('companion.install denied', 'identity:native not granted', () => raw('companion.install', { template: 'x' }));
-    }
+    // identity:native was RETIRED 2026-08-15 along with both its primitives and the
+    // /auth/companion-token endpoint behind them. These are no longer permission-gated
+    // checks — the actions do not exist, so they must fall through to "unknown action"
+    // whether or not anything is granted. Asserting that (rather than deleting the rows)
+    // is what catches a re-introduction: a "denied" result here would mean the provider
+    // is registered again and only consent stands between a plugin and the user's token.
+    await expectErr('identity.exportToken retired', 'unknown action', () => raw('identity.exportToken', {}));
+    await expectErr('companion.install retired', 'unknown action', () => raw('companion.install', { template: 'x' }));
     await expectErr('old action names retired', 'unknown action', () => raw('auth:copy-token', {}));
     await expectErr('polymarket actions retired', 'unknown action', () => raw('polymarket:status', {}));
     if (perms.includes('wallet')) {

@@ -178,19 +178,11 @@ export async function gameTelemetryUnbind(game) {
   return request('game.telemetry.unbind', { game });
 }
 
-/** ⚠ T3: copy the user's login token to their clipboard (host confirms first). Requires 'identity:native'. */
-export async function identityExportToken() {
-  return request('identity.exportToken', {}, INTERACTIVE_TIMEOUT_MS);
-}
-
-/**
- * ⚠ T3: mint a companion token and show the user your install command with
- * {{API_BASE}} {{APP_ORIGIN}} {{TOKEN}} {{SERVER_ID}} {{CHANNEL_ID}} substituted.
- * Requires 'identity:native'.
- */
-export async function companionInstall(template, channelId) {
-  return request('companion.install', { template, channelId }, INTERACTIVE_TIMEOUT_MS);
-}
+// `identityExportToken` and `companionInstall` were removed 2026-08-15 along with the
+// identity:native permission and POST /auth/companion-token. The host no longer
+// implements either action, so calling one now fails with "unknown action". Plugins
+// wanting live game state use the gameTelemetry helpers above: the desktop app owns
+// the socket and forwards match data only, never a credential.
 
 /** Device-local KV (never leaves this browser). Requires 'storage:local' permission. */
 export async function storageLocalGet(key) {
