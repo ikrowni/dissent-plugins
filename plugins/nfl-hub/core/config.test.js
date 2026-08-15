@@ -94,11 +94,11 @@ describe('teamByAbbr', () => {
 describe('logoPath', () => {
   it('returns a local asset path, never an espncdn url', () => {
     const p = logoPath('KC');
-    expect(p).toBe('nfl-hub/assets/logos/kc.png');
+    expect(p).toBe('assets/logos/kc.png');
     expect(p).not.toContain('espncdn');
   });
   it('normalises the abbr first', () => {
-    expect(logoPath('WAS')).toBe('nfl-hub/assets/logos/wsh.png');
+    expect(logoPath('WAS')).toBe('assets/logos/wsh.png');
   });
 });
 

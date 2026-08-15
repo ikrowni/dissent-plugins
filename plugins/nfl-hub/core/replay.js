@@ -111,7 +111,7 @@ export function createReplay({ plays, drives, probabilities, stepMs = 1000 }) {
 
 /** Load a named replay's fixtures from the plugin's own origin. */
 export async function loadReplay(name, { stepMs = 1000 } = {}) {
-  const base = 'nfl-hub/tests/fixtures';
+  const base = 'tests/fixtures';
   const [plays, drives, probabilities] = await Promise.all([
     fetch(`${base}/plays-${name}.json`).then((r) => r.json()),
     fetch(`${base}/drives-${name}.json`).then((r) => r.json()),

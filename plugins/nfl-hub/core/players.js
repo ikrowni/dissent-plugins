@@ -19,7 +19,7 @@
 // fallback needs no extra fetches — it matches against data the hub already holds.
 import { normalizeAbbr } from './config.js';
 
-const ASSET = 'nfl-hub/assets/players.index.json';
+const ASSET = 'assets/players.index.json';
 
 /** Casefold, drop punctuation and generational suffixes, collapse whitespace.
  *

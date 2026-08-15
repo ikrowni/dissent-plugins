@@ -15,8 +15,8 @@ const parse = (html) => { const d = document.createElement('div'); d.innerHTML =
 
 const game = {
   id: '1', state: 'pre', startsAt: '2025-09-07T17:00Z',
-  home: { abbr: 'PHI', logo: 'nfl-hub/assets/logos/phi.png' },
-  away: { abbr: 'DAL', logo: 'nfl-hub/assets/logos/dal.png' },
+  home: { abbr: 'PHI', logo: 'assets/logos/phi.png' },
+  away: { abbr: 'DAL', logo: 'assets/logos/dal.png' },
 };
 
 describe('oddsRow', () => {

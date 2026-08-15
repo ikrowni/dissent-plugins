@@ -211,7 +211,7 @@
     },
     {
       "url": "core/config.js",
-      "sha256": "f0f0fb4f290d06ec3349290f0c7da425b5e5958714c1f2f3166e25c3a8d9f92a"
+      "sha256": "1a8f855a43268b3e03a6fa14e45b410d18c31fdc44e062be72d0f57ec4725c49"
     },
     {
       "url": "core/draft-intel.js",
@@ -371,7 +371,7 @@
     },
     {
       "url": "core/players.js",
-      "sha256": "816368f30c5f98d0568eb1f6639a15ff0c5d340f6af7328ceb77b73152023671"
+      "sha256": "7b1f3adb58fd36b1522fb0a6b2b9f77a70f5979103211b9e4bc13d2d9590d6ca"
     },
     {
       "url": "core/playoff-odds.js",
@@ -383,7 +383,7 @@
     },
     {
       "url": "core/replay.js",
-      "sha256": "3c80bc4905731accb5abf246a0509c802084d4e87aed5b312acf1d223c65f2e9"
+      "sha256": "f36af17f90b1463a1c1ddee219d6ff012a48c798f5348edbe34d091f55223cba"
     },
     {
       "url": "core/scheduler.js",
@@ -507,7 +507,7 @@
     },
     {
       "url": "views/game.js",
-      "sha256": "e3ea978867b1384bef199d940c456ce470ba56c9034ea09779fade8172123c08"
+      "sha256": "0b8819bb0036aa209baf764e4ac61b0e4890c686bc3e65fbdaf6324b6f1b04fa"
     },
     {
       "url": "views/leaders.js",

@@ -115,12 +115,12 @@ describe('legibleColor', () => {
 
 describe('chip', () => {
   const side = { abbr: 'KC', name: 'Chiefs', fullName: 'Kansas City Chiefs',
-    record: '1-0', logo: 'nfl-hub/assets/logos/kc.png' };
+    record: '1-0', logo: 'assets/logos/kc.png' };
 
   it('renders a local logo and the abbreviation', () => {
     const el = parse(chip(side));
     const img = el.querySelector('img');
-    expect(img.getAttribute('src')).toBe('nfl-hub/assets/logos/kc.png');
+    expect(img.getAttribute('src')).toBe('assets/logos/kc.png');
     expect(img.getAttribute('src')).not.toContain('espncdn');
     expect(el.textContent).toContain('KC');
   });

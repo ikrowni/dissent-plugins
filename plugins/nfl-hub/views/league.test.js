@@ -20,9 +20,9 @@ const mk = (over = {}) => ({
   down: null, distance: null, downDistanceText: null,
   timeslot: 'Sunday · 1:00 PM ET', startsAt: '2025-09-07T17:00Z',
   home: { abbr: 'PHI', name: 'Eagles', score: 0, record: '0-0',
-    logo: 'nfl-hub/assets/logos/phi.png', primary: '#06424d' },
+    logo: 'assets/logos/phi.png', primary: '#06424d' },
   away: { abbr: 'DAL', name: 'Cowboys', score: 0, record: '0-0',
-    logo: 'nfl-hub/assets/logos/dal.png', primary: '#002a5c' },
+    logo: 'assets/logos/dal.png', primary: '#002a5c' },
   ...over,
 });
 

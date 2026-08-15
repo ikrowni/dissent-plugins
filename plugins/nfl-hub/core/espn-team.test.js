@@ -62,7 +62,7 @@ describe('parseTeamRecord', () => {
     const r = parseTeamRecord(rosterRaw);
     expect(r.abbr).toBe('PHI');
     expect(r.fullName).toMatch(/Eagles/);
-    expect(r.logo).toBe('nfl-hub/assets/logos/phi.png');
+    expect(r.logo).toBe('assets/logos/phi.png');
     expect(r.conf).toBe('NFC');
     expect(r.div).toBe('East');
   });
@@ -131,7 +131,7 @@ describe('parseTeamSchedule', () => {
       expect(typeof g.id).toBe('string');
       expect(['pre', 'in', 'post']).toContain(g.state);
       expect(g.opponentAbbr === null || /^[A-Z]{2,3}$/.test(g.opponentAbbr)).toBe(true);
-      if (g.opponentLogo) expect(g.opponentLogo).toContain('nfl-hub/assets/logos/');
+      if (g.opponentLogo) expect(g.opponentLogo).toContain('assets/logos/');
     }
   });
 

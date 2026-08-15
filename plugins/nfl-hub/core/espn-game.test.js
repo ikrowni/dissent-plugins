@@ -94,7 +94,7 @@ describe('parseScoreboard', () => {
   });
 
   it('points logos at local assets', () => {
-    expect(parseScoreboard(raw).games[0].home.logo).toBe('nfl-hub/assets/logos/phi.png');
+    expect(parseScoreboard(raw).games[0].home.logo).toBe('assets/logos/phi.png');
   });
 
   it('tolerates a pregame event with no situation', () => {

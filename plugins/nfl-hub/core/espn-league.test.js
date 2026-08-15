@@ -16,7 +16,7 @@ describe('parseStandings', () => {
       expect(rows).toHaveLength(4);
       for (const r of rows) {
         expect(r.abbr).toMatch(/^[A-Z]{2,3}$/);
-        expect(r.logo).toContain('nfl-hub/assets/logos/');
+        expect(r.logo).toContain('assets/logos/');
         expect(typeof r.wins).toBe('number');
         expect(typeof r.losses).toBe('number');
       }

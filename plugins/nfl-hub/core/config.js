@@ -91,8 +91,14 @@ export function teamIdFromRef(ref) {
 /** Local asset path — deliberately NOT an espncdn url. There are only 32 logos and
  *  they repeat on every surface; the node image proxy allows 120 req/min per IP, so
  *  fetching them at runtime buys nothing and risks rate-limiting the whole plugin. */
+// ⚠️ RELATIVE TO THIS PLUGIN'S DIRECTORY, not to the plugins root. These carried an
+// `nfl-hub/` prefix until 2026-08-15, which worked only because every plugin shipped
+// `<base href=".../plugins/">`. That tag was removed so a mirrored plugin would stop
+// resolving assets against the publisher's host; the entry HTML's refs were rewritten at
+// the time and these were missed, leaving a doubled path that 404s on every host — team
+// logos rendered as empty boxes with no failing request that named the plugin.
 export function logoPath(abbr) {
-  return `nfl-hub/assets/logos/${normalizeAbbr(abbr).toLowerCase()}.png`;
+  return `assets/logos/${normalizeAbbr(abbr).toLowerCase()}.png`;
 }
 
 const ET = 'America/New_York';

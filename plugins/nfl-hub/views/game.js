@@ -137,9 +137,9 @@ function loadFromReplay(replay) {
     period: rs.period, clock: rs.clock,
     timeslot: 'Replay · DAL @ PHI 2025 wk1', broadcast: null, venue: null,
     home: { abbr: 'PHI', fullName: 'Philadelphia Eagles', score: rs.homeScore,
-      logo: 'nfl-hub/assets/logos/phi.png', primary: '#06424d', record: null },
+      logo: 'assets/logos/phi.png', primary: '#06424d', record: null },
     away: { abbr: 'DAL', fullName: 'Dallas Cowboys', score: rs.awayScore,
-      logo: 'nfl-hub/assets/logos/dal.png', primary: '#002a5c', record: null },
+      logo: 'assets/logos/dal.png', primary: '#002a5c', record: null },
     down: null, distance: null, possessionAbbr: null, redZone: false,
   };
 }

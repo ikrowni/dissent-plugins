@@ -10,9 +10,9 @@ const g = {
   possessionAbbr: 'DAL', timeslot: 'Sunday Night Football', venue: 'Lincoln Financial Field',
   broadcast: 'NBC',
   home: { abbr: 'PHI', fullName: 'Philadelphia Eagles', score: 17, record: '0-0',
-    logo: 'nfl-hub/assets/logos/phi.png', primary: '#06424d' },
+    logo: 'assets/logos/phi.png', primary: '#06424d' },
   away: { abbr: 'DAL', fullName: 'Dallas Cowboys', score: 24, record: '0-0',
-    logo: 'nfl-hub/assets/logos/dal.png', primary: '#002a5c' },
+    logo: 'assets/logos/dal.png', primary: '#002a5c' },
 };
 
 describe('wpSplit', () => {

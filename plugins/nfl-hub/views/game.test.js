@@ -8,8 +8,8 @@ const base = {
   loading: false, error: null,
   game: {
     id: '9', state: 'in', period: 3, clock: '7:42',
-    home: { abbr: 'PHI', score: 17, logo: 'nfl-hub/assets/logos/phi.png', primary: '#06424d' },
-    away: { abbr: 'DAL', score: 24, logo: 'nfl-hub/assets/logos/dal.png', primary: '#002a5c' },
+    home: { abbr: 'PHI', score: 17, logo: 'assets/logos/phi.png', primary: '#06424d' },
+    away: { abbr: 'DAL', score: 24, logo: 'assets/logos/dal.png', primary: '#002a5c' },
   },
   plays: [], drives: [], winProb: [], summary: {},
 };
