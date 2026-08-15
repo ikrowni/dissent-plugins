@@ -52,7 +52,7 @@ import { handleSDKMessage, request } from './plugin-sdk.js';
 import {
   searchMarkets, connectAndAuth, getStoredCreds, clearCreds, usdcBalance,
   buildOrderParams, signOrder, submitOrder,
-} from './polymarket-hub/pm-clob.js';
+} from './pm-clob.js';
 
 let _creds = null;      // { address, apiKey, secret, passphrase } — device-local only
 let _balance = null;

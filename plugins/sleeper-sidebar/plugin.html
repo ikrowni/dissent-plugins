@@ -117,10 +117,10 @@ body { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; background: v
 
 <script src="/sdk/v1/dissent-plugin-sdk.iife.js"></script>
 <script type="module">
-import * as API from './sleeper-sidebar/sleeper-sidebar-api.js';
+import * as API from './sleeper-sidebar-api.js';
 import { esc, renderSpinner, renderError, renderSectionHeader, renderSetupScreen, renderLeagueTabs,
          renderMatchup, renderStandings, renderTransactions, renderBracket, renderDraftInfo }
-  from './sleeper-sidebar/sleeper-sidebar-render.js';
+  from './sleeper-sidebar-render.js';
 
 // ── Inline request bridge for storage (IIFE SDK does not expose storage) ──
 const _pending = {};
