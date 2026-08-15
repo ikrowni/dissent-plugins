@@ -13,7 +13,7 @@ import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
 import { imageUrl } from '../../plugin-sdk.js';
 import { pct } from '../core/polymarket.js';
-import { canTrade, marketUrl } from '../../polymarket.js';
+import { canTrade, marketUrl } from '../core/polymarket-trade.js';
 
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.

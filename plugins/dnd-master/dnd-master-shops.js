@@ -1,7 +1,7 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260503';
-import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingShopVideo = null;   // File object for new shop upload

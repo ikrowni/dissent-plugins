@@ -1,6 +1,6 @@
 // dnd-master-logs.js — Logs tab: append-only campaign event log (max 500 entries)
 import { storageSetCompanion } from '../plugin-sdk.js';
-import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 

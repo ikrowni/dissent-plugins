@@ -27,7 +27,7 @@ import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
   dmEditExhaustion, dmEditNotes } from './dnd-master-players.js';
-import { loadHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 

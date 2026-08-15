@@ -45,6 +45,32 @@ jobs:
       - name: Check server modules match their manifests
         run: node scripts/check-server-modules.mjs
 
+      # ⚠️ THESE THREE GUARD MIRRORING, AND ALL THREE FAIL SILENTLY WITHOUT CI.
+      # Each one describes a plugin that works perfectly on THIS host and breaks on
+      # every other node — so no amount of testing against plugins.dissent.chat
+      # would ever show it. That is precisely how five plugins ended up unmirrorable
+      # and unnoticed until 2026-08-15.
+
+      # A resource that is not declared is a resource a mirror cannot enumerate, so
+      # the plugin copies its entry file and keeps loading everything else from us.
+      # The script has had a --check mode for this from the start; it was never wired
+      # in, which meant a plugin could ship files its own manifest did not mention.
+      - name: Manifests declare what the plugins actually ship
+        run: node scripts/declare-resources.mjs --all --check
+
+      # The shared modules at the plugins root are the SOURCE; each consumer imports a
+      # generated copy under its own directory. This is what keeps "one source of
+      # truth" true — polymarket.js in particular is the single choke point between a
+      # config setting and a real-money order, and a drifted copy answers differently.
+      - name: Vendored shared modules match their source
+        run: node scripts/vendor-shared.mjs --check
+
+      # Any import reaching above a plugin's own directory can never be mirrored
+      # (internal/pluginmirror.RelPath refuses it), permanently pinning that plugin to
+      # whoever published it.
+      - name: No unmirrorable imports
+        run: node scripts/check-plugin-imports.mjs
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh

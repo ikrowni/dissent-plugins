@@ -1,3 +1,11 @@
+// ⚠️ GENERATED FILE — DO NOT EDIT.
+//
+// Vendored from plugins/polymarket.js by scripts/vendor-shared.mjs.
+// Edit that file and re-run the script; `--check` fails the deploy if this copy drifts.
+//
+// It is a copy because a mirror may only serve files from under this plugin's own
+// directory, so importing '../../polymarket.js' directly would make the plugin unmirrorable.
+
 // plugins/polymarket.js — the SHARED Polymarket capability, for every plugin.
 //
 // ⚠️ NOT IMPORTED DIRECTLY. This file is the SOURCE; consumers import a generated copy
@@ -43,7 +51,7 @@
 // real order with real money. Treat first live use as a test, with a trivial amount.
 import {
   request, storageLocalGet, storageLocalSet, storageLocalDelete, INTERACTIVE_TIMEOUT_MS,
-} from './plugin-sdk.js';
+} from '../../plugin-sdk.js';
 
 export const MODE = { LINK: 'link', TRADE: 'trade' };
 

@@ -25,12 +25,16 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "rl-scraper.js",
+      "sha256": "22849157a1f0f42fdeadc840fe15f7bc11f2b09ae95278f3d372d78dc19b1282"
+    },
+    {
       "url": "rl-sidebar-main.js",
-      "sha256": "7f46f3b22bb5943e17bfcfb100f52899f3dcc971166e92b3ae97a1028b5c371a"
+      "sha256": "7d2d61f43dc83ec34804865caa85e90fc38380fd0da74bb17b1614afa5a3dddc"
     },
     {
       "url": "rl-sidebar-profile.js",
-      "sha256": "17ce9b9a90ae53d0f56a0d0006a34e1e4ef4cdd9286a4281f8211ece01f35c2c"
+      "sha256": "820a0bbdd154aea8eec5a74687c99397ec126422f7f0656737860cfc3926f816"
     },
     {
       "url": "rl-sidebar-styles.css",

@@ -1,6 +1,6 @@
 // dnd-master-triggers.js — DM sidebar tab: list triggers and audio zones (Phase 7)
 import { storageGetCompanion } from '../plugin-sdk.js';
-import { loadHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _sharedState = null;
 

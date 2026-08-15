@@ -24,16 +24,20 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "dnd-hub-shared-storage.js",
+      "sha256": "749066d5126837c1f3d84cb5256be88c565c473f561cea72988b05ada9f262d4"
+    },
+    {
       "url": "dnd-player-combat.js",
       "sha256": "4aeeb523a3336618cb3313117ffa071ed1f1205fc56159f4ff0aab21643a3b34"
     },
     {
       "url": "dnd-player-levelup.js",
-      "sha256": "5ef2d82f1c4336097d943a38bcbe3fde5c6b3af9c78eb0bdec404f0bf875a052"
+      "sha256": "76021a081041415dc72bc4b3bd50f84d97a731d79c1086caa06899612be1df3f"
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "77f5611438dbeb6f4a6fe2e33d4cf4f6f48ce95c936d1c59829af7479ba7fecb"
+      "sha256": "ab6fc7f05e541fd1cbf723aaaf9894925b1f2b2dd845f693a0d086bd0b98c8ba"
     },
     {
       "url": "dnd-player-resources.js",

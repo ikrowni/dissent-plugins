@@ -1,6 +1,6 @@
 // rl-sidebar-profile.js — profile card: ranks, stats, MMR chart, season selector
 import { esc, imageUrl } from '../plugin-sdk.js';
-import { scrapeRLStats, getPlaylistData, getSeasonNums, getSeasonLabel } from '../rl-scraper.js';
+import { scrapeRLStats, getPlaylistData, getSeasonNums, getSeasonLabel } from './rl-scraper.js';
 import { MODES } from './rl-sidebar-main.js';
 
 // ── Format helpers ────────────────────────────────────────────────────────────

@@ -1,9 +1,17 @@
+// ⚠️ GENERATED FILE — DO NOT EDIT.
+//
+// Vendored from plugins/rl-scraper.js by scripts/vendor-shared.mjs.
+// Edit that file and re-run the script; `--check` fails the deploy if this copy drifts.
+//
+// It is a copy because a mirror may only serve files from under this plugin's own
+// directory, so importing '../rl-scraper.js' directly would make the plugin unmirrorable.
+
 // rl-scraper.js — shared rlstats.net HTML scraping utilities
 //
 // ⚠️ NOT IMPORTED DIRECTLY. This is the SOURCE; rl-hub and rl-sidebar each import a
 // generated copy in their own directory, because a mirror may only serve files from under
 // a plugin's own directory. Edit here, then run `node scripts/vendor-shared.mjs`.
-import { request } from './plugin-sdk.js';
+import { request } from '../plugin-sdk.js';
 
 // ── Platform URL mapping ──────────────────────────────────────────────────────
 

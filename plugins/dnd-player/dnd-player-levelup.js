@@ -471,8 +471,8 @@ export async function applyLevelUp() {
 
   // Broadcast HP change so the hub token updates
   try {
-    const { realtimePublish } = await import('../../plugin-sdk.js');
-    const { EV } = await import('../../dnd-hub/dnd-hub-event-types.js');
+    const { realtimePublish } = await import('../plugin-sdk.js');
+    const { EV } = await import('../dnd-hub/dnd-hub-event-types.js');
     await realtimePublish(EV.HP_CHANGE, {
       type: EV.HP_CHANGE, userId: _userId, campaignId: _campaignId,
       hp: _char.hp, hpMax: _char.hpMax, source: `Level up to ${_char.level}`,

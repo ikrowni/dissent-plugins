@@ -1,7 +1,7 @@
 // dnd-master-scenes.js — Scenes tab: create, delete, load
 import { requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, genId, esc } from '../plugin-sdk.js';
 import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260502p4';
-import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingVideo = null; // File object selected but not yet uploaded

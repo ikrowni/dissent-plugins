@@ -69,7 +69,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "ca33ca75739e915171fc5481b40777d5a058c485304946f31aea745cb900961c"
+      "sha256": "892006fe1ed170a858f33533470b2b6b2d1244bbcb4c305842d83ea68104e16c"
     },
     {
       "url": "core/cache.js",
@@ -106,6 +106,10 @@
     {
       "url": "core/motion.js",
       "sha256": "259ed91ecb948c66dcc5651d4a32bb2e15a4f430b167e2dafb801cecbcc8431c"
+    },
+    {
+      "url": "core/polymarket-trade.js",
+      "sha256": "54f45ab044c1740697a38ab7be149f1235417518c0cfb73a32d436e0cbbe6c7b"
     },
     {
       "url": "core/polymarket.js",
@@ -185,7 +189,7 @@
     },
     {
       "url": "views/versus.js",
-      "sha256": "b9c37b8dce38c18d9a2305d7b15f94fa2341cc779854d6b18fc931e9399ad75d"
+      "sha256": "1e2af6643e2b2cd44c0e4d32eded67f26750520a0bdf687d1c356efa01ce214a"
     }
   ]
 }

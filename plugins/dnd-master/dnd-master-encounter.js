@@ -3,7 +3,7 @@ import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realt
 import { EV } from '../dnd-hub/dnd-hub-event-types.js';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
-import { loadHubDmCompanion, saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let encounterCreatures = [];
 let _targetDifficulty = null;

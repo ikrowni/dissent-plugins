@@ -22,7 +22,7 @@ import { parseAthlete } from './ufc-athlete.js';
 import {
   parseNews, relevantTo, cardAthleteIds, cardAthleteNames,
 } from './ufc-news.js';
-import { placeBet } from '../../polymarket.js';
+import { placeBet } from './polymarket-trade.js';
 
 export const state = {
   view: 'card',        // 'card' | 'schedule'

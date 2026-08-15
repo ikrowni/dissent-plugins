@@ -1,6 +1,6 @@
 // dnd-master-actors.js — Actors tab: custom NPC/monster builder
 import { storageSetCompanion, esc, genId } from '../plugin-sdk.js';
-import { saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingAttacks = [];

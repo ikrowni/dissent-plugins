@@ -15,7 +15,7 @@ import { setResourceState, renderResources, toggleResourcePip,
 import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpRollHP, levelUpTakeAverage, levelUpToggleSpell,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
-import { loadHubDmCompanion, saveHubDmCompanion } from '../dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let CHAR = null;
 let CAMPAIGN_ID = null;

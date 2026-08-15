@@ -1,3 +1,11 @@
+// ⚠️ GENERATED FILE — DO NOT EDIT.
+//
+// Vendored from plugins/dnd-hub-shared-storage.js by scripts/vendor-shared.mjs.
+// Edit that file and re-run the script; `--check` fails the deploy if this copy drifts.
+//
+// It is a copy because a mirror may only serve files from under this plugin's own
+// directory, so importing '../dnd-hub-shared-storage.js' directly would make the plugin unmirrorable.
+
 // dnd-hub-shared-storage.js — companion-side access to dnd-hub's sharded campaign data.
 //
 // ⚠️ NOT IMPORTED DIRECTLY. This is the SOURCE; dnd-master and dnd-player each import a
@@ -14,7 +22,7 @@
 // 'hub-dm' and write blobs dnd-hub never reads back.
 //
 // The legacy 'hub-dm' key is still read as a fallback and is never written here.
-import { storageGetCompanion, storageSetCompanion } from './plugin-sdk.js';
+import { storageGetCompanion, storageSetCompanion } from '../plugin-sdk.js';
 
 const HUB = 'dnd-hub';
 

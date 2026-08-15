@@ -1,6 +1,6 @@
 // rl-sidebar-main.js — init, own-profile load, player-selected event handling
 import { handleSDKMessage, storageGetUser, storageGetCompanion, request, realtimePublishCompanion, esc } from '../plugin-sdk.js';
-import { getSeasonNums, getPlaylistData } from '../rl-scraper.js';
+import { getSeasonNums, getPlaylistData } from './rl-scraper.js';
 import { renderProfile, renderMemberCardContent, fetchAndRenderMemberCard } from './rl-sidebar-profile.js';
 
 const MODES = [

@@ -1,6 +1,6 @@
 // rl-hub-main.js — init, storage, cache orchestration, fetch queue
 import { handleSDKMessage, storageGet, storageSet, storageGetUser, storageSetUser, realtimePublishCompanion } from '../plugin-sdk.js';
-import { scrapeRLStats } from '../rl-scraper.js';
+import { scrapeRLStats } from './rl-scraper.js';
 import { showRegisterScreen, initRegisterForm } from './rl-hub-register.js';
 import {
   initVersus, showVersus, refreshVersus, addFeedEvent,
