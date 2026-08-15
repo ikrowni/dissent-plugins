@@ -159,6 +159,25 @@ export async function voiceSetGain(userId, gain) {
   return request('voice.setGain', { userId, gain });
 }
 
+/**
+ * Live match data from a game running on the user's own machine. Requires
+ * 'game:telemetry'. Broadcasting is DESKTOP-ONLY — status() reports `desktop: false`
+ * on web and Android instead of throwing, so render a "needs the desktop app" state
+ * rather than a dead button. Watching works everywhere: once bound, the desktop app
+ * forwards events to the channel even while your frame is closed.
+ *
+ * status(game) → { desktop, supported, running, streaming, bound, channelId }
+ */
+export async function gameTelemetryStatus(game) {
+  return request('game.telemetry.status', { game });
+}
+export async function gameTelemetryBind(game, channelId) {
+  return request('game.telemetry.bind', { game, channelId });
+}
+export async function gameTelemetryUnbind(game) {
+  return request('game.telemetry.unbind', { game });
+}
+
 /** ⚠ T3: copy the user's login token to their clipboard (host confirms first). Requires 'identity:native'. */
 export async function identityExportToken() {
   return request('identity.exportToken', {}, INTERACTIVE_TIMEOUT_MS);

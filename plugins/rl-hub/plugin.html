@@ -42,13 +42,23 @@
       <details class="companion-accordion">
         <summary class="companion-summary">Live Broadcast (optional)</summary>
         <div class="companion-body">
-          <p class="companion-desc">Show a live match view in the hub for all server members while you play. The companion runs silently in the background — no terminal needed after install.</p>
+          <p class="companion-desc">Show a live match view in the hub for everyone on this server while you play. Nothing is installed — the Dissent desktop app reads the match itself, only while Rocket League is running.</p>
+
+          <p class="companion-step"><strong>Step 1 — turn on Rocket League's Stats API.</strong> Open this file in Notepad:</p>
+          <p class="companion-cmd"><code id="ini-path">Steam\steamapps\common\rocketleague\TAGame\Config\DefaultStatsAPI.ini</code>
+             <button class="btn-inline" id="btn-copy-path" onclick="copyIniPath()">Copy path</button></p>
+          <p class="companion-step">Find <code>PacketSendRate</code> and change it from <code>0</code> to <code>1</code>, then save and <strong>fully restart Rocket League</strong> — it only reads this file at launch.</p>
+          <pre class="companion-ini">[TAGame.MatchStatsExporter_TA]
+Port=49123
+WebPort=49124
+PacketSendRate=1</pre>
+          <p class="companion-note">There is no "enabled" setting — <code>PacketSendRate=0</code> is off and anything above 0 is on. 1 is plenty: Dissent sends at most one match update per second no matter what you set here, so a higher rate costs you CPU without adding anything to the hub.</p>
+
+          <p class="companion-step"><strong>Step 2 — turn on broadcasting.</strong></p>
           <div class="companion-actions">
-            <button class="btn-companion btn-install" id="btn-install-companion" onclick="installCompanion()">Install on Windows</button>
-            <button class="btn-companion" id="btn-copy-token" onclick="copyAuthToken()">Copy Token only</button>
+            <button class="btn-companion btn-install" id="btn-broadcast" onclick="toggleBroadcast()">Broadcast to this channel</button>
           </div>
-          <p class="companion-hint hidden" id="install-hint">Open <strong>PowerShell</strong> (Win + R → powershell) and paste. It installs Node check, downloads the script, enables the RL Stats API, and sets it to auto-start on login.</p>
-          <p class="companion-cmd"><strong>Manual:</strong> <a class="companion-link" href="rl-companion.js" download="rl-companion.js">Download script</a> · then run: <code>node rl-companion.js --server … --token … --server-id … --channel-id …</code></p>
+          <p class="companion-hint" id="broadcast-status">Checking…</p>
         </div>
       </details>
     </div>

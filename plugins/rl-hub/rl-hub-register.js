@@ -65,55 +65,84 @@ async function submitRegistration() {
   }
 }
 
-async function copyAuthToken() {
-  const btn = document.getElementById('btn-copy-token');
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = 'Copying…';
-  try {
-    await request('identity.exportToken', {});
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = 'Copy Auth Token'; btn.disabled = false; }, 2000);
-  } catch {
-    btn.textContent = 'Failed — try again';
-    setTimeout(() => { btn.textContent = 'Copy Auth Token'; btn.disabled = false; }, 2500);
-  }
-}
+const RL_GAME = 'rocket-league';
 
-async function installCompanion() {
-  const btn = document.getElementById('btn-install-companion');
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = 'Copying command…';
+/** Reflects desktop capability + binding state into the Live Broadcast section. */
+async function refreshBroadcastUi() {
+  const btn = document.getElementById('btn-broadcast');
+  const status = document.getElementById('broadcast-status');
+  if (!btn || !status) return;
+
+  let st;
   try {
-    await request('companion.install', {
-      channelId: getChannelId(),
-      // Host substitutes the five {{…}} placeholders and shows the full command
-      // to the user before anything reaches their clipboard.
-      template: [
-        "$env:RLC_SERVER='{{API_BASE}}'",
-        "$env:RLC_STATIC='{{APP_ORIGIN}}'",
-        "$env:RLC_TOKEN='{{TOKEN}}'",
-        "$env:RLC_SID='{{SERVER_ID}}'",
-        "$env:RLC_CID='{{CHANNEL_ID}}'",
-        "irm '{{APP_ORIGIN}}/plugins/rl-hub/rl-companion-install.ps1' | iex",
-      ].join('; '),
-    });
-    btn.textContent = '✓ Paste into PowerShell!';
+    st = await request('game.telemetry.status', { game: RL_GAME });
+  } catch {
+    btn.disabled = true;
+    btn.textContent = 'Unavailable';
+    status.textContent = 'This version of Dissent cannot broadcast matches.';
+    return;
+  }
+
+  // Web and Android answer desktop:false rather than failing — say so plainly instead
+  // of leaving a button that looks live and does nothing.
+  if (!st.desktop) {
+    btn.disabled = true;
+    btn.textContent = 'Desktop app required';
+    status.textContent = 'Broadcasting needs the Dissent desktop app. You can still watch other players\u2019 matches here on any device.';
+    return;
+  }
+
+  btn.disabled = false;
+  if (st.bound) {
+    btn.textContent = 'Stop broadcasting';
     btn.classList.add('btn-companion-success');
-    const hint = document.getElementById('install-hint');
-    if (hint) hint.classList.remove('hidden');
-    setTimeout(() => {
-      btn.textContent = 'Install on Windows';
-      btn.classList.remove('btn-companion-success');
-      btn.disabled = false;
-    }, 6000);
-  } catch {
-    btn.textContent = 'Failed — try again';
-    setTimeout(() => { btn.textContent = 'Install on Windows'; btn.disabled = false; }, 2500);
+    status.textContent = st.streaming
+      ? 'Live \u2014 sending match data to this channel.'
+      : st.running
+        ? 'Rocket League is running but not sending data yet. Check PacketSendRate in DefaultStatsAPI.ini, then restart the game.'
+        : 'On. Match data will appear here as soon as you start Rocket League.';
+  } else {
+    btn.textContent = 'Broadcast to this channel';
+    btn.classList.remove('btn-companion-success');
+    status.textContent = 'Off. Nothing is read from your computer.';
   }
 }
 
-window._rlHubSubmitReg    = submitRegistration;
-window.copyAuthToken      = copyAuthToken;
-window.installCompanion   = installCompanion;
+async function toggleBroadcast() {
+  const btn = document.getElementById('btn-broadcast');
+  const status = document.getElementById('broadcast-status');
+  if (!btn) return;
+  btn.disabled = true;
+
+  let bound = false;
+  try {
+    const st = await request('game.telemetry.status', { game: RL_GAME });
+    bound = Boolean(st.bound);
+  } catch { /* fall through to bind */ }
+
+  try {
+    if (bound) await request('game.telemetry.unbind', { game: RL_GAME });
+    else       await request('game.telemetry.bind',   { game: RL_GAME, channelId: getChannelId() });
+  } catch (err) {
+    if (status) status.textContent = (err && err.message) ? err.message : 'Could not change broadcast setting.';
+  }
+  await refreshBroadcastUi();
+}
+
+async function copyIniPath() {
+  const btn = document.getElementById('btn-copy-path');
+  const path = document.getElementById('ini-path');
+  if (!btn || !path) return;
+  try {
+    await navigator.clipboard.writeText(path.textContent.trim());
+    btn.textContent = 'Copied';
+  } catch {
+    btn.textContent = 'Select it manually';
+  }
+  setTimeout(() => { btn.textContent = 'Copy path'; }, 2000);
+}
+
+window._rlHubSubmitReg      = submitRegistration;
+window.toggleBroadcast      = toggleBroadcast;
+window.copyIniPath          = copyIniPath;
+window._rlHubRefreshBroadcast = refreshBroadcastUi;

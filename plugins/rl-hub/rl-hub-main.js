@@ -263,6 +263,9 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   const el = document.getElementById(`screen-${name}`);
   if (el) el.classList.remove('hidden');
+  // Broadcast state is host-side (is this desktop? is the game up? is it bound?), so it
+  // can change while the hub is closed — read it on every entry rather than once at load.
+  if (name === 'register') window._rlHubRefreshBroadcast?.();
 }
 
 // ── Window globals ────────────────────────────────────────────────────────────

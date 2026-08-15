@@ -501,6 +501,31 @@ details[open] .companion-summary::before { content: '▼ '; }
 .companion-hint { font-size: 10px; color: var(--text-dim); line-height: 1.5; margin: 0; padding: 6px 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); }
 .companion-link { color: var(--rl-blue); text-decoration: underline; }
 
+/* ── Live Broadcast setup (replaced the companion installer 2026-08-15) ── */
+.companion-step { font-size: 11px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+.companion-step code {
+  padding: 1px 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text-dim); font-size: 10px;
+}
+/* The ini excerpt is the one thing a user retypes by hand, so it keeps real line
+   breaks and scrolls rather than wrapping mid-key. */
+.companion-ini {
+  margin: 0; padding: 8px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-dim); font-size: 10px; line-height: 1.6;
+  overflow-x: auto; white-space: pre;
+}
+.companion-note { font-size: 10px; color: var(--text-dim); margin: 0; line-height: 1.5; }
+.companion-note code {
+  padding: 1px 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; font-size: 9px;
+}
+.btn-inline {
+  margin-left: 6px; padding: 2px 8px; font-size: 9px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text-muted);
+}
+.btn-inline:hover { color: var(--text); border-color: var(--rl-blue); }
+
 /* ── Live debug toast ── */
 .live-debug {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

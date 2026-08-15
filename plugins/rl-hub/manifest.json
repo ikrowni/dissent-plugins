@@ -11,7 +11,8 @@
   ],
   "url": "https://plugins.dissent.chat/plugins/rl-hub/plugin.html",
   "declared_permissions": [
-    "fetch:external"
+    "fetch:external",
+    "game:telemetry"
   ],
   "allowed_fetch_domains": [
     "api.tracker.gg",
@@ -33,28 +34,20 @@
       "sha256": "b396ec19b43e6ea2b818aeb9d3b870a9f084324893b7e42ffb3efc01f2e3f419"
     },
     {
-      "url": "rl-companion-install.ps1",
-      "sha256": "17f3dc9d45ddb0eacd3a544cda0d26133e65a9f281389b28c046a90cd8833fa5"
-    },
-    {
-      "url": "rl-companion.js",
-      "sha256": "c76591ffd41ab9017fc887d5d71a7322941422ec821d6db4043df29ae3ddea10"
-    },
-    {
       "url": "rl-hub-leaderboard.js",
       "sha256": "f20abb1de3ebbd3b6b8e9d44431d37d66688358b49dcf61a18328d7b341546e7"
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "d5e0287ee6e152b1c6f71c6bca42a162887629ddf7df62c94792c123fcee835c"
+      "sha256": "cc99623b79ebc9a4ad785af577fc51ded56caca648dfe587e08b77a4f5e7937b"
     },
     {
       "url": "rl-hub-register.js",
-      "sha256": "1e0fa3f233daab1f0b184d0917fad2b1ed070d625e73dfd509fe0730eb6792d3"
+      "sha256": "23aa87b64cb2b8c5a42a5909d8f79a68535757940162db272a6c9b523b7e5b7b"
     },
     {
       "url": "rl-hub-styles.css",
-      "sha256": "e0e5289bebc5e0fc35ccff843639543c0ec85c6e2953e895805fbc89f36d5779"
+      "sha256": "54dd7f44d6981e8b5c3221948aeef2d1fa8c42bc1840d973acbfc1140a4cebc1"
     },
     {
       "url": "rl-hub-tournament.js",
