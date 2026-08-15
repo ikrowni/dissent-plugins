@@ -10,7 +10,7 @@ export function setSpellState(char, saveCharFn) { _char = char; _saveChar = save
 export async function loadSRDSpells() {
   if (_srdSpells) return _srdSpells;
   try {
-    const r = await fetch(new URL('./dnd-srd/spells.json', document.baseURI).href);
+    const r = await fetch(new URL('../dnd-hub/dnd-srd/spells.json', document.baseURI).href);
     _srdSpells = await r.json();
   } catch { _srdSpells = []; }
   return _srdSpells;

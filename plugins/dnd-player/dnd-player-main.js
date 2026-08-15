@@ -1071,7 +1071,7 @@ async function startLevelUp() {
   // Load SRD data first, then start wizard (so spell/feat pickers are populated)
   let srdData = { classes: [], feats: [], spells: [] };
   try {
-    const base = new URL('../../dnd-hub/dnd-srd/', document.baseURI).href;
+    const base = new URL('../dnd-hub/dnd-srd/', document.baseURI).href;
     const [classes, feats, spells] = await Promise.all([
       fetch(base + 'classes.json').then(r => r.json()),
       fetch(base + 'feats.json').then(r => r.json()),

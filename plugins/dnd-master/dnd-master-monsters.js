@@ -13,8 +13,9 @@ export function setMonstersState({ userId }) {
 
 export async function loadSRDMonsters() {
   try {
-    const base = new URL('.', document.baseURI).href;
-    const r = await fetch(base + 'dnd-srd/monsters.json');
+    // The SRD lives in dnd-hub, which owns it — resolves while dnd-hub is mirrored here too.
+    const base = new URL('../dnd-hub/dnd-srd/', document.baseURI).href;
+    const r = await fetch(base + 'monsters.json');
     SRD_MONSTERS = await r.json();
   } catch (err) { SRD_MONSTERS = []; }
 }

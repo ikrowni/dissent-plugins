@@ -132,6 +132,38 @@
       "sha256": "35a16d58c11951fb36561483530535c667335a35a60b5307a5902a0db1a18f6a"
     },
     {
+      "url": "dnd-srd/backgrounds.json",
+      "sha256": "385b3e177bcf38a5001696ab5dee8f745c24ef9c8fbdf875f510426b6729852e"
+    },
+    {
+      "url": "dnd-srd/classes.json",
+      "sha256": "3b9ea8aac5cd800fd49a4afbb6766d4e60d010135d65783d29ab60688cede408"
+    },
+    {
+      "url": "dnd-srd/equipment.json",
+      "sha256": "2f3980b145bd5a3980a45503e05fdc124f5c52bdc3e112bd1db5ac5d678ea230"
+    },
+    {
+      "url": "dnd-srd/feats.json",
+      "sha256": "2138c36e199fa69c9dca6fc70468ddc292c3d831883dba955fe03a74c95e3a33"
+    },
+    {
+      "url": "dnd-srd/magic-items.json",
+      "sha256": "b0e053aa2d84629320aa8fbeda67458f06f678944279e136fba0309d7fa5ffde"
+    },
+    {
+      "url": "dnd-srd/monsters.json",
+      "sha256": "7dfaba3ada3d5cfef04f73d649f936d942387fe4e0c03901947540fe0a11cf37"
+    },
+    {
+      "url": "dnd-srd/races.json",
+      "sha256": "7c7c9bf39898f6e7227d49e59656987d67f34c41f556cee156f2a4f4f6eaabb0"
+    },
+    {
+      "url": "dnd-srd/spells.json",
+      "sha256": "12890c8c7749a115bcfb9f3c4cad0e4a983139d6bd849dbc43f312e046fb12a1"
+    },
+    {
       "url": "vendor/cannon-es.js",
       "sha256": "f0700cbd3a482954949b9d58c1b0f76dcc74767750297647a39d8c40dd63d37c"
     },
