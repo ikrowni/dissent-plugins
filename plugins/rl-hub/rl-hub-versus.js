@@ -1,13 +1,12 @@
 // rl-hub-versus.js — Broadcast versus panel
-import { esc } from '../plugin-sdk.js';
 import { addBallHitPoint, restoreOverlayState, resetOverlayState } from './rl-hub-versus-overlay.js';
-import {
-  formatTime, calcPossessionFromTouches, calcOffDef, calcShotAcc,
-  normalizeBarPct, formatBallSpeed, ballSpeedColor,
-} from './versus/calc.js';
 import * as state from './versus/state.js';
 import { updateTicker, updateDemoFeed } from './versus/feed.js';
 import { twitchCard } from './versus/stream.js';
+import { barChart, ballSpeedCard, possessionCard, balanceCard, lastGoalCard } from './versus/panels.js';
+import { applyTeamColors, timerCard, timerCardIdle } from './versus/scoreboard.js';
+import { playerCard } from './versus/playercard.js';
+import { playerPositionsCard, drawPlayerPositions } from './versus/field.js';
 
 // Re-exported so rl-hub-main.js and the existing suite keep importing these from here.
 // The public surface of this module must not change across the split.
@@ -16,6 +15,7 @@ export {
   normalizeBarPct, formatBallSpeed, ballSpeedColor,
 } from './versus/calc.js';
 export { setTwitchStreamer } from './versus/stream.js';
+export { applyTeamColors } from './versus/scoreboard.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ export function addFeedEvent({ event_name, player_name, team_num, victim_name, v
     updateTicker();
   }
 
-  if (_currentGameState) { _render(_currentGameState); restoreOverlayState(); _drawPlayerPositions(); }
+  if (_currentGameState) { _render(_currentGameState); restoreOverlayState(); drawPlayerPositions(); }
 }
 
 export function refreshVersus(liveGames) {
@@ -119,256 +119,11 @@ export function refreshVersus(liveGames) {
   else if (e.gameState.ball?.team_num === 1) state.bumpBallTouch('orange');
   _render(e.gameState);
   restoreOverlayState();
-  _drawPlayerPositions();
+  drawPlayerPositions();
 }
 
 export function addBallHit(data) {
   addBallHitPoint(data);
-}
-
-export function applyTeamColors(teams) {
-  const root = document.documentElement;
-  const b = teams?.blue;
-  const o = teams?.orange;
-  if (b?.color_primary)   root.style.setProperty('--rl-blue',        `#${b.color_primary}`);
-  if (b?.color_secondary) root.style.setProperty('--rl-blue-accent',  `#${b.color_secondary}`);
-  if (o?.color_primary)   root.style.setProperty('--rl-orange',       `#${o.color_primary}`);
-  if (o?.color_secondary) root.style.setProperty('--rl-orange-accent', `#${o.color_secondary}`);
-}
-
-
-
-function _playerPositionsCard(team) {
-  const label = team === 'blue' ? 'BLUE POSITIONS' : 'ORANGE POSITIONS';
-  return `<div class="vsb-posmap-card">
-    <div class="vsb-poss-title">${label}</div>
-    <canvas id="vsb-posmap-canvas-${team}" class="vsb-posmap-canvas" width="200" height="160"></canvas>
-  </div>`;
-}
-
-function _drawPlayerPositions() {
-  _drawTeamPositions('blue');
-  _drawTeamPositions('orange');
-}
-
-function _drawTeamPositions(team) {
-  const canvas = document.getElementById(`vsb-posmap-canvas-${team}`);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const W = canvas.width;
-  const H = canvas.height;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Tinted field background for this team
-  ctx.fillStyle = team === 'blue' ? 'rgba(59,130,246,.06)' : 'rgba(249,115,22,.06)';
-  ctx.fillRect(2, 2, W - 4, H - 4);
-
-  // Field outline
-  ctx.strokeStyle = 'rgba(255,255,255,.12)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(2, 2, W - 4, H - 4);
-
-  // Midfield line (vertical; blue half on left)
-  ctx.beginPath();
-  ctx.moveTo(W / 2, 2);
-  ctx.lineTo(W / 2, H - 2);
-  ctx.strokeStyle = 'rgba(255,255,255,.10)';
-  ctx.stroke();
-
-  const COLORS = team === 'blue'
-    ? ['rgba(59,130,246,.65)', 'rgba(96,165,250,.65)', 'rgba(147,197,253,.65)']
-    : ['rgba(249,115,22,.65)', 'rgba(251,146,60,.65)', 'rgba(253,186,116,.65)'];
-  let colorIdx = 0;
-
-  for (const positions of Object.values(state.playerPositions())) {
-    if (!positions.length || positions[0].team !== team) continue;
-    const color = COLORS[colorIdx++ % COLORS.length];
-    for (const pos of positions) {
-      // RL Y (field length, -5120 to +5120): high Y = blue goal → left of canvas
-      const cx = 2 + ((5120 - pos.y) / 10240) * (W - 4);
-      // RL X (field width, -4096 to +4096) → vertical axis
-      const cy = 2 + ((pos.x + 4096) / 8192) * (H - 4);
-      ctx.beginPath();
-      ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-    }
-  }
-}
-
-function _barChart(players, team) {
-  const sum   = k => players.reduce((s, p) => s + (p[k] ?? 0), 0);
-  const demos = players.reduce((s, p) => s + (state.demoCounts()[p.name] ?? 0), 0);
-
-  const stats = [
-    { lbl: 'Goals',   val: sum('goals')   },
-    { lbl: 'Shots',   val: sum('shots')   },
-    { lbl: 'Saves',   val: sum('saves')   },
-    { lbl: 'Assists', val: sum('assists') },
-    { lbl: 'Demos',   val: demos           },
-  ];
-  const maxVal = Math.max(...stats.map(s => s.val), 1);
-
-  const rows = stats.map(({ lbl, val }) => {
-    const pct = normalizeBarPct(val, maxVal);
-    return `<div class="vsb-bc-row">
-      <span class="vsb-bc-label">${lbl}</span>
-      <div class="vsb-bc-track"><div class="vsb-bc-fill ${team}" style="width:${pct}%"></div></div>
-      <span class="vsb-bc-val">${val}</span>
-    </div>`;
-  }).join('');
-
-  return `<div class="vsb-barchart"><div class="vsb-bc-title">TEAM STATS</div>${rows}</div>`;
-}
-
-function _timerCard(gs) {
-  const bScore = gs.teams?.blue?.score   ?? 0;
-  const oScore = gs.teams?.orange?.score ?? 0;
-  const pillCls  = gs.has_winner ? 'vsb-final' : gs.is_replay ? 'vsb-replay' : 'vsb-live';
-  const pillText = gs.has_winner ? 'FINAL'     : gs.is_replay ? 'REPLAY'     : 'LIVE';
-  const timeHTML = gs.is_overtime
-    ? `<span class="vsb-ot-tag">OT</span>`
-    : `<span class="vsb-time">${esc(formatTime(gs.time ?? 0))}</span>`;
-
-  return `<div class="vsb-timer-card">
-    <div class="vsb-scores-row">
-      <span class="vsb-big-score blue${bScore > oScore ? ' winning' : ''}">${bScore}</span>
-      <div class="vsb-timer-mid">
-        <span class="vsb-pill ${pillCls}">${pillText}</span>
-        ${timeHTML}
-      </div>
-      <span class="vsb-big-score orange${oScore > bScore ? ' winning' : ''}">${oScore}</span>
-    </div>
-    <div class="vsb-arena-name">${esc(gs.arena ?? '—')}</div>
-  </div>`;
-}
-
-function _timerCardIdle() {
-  return `<div class="vsb-timer-card">
-    <div class="vsb-scores-row">
-      <span class="vsb-big-score blue idle">—</span>
-      <div class="vsb-timer-mid">
-        <span class="vsb-pill vsb-waiting">WAITING</span>
-        <span class="vsb-time">--:--</span>
-      </div>
-      <span class="vsb-big-score orange idle">—</span>
-    </div>
-    <div class="vsb-arena-name">—</div>
-  </div>`;
-}
-
-function _ballSpeedCard(gs) {
-  const kmh = formatBallSpeed(gs?.ball?.speed ?? 0);
-  const cls = ballSpeedColor(kmh);
-  return `<div class="vsb-ball-speed-card">
-    <div class="vsb-poss-title">BALL SPEED</div>
-    <div class="vsb-ball-speed-num ${cls}">${kmh} <span class="vsb-ball-speed-unit">km/h</span></div>
-  </div>`;
-}
-
-function _possessionCard() {
-  const { blue: bPct, orange: oPct } = calcPossessionFromTouches(state.ballTouches().blue, state.ballTouches().orange);
-  return `<div class="vsb-poss-card">
-    <div class="vsb-poss-title">BALL CONTROL</div>
-    <div class="vsb-poss-bar">
-      <div class="vsb-poss-blue"   style="width:${bPct}%"></div>
-      <div class="vsb-poss-orange" style="width:${oPct}%"></div>
-    </div>
-    <div class="vsb-poss-labels">
-      <span class="vsb-poss-pct blue">${bPct}%</span>
-      <span class="vsb-poss-pct orange">${oPct}%</span>
-    </div>
-  </div>`;
-}
-
-function _balanceCard(players, team) {
-  const { off, def } = calcOffDef(players);
-  const acc          = calcShotAcc(players);
-  const label        = team === 'blue' ? 'BLUE BALANCE' : 'ORANGE BALANCE';
-  return `<div class="vsb-bal-card ${team}">
-    <div class="vsb-bal-title">${label}</div>
-    <div class="vsb-bal-bar"><div class="vsb-bal-fill ${team}" style="width:${off}%"></div></div>
-    <div class="vsb-bal-stat"><span>Off/Def</span><span class="vsb-bal-val">${off}/${def}</span></div>
-    <div class="vsb-bal-stat"><span>Shot Acc.</span><span class="vsb-bal-val">${acc}%</span></div>
-  </div>`;
-}
-
-function _lastGoalCard(side, team) {
-  const g     = state.lastGoals()[side];
-  const title = `LAST GOAL — ${team.toUpperCase()}`;
-  if (!g) {
-    return `<div class="vsb-goal-card ${team}">
-      <div class="vsb-goal-title">${title}</div>
-      <div class="vsb-goal-scorer empty">—</div>
-    </div>`;
-  }
-  const timeStr = g.time != null ? formatTime(g.time) : '—';
-  return `<div class="vsb-goal-card ${team}">
-    <div class="vsb-goal-title">${title}</div>
-    <div class="vsb-goal-scorer">${esc(g.scorer)}</div>
-    <div class="vsb-goal-meta">
-      <span>Speed: <strong>—</strong></span>
-      <span>@ <strong>${timeStr}</strong></span>
-    </div>
-  </div>`;
-}
-
-// ── Player card ───────────────────────────────────────────────────────────────
-
-function _playerCard(p, team, slotIndex = 0) {
-  const demo     = p?.demolished ?? false;
-  const ss       = p?.supersonic ?? false;
-  const boostPct = demo ? 0 : Math.min(100, Math.max(0, Math.round(p?.boost ?? 0)));
-  const demos    = p ? (state.demoCounts()[p.name] ?? 0) : 0;
-  const mbr      = p?.is_member ?? false;
-
-  const cardCls = ['vsb-pcard', team, demo ? 'demo' : '', ss ? 'ss' : ''].filter(Boolean).join(' ');
-  const slotLabel = `PLAYER ${slotIndex + 1}`;
-
-  const header = !p
-    ? `<div class="vsb-pcard-slot ${team}">${slotLabel}</div><div class="vsb-pcard-header"><span class="vsb-pname empty">—</span></div>`
-    : `<div class="vsb-pcard-slot ${team}">${slotLabel}</div><div class="vsb-pcard-header">
-        <span class="vsb-pname${mbr ? ' member' : ''}">${esc(p.name ?? '?')}</span>
-        <span class="vsb-pscore">${p.score ?? 0}</span>
-      </div>`;
-
-  const badges = [
-    p?.on_wall       ? `<span class="vsb-badge vsb-badge-wall">🧗 WALL</span>`   : '',
-    p?.powersliding  ? `<span class="vsb-badge vsb-badge-slide">🌀 SLIDE</span>` : '',
-  ].filter(Boolean).join('');
-  const badgeRow = badges ? `<div class="vsb-badge-row">${badges}</div>` : '';
-
-  const speedKmh = p ? Math.round((p.speed ?? 0) / 100 * 3.6) : 0;
-  const speedRow = p ? `<div class="vsb-speed-row">
-  <span class="vsb-speed-label${p?.supersonic ? ' active' : ''}">SPEED</span>
-  <span class="vsb-speed-val">${speedKmh} <span class="vsb-speed-unit">km/h</span></span>
-</div>` : '';
-
-  const STATS = [
-    { ico: '⚽', lbl: 'Goals',  val: p?.goals   ?? 0 },
-    { ico: '🤝', lbl: 'Ast',    val: p?.assists  ?? 0 },
-    { ico: '🛡', lbl: 'Saves',  val: p?.saves    ?? 0 },
-    { ico: '🎯', lbl: 'Shots',  val: p?.shots    ?? 0 },
-    { ico: '💥', lbl: 'Demos',  val: demos             },
-    { ico: '🏐', lbl: 'Touch',  val: p?.touches  ?? 0 },
-  ];
-  const icons = STATS.map(s =>
-    `<div class="vsb-si"><span class="vsb-si-ico">${s.ico}</span><span class="vsb-si-val">${s.val}</span><span class="vsb-si-lbl">${s.lbl}</span></div>`
-  ).join('');
-
-  return `<div class="${cardCls}">
-    ${header}
-    ${badgeRow}
-    <div class="vsb-boost-row">
-      <span class="vsb-boost-label${p?.boosting ? ' active' : ''}">BOOST</span>
-      <div class="vsb-boost-track"><div class="vsb-boost-fill ${team}" style="width:${boostPct}%"></div></div>
-      <span class="vsb-boost-val">${boostPct}</span>
-    </div>
-    ${speedRow}
-    <div class="vsb-stat-icons">${icons}</div>
-  </div>`;
 }
 
 // ── Render idle (no live match) ───────────────────────────────────────────────
@@ -378,18 +133,18 @@ function _renderIdle() {
   if (!panel) return;
 
   const emptyCards = Array.from({ length: _expectedSlots }, () => '');
-  const bIdle = emptyCards.map((_, i) => _playerCard(null, 'blue', i)).join('');
-  const oIdle = emptyCards.map((_, i) => _playerCard(null, 'orange', i)).join('');
+  const bIdle = emptyCards.map((_, i) => playerCard(null, 'blue', i)).join('');
+  const oIdle = emptyCards.map((_, i) => playerCard(null, 'orange', i)).join('');
 
   panel.innerHTML = `<div class="vsb-root">
     <div class="vsb-broadcast">
       <img class="vsb-team-banner" src="https://app.dissent.chat/plugins/rl-hub/blue-team.png" alt="Blue Team">
-      ${_timerCardIdle()}
+      ${timerCardIdle()}
       <img class="vsb-team-banner" src="https://app.dissent.chat/plugins/rl-hub/red-team.png" alt="Orange Team">
-      <div class="vsb-players-col">${bIdle}${_barChart([], 'blue')}${_balanceCard([], 'blue')}${_lastGoalCard('blue', 'blue')}${_playerPositionsCard('blue')}</div>
+      <div class="vsb-players-col">${bIdle}${barChart([], 'blue')}${balanceCard([], 'blue')}${lastGoalCard('blue', 'blue')}${playerPositionsCard('blue')}</div>
       <div class="vsb-center-stats">
-        ${_ballSpeedCard(null)}
-        ${_possessionCard()}
+        ${ballSpeedCard(null)}
+        ${possessionCard()}
         <div class="vsb-tl-card">
           <div class="vsb-poss-title">GOAL TIMELINE</div>
           <div class="vsb-tl-track">
@@ -410,7 +165,7 @@ function _renderIdle() {
           <canvas id="vsb-heatmap-canvas" class="vsb-heatmap-canvas" width="200" height="160"></canvas>
         </div>
       </div>
-      <div class="vsb-players-col">${oIdle}${_barChart([], 'orange')}${_balanceCard([], 'orange')}${_lastGoalCard('orange', 'orange')}${_playerPositionsCard('orange')}</div>
+      <div class="vsb-players-col">${oIdle}${barChart([], 'orange')}${balanceCard([], 'orange')}${lastGoalCard('orange', 'orange')}${playerPositionsCard('orange')}</div>
     </div>
     <div class="vs-staleness" id="vs-staleness-footer">Waiting for a live match…</div>
   </div>`;
@@ -428,18 +183,18 @@ function _render(gs) {
   const oPlayers = (gs.players ?? []).filter(p => p.team === 'orange');
   const slots    = Math.max(bPlayers.length, oPlayers.length, _expectedSlots, 1);
 
-  const bCards = Array.from({ length: slots }, (_, i) => _playerCard(bPlayers[i] ?? null, 'blue', i)).join('');
-  const oCards = Array.from({ length: slots }, (_, i) => _playerCard(oPlayers[i] ?? null, 'orange', i)).join('');
+  const bCards = Array.from({ length: slots }, (_, i) => playerCard(bPlayers[i] ?? null, 'blue', i)).join('');
+  const oCards = Array.from({ length: slots }, (_, i) => playerCard(oPlayers[i] ?? null, 'orange', i)).join('');
 
   panel.innerHTML = `<div class="vsb-root">
     <div class="vsb-broadcast">
       <img class="vsb-team-banner" src="https://app.dissent.chat/plugins/rl-hub/blue-team.png" alt="Blue Team">
-      ${_timerCard(gs)}
+      ${timerCard(gs)}
       <img class="vsb-team-banner" src="https://app.dissent.chat/plugins/rl-hub/red-team.png" alt="Orange Team">
-      <div class="vsb-players-col">${bCards}${_barChart(bPlayers, 'blue')}${_balanceCard(bPlayers, 'blue')}${_lastGoalCard('blue', 'blue')}${_playerPositionsCard('blue')}</div>
+      <div class="vsb-players-col">${bCards}${barChart(bPlayers, 'blue')}${balanceCard(bPlayers, 'blue')}${lastGoalCard('blue', 'blue')}${playerPositionsCard('blue')}</div>
       <div class="vsb-center-stats">
-        ${_ballSpeedCard(gs)}
-        ${_possessionCard()}
+        ${ballSpeedCard(gs)}
+        ${possessionCard()}
         <div class="vsb-tl-card">
           <div class="vsb-poss-title">GOAL TIMELINE</div>
           <div class="vsb-tl-track">
@@ -460,7 +215,7 @@ function _render(gs) {
           <canvas id="vsb-heatmap-canvas" class="vsb-heatmap-canvas" width="200" height="160"></canvas>
         </div>
       </div>
-      <div class="vsb-players-col">${oCards}${_barChart(oPlayers, 'orange')}${_balanceCard(oPlayers, 'orange')}${_lastGoalCard('orange', 'orange')}${_playerPositionsCard('orange')}</div>
+      <div class="vsb-players-col">${oCards}${barChart(oPlayers, 'orange')}${balanceCard(oPlayers, 'orange')}${lastGoalCard('orange', 'orange')}${playerPositionsCard('orange')}</div>
     </div>
     <div class="vs-staleness" id="vs-staleness-footer">Updated just now</div>
   </div>`;
