@@ -5,6 +5,7 @@ import {
   buildBracket, propagateWinners, champion as bracketChampion, validateScore, roundName,
 } from './tournament/bracket.js';
 import { stampVersion, shouldAccept, isStaleWrite } from './tournament/sync.js';
+import { confirmDialog, scoreDialog, closeDialog } from './tournament/dialog.js';
 
 const EV_TOURN_UPDATE = 'rl:tournament:update';
 
@@ -200,36 +201,56 @@ async function createTournament() {
 }
 
 async function deleteTournament() {
-  if (!confirm('Delete this tournament? This cannot be undone.')) return;
+  const ok = await confirmDialog({
+    title: 'Delete this tournament?',
+    body: 'The bracket and every result recorded in it are removed for everyone. This cannot be undone.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
   _tournament = null;
   await storageSet(SK.TOURNAMENT, null);
   await realtimePublish(EV_TOURN_UPDATE, null);
   renderTournamentTab(document.getElementById('tab-content'));
 }
 
-function enterResult(roundIdx, matchIdx) {
+async function enterResult(roundIdx, matchIdx) {
   const match = _tournament.rounds[roundIdx].matches[matchIdx];
-  const bo    = _tournament.bestOf;
+  const bo = _tournament.bestOf;
 
-  const input = prompt(`Enter score for ${match.player1.displayName} vs ${match.player2.displayName}\nFormat: "2-1" (first number = ${match.player1.displayName})`);
-  if (!input) return;
+  const result = await scoreDialog({
+    player1: match.player1.displayName,
+    player2: match.player2.displayName,
+    bestOf: bo,
+  });
+  if (!result) return;
 
-  const parts = input.split(/[-:]/);
-  const s1 = parseInt(parts[0], 10);
-  const s2 = parseInt(parts[1], 10);
+  // The dialog cannot return an invalid score — the button stays disabled — but the
+  // bracket is the thing that must never hold a nonsense result, so it validates too.
+  const v = validateScore(result.s1, result.s2, bo);
+  if (!v.ok) return;
 
-  // Shared, tested validation. The previous check accepted 2-2 and 2-3 in a best of 3:
-  // it only asked whether ONE side reached the target, never whether the other had too,
-  // nor whether the series length was possible.
-  const v = validateScore(s1, s2, bo);
-  if (!v.ok) { alert(v.error); return; }
+  // Re-read the match: an incoming update may have replaced the bracket while the dialog
+  // was open, in which case this roundIdx/matchIdx could now point somewhere else.
+  const live = _tournament.rounds[roundIdx]?.matches?.[matchIdx];
+  if (!live || live.player1?.dissentUserId !== match.player1.dissentUserId
+            || live.player2?.dissentUserId !== match.player2.dissentUserId) {
+    await confirmDialog({
+      title: 'Bracket changed',
+      body: 'This match was updated while the result dialog was open, so the score was not saved. Check the bracket and try again.',
+      confirmLabel: 'OK',
+    });
+    return;
+  }
 
-  match.score1  = s1;
-  match.score2  = s2;
-  match.winnerId = s1 > s2 ? match.player1.dissentUserId : match.player2.dissentUserId;
+  live.score1 = result.s1;
+  live.score2 = result.s2;
+  live.winnerId = result.s1 > result.s2
+    ? live.player1.dissentUserId
+    : live.player2.dissentUserId;
 
   propagateWinners(_tournament.rounds, _tournament.participants ?? []);
-  saveTournament();
+  await saveTournament();
 }
 
 // ── Realtime handler (called from main) ───────────────────────────────────────
@@ -245,6 +266,9 @@ export function handleTournamentEvent(data) {
     return;
   }
   if (!shouldAccept(_tournament, data)) return;
+  // A dialog is mounted on document.body, so a re-render leaves it standing. If the
+  // tournament it referred to is gone, the dialog is about nothing — close it.
+  if (!data) closeDialog();
   _tournament = data;
   renderTournamentTab(document.getElementById('tab-content'));
 }
