@@ -156,6 +156,14 @@ export function currentScreenState() {
   });
 }
 
+/// Hosts for rl-hub-versus-overlay.js, which finds these by id and bails silently if they
+/// are absent. Dropping them in the 2026-08-16 layout rewrite killed goal cards, crossbar
+/// alerts and the pause indicator with no error anywhere — see overlay-contract.test.js.
+function _overlayHosts() {
+  return `<div id="vsb-flash-overlay" class="vsb-flash-overlay hidden"></div>
+    <div id="vsb-paused-overlay" class="vsb-paused-overlay hidden">Paused</div>`;
+}
+
 function _centre(st, gs) {
   if (centreShowsStream(st, twitchUsername())) return twitchCard();
   if (centreShowsMatchHero(st, twitchUsername())) return matchHero(gs);
@@ -179,6 +187,7 @@ function _render() {
 
   if (!showsMatch) {
     panel.innerHTML = `<div class="${rootClassFor(gs)}">
+      ${_overlayHosts()}
       <div class="vsb-band-top">${statusBar(gs)}</div>
       <div class="vsb-band-centre-only">${emptyState(st)}</div>
     </div>`;
@@ -191,6 +200,7 @@ function _render() {
   const slots = Math.max(bPlayers.length, oPlayers.length, _expectedSlots, 1);
 
   panel.innerHTML = `<div class="${rootClassFor(gs)}">
+    ${_overlayHosts()}
     <div class="vsb-band-top">${statusBar(gs)}</div>
     <div class="vsb-band-mid">
       ${_rail(bPlayers, 'blue', slots)}
@@ -207,6 +217,14 @@ function _render() {
       <div class="vsb-panel">
         <div class="vsb-panel-title">Demolitions</div>
         <div id="vsb-demo-feed"><div class="vsb-demo-empty">No demos yet</div></div>
+      </div>
+      <div class="vsb-panel">
+        <div class="vsb-panel-title">Goal timeline</div>
+        <div class="vsb-tl-track"><div id="vsb-goal-timeline"></div></div>
+      </div>
+      <div class="vsb-panel">
+        <div class="vsb-panel-title">Fastest goal</div>
+        <div id="vsb-fastest-goal" class="vsb-fg"><span class="vsb-fg-label">None yet</span></div>
       </div>
       <div class="vsb-panel">${lastGoalCard('blue', 'blue')}</div>
       <div class="vsb-panel">${lastGoalCard('orange', 'orange')}</div>
