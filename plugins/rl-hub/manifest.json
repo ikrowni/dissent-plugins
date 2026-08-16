@@ -25,6 +25,14 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "assets/octane-blue.png",
+      "sha256": "bb863f9def2d22cd6c01a3afbaa1ba82800ed6f041c024b579c3c127ed982d9c"
+    },
+    {
+      "url": "assets/octane-orange.png",
+      "sha256": "597ff8891f05accfaec8a7a71ba95205cfa22991f7ffe5a2bc9a11b64ce716bd"
+    },
+    {
       "url": "blue-team.png",
       "sha256": "016ad667ece7190c07920e30e77b9a7e787b0f99ee940bbc2d301f03e158916d"
     },
@@ -38,7 +46,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "16cd24746d90cbd9980ffed4e8aa7a467029cc8639626a55e4d2c63c16385850"
+      "sha256": "6a7a3ed4389f07b89e75d5abf183c8f850c737918f3867c463244b34a57576aa"
     },
     {
       "url": "rl-hub-register.js",
@@ -46,7 +54,7 @@
     },
     {
       "url": "rl-hub-styles.css",
-      "sha256": "54dd7f44d6981e8b5c3221948aeef2d1fa8c42bc1840d973acbfc1140a4cebc1"
+      "sha256": "dbd54124e6bd2146f757ccb88f1d0aa16bdf0e4e16f614ebb34161ef726bfe9d"
     },
     {
       "url": "rl-hub-tournament.js",
@@ -58,7 +66,7 @@
     },
     {
       "url": "rl-hub-versus.js",
-      "sha256": "ba4f3bf5f9cf9861ad27a69cf150e9f3c5107ab7920fd19399e3577bcf1682c1"
+      "sha256": "140c8d497555755c0fbdbbf3a04afb519970d8ca033210cba357debe9a22eb2a"
     },
     {
       "url": "rl-scraper.js",
@@ -106,11 +114,15 @@
     },
     {
       "url": "versus/__fixtures__/live-update.json",
-      "sha256": "e7dfa81f219b5d2a9f1a58e971b0ebdf08f4572ff795bf0db8814dcee7448914"
+      "sha256": "5c1171e6eafe36907a2589b660c9b2711dbb322473272301196dc3034ef35f13"
     },
     {
       "url": "versus/calc.js",
       "sha256": "62759655290d1b3bf346b3f7dfa3421198a7feb04fece347a90cdfbbea14fbaa"
+    },
+    {
+      "url": "versus/emptystates.js",
+      "sha256": "bb0ff03913a6e59901bb72b7f0fc4591e7eb9d9232a1ec58a24f388d8a3809d6"
     },
     {
       "url": "versus/feed.js",
@@ -130,15 +142,19 @@
     },
     {
       "url": "versus/scoreboard.js",
-      "sha256": "d10a6cd93c563592bf7037aa7abaee444e90abfa302c3d6d693ee73f8deb5458"
+      "sha256": "877764d81fd7261d182a593c79552bfdad5b88df3982a1a4188e100cb37eac61"
+    },
+    {
+      "url": "versus/screenstate.js",
+      "sha256": "3babe023ec3a3fee795cd4ca5b546c93fc87c6619649d82a7a82470c34b42483"
     },
     {
       "url": "versus/state.js",
-      "sha256": "903318e015d9e108c747d4b202dbb304684230d62e785e2017b05348519ff978"
+      "sha256": "961c3967ef794bbfc1252511390c70b568b01b8a3813b1f77eb24b04db7a7eee"
     },
     {
       "url": "versus/stream.js",
-      "sha256": "e356bf7096accce70d9f611a17a8a80b4d6a77350fc6d82d042c2b184f1c84b3"
+      "sha256": "c1086d7634326b66b46c0d074a1d158db0e4478f1e96c5a4e91827549a3d4f66"
     }
   ]
 }

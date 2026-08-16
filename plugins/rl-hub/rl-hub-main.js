@@ -4,8 +4,8 @@ import { scrapeRLStats } from './rl-scraper.js';
 import { showRegisterScreen, initRegisterForm } from './rl-hub-register.js';
 import {
   initVersus, showVersus, refreshVersus, addFeedEvent,
-  addBallHit, setOnHideCallback, resetMatchState, setTwitchStreamer,
-} from './rl-hub-versus.js?v=12';
+  addBallHit, setOnHideCallback, resetMatchState, setTwitchStreamer, setClientOnline,
+} from './rl-hub-versus.js?v=13';
 import {
   addGoalEvent, showCrossbarAlert, setPaused, resetOverlayState,
 } from './rl-hub-versus-overlay.js';
@@ -190,6 +190,7 @@ async function handleRegistrationSaved() {
 function onEvent(ev) {
   if (ev.event === 'rl:companion:online') {
     console.log('[rl-hub] rl:companion:online received — companion is running');
+    setClientOnline(true);
     _showLiveDebug('Companion connected — waiting for a match to start');
   }
   if (ev.event === 'rl:companion:match:created') {
