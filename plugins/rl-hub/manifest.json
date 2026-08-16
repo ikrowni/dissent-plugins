@@ -38,7 +38,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "93db711a1cfa951061d727511a434697e2052d4e5a45523e5be4fdb421281b6f"
+      "sha256": "16cd24746d90cbd9980ffed4e8aa7a467029cc8639626a55e4d2c63c16385850"
     },
     {
       "url": "rl-hub-register.js",
@@ -103,6 +103,10 @@
     {
       "url": "vendor/fonts/barlow-condensed.css",
       "sha256": "69aa5cade66b51ffa47f1c30ccc74442034753ebdced9c69191cba4d7c78cd1b"
+    },
+    {
+      "url": "versus/__fixtures__/live-update.json",
+      "sha256": "e7dfa81f219b5d2a9f1a58e971b0ebdf08f4572ff795bf0db8814dcee7448914"
     },
     {
       "url": "versus/calc.js",
