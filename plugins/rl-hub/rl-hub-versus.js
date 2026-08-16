@@ -1,11 +1,13 @@
 // rl-hub-versus.js — Broadcast versus panel
-import { esc, mediaEmbed, getInitContext } from '../plugin-sdk.js';
+import { esc } from '../plugin-sdk.js';
 import { addBallHitPoint, restoreOverlayState, resetOverlayState } from './rl-hub-versus-overlay.js';
 import {
   formatTime, calcPossessionFromTouches, calcOffDef, calcShotAcc,
   normalizeBarPct, formatBallSpeed, ballSpeedColor,
 } from './versus/calc.js';
 import * as state from './versus/state.js';
+import { updateTicker, updateDemoFeed } from './versus/feed.js';
+import { twitchCard } from './versus/stream.js';
 
 // Re-exported so rl-hub-main.js and the existing suite keep importing these from here.
 // The public surface of this module must not change across the split.
@@ -13,20 +15,18 @@ export {
   formatTime, calcPossessionFromTouches, calcOffDef, calcShotAcc,
   normalizeBarPct, formatBallSpeed, ballSpeedColor,
 } from './versus/calc.js';
+export { setTwitchStreamer } from './versus/stream.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
 let _onHide = null;
 export function setOnHideCallback(fn) { _onHide = fn; }
-export function setTwitchStreamer(username) { _twitchUsername = username ?? ''; }
 
 let _currentSenderId = null;
 let _currentGameState = null;
 let _shownAt = 0;
 let _stalenessTimer = null;
 let _expectedSlots  = 1;                            // set by active mode tab
-
-let _twitchUsername = '';
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export function addFeedEvent({ event_name, player_name, team_num, victim_name, v
       victim: victim_name ?? '?', victim_team: victim_team === 0 ? 'blue' : 'orange',
       ts: Date.now(),
     });
-    _updateDemoFeed();
+    updateDemoFeed();
   }
 
   const GOAL_EVENTS = ['Goal', 'Aerial Goal', 'Bicycle Kick Goal'];
@@ -87,7 +87,7 @@ export function addFeedEvent({ event_name, player_name, team_num, victim_name, v
   const TICKER_EVENTS = ['Goal', 'Aerial Goal', 'Bicycle Kick Goal', 'Save', 'Epic Save', 'Demolition', 'Demolish', 'Assist'];
   if (TICKER_EVENTS.includes(event_name)) {
     state.pushTicker({ event_name, player_name, team: side, ts: Date.now() });
-    _updateTicker();
+    updateTicker();
   }
 
   if (_currentGameState) { _render(_currentGameState); restoreOverlayState(); _drawPlayerPositions(); }
@@ -136,68 +136,7 @@ export function applyTeamColors(teams) {
   if (o?.color_secondary) root.style.setProperty('--rl-orange-accent', `#${o.color_secondary}`);
 }
 
-function _updateTicker() {
-  const el = document.getElementById('vsb-ticker');
-  if (!el) return;
-  if (state.tickerEvents().length === 0) {
-    el.innerHTML = '<div class="vsb-demo-empty">No events yet</div>';
-    return;
-  }
-  el.innerHTML = state.tickerEvents().map(e => {
-    const icon = _tickerIcon(e.event_name);
-    return `<div class="vsb-tick-row ${e.team}">
-      <span class="vsb-tick-ico">${icon}</span>
-      <span class="vsb-tick-name">${esc(e.player_name)}</span>
-      <span class="vsb-tick-evt">${esc(e.event_name)}</span>
-    </div>`;
-  }).join('');
-}
 
-function _updateDemoFeed() {
-  const el = document.getElementById('vsb-demo-feed');
-  if (!el) return;
-  el.innerHTML = state.demoFeed().map(d =>
-    `<div class="vsb-demo-row">
-      <span class="vsb-demo-name ${d.attacker_team}">${esc(d.attacker)}</span>
-      <span class="vsb-demo-arrow">💥</span>
-      <span class="vsb-demo-name ${d.victim_team}">${esc(d.victim)}</span>
-    </div>`
-  ).join('') || `<div class="vsb-demo-empty">No demos yet</div>`;
-}
-
-function _tickerIcon(eventName) {
-  const map = {
-    'Goal': '⚽', 'Aerial Goal': '🚀', 'Bicycle Kick Goal': '🚲',
-    'Save': '🛡', 'Epic Save': '🦅', 'Demolition': '💥', 'Demolish': '💥', 'Assist': '🤝',
-  };
-  return map[eventName] ?? '📊';
-}
-
-function _twitchCard() {
-  if (!_twitchUsername) {
-    return `<div class="vsb-twitch-card vsb-twitch-idle">
-      <span class="vsb-twitch-ico">📺</span>
-      <span class="vsb-twitch-hint">Add your Twitch username in ⚙️ settings to enable the stream viewer</span>
-    </div>`;
-  }
-  const safeUser = esc(_twitchUsername);
-  return `<div class="vsb-heatmap-card vsb-twitch-outer" onclick="watchTwitch('${safeUser}')" role="button" title="Watch ${safeUser} on Twitch">
-    <div class="vsb-twitch-screen">
-      <div class="vsb-twitch-screen-center">
-        <div class="vsb-twitch-playbtn">&#9654;</div>
-      </div>
-      <div class="vsb-twitch-bar">
-        <span class="vsb-twitch-bar-icon">&#9654;</span>
-        <span class="vsb-twitch-bar-icon">&#128266;</span>
-        <div class="vsb-twitch-scrubber">
-          <div class="vsb-twitch-track"></div>
-          <div class="vsb-twitch-dot"></div>
-        </div>
-        <span class="vsb-twitch-bar-icon">&#x26F6;</span>
-      </div>
-    </div>
-  </div>`;
-}
 
 function _playerPositionsCard(team) {
   const label = team === 'blue' ? 'BLUE POSITIONS' : 'ORANGE POSITIONS';
@@ -457,7 +396,7 @@ function _renderIdle() {
             <div id="vsb-goal-timeline"></div>
           </div>
         </div>
-        ${_twitchCard()}
+        ${twitchCard()}
         <div class="vsb-demo-card">
           <div class="vsb-poss-title">DEMOLITIONS</div>
           <div id="vsb-demo-feed"><div class="vsb-demo-empty">No demos yet</div></div>
@@ -507,7 +446,7 @@ function _render(gs) {
             <div id="vsb-goal-timeline"></div>
           </div>
         </div>
-        ${_twitchCard()}
+        ${twitchCard()}
         <div class="vsb-demo-card">
           <div class="vsb-poss-title">DEMOLITIONS</div>
           <div id="vsb-demo-feed"><div class="vsb-demo-empty">No demos yet</div></div>
@@ -526,8 +465,8 @@ function _render(gs) {
     <div class="vs-staleness" id="vs-staleness-footer">Updated just now</div>
   </div>`;
 
-  _updateTicker();
-  _updateDemoFeed();
+  updateTicker();
+  updateDemoFeed();
   _startStaleness();
 }
 
@@ -553,11 +492,3 @@ function _stopStaleness() {
   if (_stalenessTimer) { clearInterval(_stalenessTimer); _stalenessTimer = null; }
 }
 
-window.watchTwitch = (username) => {
-  // parent= must be the raw hostname of the embedding app (Twitch requirement).
-  const parent = getInitContext()?.hostHostname || 'app.dissent.chat';
-  mediaEmbed(
-    `https://player.twitch.tv/?channel=${encodeURIComponent(username)}&parent=${parent}&muted=false&autoplay=true`,
-    `${username} on Twitch`,
-  );
-};
