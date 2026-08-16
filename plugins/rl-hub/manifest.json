@@ -58,7 +58,7 @@
     },
     {
       "url": "rl-hub-versus.js",
-      "sha256": "943cde7d6aa7d3d2593ecefb7914080a4e151033af315607213526f2b43ce952"
+      "sha256": "ba4f3bf5f9cf9861ad27a69cf150e9f3c5107ab7920fd19399e3577bcf1682c1"
     },
     {
       "url": "rl-scraper.js",
@@ -103,6 +103,38 @@
     {
       "url": "vendor/fonts/barlow-condensed.css",
       "sha256": "69aa5cade66b51ffa47f1c30ccc74442034753ebdced9c69191cba4d7c78cd1b"
+    },
+    {
+      "url": "versus/calc.js",
+      "sha256": "62759655290d1b3bf346b3f7dfa3421198a7feb04fece347a90cdfbbea14fbaa"
+    },
+    {
+      "url": "versus/feed.js",
+      "sha256": "11a854683cabcb09776911a9a4f3cf51876add7d889540c4bf68ca97f6e32dc6"
+    },
+    {
+      "url": "versus/field.js",
+      "sha256": "8296919230c255aedf3f6ac9f37cbb008bcb8579ea5f811aa29baf225a986347"
+    },
+    {
+      "url": "versus/panels.js",
+      "sha256": "f01e2b2df7b96c12793fcb9c1958cb96f2468decf68f4767892ff09849935ad5"
+    },
+    {
+      "url": "versus/playercard.js",
+      "sha256": "ab284467533e3fb5cd6c172a9f1179e78501333fa14681ca32150bbc3d8d23ff"
+    },
+    {
+      "url": "versus/scoreboard.js",
+      "sha256": "d10a6cd93c563592bf7037aa7abaee444e90abfa302c3d6d693ee73f8deb5458"
+    },
+    {
+      "url": "versus/state.js",
+      "sha256": "903318e015d9e108c747d4b202dbb304684230d62e785e2017b05348519ff978"
+    },
+    {
+      "url": "versus/stream.js",
+      "sha256": "e356bf7096accce70d9f611a17a8a80b4d6a77350fc6d82d042c2b184f1c84b3"
     }
   ]
 }
