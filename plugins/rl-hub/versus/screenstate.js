@@ -10,7 +10,7 @@
 // as a stale one. Callers must pass msSinceFrame from their own last-render timestamp.
 
 export const STATES = {
-  NO_CLIENT: 'no-client',
+  NO_BROADCAST: 'no-broadcast',
   GAME_CLOSED: 'game-closed',
   PRE_MATCH: 'pre-match',
   LIVE: 'live',
@@ -22,8 +22,11 @@ export const STATES = {
 // Matches LIVE_STALENESS_MS in rl-hub-main.js. If that changes, change this.
 export const STALE_AFTER_MS = 15000;
 
-export function screenState({ hasClient, gameState, msSinceFrame = 0 }) {
-  if (!hasClient) return STATES.NO_CLIENT;
+/// `isBroadcasting` means "someone is sending match data to this channel" — NOT "this
+/// viewer has the desktop app". Most viewers are spectators who cannot broadcast and do
+/// not need to; conflating the two tells them to fix something that is not broken.
+export function screenState({ isBroadcasting, gameState, msSinceFrame = 0 }) {
+  if (!isBroadcasting) return STATES.NO_BROADCAST;
   if (!gameState) return STATES.GAME_CLOSED;
   if (gameState.has_winner) return STATES.ENDED;
   if (msSinceFrame > STALE_AFTER_MS) return STATES.STALE;

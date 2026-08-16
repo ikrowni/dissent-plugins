@@ -150,7 +150,7 @@ export function addBallHit(data) {
 /// Exposed for tests: which screen the current inputs resolve to.
 export function currentScreenState() {
   return screenState({
-    hasClient: _clientOnline,
+    isBroadcasting: _clientOnline,
     gameState: _currentGameState,
     msSinceFrame: _shownAt ? Date.now() - _shownAt : 0,
   });

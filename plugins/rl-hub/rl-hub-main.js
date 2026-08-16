@@ -5,7 +5,7 @@ import { showRegisterScreen, initRegisterForm } from './rl-hub-register.js';
 import {
   initVersus, showVersus, refreshVersus, addFeedEvent,
   addBallHit, setOnHideCallback, resetMatchState, setTwitchStreamer, setClientOnline,
-} from './rl-hub-versus.js?v=13';
+} from './rl-hub-versus.js?v=14';
 import {
   addGoalEvent, showCrossbarAlert, setPaused, resetOverlayState,
 } from './rl-hub-versus-overlay.js';

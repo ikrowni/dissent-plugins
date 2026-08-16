@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { emptyState, hasEmptyState } from './emptystates.js';
 import { STATES } from './screenstate.js';
 
-const NON_LIVE = [STATES.NO_CLIENT, STATES.GAME_CLOSED, STATES.PRE_MATCH, STATES.STALE];
+const NON_LIVE = [STATES.NO_BROADCAST, STATES.GAME_CLOSED, STATES.PRE_MATCH, STATES.STALE];
 
 describe('emptyState', () => {
   it.each(NON_LIVE)('renders explanatory copy for %s', (s) => {
@@ -30,5 +30,33 @@ describe('emptyState', () => {
 
   it('returns empty string for an unknown state rather than throwing', () => {
     expect(emptyState('not-a-state')).toBe('');
+  });
+});
+
+// ── Regression guards ─────────────────────────────────────────────────────────
+//
+// Both of these encode corrections the owner had to make more than once. They are cheap
+// and they fail loudly, which is the point.
+
+describe('copy accuracy', () => {
+  it('never implies a companion app exists — there is none', () => {
+    for (const s of NON_LIVE) {
+      expect(emptyState(s).toLowerCase()).not.toContain('companion');
+    }
+  });
+
+  it('never tells a viewer the desktop app is required', () => {
+    // Web and Android report desktop:false and cannot broadcast, but they CAN watch.
+    // Telling a spectator to install the desktop app is telling them to fix something
+    // that is not broken for them. Broadcasting instructions belong in the settings card.
+    for (const s of NON_LIVE) {
+      expect(emptyState(s).toLowerCase()).not.toContain('desktop app required');
+    }
+  });
+
+  it('points at the real gate when a broadcaster sees nothing', () => {
+    // PacketSendRate, not an "enabled" flag — the retired installer patched a bEnabled
+    // key that does not exist and reported success.
+    expect(emptyState(STATES.GAME_CLOSED)).toContain('PacketSendRate');
   });
 });

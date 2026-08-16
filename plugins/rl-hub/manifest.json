@@ -46,7 +46,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "6a7a3ed4389f07b89e75d5abf183c8f850c737918f3867c463244b34a57576aa"
+      "sha256": "900a4b1c5913240405cfa224b17d719d07cdde027b8dc7b8aeb3f74ef33139f9"
     },
     {
       "url": "rl-hub-register.js",
@@ -66,7 +66,7 @@
     },
     {
       "url": "rl-hub-versus.js",
-      "sha256": "140c8d497555755c0fbdbbf3a04afb519970d8ca033210cba357debe9a22eb2a"
+      "sha256": "35e70e49af9c5851351f31aff515a20a403909dad2c426cdcd7080a17512c6c7"
     },
     {
       "url": "rl-scraper.js",
@@ -122,7 +122,7 @@
     },
     {
       "url": "versus/emptystates.js",
-      "sha256": "bb0ff03913a6e59901bb72b7f0fc4591e7eb9d9232a1ec58a24f388d8a3809d6"
+      "sha256": "c28fa03e874ca91cbafd3bd267a9fef179d2db9ac8c6e671caf7a83cf725857d"
     },
     {
       "url": "versus/feed.js",
@@ -146,7 +146,7 @@
     },
     {
       "url": "versus/screenstate.js",
-      "sha256": "3babe023ec3a3fee795cd4ca5b546c93fc87c6619649d82a7a82470c34b42483"
+      "sha256": "7123a1ea64bd7c99b9440ca76c6f689085f75be9eb22e246d7265ec0ff922a0f"
     },
     {
       "url": "versus/state.js",
