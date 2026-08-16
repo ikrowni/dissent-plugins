@@ -198,6 +198,15 @@ function onEvent(ev) {
   if (ev.event === 'rl:live:update') {
     const { sender_id: senderId, game_state: gameState } = ev.data ?? {};
     console.log('[rl-hub] rl:live:update received', { senderId, hasGameState: !!gameState });
+    // TEMPORARY — payload capture for the versus redesign fixture. Removed once the
+    // fixture is frozen; see docs/superpowers/plans/2026-08-16-rl-hub-versus-1-foundation.md
+    if (gameState) {
+      window.__RL_CAPTURE = gameState;
+      const n = (gameState.players ?? []).length;
+      const moved = (gameState.players ?? []).filter(p => p.location && (p.location.x || p.location.y)).length;
+      console.log(`[rl-hub] CAPTURE players=${n} withPosition=${moved} — run: copy(JSON.stringify(window.__RL_CAPTURE))`);
+      console.log('[rl-hub] CAPTURE_JSON ' + JSON.stringify(gameState));
+    }
     if (!senderId || !gameState) return;
     const wasEmpty = Object.keys(_liveGames).length === 0;
     if (wasEmpty) _showLiveDebug('Companion connected — live data flowing');
