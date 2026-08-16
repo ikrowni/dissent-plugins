@@ -841,3 +841,89 @@ details[open] .companion-summary::before { content: '▼ '; }
   background: rgba(20,20,40,.95); border: 1px solid rgba(255,255,255,.15);
   color: rgba(255,255,255,.8);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Broadcast restyle 2026-08-16 — player cards and rail panels.
+   Appended last so these win over the older rules above without deleting them.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.vsb-pcard {
+  border-radius: 6px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-left-width: 2px;
+  background: rgba(255,255,255,.025);
+  display: flex; flex-direction: column; gap: 7px;
+  transition: opacity 140ms linear;
+}
+.vsb-pcard.blue   { border-left-color: var(--rl-blue); }
+.vsb-pcard.orange { border-left-color: var(--rl-orange); }
+/* A demolished player is out of the play — say so by receding, not by hiding. */
+.vsb-pcard.demo { opacity: .38; }
+
+.vsb-pcard-slot {
+  font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+  color: rgba(255,255,255,.28);
+}
+.vsb-pcard-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.vsb-pname {
+  font-size: 15px; font-weight: 600; letter-spacing: .2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vsb-pname.empty { color: rgba(255,255,255,.25); font-weight: 400; }
+.vsb-pname.member { color: var(--rl-blue-accent, #60a5fa); }
+.vsb-pscore { font-size: 14px; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.55); }
+
+.vsb-badge-row { display: flex; gap: 4px; flex-wrap: wrap; }
+/* border-radius: 0 is deliberate — rounded pills read inconsistently against the
+   square-cornered panels and the single-sided card accent. */
+.vsb-badge {
+  font-size: 9px; letter-spacing: 1.1px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 0;
+  border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.55);
+}
+.vsb-badge.vsb-badge-ss { border-color: #ffd75a; color: #ffd75a; }
+
+.vsb-boost-row, .vsb-speed-row { display: flex; align-items: center; gap: 8px; }
+.vsb-boost-label, .vsb-speed-label {
+  font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: rgba(255,255,255,.35); flex: none; width: 38px;
+}
+.vsb-boost-label.active { color: #ffd75a; }
+.vsb-speed-label.active { color: #ffd75a; }
+.vsb-boost-track {
+  flex: 1; height: 3px; border-radius: 2px; overflow: hidden;
+  background: rgba(255,255,255,.08);
+}
+.vsb-boost-fill { height: 100%; }
+.vsb-boost-fill.blue   { background: var(--rl-blue); }
+.vsb-boost-fill.orange { background: var(--rl-orange); }
+.vsb-boost-val, .vsb-speed-val {
+  font-size: 12px; font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,.7); flex: none; min-width: 34px; text-align: right;
+}
+.vsb-speed-row { justify-content: space-between; }
+.vsb-speed-unit { font-size: 10px; color: rgba(255,255,255,.35); }
+
+.vsb-stat-icons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+.vsb-si { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.vsb-si-val { font-size: 14px; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.vsb-si-lbl {
+  font-size: 9px; letter-spacing: .5px; text-transform: uppercase;
+  color: rgba(255,255,255,.32);
+}
+
+.vsb-totals { display: flex; flex-direction: column; gap: 3px; }
+.vsb-total-row { display: flex; justify-content: space-between; font-size: 12px; }
+.vsb-total-row span:first-child { color: rgba(255,255,255,.45); }
+.vsb-total-row span:last-child  { font-variant-numeric: tabular-nums; }
+
+.vsb-totals-panel.blue   { border-left: 2px solid var(--rl-blue); border-radius: 0 6px 6px 0; }
+.vsb-totals-panel.orange { border-left: 2px solid var(--rl-orange); border-radius: 0 6px 6px 0; }
+
+.vsb-fg { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.vsb-fg-label { font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.32); }
+.vsb-fg-name.blue   { color: var(--rl-blue); font-weight: 600; }
+.vsb-fg-name.orange { color: var(--rl-orange); font-weight: 600; }
+.vsb-fg-speed { font-variant-numeric: tabular-nums; color: rgba(255,255,255,.6); }

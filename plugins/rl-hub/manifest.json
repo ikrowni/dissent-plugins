@@ -46,7 +46,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "e8747a64ef7ea257148bc183f760b09cd7f6dd3f59364224c8f771cce4439cc7"
+      "sha256": "18ba159114f81ff758857e859b01d205a1439a5e1cdde1fa65df548c29c38e5b"
     },
     {
       "url": "rl-hub-register.js",
@@ -54,7 +54,7 @@
     },
     {
       "url": "rl-hub-styles.css",
-      "sha256": "dbd54124e6bd2146f757ccb88f1d0aa16bdf0e4e16f614ebb34161ef726bfe9d"
+      "sha256": "edbe90482d53242e79ef760a76b201809c9840fdcfb144e27b4864eb92c37595"
     },
     {
       "url": "rl-hub-tournament.js",
@@ -66,7 +66,7 @@
     },
     {
       "url": "rl-hub-versus.js",
-      "sha256": "a9021ca64cce14734530a0de974e494bdaffe0e890a71e4b674a3a36dc64026c"
+      "sha256": "3348a07f2a84344fa8ebec60094e94d228c818bb0e845f1969049e9134df3dc8"
     },
     {
       "url": "rl-scraper.js",
@@ -134,11 +134,11 @@
     },
     {
       "url": "versus/panels.js",
-      "sha256": "f01e2b2df7b96c12793fcb9c1958cb96f2468decf68f4767892ff09849935ad5"
+      "sha256": "79a460871b409d3192cc2dedf46b39fac0f007d34e0391136610b7bf7646fbad"
     },
     {
       "url": "versus/playercard.js",
-      "sha256": "ab284467533e3fb5cd6c172a9f1179e78501333fa14681ca32150bbc3d8d23ff"
+      "sha256": "54b8eea8481e4fe648d0c51e70967190947752c3512c725c8ed5ad720b9d1f30"
     },
     {
       "url": "versus/scoreboard.js",

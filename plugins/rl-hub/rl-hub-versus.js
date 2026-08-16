@@ -9,7 +9,7 @@ import { addBallHitPoint, restoreOverlayState, resetOverlayState } from './rl-hu
 import * as state from './versus/state.js';
 import { updateTicker, updateDemoFeed } from './versus/feed.js';
 import { twitchCard, twitchUsername } from './versus/stream.js';
-import { barChart, ballSpeedCard, possessionCard, balanceCard, lastGoalCard } from './versus/panels.js';
+import { teamTotals, ballSpeedCard, possessionCard, balanceCard, lastGoalCard } from './versus/panels.js';
 import { applyTeamColors, rootClassFor, statusBar, matchHero } from './versus/scoreboard.js';
 import { playerCard } from './versus/playercard.js';
 import {
@@ -172,7 +172,7 @@ function _centre(st, gs) {
 
 function _rail(players, team, slots) {
   const cards = Array.from({ length: slots }, (_, i) => playerCard(players[i] ?? null, team, i)).join('');
-  return `<div class="vsb-rail">${cards}${barChart(players, team)}${balanceCard(players, team)}</div>`;
+  return `<div class="vsb-rail">${cards}${teamTotals(players, team)}${balanceCard(players, team)}</div>`;
 }
 
 function _render() {

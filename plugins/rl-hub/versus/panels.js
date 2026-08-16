@@ -3,14 +3,16 @@
 import { esc } from '../../plugin-sdk.js';
 import {
   formatTime, formatBallSpeed, ballSpeedColor,
-  calcPossessionFromTouches, calcOffDef, calcShotAcc, normalizeBarPct,
+  calcPossessionFromTouches, calcOffDef, calcShotAcc,
 } from './calc.js';
 import { demoCounts, ballTouches, lastGoals } from './state.js';
 
-export function barChart(players, team) {
+export function teamTotals(players, team) {
   const sum   = k => players.reduce((s, p) => s + (p[k] ?? 0), 0);
   const demos = players.reduce((s, p) => s + (demoCounts()[p.name] ?? 0), 0);
 
+  // A label/value list, not bars. Bars in the rails compete with the centre band for
+  // attention, and the centre has to win.
   const stats = [
     { lbl: 'Goals',   val: sum('goals')   },
     { lbl: 'Shots',   val: sum('shots')   },
@@ -18,18 +20,15 @@ export function barChart(players, team) {
     { lbl: 'Assists', val: sum('assists') },
     { lbl: 'Demos',   val: demos           },
   ];
-  const maxVal = Math.max(...stats.map(s => s.val), 1);
 
-  const rows = stats.map(({ lbl, val }) => {
-    const pct = normalizeBarPct(val, maxVal);
-    return `<div class="vsb-bc-row">
-      <span class="vsb-bc-label">${lbl}</span>
-      <div class="vsb-bc-track"><div class="vsb-bc-fill ${team}" style="width:${pct}%"></div></div>
-      <span class="vsb-bc-val">${val}</span>
-    </div>`;
-  }).join('');
+  const rows = stats.map(({ lbl, val }) =>
+    `<div class="vsb-total-row"><span>${lbl}</span><span>${val}</span></div>`
+  ).join('');
 
-  return `<div class="vsb-barchart"><div class="vsb-bc-title">TEAM STATS</div>${rows}</div>`;
+  return `<div class="vsb-panel vsb-totals-panel ${team}">
+    <div class="vsb-panel-title">Team totals</div>
+    <div class="vsb-totals">${rows}</div>
+  </div>`;
 }
 
 export function ballSpeedCard(gs) {

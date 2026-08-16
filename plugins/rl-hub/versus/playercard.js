@@ -20,9 +20,12 @@ export function playerCard(p, team, slotIndex = 0) {
         <span class="vsb-pscore">${p.score ?? 0}</span>
       </div>`;
 
+  // No emoji. They render at different sizes and weights on every platform and read as
+  // amateur against a broadcast layout.
   const badges = [
-    p?.on_wall       ? `<span class="vsb-badge vsb-badge-wall">🧗 WALL</span>`   : '',
-    p?.powersliding  ? `<span class="vsb-badge vsb-badge-slide">🌀 SLIDE</span>` : '',
+    p?.on_wall      ? `<span class="vsb-badge">Wall</span>`  : '',
+    p?.powersliding ? `<span class="vsb-badge">Slide</span>` : '',
+    p?.supersonic   ? `<span class="vsb-badge vsb-badge-ss">Supersonic</span>` : '',
   ].filter(Boolean).join('');
   const badgeRow = badges ? `<div class="vsb-badge-row">${badges}</div>` : '';
 
@@ -33,15 +36,15 @@ export function playerCard(p, team, slotIndex = 0) {
 </div>` : '';
 
   const STATS = [
-    { ico: '⚽', lbl: 'Goals',  val: p?.goals   ?? 0 },
-    { ico: '🤝', lbl: 'Ast',    val: p?.assists  ?? 0 },
-    { ico: '🛡', lbl: 'Saves',  val: p?.saves    ?? 0 },
-    { ico: '🎯', lbl: 'Shots',  val: p?.shots    ?? 0 },
-    { ico: '💥', lbl: 'Demos',  val: demos             },
-    { ico: '🏐', lbl: 'Touch',  val: p?.touches  ?? 0 },
+    { lbl: 'Goals', val: p?.goals   ?? 0 },
+    { lbl: 'Ast',   val: p?.assists ?? 0 },
+    { lbl: 'Saves', val: p?.saves   ?? 0 },
+    { lbl: 'Shots', val: p?.shots   ?? 0 },
+    { lbl: 'Demos', val: demos            },
+    { lbl: 'Touch', val: p?.touches ?? 0 },
   ];
   const icons = STATS.map(s =>
-    `<div class="vsb-si"><span class="vsb-si-ico">${s.ico}</span><span class="vsb-si-val">${s.val}</span><span class="vsb-si-lbl">${s.lbl}</span></div>`
+    `<div class="vsb-si"><span class="vsb-si-val">${s.val}</span><span class="vsb-si-lbl">${s.lbl}</span></div>`
   ).join('');
 
   return `<div class="${cardCls}">
