@@ -4,6 +4,7 @@ import { SK, MODES, getMembers, getStatsCache, getMyUserId, isFresh } from './rl
 import {
   buildBracket, propagateWinners, champion as bracketChampion, validateScore, roundName,
 } from './tournament/bracket.js';
+import { stampVersion, shouldAccept, isStaleWrite } from './tournament/sync.js';
 
 const EV_TOURN_UPDATE = 'rl:tournament:update';
 
@@ -44,6 +45,8 @@ function buildParticipants(gameMode) {
 // ── Persist + broadcast ───────────────────────────────────────────────────────
 
 async function saveTournament() {
+  // Stamp before both writes so storage and the broadcast carry the same version.
+  _tournament = stampVersion(_tournament, getMyUserId());
   await storageSet(SK.TOURNAMENT, _tournament);
   await realtimePublish(EV_TOURN_UPDATE, _tournament);
   renderTournamentContent(document.getElementById('tab-content'));
@@ -232,6 +235,16 @@ function enterResult(roundIdx, matchIdx) {
 // ── Realtime handler (called from main) ───────────────────────────────────────
 
 export function handleTournamentEvent(data) {
+  // ⚠️ NOT an authorization check — see tournament/sync.js. This only stops a stale client
+  // silently rolling back correct results, which is the failure that bites first.
+  if (isStaleWrite(_tournament, data)) {
+    console.warn('[rl-hub] ignoring stale tournament update',
+      { held: _tournament?.version, incoming: data?.version });
+    // Re-publish so the stale sender catches up rather than sitting on a dead copy.
+    realtimePublish(EV_TOURN_UPDATE, _tournament);
+    return;
+  }
+  if (!shouldAccept(_tournament, data)) return;
   _tournament = data;
   renderTournamentTab(document.getElementById('tab-content'));
 }

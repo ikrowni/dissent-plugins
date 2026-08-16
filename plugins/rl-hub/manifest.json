@@ -58,7 +58,7 @@
     },
     {
       "url": "rl-hub-tournament.js",
-      "sha256": "d008807edff5187d459fd60d6af318450085569c6b187cf7d83f6355217c9dba"
+      "sha256": "4cbdcfeb5474443e0b24fb71a90a77df4ba9baa4106fa2b370a8f1eb31ea7b34"
     },
     {
       "url": "rl-hub-versus-overlay.js",
@@ -75,6 +75,10 @@
     {
       "url": "tournament/bracket.js",
       "sha256": "365df2d25c7d833a420a7d120dbca2c0d7e2b44fe9ee5a722fa020143e22641b"
+    },
+    {
+      "url": "tournament/sync.js",
+      "sha256": "46f838cc1d4119f7ec5202148f06426732b53da947c3319491c8530033e14e03"
     },
     {
       "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2",
