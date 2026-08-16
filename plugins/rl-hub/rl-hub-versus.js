@@ -5,6 +5,7 @@ import {
   formatTime, calcPossessionFromTouches, calcOffDef, calcShotAcc,
   normalizeBarPct, formatBallSpeed, ballSpeedColor,
 } from './versus/calc.js';
+import * as state from './versus/state.js';
 
 // Re-exported so rl-hub-main.js and the existing suite keep importing these from here.
 // The public surface of this module must not change across the split.
@@ -23,19 +24,7 @@ let _currentSenderId = null;
 let _currentGameState = null;
 let _shownAt = 0;
 let _stalenessTimer = null;
-let _demoCounts     = {};                           // { [playerName]: count }
-let _lastGoals      = { blue: null, orange: null }; // { scorer, time } | null
-let _ballTouches    = { blue: 0, orange: 0 };       // tick counts from ball.team_num
 let _expectedSlots  = 1;                            // set by active mode tab
-
-const MAX_TICKER_EVENTS = 4;
-let _tickerEvents = [];  // Array<{ event_name, player_name, team, ts }>
-
-const MAX_DEMO_FEED = 3;
-let _demoFeed = [];  // Array<{ attacker, attacker_team, victim, victim_team, ts }>
-
-const MAX_PLAYER_POSITIONS = 400;
-let _playerPositions = {};  // { [playerName]: Array<{ x, y, team }> }
 
 let _twitchUsername = '';
 
@@ -54,18 +43,13 @@ export function showVersus(senderId, gameState) {
   _currentSenderId = senderId;
   _currentGameState = gameState;
   _shownAt = Date.now();
-  if (gameState.ball?.team_num === 0) _ballTouches.blue++;
-  else if (gameState.ball?.team_num === 1) _ballTouches.orange++;
+  if (gameState.ball?.team_num === 0) state.bumpBallTouch('blue');
+  else if (gameState.ball?.team_num === 1) state.bumpBallTouch('orange');
   _render(gameState);
 }
 
 export function resetMatchState() {
-  _demoCounts      = {};
-  _demoFeed        = [];
-  _lastGoals       = { blue: null, orange: null };
-  _tickerEvents    = [];
-  _ballTouches     = { blue: 0, orange: 0 };
-  _playerPositions = {};
+  state.resetAll();
   resetOverlayState();
 }
 
@@ -73,12 +57,7 @@ export function hideVersus() {
   _stopStaleness();
   _currentSenderId  = null;
   _currentGameState = null;
-  _demoCounts       = {};
-  _lastGoals        = { blue: null, orange: null };
-  _ballTouches      = { blue: 0, orange: 0 };
-  _tickerEvents     = [];
-  _demoFeed         = [];
-  _playerPositions  = {};
+  state.resetAll();
   _onHide?.();
   applyTeamColors({
     blue:   { color_primary: '1a6fdb', color_secondary: '60a5fa' },
@@ -91,25 +70,23 @@ export function addFeedEvent({ event_name, player_name, team_num, victim_name, v
   const side = team_num === 0 ? 'blue' : 'orange';
 
   if (event_name === 'Demolition' || event_name === 'Demolish') {
-    _demoCounts[player_name] = (_demoCounts[player_name] ?? 0) + 1;
-    _demoFeed.unshift({
+    state.bumpDemo(player_name);
+    state.pushDemoFeed({
       attacker: player_name, attacker_team: side,
       victim: victim_name ?? '?', victim_team: victim_team === 0 ? 'blue' : 'orange',
       ts: Date.now(),
     });
-    if (_demoFeed.length > MAX_DEMO_FEED) _demoFeed.pop();
     _updateDemoFeed();
   }
 
   const GOAL_EVENTS = ['Goal', 'Aerial Goal', 'Bicycle Kick Goal'];
   if (GOAL_EVENTS.includes(event_name)) {
-    _lastGoals[side] = { scorer: player_name, time: _currentGameState?.time ?? null };
+    state.setLastGoal(side, { scorer: player_name, time: _currentGameState?.time ?? null });
   }
 
   const TICKER_EVENTS = ['Goal', 'Aerial Goal', 'Bicycle Kick Goal', 'Save', 'Epic Save', 'Demolition', 'Demolish', 'Assist'];
   if (TICKER_EVENTS.includes(event_name)) {
-    _tickerEvents.unshift({ event_name, player_name, team: side, ts: Date.now() });
-    if (_tickerEvents.length > MAX_TICKER_EVENTS) _tickerEvents.pop();
+    state.pushTicker({ event_name, player_name, team: side, ts: Date.now() });
     _updateTicker();
   }
 
@@ -134,14 +111,12 @@ export function refreshVersus(liveGames) {
   // Collect player positions for heatmap
   for (const p of (e.gameState.players ?? [])) {
     if (!p.location) continue;
-    if (!_playerPositions[p.name]) _playerPositions[p.name] = [];
-    _playerPositions[p.name].push({ x: p.location.x, y: p.location.y, team: p.team });
-    if (_playerPositions[p.name].length > MAX_PLAYER_POSITIONS) _playerPositions[p.name].shift();
+    state.pushPosition(p.name, p.location.x, p.location.y, p.team);
   }
   _currentGameState = e.gameState;
   _shownAt = e.receivedAt;
-  if (e.gameState.ball?.team_num === 0) _ballTouches.blue++;
-  else if (e.gameState.ball?.team_num === 1) _ballTouches.orange++;
+  if (e.gameState.ball?.team_num === 0) state.bumpBallTouch('blue');
+  else if (e.gameState.ball?.team_num === 1) state.bumpBallTouch('orange');
   _render(e.gameState);
   restoreOverlayState();
   _drawPlayerPositions();
@@ -164,11 +139,11 @@ export function applyTeamColors(teams) {
 function _updateTicker() {
   const el = document.getElementById('vsb-ticker');
   if (!el) return;
-  if (_tickerEvents.length === 0) {
+  if (state.tickerEvents().length === 0) {
     el.innerHTML = '<div class="vsb-demo-empty">No events yet</div>';
     return;
   }
-  el.innerHTML = _tickerEvents.map(e => {
+  el.innerHTML = state.tickerEvents().map(e => {
     const icon = _tickerIcon(e.event_name);
     return `<div class="vsb-tick-row ${e.team}">
       <span class="vsb-tick-ico">${icon}</span>
@@ -181,7 +156,7 @@ function _updateTicker() {
 function _updateDemoFeed() {
   const el = document.getElementById('vsb-demo-feed');
   if (!el) return;
-  el.innerHTML = _demoFeed.map(d =>
+  el.innerHTML = state.demoFeed().map(d =>
     `<div class="vsb-demo-row">
       <span class="vsb-demo-name ${d.attacker_team}">${esc(d.attacker)}</span>
       <span class="vsb-demo-arrow">💥</span>
@@ -268,7 +243,7 @@ function _drawTeamPositions(team) {
     : ['rgba(249,115,22,.65)', 'rgba(251,146,60,.65)', 'rgba(253,186,116,.65)'];
   let colorIdx = 0;
 
-  for (const positions of Object.values(_playerPositions)) {
+  for (const positions of Object.values(state.playerPositions())) {
     if (!positions.length || positions[0].team !== team) continue;
     const color = COLORS[colorIdx++ % COLORS.length];
     for (const pos of positions) {
@@ -286,7 +261,7 @@ function _drawTeamPositions(team) {
 
 function _barChart(players, team) {
   const sum   = k => players.reduce((s, p) => s + (p[k] ?? 0), 0);
-  const demos = players.reduce((s, p) => s + (_demoCounts[p.name] ?? 0), 0);
+  const demos = players.reduce((s, p) => s + (state.demoCounts()[p.name] ?? 0), 0);
 
   const stats = [
     { lbl: 'Goals',   val: sum('goals')   },
@@ -355,7 +330,7 @@ function _ballSpeedCard(gs) {
 }
 
 function _possessionCard() {
-  const { blue: bPct, orange: oPct } = calcPossessionFromTouches(_ballTouches.blue, _ballTouches.orange);
+  const { blue: bPct, orange: oPct } = calcPossessionFromTouches(state.ballTouches().blue, state.ballTouches().orange);
   return `<div class="vsb-poss-card">
     <div class="vsb-poss-title">BALL CONTROL</div>
     <div class="vsb-poss-bar">
@@ -382,7 +357,7 @@ function _balanceCard(players, team) {
 }
 
 function _lastGoalCard(side, team) {
-  const g     = _lastGoals[side];
+  const g     = state.lastGoals()[side];
   const title = `LAST GOAL — ${team.toUpperCase()}`;
   if (!g) {
     return `<div class="vsb-goal-card ${team}">
@@ -407,7 +382,7 @@ function _playerCard(p, team, slotIndex = 0) {
   const demo     = p?.demolished ?? false;
   const ss       = p?.supersonic ?? false;
   const boostPct = demo ? 0 : Math.min(100, Math.max(0, Math.round(p?.boost ?? 0)));
-  const demos    = p ? (_demoCounts[p.name] ?? 0) : 0;
+  const demos    = p ? (state.demoCounts()[p.name] ?? 0) : 0;
   const mbr      = p?.is_member ?? false;
 
   const cardCls = ['vsb-pcard', team, demo ? 'demo' : '', ss ? 'ss' : ''].filter(Boolean).join(' ');
