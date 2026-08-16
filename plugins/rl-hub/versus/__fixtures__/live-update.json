@@ -1,30 +1,30 @@
 {
   "arena": "Outlaw_Oasis_P",
-  "ball": { "speed": 0, "team_num": 255 },
+  "ball": { "speed": 30.146709442138672, "team_num": 0 },
   "has_winner": false,
   "is_overtime": false,
   "is_replay": false,
   "mode": "1v1 Duel",
   "players": [
     {
-      "assists": 0, "boost": 33, "boosting": false, "demolished": false, "demos": 0,
+      "assists": 0, "boost": 69, "boosting": false, "demolished": false, "demos": 0,
       "goals": 0, "is_bot": false, "location": { "x": 0, "y": 0 },
       "name": "player_orange", "on_wall": false, "powersliding": false,
-      "saves": 0, "score": 0, "shots": 0, "speed": 0.009755998849868776,
+      "saves": 0, "score": 0, "shots": 0, "speed": 12.0858736038208,
       "supersonic": false, "team": "orange", "touches": 1
     },
     {
       "assists": 0, "boost": 0, "boosting": false, "demolished": false, "demos": 0,
-      "goals": 1, "is_bot": false, "location": { "x": 0, "y": 0 },
+      "goals": 0, "is_bot": false, "location": { "x": 0, "y": 0 },
       "name": "player_blue", "on_wall": false, "powersliding": false,
-      "saves": 0, "score": 166, "shots": 1, "speed": 0,
-      "supersonic": false, "team": "blue", "touches": 9
+      "saves": 0, "score": 26, "shots": 0, "speed": 0,
+      "supersonic": false, "team": "blue", "touches": 3
     }
   ],
   "teams": {
-    "blue":   { "color_primary": "1873FF", "color_secondary": "E5E5E5", "score": 1 },
+    "blue":   { "color_primary": "1873FF", "color_secondary": "E5E5E5", "score": 0 },
     "orange": { "color_primary": "C26418", "color_secondary": "E5E5E5", "score": 0 }
   },
-  "time": 271,
+  "time": 284,
   "winner": ""
 }

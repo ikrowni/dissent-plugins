@@ -8,6 +8,11 @@ export function setTwitchStreamer(username) {
   _twitchUsername = username ?? '';
 }
 
+/// Read by the orchestrator to choose stream vs match hero for the centre band.
+export function twitchUsername() {
+  return _twitchUsername;
+}
+
 export function twitchCard() {
   if (!_twitchUsername) {
     return `<div class="vsb-twitch-card vsb-twitch-idle">

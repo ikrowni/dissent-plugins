@@ -59,3 +59,10 @@ export function resetAll() {
   _demoFeed = [];
   _playerPositions = {};
 }
+
+/// Replay camera positions are not play positions. Appending them silently corrupts the
+/// trail, and nothing about the rendered result looks wrong afterwards.
+export function shouldAccumulate(gameState) {
+  if (!gameState) return false;
+  return gameState.is_replay !== true;
+}
