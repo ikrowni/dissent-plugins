@@ -1,6 +1,9 @@
 // rl-hub-tournament.js — single elimination bracket
 import { storageGet, storageSet, realtimePublish, genId, esc } from '../plugin-sdk.js';
 import { SK, MODES, getMembers, getStatsCache, getMyUserId, isFresh } from './rl-hub-main.js';
+import {
+  buildBracket, propagateWinners, champion as bracketChampion, validateScore, roundName,
+} from './tournament/bracket.js';
 
 const EV_TOURN_UPDATE = 'rl:tournament:update';
 
@@ -8,84 +11,13 @@ let _tournament = null;
 
 // ── Bracket math ─────────────────────────────────────────────────────────────
 
-function nextPow2(n) {
-  let p = 1;
-  while (p < n) p <<= 1;
-  return p;
-}
-
-function buildBracket(participants) {
-  // Standard single-elim seeding: 1 vs N, 2 vs N-1, …
-  const size = nextPow2(participants.length);
-  const seeds = [...participants];
-  // Pad with byes
-  while (seeds.length < size) seeds.push(null);
-
-  // Build round 1 matchups
-  const matches = [];
-  for (let i = 0; i < size / 2; i++) {
-    matches.push({
-      player1: seeds[i],
-      player2: seeds[size - 1 - i],
-      score1: null,
-      score2: null,
-      winnerId: null,
-    });
-  }
-
-  // Handle byes: if one slot is null, the other auto-advances
-  matches.forEach(m => {
-    if (m.player1 && !m.player2) m.winnerId = m.player1.dissentUserId;
-    if (!m.player1 && m.player2) m.winnerId = m.player2.dissentUserId;
-  });
-
-  // Build subsequent rounds (empty until results entered)
-  const rounds = [{ name: roundName(matches.length * 2), matches }];
-  let prevMatches = matches;
-  while (prevMatches.length > 1) {
-    const nextCount = prevMatches.length / 2;
-    const nextMatches = Array.from({ length: nextCount }, () => ({
-      player1: null, player2: null, score1: null, score2: null, winnerId: null,
-    }));
-    rounds.push({ name: roundName(nextMatches.length * 2), matches: nextMatches });
-    prevMatches = nextMatches;
-  }
-
-  return rounds;
-}
-
-function roundName(totalPlayers) {
-  if (totalPlayers <= 2)  return 'Final';
-  if (totalPlayers <= 4)  return 'Semifinals';
-  if (totalPlayers <= 8)  return 'Quarterfinals';
-  return `Round of ${totalPlayers}`;
-}
-
-function propagateWinners(rounds) {
-  for (let r = 0; r < rounds.length - 1; r++) {
-    const cur  = rounds[r].matches;
-    const next = rounds[r + 1].matches;
-    for (let i = 0; i < next.length; i++) {
-      const a = cur[i * 2];
-      const b = cur[i * 2 + 1];
-      next[i].player1 = a.winnerId ? findParticipant(a.winnerId) : null;
-      next[i].player2 = b.winnerId ? findParticipant(b.winnerId) : null;
-      // Auto-advance byes
-      if (next[i].player1 && !next[i].player2) next[i].winnerId = next[i].player1.dissentUserId;
-      if (!next[i].player1 && next[i].player2) next[i].winnerId = next[i].player2.dissentUserId;
-    }
-  }
-}
-
 function findParticipant(userId) {
   return _tournament?.participants?.find(p => p.dissentUserId === userId) ?? null;
 }
 
 function getChampion() {
   if (!_tournament) return null;
-  const finalRound = _tournament.rounds[_tournament.rounds.length - 1];
-  const finalMatch = finalRound?.matches[0];
-  return finalMatch?.winnerId ? findParticipant(finalMatch.winnerId) : null;
+  return bracketChampion(_tournament.rounds, _tournament.participants ?? []);
 }
 
 // ── MMR seeding ───────────────────────────────────────────────────────────────
@@ -275,7 +207,6 @@ async function deleteTournament() {
 function enterResult(roundIdx, matchIdx) {
   const match = _tournament.rounds[roundIdx].matches[matchIdx];
   const bo    = _tournament.bestOf;
-  const target = Math.ceil(bo / 2);
 
   const input = prompt(`Enter score for ${match.player1.displayName} vs ${match.player2.displayName}\nFormat: "2-1" (first number = ${match.player1.displayName})`);
   if (!input) return;
@@ -284,16 +215,17 @@ function enterResult(roundIdx, matchIdx) {
   const s1 = parseInt(parts[0], 10);
   const s2 = parseInt(parts[1], 10);
 
-  if (isNaN(s1) || isNaN(s2) || (s1 !== target && s2 !== target)) {
-    alert(`Invalid score. In a Best of ${bo}, winner must reach ${target} wins.`);
-    return;
-  }
+  // Shared, tested validation. The previous check accepted 2-2 and 2-3 in a best of 3:
+  // it only asked whether ONE side reached the target, never whether the other had too,
+  // nor whether the series length was possible.
+  const v = validateScore(s1, s2, bo);
+  if (!v.ok) { alert(v.error); return; }
 
   match.score1  = s1;
   match.score2  = s2;
   match.winnerId = s1 > s2 ? match.player1.dissentUserId : match.player2.dissentUserId;
 
-  propagateWinners(_tournament.rounds);
+  propagateWinners(_tournament.rounds, _tournament.participants ?? []);
   saveTournament();
 }
 
