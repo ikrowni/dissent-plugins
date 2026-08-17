@@ -12,8 +12,7 @@
   "url": "https://plugins.dissent.chat/plugins/rl-hub/plugin.html",
   "declared_permissions": [
     "fetch:external",
-    "game:telemetry",
-    "storage:log"
+    "game:telemetry"
   ],
   "allowed_fetch_domains": [
     "rlstats.net"
@@ -58,10 +57,6 @@
       "sha256": "348883f740f791a308abf2592e67987074f7e37b59087537fcbfa88d3db35323"
     },
     {
-      "url": "rl-hub-tournament.js",
-      "sha256": "398d4fb753d61464b80f7d0f8a3e4c4c1bd802a89f39a7278d4f2843114cc0bb"
-    },
-    {
       "url": "rl-hub-versus-overlay.js",
       "sha256": "edb14c01a6991b6262117c520f694af1cb3c52d0e36fcc190bd5a8598d318312"
     },
@@ -72,18 +67,6 @@
     {
       "url": "rl-scraper.js",
       "sha256": "22849157a1f0f42fdeadc840fe15f7bc11f2b09ae95278f3d372d78dc19b1282"
-    },
-    {
-      "url": "tournament/bracket.js",
-      "sha256": "365df2d25c7d833a420a7d120dbca2c0d7e2b44fe9ee5a722fa020143e22641b"
-    },
-    {
-      "url": "tournament/dialog.js",
-      "sha256": "435a222e684615791dc015188f357b5eda2a1070c26a894ab888a6dae1fb8e64"
-    },
-    {
-      "url": "tournament/replay.js",
-      "sha256": "7126f38db6735dd8c28469d354e238aea0edd5344381f93769693a0dd8c59380"
     },
     {
       "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2",

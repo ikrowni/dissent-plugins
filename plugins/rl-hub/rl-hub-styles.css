@@ -35,6 +35,20 @@ body {
 
 /* ── Screens ── */
 .screen { display: flex; flex-direction: column; height: 100vh; position: relative; }
+/* The generic hide. EVERY .hidden rule in this file used to be scoped to one element —
+   .screen.hidden, .reg-error.hidden, .live-debug.hidden and the two overlays — so any OTHER
+   element toggled with classList.toggle('hidden') was never actually hidden.
+
+   Two things were broken by that and neither raised an error:
+     · #btn-cancel-edit — plugin.html says "Hidden during first registration", and it was
+       not; a brand-new user saw a Cancel button with nowhere to go back to.
+     · #versus-panel / #tab-content — showHubTab toggled a class that styled nothing, so the
+       live view never hid and the second tab rendered underneath it.
+
+   Guarded by hidden-contract.test.js, which reads the elements the code toggles rather than
+   trusting a list here. */
+.hidden { display: none !important; }
+
 .screen.hidden { display: none; }
 
 /* ── Loading ── */
