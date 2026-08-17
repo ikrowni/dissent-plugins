@@ -969,3 +969,16 @@ details[open] .companion-summary::before { content: '▼ '; }
 .rlt-score-sep { font-size: 18px; color: rgba(255,255,255,.3); padding-bottom: 10px; }
 
 .rlt-modal .btn-sm[disabled] { opacity: .4; cursor: not-allowed; }
+
+
+/* Hub tabs (2026-08-17) — the tournament view had no entry point until now. */
+.hub-header-actions { display: flex; align-items: center; gap: 6px; }
+.hub-tab {
+  background: transparent; border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.55); border-radius: 5px;
+  padding: 5px 12px; font-size: 12px; letter-spacing: .6px;
+  text-transform: uppercase; cursor: pointer;
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+}
+.hub-tab:hover { color: #e8eaf0; border-color: rgba(255,255,255,.24); }
+.hub-tab.active { color: #e8eaf0; border-color: var(--rl-blue, #1a6fdb); background: rgba(26,111,219,.12); }

@@ -32,6 +32,15 @@ export function getHitPoints() {
   return _hitPoints.slice();
 }
 
+// ⚠️ UNIT UNRESOLVED — do not "fix" this without a real payload.
+//
+// The owner reports goal speed displays wrongly (2026-08-17). Two candidate units and no
+// way to tell them apart from here:
+//   - the existing test asserts km/h, from the RETIRED SOS companion
+//   - showCrossbarAlert in this file documents CrossbarHit.BallSpeed as cm/s, and
+//     formatBallSpeed in versus/calc.js converts /100*3.6 on the Stats API's ball.speed
+// The source changed underneath the test, so the test proves only what SOS used to send.
+// rl-hub-main.js logs the raw payload on every goal — score one, read GOAL_UNITS, decide.
 export function formatGoalSpeed(kmh) {
   return Math.round(kmh);
 }

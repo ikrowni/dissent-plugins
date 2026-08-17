@@ -20,7 +20,12 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const overlaySrc = readFileSync(join(here, '..', 'rl-hub-versus-overlay.js'), 'utf8');
-const layoutSrc = readFileSync(join(here, '..', 'rl-hub-versus.js'), 'utf8');
+// Both files render ids the overlay module looks for: plugin.html holds the two overlay
+// hosts statically, rl-hub-versus.js renders the panels. Checking only one of them produced
+// a wrong diagnosis once — the flash overlay was reported as broken when plugin.html had it
+// all along, and "restoring" it created duplicate ids.
+const layoutSrc = readFileSync(join(here, '..', 'rl-hub-versus.js'), 'utf8')
+  + '\n' + readFileSync(join(here, '..', 'plugin.html'), 'utf8');
 
 /// Ids the overlay module looks up but the layout deliberately does not render, each with
 /// the reason. An entry here is a decision on the record, not an oversight.
@@ -64,5 +69,15 @@ describe('overlay ↔ layout DOM contract', () => {
 
   it('renders the flash overlay host, which carries goals and crossbars', () => {
     expect(rendered.has('vsb-flash-overlay')).toBe(true);
+  });
+
+  // Duplicate ids are not a style nit here: getElementById returns whichever comes first in
+  // document order, so two elements with the same id means the overlay writes into one of
+  // them and CSS may position the other. This caught a real duplication on 2026-08-17.
+  it('declares each overlay id exactly once across the layout sources', () => {
+    const counts = {};
+    for (const id of idsRenderedBy(layoutSrc)) counts[id] = (counts[id] ?? 0) + 1;
+    const dupes = Object.entries(counts).filter(([, n]) => n > 1).map(([id]) => id);
+    expect(dupes).toEqual([]);
   });
 });

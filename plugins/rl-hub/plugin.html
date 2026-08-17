@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Rocket League Hub</title>
-  <link rel="stylesheet" href="rl-hub-styles.css?v=20">
+  <link rel="stylesheet" href="rl-hub-styles.css?v=21">
 </head>
 <body>
   <!-- Screens -->
@@ -73,9 +73,17 @@ PacketSendRate=1</pre>
           <div class="page-sub" id="hub-season-label">Season —</div>
         </div>
       </div>
-      <button class="icon-btn" title="Edit my account" onclick="showEditAccount()">⚙️</button>
+      <div class="hub-header-actions">
+        <button class="hub-tab active" id="tab-btn-live" onclick="showHubTab('live')">Live</button>
+        <button class="hub-tab" id="tab-btn-tournament" onclick="showHubTab('tournament')">Tournament</button>
+        <button class="icon-btn" title="Edit my account" onclick="showEditAccount()">⚙️</button>
+      </div>
     </div>
     <div id="versus-panel"></div>
+    <!-- Tournament tab. rl-hub-tournament.js renders into #tab-content; before 2026-08-17
+         nothing imported that module and nothing rendered it, so the whole feature was
+         unreachable from the UI. -->
+    <div id="tab-content" class="hidden"></div>
     <div id="live-debug" class="live-debug hidden">
       <span id="live-debug-text">Waiting for companion…</span>
       <button class="live-debug-dismiss" onclick="dismissLiveDebug()">✕</button>
@@ -99,6 +107,6 @@ PacketSendRate=1</pre>
       + (e.reason?.message||String(e.reason)) + '\n' + (e.reason?.stack||'') + '</pre>';
   });
   </script>
-  <script type="module" src="rl-hub-main.js?v=15"></script>
+  <script type="module" src="rl-hub-main.js?v=16"></script>
 </body>
 </html>

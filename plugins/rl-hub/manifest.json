@@ -47,7 +47,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "18ba159114f81ff758857e859b01d205a1439a5e1cdde1fa65df548c29c38e5b"
+      "sha256": "b6a56eb52c1f7e700adccb0f38f90eaf97c405bca16baf369585cb9ec44481ef"
     },
     {
       "url": "rl-hub-register.js",
@@ -55,7 +55,7 @@
     },
     {
       "url": "rl-hub-styles.css",
-      "sha256": "4d57cd433b59221ab0d6b4dea007167a627cdabd893b7c8bb7a62525b47478f9"
+      "sha256": "c43f9e5f79789347201bef01cb50bed00b569bfbe86305732afed1f7d870eba3"
     },
     {
       "url": "rl-hub-tournament.js",
@@ -63,11 +63,11 @@
     },
     {
       "url": "rl-hub-versus-overlay.js",
-      "sha256": "81bb090f78a43ff7276eb652f3948c60e0bbe853343d6313a79a543063f0a46c"
+      "sha256": "edb14c01a6991b6262117c520f694af1cb3c52d0e36fcc190bd5a8598d318312"
     },
     {
       "url": "rl-hub-versus.js",
-      "sha256": "3348a07f2a84344fa8ebec60094e94d228c818bb0e845f1969049e9134df3dc8"
+      "sha256": "53a4f126e6d6e380249abfc19da81c8780a4c82023bbb462e54d26857aa55196"
     },
     {
       "url": "rl-scraper.js",

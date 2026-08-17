@@ -9,6 +9,9 @@ import {
 import {
   addGoalEvent, showCrossbarAlert, setPaused, resetOverlayState,
 } from './rl-hub-versus-overlay.js';
+import {
+  renderTournamentTab, loadTournament, handleTournamentEvent,
+} from './rl-hub-tournament.js?v=1';
 
 // ── Shared constants ────────────────────────────────────────────────────────
 
@@ -180,6 +183,10 @@ async function loadHubScreen() {
   initVersus();
   setOnHideCallback(resetOverlayState);
 
+  // The log is the source of truth; this replays it. Failure is non-fatal — the live tab
+  // must keep working even if the tournament log is unreachable.
+  loadTournament().catch(err => console.warn('[rl-hub] tournament load failed', err));
+
   if (stale.length > 0) drainFetchQueue(stale);
 }
 
@@ -223,8 +230,18 @@ function onEvent(ev) {
     _refreshVersus();
     realtimePublishCompanion('rl-sidebar', 'rl:live:end', { sender_id: senderId });
   }
+  if (ev.event === 'rl:tournament:update') {
+    handleTournamentEvent();
+  }
   if (ev.event === 'rl:live:goal') {
-    addGoalEvent(ev.data ?? {});
+    // TEMPORARY diagnostic (2026-08-17): the goal card's speed is wrong and the unit is
+    // ambiguous, and scorer_team appears to be 0 for both teams. One goal resolves both.
+    const g = ev.data ?? {};
+    console.log('[rl-hub] GOAL_UNITS raw goal_speed=%s → as-km/h=%s, as-cm/s=%s | scorer=%s scorer_team=%s (%s)',
+      g.goal_speed, Math.round(g.goal_speed ?? 0), Math.round((g.goal_speed ?? 0) / 100 * 3.6),
+      g.scorer, g.scorer_team, g.scorer_team === 0 ? 'renders BLUE' : 'renders ORANGE');
+    console.log('[rl-hub] GOAL_RAW ' + JSON.stringify(g));
+    addGoalEvent(g);
   }
   if (ev.event === 'rl:live:ballhit') {
     addBallHit(ev.data ?? {});
@@ -245,6 +262,23 @@ function onEvent(ev) {
     }
   }
 }
+
+// Tab switching between the live match view and the tournament bracket.
+window.showHubTab = (tab) => {
+  const versus = document.getElementById('versus-panel');
+  const content = document.getElementById('tab-content');
+  const liveBtn = document.getElementById('tab-btn-live');
+  const tournBtn = document.getElementById('tab-btn-tournament');
+  if (!versus || !content) return;
+
+  const live = tab !== 'tournament';
+  versus.classList.toggle('hidden', !live);
+  content.classList.toggle('hidden', live);
+  liveBtn?.classList.toggle('active', live);
+  tournBtn?.classList.toggle('active', !live);
+
+  if (!live) renderTournamentTab(content);
+};
 
 function _showLiveDebug(msg) {
   const el = document.getElementById('live-debug');
