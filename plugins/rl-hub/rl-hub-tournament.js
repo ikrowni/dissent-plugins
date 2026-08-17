@@ -1,15 +1,14 @@
 // rl-hub-tournament.js — single elimination bracket
-import { storageGet, storageSet, realtimePublish, genId, esc } from '../plugin-sdk.js';
-import { SK, MODES, getMembers, getStatsCache, getMyUserId, isFresh } from './rl-hub-main.js';
-import {
-  buildBracket, propagateWinners, champion as bracketChampion, validateScore, roundName,
-} from './tournament/bracket.js';
-import { stampVersion, shouldAccept, isStaleWrite } from './tournament/sync.js';
+import { logAppend, logReadAll, realtimePublish, genId, esc } from '../plugin-sdk.js';
+import { MODES, getMembers, getStatsCache, getMyUserId, isFresh } from './rl-hub-main.js';
+import { champion as bracketChampion, validateScore } from './tournament/bracket.js';
+import { replay, canManage as replayCanManage, KIND } from './tournament/replay.js';
 import { confirmDialog, scoreDialog, closeDialog } from './tournament/dialog.js';
 
 const EV_TOURN_UPDATE = 'rl:tournament:update';
 
 let _tournament = null;
+let _rejected = [];
 
 // ── Bracket math ─────────────────────────────────────────────────────────────
 
@@ -45,12 +44,26 @@ function buildParticipants(gameMode) {
 
 // ── Persist + broadcast ───────────────────────────────────────────────────────
 
-async function saveTournament() {
-  // Stamp before both writes so storage and the broadcast carry the same version.
-  _tournament = stampVersion(_tournament, getMyUserId());
-  await storageSet(SK.TOURNAMENT, _tournament);
-  await realtimePublish(EV_TOURN_UPDATE, _tournament);
-  renderTournamentContent(document.getElementById('tab-content'));
+/// Re-derive everything from the attested log. The log is the truth; nothing else is.
+///
+/// Realtime is only an invalidation ping — we deliberately do NOT trust the payload it
+/// carries, because a realtime publish has no attested sender and any member can send one.
+async function reloadFromLog() {
+  const entries = await logReadAll();
+  const { tournament, rejected } = replay(entries);
+  _tournament = tournament;
+  _rejected = rejected;
+  if (rejected.length) {
+    console.warn('[rl-hub] tournament: %d log entr%s rejected on replay',
+      rejected.length, rejected.length === 1 ? 'y' : 'ies', rejected);
+  }
+  renderTournamentTab(document.getElementById('tab-content'));
+}
+
+/// Tell other clients something changed so they re-read. The payload is deliberately empty:
+/// anything in it would be unattested and therefore not worth reading.
+async function announceChange() {
+  try { await realtimePublish(EV_TOURN_UPDATE, { changed: true }); } catch { /* best effort */ }
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -110,7 +123,9 @@ function renderTournamentContent(content) {
   if (!_tournament) return;
   const myId   = getMyUserId();
   const champ  = getChampion();
-  const canManage = _tournament.createdBy === myId;
+  // Attested: the log says who created the bracket. The old check read a createdBy
+  // field the creator wrote themselves, which anyone could have set.
+  const canManage = replayCanManage(_tournament, myId);
 
   let html = `
     <div class="tourn-header">
@@ -184,34 +199,38 @@ async function createTournament() {
   const bestOf  = parseInt(document.getElementById('tourn-bestof')?.value ?? '3', 10);
 
   const participants = buildParticipants(gameMode);
-  const rounds = buildBracket(participants);
+  if (participants.length < 2) {
+    await confirmDialog({
+      title: 'Not enough players',
+      body: 'A bracket needs at least two registered members. Ask people to connect their Rocket League account first.',
+      confirmLabel: 'OK',
+    });
+    return;
+  }
 
-  _tournament = {
+  // The organiser is whoever the NODE says appended this entry — never a field we set.
+  // That is what makes the bracket's authority checkable by every other client.
+  await logAppend({
+    kind: KIND.CREATE,
     id: genId(),
-    name,
-    gameMode,
-    bestOf,
-    status: 'active',
-    participants,
-    rounds,
-    createdBy: getMyUserId(),
-  };
-
-  await saveTournament();
+    name, gameMode, bestOf, participants,
+  });
+  await reloadFromLog();
+  announceChange();
 }
 
 async function deleteTournament() {
   const ok = await confirmDialog({
     title: 'Delete this tournament?',
-    body: 'The bracket and every result recorded in it are removed for everyone. This cannot be undone.',
+    body: 'The bracket stops being shown to everyone. The log of what happened is kept — entries cannot be removed, which is what makes past results verifiable.',
     confirmLabel: 'Delete',
     danger: true,
   });
   if (!ok) return;
-  _tournament = null;
-  await storageSet(SK.TOURNAMENT, null);
-  await realtimePublish(EV_TOURN_UPDATE, null);
-  renderTournamentTab(document.getElementById('tab-content'));
+
+  await logAppend({ kind: KIND.DELETE, tournamentId: _tournament.id });
+  await reloadFromLog();
+  announceChange();
 }
 
 async function enterResult(roundIdx, matchIdx) {
@@ -243,40 +262,30 @@ async function enterResult(roundIdx, matchIdx) {
     return;
   }
 
-  live.score1 = result.s1;
-  live.score2 = result.s2;
-  live.winnerId = result.s1 > result.s2
-    ? live.player1.dissentUserId
-    : live.player2.dissentUserId;
+  await logAppend({
+    kind: KIND.RESULT,
+    tournamentId: _tournament.id,
+    roundIdx, matchIdx,
+    s1: result.s1, s2: result.s2,
+  });
 
-  propagateWinners(_tournament.rounds, _tournament.participants ?? []);
-  await saveTournament();
+  await reloadFromLog();
+  announceChange();
 }
 
 // ── Realtime handler (called from main) ───────────────────────────────────────
 
-export function handleTournamentEvent(data) {
-  // ⚠️ NOT an authorization check — see tournament/sync.js. This only stops a stale client
-  // silently rolling back correct results, which is the failure that bites first.
-  if (isStaleWrite(_tournament, data)) {
-    console.warn('[rl-hub] ignoring stale tournament update',
-      { held: _tournament?.version, incoming: data?.version });
-    // Re-publish so the stale sender catches up rather than sitting on a dead copy.
-    realtimePublish(EV_TOURN_UPDATE, _tournament);
-    return;
-  }
-  if (!shouldAccept(_tournament, data)) return;
-  // A dialog is mounted on document.body, so a re-render leaves it standing. If the
-  // tournament it referred to is gone, the dialog is about nothing — close it.
-  if (!data) closeDialog();
-  _tournament = data;
-  renderTournamentTab(document.getElementById('tab-content'));
+export function handleTournamentEvent() {
+  // ⚠️ The argument is ignored ON PURPOSE. A realtime publish carries no attested sender,
+  // so anything inside it could have been written by anyone. The event means only
+  // "something changed"; the log says what.
+  reloadFromLog();
 }
 
 // ── Load on init ──────────────────────────────────────────────────────────────
 
 export async function loadTournament() {
-  _tournament = await storageGet(SK.TOURNAMENT);
+  await reloadFromLog();
 }
 
 // ── Window globals ────────────────────────────────────────────────────────────

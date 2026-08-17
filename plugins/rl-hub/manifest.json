@@ -12,7 +12,8 @@
   "url": "https://plugins.dissent.chat/plugins/rl-hub/plugin.html",
   "declared_permissions": [
     "fetch:external",
-    "game:telemetry"
+    "game:telemetry",
+    "storage:log"
   ],
   "allowed_fetch_domains": [
     "rlstats.net"
@@ -58,7 +59,7 @@
     },
     {
       "url": "rl-hub-tournament.js",
-      "sha256": "43dad0e2704310e978e59b0393fb7f2011c3e5c42d99450d4584567c1d3fb454"
+      "sha256": "ff6c378ce4c457db27da436f8df956c07090a132fd173ed288d5a0c8cb12a769"
     },
     {
       "url": "rl-hub-versus-overlay.js",
@@ -81,8 +82,8 @@
       "sha256": "435a222e684615791dc015188f357b5eda2a1070c26a894ab888a6dae1fb8e64"
     },
     {
-      "url": "tournament/sync.js",
-      "sha256": "46f838cc1d4119f7ec5202148f06426732b53da947c3319491c8530033e14e03"
+      "url": "tournament/replay.js",
+      "sha256": "7126f38db6735dd8c28469d354e238aea0edd5344381f93769693a0dd8c59380"
     },
     {
       "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2",
