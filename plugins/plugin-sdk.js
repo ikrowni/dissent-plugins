@@ -70,6 +70,49 @@ export async function releaseFileContext(context) {
 export async function storageGetUser(key) { return storageGet(key, 'user'); }
 export async function storageSetUser(key, value) { return storageSet(key, value, 'user'); }
 
+// ── Append-only attested log ──────────────────────────────────────────────────
+//
+// The one place a plugin can record WHO did something and have it believed. The node
+// stamps `author_id` from the authenticated session; a plugin cannot set it, forge it, or
+// pass one in. Everything else a plugin writes — storage:server, realtime:publish — is
+// anonymous and any member can overwrite it.
+//
+// ⚠️ This is not message access. The log holds only what plugins appended to this channel;
+// it never exposes conversation.
+//
+// ⚠️ Append-only on purpose. There is no edit and no delete, because a rewritable history
+// would let whoever forged an entry rewrite the evidence too.
+
+/** Append one entry. Returns { id, author_id, created_at } or null. */
+export async function logAppend(data) {
+  try { return await request('log:append', { data }); } catch { return null; }
+}
+
+/** Read entries after `after` (0 = from the beginning). Returns an array, newest last.
+ *  Entries look like { id, author_id, data, created_at }. `author_id` is null when the
+ *  author has since been erased — the entry survives, unattributed. */
+export async function logRead(after = 0, limit) {
+  try {
+    const r = await request('log:read', { after, ...(limit ? { limit } : {}) });
+    return r?.entries ?? [];
+  } catch { return []; }
+}
+
+/** Read the whole log, paging until exhausted. Convenience for plugins that replay history
+ *  on load. Stops at `maxPages` so a corrupt cursor cannot spin forever. */
+export async function logReadAll(maxPages = 50) {
+  const out = [];
+  let after = 0;
+  for (let i = 0; i < maxPages; i++) {
+    const page = await logRead(after, 1000);
+    if (!page.length) break;
+    out.push(...page);
+    after = page[page.length - 1].id;
+    if (page.length < 1000) break;
+  }
+  return out;
+}
+
 // Debounced write — coalesces rapid successive writes to the same key into one.
 // Use for high-frequency writes (token moves, drag updates) to stay under rate limits.
 const _debounceTimers = {};
