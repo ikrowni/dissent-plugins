@@ -11,7 +11,7 @@ import {
 } from './rl-hub-versus-overlay.js';
 import {
   renderTournamentTab, loadTournament, handleTournamentEvent,
-} from './rl-hub-tournament.js?v=1';
+} from './rl-hub-tournament.js?v=2';
 
 // ── Shared constants ────────────────────────────────────────────────────────
 

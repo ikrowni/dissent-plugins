@@ -982,3 +982,5 @@ details[open] .companion-summary::before { content: '▼ '; }
 }
 .hub-tab:hover { color: #e8eaf0; border-color: rgba(255,255,255,.24); }
 .hub-tab.active { color: #e8eaf0; border-color: var(--rl-blue, #1a6fdb); background: rgba(26,111,219,.12); }
+
+.tourn-error { color: #ff6b6b; font-family: ui-monospace, monospace; font-size: 12px; }

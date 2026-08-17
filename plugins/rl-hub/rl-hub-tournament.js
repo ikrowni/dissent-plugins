@@ -9,6 +9,27 @@ const EV_TOURN_UPDATE = 'rl:tournament:update';
 
 let _tournament = null;
 let _rejected = [];
+let _loadError = null;
+
+/// Every log write goes through here. The capability layer rejects with a real reason —
+/// "storage:log not granted", "plugin not assigned to this channel", "log is full" — and
+/// showing it is the difference between a fixable problem and a button that does nothing.
+async function writeToLog(entry, whatFailed) {
+  try {
+    await logAppend(entry);
+    return true;
+  } catch (err) {
+    console.error('[rl-hub] tournament log append failed', err);
+    await confirmDialog({
+      title: whatFailed,
+      body: `The server refused the write: ${err?.message ?? 'unknown error'}\n\n` +
+            'Nothing was recorded. If this says the permission was not granted, reopen the ' +
+            'hub settings and accept the tournament history permission.',
+      confirmLabel: 'OK',
+    });
+    return false;
+  }
+}
 
 // ── Bracket math ─────────────────────────────────────────────────────────────
 
@@ -49,7 +70,19 @@ function buildParticipants(gameMode) {
 /// Realtime is only an invalidation ping — we deliberately do NOT trust the payload it
 /// carries, because a realtime publish has no attested sender and any member can send one.
 async function reloadFromLog() {
-  const entries = await logReadAll();
+  let entries;
+  try {
+    entries = await logReadAll();
+  } catch (err) {
+    // An unreadable log is not an empty one. Saying "no tournament" here would be a
+    // confident lie over a failure.
+    console.error('[rl-hub] tournament log read failed', err);
+    _loadError = err?.message ?? 'unknown error';
+    _tournament = null;
+    renderTournamentTab(document.getElementById('tab-content'));
+    return;
+  }
+  _loadError = null;
   const { tournament, rejected } = replay(entries);
   _tournament = tournament;
   _rejected = rejected;
@@ -78,17 +111,34 @@ export function renderTournamentTab(content) {
 }
 
 function renderSetupOrEmpty(content) {
-  const myId = getMyUserId();
-  const canManage = !_tournament || _tournament.createdBy === myId;
+  const registered = getMembers().length;
+
+  if (_loadError) {
+    content.innerHTML = `
+      <div class="tourn-header"><span class="tourn-title">Tournament</span></div>
+      <div class="tourn-empty">
+        Could not read the tournament history.<br>
+        <span class="tourn-error">${esc(_loadError)}</span><br><br>
+        This is not an empty tournament — it means the history could not be loaded, so
+        nothing is being shown rather than something wrong.
+      </div>`;
+    return;
+  }
 
   if (!_tournament) {
+    // Anyone may start a bracket; the log records who did, and only they can record results.
+    const enough = registered >= 2;
     content.innerHTML = `
       <div class="tourn-header">
         <span class="tourn-title">Tournament</span>
-        ${canManage ? '<button class="btn-sm" onclick="startTournamentSetup()">New Tournament</button>' : ''}
+        ${enough ? '<button class="btn-sm" onclick="startTournamentSetup()">New Tournament</button>' : ''}
       </div>
-      <div class="tourn-empty">No active tournament.<br>${canManage ? 'Start one above.' : 'Ask a member to start one.'}</div>
-    `;
+      <div class="tourn-empty">
+        No active tournament.<br>
+        ${enough
+          ? 'Start one above. Everyone who has connected a Rocket League account is entered automatically.'
+          : `A bracket needs at least two players with a connected Rocket League account — ${registered} ${registered === 1 ? 'has' : 'have'} connected so far.<br>Ask others to open this hub and connect their account.`}
+      </div>`;
     return;
   }
 }
@@ -199,6 +249,8 @@ async function createTournament() {
   const bestOf  = parseInt(document.getElementById('tourn-bestof')?.value ?? '3', 10);
 
   const participants = buildParticipants(gameMode);
+  console.log('[rl-hub] createTournament: %d registered member(s) → %d participant(s)',
+    getMembers().length, participants.length);
   if (participants.length < 2) {
     await confirmDialog({
       title: 'Not enough players',
@@ -210,11 +262,13 @@ async function createTournament() {
 
   // The organiser is whoever the NODE says appended this entry — never a field we set.
   // That is what makes the bracket's authority checkable by every other client.
-  await logAppend({
+  const ok2 = await writeToLog({
     kind: KIND.CREATE,
     id: genId(),
     name, gameMode, bestOf, participants,
-  });
+  }, 'Could not create the tournament');
+  if (!ok2) return;
+
   await reloadFromLog();
   announceChange();
 }
@@ -228,7 +282,10 @@ async function deleteTournament() {
   });
   if (!ok) return;
 
-  await logAppend({ kind: KIND.DELETE, tournamentId: _tournament.id });
+  const removed = await writeToLog({ kind: KIND.DELETE, tournamentId: _tournament.id },
+    'Could not delete the tournament');
+  if (!removed) return;
+
   await reloadFromLog();
   announceChange();
 }
@@ -262,12 +319,13 @@ async function enterResult(roundIdx, matchIdx) {
     return;
   }
 
-  await logAppend({
+  const saved = await writeToLog({
     kind: KIND.RESULT,
     tournamentId: _tournament.id,
     roundIdx, matchIdx,
     s1: result.s1, s2: result.s2,
-  });
+  }, 'Could not save the result');
+  if (!saved) return;
 
   await reloadFromLog();
   announceChange();

@@ -47,7 +47,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "b6a56eb52c1f7e700adccb0f38f90eaf97c405bca16baf369585cb9ec44481ef"
+      "sha256": "a77cc15492b3324ed9da9725aca8c9a2a22edda15f683ce4310cc5140e3c58ec"
     },
     {
       "url": "rl-hub-register.js",
@@ -55,11 +55,11 @@
     },
     {
       "url": "rl-hub-styles.css",
-      "sha256": "c43f9e5f79789347201bef01cb50bed00b569bfbe86305732afed1f7d870eba3"
+      "sha256": "348883f740f791a308abf2592e67987074f7e37b59087537fcbfa88d3db35323"
     },
     {
       "url": "rl-hub-tournament.js",
-      "sha256": "ff6c378ce4c457db27da436f8df956c07090a132fd173ed288d5a0c8cb12a769"
+      "sha256": "398d4fb753d61464b80f7d0f8a3e4c4c1bd802a89f39a7278d4f2843114cc0bb"
     },
     {
       "url": "rl-hub-versus-overlay.js",

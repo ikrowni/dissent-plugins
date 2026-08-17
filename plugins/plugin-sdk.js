@@ -83,19 +83,25 @@ export async function storageSetUser(key, value) { return storageSet(key, value,
 // ⚠️ Append-only on purpose. There is no edit and no delete, because a rewritable history
 // would let whoever forged an entry rewrite the evidence too.
 
-/** Append one entry. Returns { id, author_id, created_at } or null. */
+/** Append one entry. Returns { id, author_id, created_at }.
+ *
+ *  ⚠️ THROWS on failure, deliberately. An earlier version caught and returned null, which
+ *  turned every refusal — missing consent, plugin not bound to the channel, log full — into
+ *  a UI that simply did nothing. A write path that hides why it failed is worse than one
+ *  that fails loudly: the caller cannot tell success from silence. */
 export async function logAppend(data) {
-  try { return await request('log:append', { data }); } catch { return null; }
+  return request('log:append', { data });
 }
 
 /** Read entries after `after` (0 = from the beginning). Returns an array, newest last.
  *  Entries look like { id, author_id, data, created_at }. `author_id` is null when the
  *  author has since been erased — the entry survives, unattributed. */
+/** ⚠️ THROWS on failure rather than returning []. An empty log and an unreadable one mean
+ *  very different things — the first says "no tournament yet", the second says "we could not
+ *  tell". Collapsing them into [] renders a confident empty state over an error. */
 export async function logRead(after = 0, limit) {
-  try {
-    const r = await request('log:read', { after, ...(limit ? { limit } : {}) });
-    return r?.entries ?? [];
-  } catch { return []; }
+  const r = await request('log:read', { after, ...(limit ? { limit } : {}) });
+  return r?.entries ?? [];
 }
 
 /** Read the whole log, paging until exhausted. Convenience for plugins that replay history
