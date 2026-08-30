@@ -23,6 +23,18 @@ export const WAIVER_TYPE = Object.freeze({
   FAAB: 'faab',             // blind bidding against a budget
 });
 
+/**
+ * Ceilings on the roster shape.
+ *
+ * ⚠️ These bound a TYPO, not a taste. A league may legitimately run a deep
+ * bench; none can run 4,000 of them, and an unbounded number reaches
+ * `generateOrder` as a rounds count and builds a draft nobody can load.
+ */
+export const MAX_BENCH_SLOTS = 40;
+export const MAX_IR_SLOTS = 10;
+export const MAX_TAXI_SLOTS = 10;
+export const MAX_DRAFT_ROUNDS = 40;
+
 /** The default league: 12-team PPR redraft, the most common shape by far. */
 export const DEFAULT_SETTINGS = Object.freeze({
   name: 'New League',
@@ -125,14 +137,90 @@ export function requiresLineupSetting(settings) {
  */
 export function normalizeSettings(partial = {}) {
   const merged = { ...DEFAULT_SETTINGS, ...partial };
+  const positions = [...(partial.rosterPositions ?? DEFAULT_SETTINGS.rosterPositions)];
+
+  // ⚠️ `irSlots` AND the 'IR' entries in `rosterPositions` BOTH described the
+  // same thing, and nothing kept them equal. The roster screen counted the
+  // array (views/league-roster.js) while the server enforced the number
+  // (ops-league.js placeOnIr, rosters.js validateRosters) — so a commissioner
+  // who set irSlots without adding 'IR' got a league where the node allowed a
+  // player onto IR and the roster page had nowhere to draw him. He was held,
+  // uncounted against the active roster, and invisible. Same story for taxi.
+  //
+  // The number is the source of truth and the array is derived from it, with
+  // one exception: a caller who passes `rosterPositions` and NOT the number is
+  // describing the shape with the array, so the number follows it instead.
+  const ir = reserveCount(partial, positions, 'irSlots', 'IR', merged);
+  const taxi = reserveCount(partial, positions, 'taxiSlots', 'TAXI', merged);
+
   return {
     ...merged,
-    rosterPositions: [...(partial.rosterPositions ?? DEFAULT_SETTINGS.rosterPositions)],
+    irSlots: ir,
+    taxiSlots: taxi,
+    rosterPositions: setReserve(setReserve(positions, 'IR', ir), 'TAXI', taxi),
     scoring: { ...(partial.scoring ?? DEFAULT_SETTINGS.scoring) },
     // ⚠️ Copied for the same reason as `scoring`: a league editing its limits in
     // place would otherwise edit every league seeded from the frozen default.
     positionLimits: { ...(partial.positionLimits ?? DEFAULT_SETTINGS.positionLimits) },
   };
+}
+
+/** Which of the two descriptions of a reserve compartment wins — see above. */
+function reserveCount(partial, positions, field, token, merged) {
+  const describedByArray = partial.rosterPositions !== undefined && partial[field] === undefined;
+  const n = describedByArray
+    ? positions.filter((x) => x === token).length
+    : Number(merged[field] ?? 0);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+/**
+ * Rewrite a slot list to hold exactly `n` of one reserve token.
+ *
+ * ⚠️ STARTING SLOTS AND BENCH KEEP THEIR ORDER. Only the named token is
+ * stripped and re-appended, because a lineup is indexed against the starters
+ * and re-ordering them would silently re-label every starting slot.
+ */
+function setReserve(positions, token, n) {
+  const kept = positions.filter((x) => x !== token);
+  return [...kept, ...Array.from({ length: n }, () => token)];
+}
+
+/**
+ * Set a league's roster shape from counts rather than from a hand-built array.
+ *
+ * This is what a settings form should call: "ten bench spots and one IR" is the
+ * question a commissioner is actually answering, and building the array by hand
+ * at each call site is how the starters get re-ordered by accident.
+ *
+ * ⚠️ STARTERS ARE NEVER TOUCHED. Passing `bench` undefined leaves the bench
+ * alone, so a caller changing only IR cannot silently resize the bench.
+ */
+export function setRosterShape(settings, { bench, ir, taxi } = {}) {
+  const s = normalizeSettings(settings);
+  const clamp = (v, max) => Math.max(0, Math.min(max, Math.trunc(Number(v))));
+
+  let positions = [...s.rosterPositions];
+  if (bench !== undefined && Number.isFinite(Number(bench))) {
+    positions = setReserve(positions, 'BN', clamp(bench, MAX_BENCH_SLOTS));
+    // 'BN' was re-appended after IR/TAXI; put the reserves back at the end so
+    // the list still reads starters → bench → reserves.
+    positions = setReserve(setReserve(positions, 'IR', countOf(s.rosterPositions, 'IR')),
+      'TAXI', countOf(s.rosterPositions, 'TAXI'));
+  }
+
+  const next = { ...s, rosterPositions: positions };
+  if (ir !== undefined && Number.isFinite(Number(ir))) next.irSlots = clamp(ir, MAX_IR_SLOTS);
+  if (taxi !== undefined && Number.isFinite(Number(taxi))) next.taxiSlots = clamp(taxi, MAX_TAXI_SLOTS);
+  return normalizeSettings(next);
+}
+
+const countOf = (list, token) => (list ?? []).filter((x) => x === token).length;
+
+/** How many players a team may hold, IR and taxi excluded — they are extra. */
+export function activeRosterSize(settings) {
+  const { starters, bench } = splitRosterPositions(settings?.rosterPositions);
+  return starters.length + bench;
 }
 
 /**
@@ -184,6 +272,35 @@ export function validateSettings(settings) {
     errors.push(`vetoVotesNeeded (${s.vetoVotesNeeded}) exceeds numTeams (${s.numTeams})`);
   }
 
+  // Roster shape and the draft that fills it.
+  const { bench, ir: irInList } = splitRosterPositions(s.rosterPositions);
+  if (bench > MAX_BENCH_SLOTS) errors.push(`at most ${MAX_BENCH_SLOTS} bench slots`);
+  if (!Number.isInteger(s.irSlots) || s.irSlots < 0 || s.irSlots > MAX_IR_SLOTS) {
+    errors.push(`irSlots must be a whole number from 0 to ${MAX_IR_SLOTS}`);
+  }
+  if (!Number.isInteger(s.taxiSlots) || s.taxiSlots < 0 || s.taxiSlots > MAX_TAXI_SLOTS) {
+    errors.push(`taxiSlots must be a whole number from 0 to ${MAX_TAXI_SLOTS}`);
+  }
+  // normalizeSettings derives the list from the numbers, so a disagreement here
+  // means something bypassed it — worth failing loudly rather than picking one.
+  if (irInList !== s.irSlots) {
+    errors.push(`rosterPositions carries ${irInList} IR slots but irSlots says ${s.irSlots}`);
+  }
+
+  if (!Number.isInteger(s.draftRounds) || s.draftRounds < 1 || s.draftRounds > MAX_DRAFT_ROUNDS) {
+    errors.push(`draftRounds must be a whole number from 1 to ${MAX_DRAFT_ROUNDS}`);
+  }
+  // ⚠️ A draft longer than the roster hands every team more players than they
+  // may hold, and `validateRosters` then reports every single team as illegal —
+  // a league-wide error whose cause is one setting nobody looked at.
+  const capacity = activeRosterSize(s);
+  if (s.draftRounds > capacity) {
+    errors.push(`${s.draftRounds} draft rounds fills more players than the ${capacity} roster spots — add bench slots or draft fewer rounds`);
+  }
+  if (!Number.isInteger(s.pickTimerSeconds) || s.pickTimerSeconds < 0) {
+    errors.push('pickTimerSeconds must be 0 (no clock) or a whole number of seconds');
+  }
+
   // ⚠️ Keeper and taxi rules on a redraft league are silently meaningless, which
   // is worse than an error — a commissioner sets maxKeepers and wonders all
   // preseason why nobody can keep anyone.
@@ -233,3 +350,72 @@ export function validateSettings(settings) {
  *   · `veto_votes_needed` is often ABSENT, so a default of 6 can exceed the team
  *     count of a small league and make a veto unreachable.
  */
+
+/**
+ * May this settings change be applied to a league in THIS state?
+ *
+ * ⚠️ SEPARATE FROM `validateSettings`, AND THE DIFFERENCE IS THE WHOLE POINT.
+ * `validateSettings` asks whether a config is internally coherent — a question
+ * about the config alone. This asks whether moving from one coherent config to
+ * another is safe given what the league already holds, which needs the rosters
+ * and the draft. A ten-man bench is perfectly valid and still catastrophic to
+ * impose on a league whose teams hold twelve players.
+ *
+ * ⚠️ GROWING IS ALWAYS ALLOWED. Adding bench spots or an IR slot before a draft
+ * is the ordinary use and must never be blocked. Only shrinking is gated, and
+ * only when something would actually be stranded.
+ *
+ * ⚠️ A SHRINK DOES NOT "UN-DRAFT" ANYONE. Nothing here decides who leaves a
+ * roster, so allowing it would simply make every affected team permanently
+ * illegal and leave `validateRosters` reporting a league-wide error whose cause
+ * was one number in a form.
+ *
+ * `draftStatus` is the draft's own status or null when none exists.
+ */
+export function canApplySettings(before, next, { rosters = {}, draftStatus = null } = {}) {
+  const a = normalizeSettings(before ?? {});
+  const b = normalizeSettings(next ?? {});
+
+  const structural = a.rosterPositions.join() !== b.rosterPositions.join()
+    || a.draftRounds !== b.draftRounds
+    || a.draftType !== b.draftType
+    || a.pickTimerSeconds !== b.pickTimerSeconds;
+  if (!structural) return { ok: true, error: null };
+
+  // ⚠️ A RUNNING DRAFT IS FROZEN ENTIRELY. `rounds`, `type` and the clock are
+  // baked into the board by `createDraft`, so changing them mid-draft moves the
+  // label and not the board — a setting that appears to work and does nothing.
+  if (draftStatus === 'active' || draftStatus === 'paused') {
+    return {
+      ok: false,
+      error: `the draft is ${draftStatus} — finish it before changing the roster or draft settings`,
+    };
+  }
+
+  const capacity = activeRosterSize(b);
+  for (const [teamId, roster] of Object.entries(rosters ?? {})) {
+    const held = (roster?.players ?? []).length;
+    if (held > capacity) {
+      return {
+        ok: false,
+        error: `team ${teamId} already holds ${held} players — ${capacity} roster spot${capacity === 1 ? '' : 's'} would strand ${held - capacity}`,
+      };
+    }
+    const onIr = (roster?.ir ?? []).length;
+    if (onIr > b.irSlots) {
+      return {
+        ok: false,
+        error: `team ${teamId} has ${onIr} on IR — ${b.irSlots} IR slot${b.irSlots === 1 ? '' : 's'} would strand ${onIr - b.irSlots}`,
+      };
+    }
+    const onTaxi = (roster?.taxi ?? []).length;
+    if (onTaxi > b.taxiSlots) {
+      return {
+        ok: false,
+        error: `team ${teamId} has ${onTaxi} on taxi — ${b.taxiSlots} would strand ${onTaxi - b.taxiSlots}`,
+      };
+    }
+  }
+
+  return { ok: true, error: null };
+}

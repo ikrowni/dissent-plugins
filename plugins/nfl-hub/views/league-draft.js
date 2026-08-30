@@ -147,14 +147,54 @@ function noDraftPane() {
   });
 }
 
+/**
+ * Which of this draft's baked-in settings no longer match the league's.
+ *
+ * ⚠️ A DRAFT IS A SNAPSHOT, AND NOTHING SAID SO. `rounds`, `type` and the pick
+ * clock are fixed into `order` when the draft is built, so a commissioner who
+ * edits the league afterwards sees the board go on reporting the old numbers
+ * with only a Start button to press. It reads as a stuck button, which is
+ * exactly how it was reported — the settings had saved fine, they simply had
+ * nowhere to land.
+ */
+function staleAgainstSettings(d, settings) {
+  if (!settings) return [];
+  const out = [];
+  // ⚠️ THE ABSENCE CHECK RUNS ON THE RAW VALUE, BEFORE FORMATTING. Formatting
+  // first turns an unset pick clock into the string "undefineds", which is not
+  // null, compares unequal to everything, and reports every league that has
+  // never set one as having drifted.
+  const cmp = (label, was, now, fmt = (v) => v) => {
+    if (now === undefined || now === null || now === '') return;
+    if (String(was) !== String(now)) out.push(`${label} ${fmt(was)} → ${fmt(now)}`);
+  };
+  cmp('rounds', d.rounds, settings.draftRounds);
+  cmp('order', d.type, settings.draftType);
+  cmp('pick clock', d.pickTimerSeconds, settings.pickTimerSeconds, (v) => `${v}s`);
+  return out;
+}
+
 function prePane(d) {
+  const stale = staleAgainstSettings(d, state.league?.settings);
   return panel({
     title: 'Draft',
     body: `
       <p class="muted">${d.order.length} picks over ${d.rounds} round${d.rounds === 1 ? '' : 's'},
       ${esc(d.type)} order. Pick clock ${d.pickTimerSeconds}s.</p>
+      ${stale.length && d.isCommissioner
+    ? `<p class="notice">This draft was built before your latest settings change, so it still
+         uses ${esc(stale.join(', '))}. Rebuilding discards nothing — no pick has been made —
+         and applies the league's current settings.</p>`
+    : ''}
       ${d.isCommissioner
-    ? `<button class="btn primary" data-act="draft-start" ${state.busy ? 'disabled' : ''}>Start draft</button>`
+    ? `<div class="row-actions">
+         <button class="btn primary" data-act="draft-start" ${state.busy ? 'disabled' : ''}>Start draft</button>
+         <button class="btn" data-act="draft-rebuild" ${state.busy ? 'disabled' : ''}>
+           ${state.busy ? 'Rebuilding…' : 'Rebuild from settings'}
+         </button>
+       </div>
+       <p class="tiny">Rebuild regenerates the board from the league settings — rounds, order and
+         pick clock. It is refused once the draft has started.</p>`
     : '<p class="muted">Waiting for the commissioner to start.</p>'}`,
   });
 }
@@ -732,6 +772,17 @@ export async function create(app) {
 }
 
 export async function start(app) { await act(app, () => startDraft(state.leagueId)); }
+
+/**
+ * Commissioner: regenerate a not-yet-started board from the current settings.
+ *
+ * ⚠️ Sends no options, on purpose. `draft:create` falls back to the league's own
+ * settings for rounds, type and clock, so passing this view's idea of them would
+ * be a second place for those numbers to be wrong.
+ */
+export async function rebuild(app) {
+  await act(app, () => createDraft(state.leagueId), 'Draft rebuilt from the league settings.');
+}
 export async function pause(app, paused) { await act(app, () => setPaused(state.leagueId, paused)); }
 export async function finalize(app) {
   await act(app, () => finalizeDraft(state.leagueId), 'Rosters updated from the draft.');

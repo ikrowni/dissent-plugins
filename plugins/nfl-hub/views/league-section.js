@@ -469,6 +469,9 @@ export async function onAction(act, target) {
     case 'draft-start':
       draft.start(app);
       return;
+    case 'draft-rebuild':
+      draft.rebuild(app);
+      return;
     case 'draft-pause':
       draft.pause(app, target.dataset.paused !== 'true');
       return;
