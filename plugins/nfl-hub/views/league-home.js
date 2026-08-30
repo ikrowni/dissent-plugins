@@ -19,7 +19,10 @@ import {
 // core/league/* is pure and shared by both halves of the plugin precisely so the
 // client cannot disagree with the server about what "PPR" means.
 import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
-import { WAIVER_TYPE } from '../core/league/settings.js';
+import {
+  WAIVER_TYPE, MAX_BENCH_SLOTS, MAX_IR_SLOTS, MAX_DRAFT_ROUNDS, activeRosterSize,
+} from '../core/league/settings.js';
+import { splitRosterPositions } from '../core/league/slots.js';
 import { latestRecap } from '../core/league/recap.js';
 import { toScoredWeeks, toRosters, hasEnoughForPower } from '../core/league/power-adapter.js';
 import { powerRankings } from '../core/power.js';
@@ -276,13 +279,27 @@ function rosterCallout(league, teamCount) {
  * league's NAME, let alone its rules. Exactly the shape `fromSleeperSettings` was
  * in: a tested capability nobody could use.
  *
- * ⚠️ STRUCTURAL SETTINGS ARE DELIBERATELY ABSENT. `numTeams` and
- * `rosterPositions` are not offered here. The op would accept them —
- * `validateSettings` only checks a config is internally coherent, not that it is
- * safe to apply to a season already in progress — and shrinking a roster under a
- * drafted team, or a league under a generated schedule, is not a settings change,
- * it is a migration. Anything that cannot be changed safely mid-season should not
- * be one input away from it.
+ * ⚠️ `numTeams` IS STILL DELIBERATELY ABSENT. Changing it under a generated
+ * schedule is a migration, not a settings change, and nothing here can perform
+ * one.
+ *
+ * ⚠️ ROSTER SHAPE AND DRAFT SETUP ARE OFFERED, AND ARE NOT THE SAME RISK. They
+ * were absent for the same reason as `numTeams` and it cost a league its draft:
+ * a commissioner could not add a bench spot or an IR slot, could not change the
+ * number of rounds, and — because a draft snapshots these when it is built —
+ * had no way to make any edit reach a draft already prepared. The board sat on
+ * "15 rounds" with only a Start button.
+ *
+ * What makes these safe to offer is that the node refuses the unsafe direction
+ * rather than this form hiding the safe one: `guardRosterShapeChange` blocks a
+ * shrink that would strand a rostered player and freezes the shape entirely
+ * while a draft is running. Growing a bench before a draft — the actual use —
+ * was never dangerous.
+ *
+ * ⚠️ COUNTS ARE POSTED, NOT `rosterPositions`. Rebuilding the array here would
+ * mean rebuilding it from whatever starters this render happened to hold, and a
+ * stale render re-orders the starting slots — which re-labels every saved
+ * lineup, since a lineup is indexed against that list.
  *
  * The rest are rules a commissioner legitimately tunes, and the module refuses
  * any combination that does not hold together.
@@ -291,6 +308,13 @@ function settingsPane(league) {
   if (!league.isCommissioner) return '';
   const st = league.settings ?? {};
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(label)}</option>`;
+  const shape = splitRosterPositions(st.rosterPositions);
+  const capacity = activeRosterSize(st);
+  // ⚠️ Named because saving is not enough. A draft already built keeps the
+  // rounds it was built with, so a commissioner who changes them here and never
+  // rebuilds sees the old number on the board and no reason why.
+  const draftNote = 'A draft that is already set up keeps the settings it was built with — '
+    + 'rebuild it from the Draft tab for a change here to reach the board.';
   return panel({
     title: 'League settings',
     right: '<span class="muted">commissioner</span>',
@@ -330,6 +354,39 @@ function settingsPane(league) {
             ${[0, 1, 2, 3].map((n) => opt(n, st.autoSubsPerWeek ?? 0, n === 0 ? 'Off' : String(n))).join('')}
           </select>
         </label>
+        <fieldset class="lg-set-group">
+          <legend>Roster</legend>
+          <label>Bench spots
+            <input name="benchSlots" type="number" min="0" max="${MAX_BENCH_SLOTS}" value="${esc(shape.bench)}">
+          </label>
+          <label>IR slots
+            <input name="irSlots" type="number" min="0" max="${MAX_IR_SLOTS}" value="${esc(st.irSlots ?? shape.ir ?? 0)}">
+          </label>
+          <p class="tiny">${shape.starters.length} starting spot${shape.starters.length === 1 ? '' : 's'}
+            + ${shape.bench} bench = <strong>${capacity}</strong> players per team.
+            IR sits on top of that and does not count against it — a player only
+            reaches it carrying a season-length reserve designation.</p>
+        </fieldset>
+
+        <fieldset class="lg-set-group">
+          <legend>Draft</legend>
+          <label>Rounds
+            <input name="draftRounds" type="number" min="1" max="${MAX_DRAFT_ROUNDS}" value="${esc(st.draftRounds ?? 15)}">
+          </label>
+          <label>Pick clock (seconds)
+            <input name="pickTimerSeconds" type="number" min="0" max="3600" value="${esc(st.pickTimerSeconds ?? 90)}">
+          </label>
+          <label>Draft order
+            <select name="draftType">
+              ${opt('snake', st.draftType ?? 'snake', 'Snake')}
+              ${opt('linear', st.draftType ?? 'snake', 'Linear')}
+            </select>
+          </label>
+          <p class="tiny">Rounds cannot exceed the ${capacity} roster spots — a longer draft
+            hands every team more players than they may hold. 0 seconds means no pick clock.
+            ${draftNote}</p>
+        </fieldset>
+
         <label class="inline"><input type="checkbox" name="tradesEnabled"${st.tradesEnabled !== false ? ' checked' : ''}> Trades allowed</label>
         <label class="inline"><input type="checkbox" name="addsEnabled"${st.addsEnabled !== false ? ' checked' : ''}> Free-agent adds allowed</label>
         <button class="btn primary" type="submit" ${state.busy ? 'disabled' : ''}>
@@ -525,6 +582,14 @@ export async function saveSettings(app, form) {
     waiverType: String(form.waiverType),
     waiverBudget: Number(form.waiverBudget),
     autoSubsPerWeek: Number(form.autoSubsPerWeek),
+    // ⚠️ COUNTS, not `rosterPositions` — the node derives the slot list from
+    // the league's own starters. See settingsPane for why posting the array is
+    // the thing that quietly re-labels every lineup.
+    benchSlots: Number(form.benchSlots),
+    irSlots: Number(form.irSlots),
+    draftRounds: Number(form.draftRounds),
+    pickTimerSeconds: Number(form.pickTimerSeconds),
+    draftType: String(form.draftType),
     // ⚠️ An unchecked checkbox is ABSENT from FormData, not `false`.
     tradesEnabled: Boolean(form.tradesEnabled),
     addsEnabled: Boolean(form.addsEnabled),

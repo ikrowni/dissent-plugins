@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.33.0",
+  "version": "2.34.0",
   "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -319,7 +319,7 @@
     },
     {
       "url": "core/league/settings.js",
-      "sha256": "2a9b79b733d51c1d66d41ceab345ea0e047678bc5a3c83402f88da406f70738c"
+      "sha256": "ac86fcb65b099f07b7325a98a755218be08b86f160f6e73feb878af7ac9f34c8"
     },
     {
       "url": "core/league/slots.js",
@@ -519,11 +519,11 @@
     },
     {
       "url": "views/league-draft.js",
-      "sha256": "666f33ff8cd562365fcde0fe776a35b0a881094c598abe647e7641a3003e5bbe"
+      "sha256": "fb9409f8c8fd07187c19ea045e83ed75b9cb44e093263e96fe39afc8b96efd63"
     },
     {
       "url": "views/league-home.js",
-      "sha256": "c29b0d5d6eb3f79660847ac23cd8931be06781261f396d4c7cb2afd7afde324f"
+      "sha256": "d59b018289f4091138f1c599ca92ea821a59d2b017a6ae5c6859505696675021"
     },
     {
       "url": "views/league-identity.js",
@@ -547,7 +547,7 @@
     },
     {
       "url": "views/league-section.js",
-      "sha256": "0e21fed1a1c35a520b1a5aaaaa4042e7ca07141180e02806ac350f267dddd0da"
+      "sha256": "f6ecea867248df34e89dc080055762d1f431bcb381c0799b9c5ccd6b98c69b36"
     },
     {
       "url": "views/league.js",

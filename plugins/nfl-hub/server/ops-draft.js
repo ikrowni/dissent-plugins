@@ -35,7 +35,22 @@ function autoPicker(queues, ranking) {
   };
 }
 
-/** Commissioner: set the draft up. */
+/**
+ * Commissioner: set the draft up, or rebuild it after a settings change.
+ *
+ * ⚠️ A DRAFT IS A SNAPSHOT OF THE SETTINGS AT THE MOMENT IT WAS BUILT. `rounds`,
+ * `type` and the pick clock are baked into `order` by `createDraft`, so editing
+ * the league afterwards changes nothing about a draft that already exists — the
+ * board goes on saying "15 rounds" while the settings say 16, with no control
+ * anywhere to reconcile them. That was reported as a stuck Start button, and it
+ * is why this op is re-runnable: rebuilding is how a settings change reaches a
+ * draft that has not started.
+ *
+ * ⚠️ AND ONLY WHILE IT HAS NOT STARTED. This used to overwrite unconditionally,
+ * which meant one stray call discarded every pick of a live draft with nothing
+ * to restore it from — the picks ARE the ownership record until the draft is
+ * finalised.
+ */
 export function createLeagueDraft({ p, payload }) {
   const lg = requireLeagueId(payload);
   const { meta, teams } = loadLeague(lg);
@@ -58,6 +73,11 @@ export function createLeagueDraft({ p, payload }) {
   const rounds = Number(payload?.rounds ?? meta.settings?.draftRounds ?? 15);
   const pickTimerSeconds = Number(payload?.pickTimerSeconds ?? meta.settings?.pickTimerSeconds ?? 90);
 
+  const existing = read(KEY.draft(lg), null);
+  if (existing && existing.status !== DRAFT_STATUS.PRE) {
+    refuse(`this draft is ${existing.status} and cannot be rebuilt — rebuilding would discard every pick made`);
+  }
+
   const assets = read(KEY.assets(lg), { pickOwnership: [] });
   const draft = createDraft({
     draftOrder: order,
@@ -68,8 +88,19 @@ export function createLeagueDraft({ p, payload }) {
     season: meta.season,
   });
 
-  mutate(KEY.draft(lg), () => draft, null);
-  return { status: draft.status, picks: draft.order.length, rounds, type };
+  // ⚠️ Re-checked INSIDE the swap. The status read above can be stale by the
+  // time this lands — the commissioner starting the draft in another tab is the
+  // obvious race, and losing that race must not wipe the draft it started.
+  mutate(KEY.draft(lg), (d) => {
+    if (d && d.status !== DRAFT_STATUS.PRE) {
+      refuse(`this draft is ${d.status} and cannot be rebuilt — rebuilding would discard every pick made`);
+    }
+    return draft;
+  }, null);
+  return {
+    status: draft.status, picks: draft.order.length, rounds, type,
+    rebuilt: Boolean(existing),
+  };
 }
 
 /** Commissioner: start the clock. */

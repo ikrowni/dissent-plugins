@@ -561,3 +561,64 @@ describe('the draft tab with no league loaded', () => {
     expect(html).toContain('draft-retry');
   });
 });
+
+// ⚠️ THE BUG THIS EXISTS FOR: a draft bakes rounds/type/clock into its board
+// when it is built, so a commissioner who edited the league afterwards saw the
+// board still reporting the old numbers with only a Start button — reported as
+// "the Start draft button is stuck". The settings had saved; they had nowhere
+// to land.
+describe('a prepared draft that no longer matches the league settings', () => {
+  const pre = (over = {}) => ({
+    status: 'pre', type: 'snake', rounds: 15, pickTimerSeconds: 90,
+    pickEndsAt: null, msRemaining: null, onClock: null, picks: {},
+    order: Array.from({ length: 120 }, (_, i) => ({ overall: i + 1, round: 1, slot: 't1', owner: 't1' })),
+    isCommissioner: true,
+    ...over,
+  });
+  const withSettings = (settings, draftOver = {}) => setup({
+    draft: pre(draftOver),
+    league: league(8, { settings }),
+  });
+
+  it('says so, naming the numbers that drifted', () => {
+    withSettings({ draftRounds: 16, draftType: 'snake', pickTimerSeconds: 90 });
+    const html = render();
+    expect(html).toContain('rounds 15 → 16');
+  });
+
+  it('offers the commissioner a rebuild alongside Start', () => {
+    withSettings({ draftRounds: 16 });
+    const html = render();
+    expect(html).toContain('data-act="draft-rebuild"');
+    expect(html).toContain('data-act="draft-start"');
+  });
+
+  it('stays quiet when the draft already matches', () => {
+    withSettings({ draftRounds: 15, draftType: 'snake', pickTimerSeconds: 90 });
+    const html = render();
+    expect(html).not.toContain('→');
+  });
+
+  // A league that has never set these must not be reported as drifted.
+  it('treats an absent setting as no disagreement', () => {
+    withSettings({ rosterPositions: ['QB', 'BN'] });
+    expect(render()).not.toContain('→');
+  });
+
+  it('notices a changed pick clock and draft type too', () => {
+    withSettings({ draftRounds: 15, draftType: 'linear', pickTimerSeconds: 120 });
+    const html = render();
+    expect(html).toContain('order snake → linear');
+    expect(html).toContain('pick clock 90s → 120s');
+  });
+
+  // ⚠️ Rebuilding is a commissioner action; the notice explains a control a
+  // manager does not have, so showing it to them is just confusing.
+  it('shows a manager neither the notice nor the button', () => {
+    withSettings({ draftRounds: 16 });
+    _state.draft.isCommissioner = false;
+    const html = render();
+    expect(html).not.toContain('data-act="draft-rebuild"');
+    expect(html).not.toContain('→');
+  });
+});

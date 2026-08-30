@@ -12,7 +12,9 @@ import {
 // managers could still join as "The Commish", and the trade UI nobody can read is
 // the same UI whether the collision arrived by join or by rename.
 import { checkTeamName, nameTaken } from "../core/league/team-identity.js";
-import { normalizeSettings, validateSettings } from "../core/league/settings.js";
+import {
+  normalizeSettings, validateSettings, setRosterShape, canApplySettings,
+} from "../core/league/settings.js";
 import { splitRosterPositions, validateLineup, irEligible } from "../core/league/slots.js";
 import { emptyRoster, addPlayer, dropPlayer, moveCompartment, ownerOf } from "../core/league/rosters.js";
 import { generateRegularSeason } from "../core/league/schedule.js";
@@ -194,21 +196,51 @@ export function joinLeague({ p, payload }) {
   return { leagueId: lg, teamId: assigned };
 }
 
-/** Commissioner: change league settings mid-season. */
+/**
+ * Commissioner: change league settings mid-season.
+ *
+ * ⚠️ ROSTER SHAPE ARRIVES AS COUNTS, NEVER AS `rosterPositions`. A client that
+ * posts the array has to rebuild it from the starters it happens to be
+ * rendering, and one stale render re-orders the starting slots — which silently
+ * re-labels every lineup, because a lineup is an array indexed against that
+ * list. `benchSlots` / `irSlots` / `taxiSlots` say what the commissioner meant
+ * and `setRosterShape` derives the array from the league's OWN starters.
+ */
 export function updateSettings({ p, payload }) {
   const lg = requireLeagueId(payload);
-  const meta = read(KEY.meta(lg), null);
+  const { meta, assets } = loadLeague(lg);
   if (!meta) refuse(`no such league: ${lg}`);
   const err = requireCommissioner(p, meta);
   if (err) refuse(err);
 
-  const next = normalizeSettings({ ...meta.settings, ...(payload?.settings ?? {}) });
+  const incoming = { ...(payload?.settings ?? {}) };
+  // Structural counts are applied through setRosterShape, not merged raw.
+  const { benchSlots, irSlots, taxiSlots, rosterPositions, ...rules } = incoming;
+  if (rosterPositions !== undefined) {
+    refuse("roster shape is set with benchSlots / irSlots / taxiSlots, not rosterPositions");
+  }
+
+  const shaped = setRosterShape({ ...meta.settings, ...rules }, {
+    bench: benchSlots, ir: irSlots, taxi: taxiSlots,
+  });
+  const next = normalizeSettings(shaped);
   const check = validateSettings(next);
   if (!check.valid) refuse(`invalid settings: ${check.errors.join("; ")}`);
+
+  // ⚠️ The state-dependent half of the check, and it needs the league — see
+  // canApplySettings for why it is not part of validateSettings.
+  const draft = read(KEY.draft(lg), null);
+  const applies = canApplySettings(meta.settings, next, {
+    rosters: assets?.rosters ?? {},
+    draftStatus: draft?.status ?? null,
+  });
+  if (!applies.ok) refuse(applies.error);
 
   mutate(KEY.meta(lg), (m) => ({ ...m, settings: next }), meta);
   return { settings: next };
 }
+
+
 
 /**
  * Set a lineup for one team and week.
