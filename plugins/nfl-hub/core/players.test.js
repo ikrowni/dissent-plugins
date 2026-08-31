@@ -238,10 +238,22 @@ describe('end-to-end join against a real ESPN roster', () => {
     const athletes = roster.team.athletes;
 
     const phi = Object.entries(REAL).filter(([, v]) => v.t === 'PHI').map(([id]) => id);
+    // ⚠️ ONLY PLAYERS ESPN ACTUALLY CARRIES. Measuring over every Sleeper PHI
+    // entry conflates "the matcher works" with "these two sources list the same
+    // people", and after final cuts they emphatically do not: Sleeper keeps
+    // listing the practice squad while ESPN's active roster drops to 53. On
+    // 2026-08-31 that alone took the ratio to 0.66 with the matcher untouched,
+    // and no threshold can survive that — it is the input data changing shape,
+    // which is the exact trap the sibling assertion above was already loosened
+    // for. Restricting the denominator to players on BOTH lists tests the
+    // matcher and nothing else. Not circular: the id is stripped before the
+    // matcher runs, so it still has to find them by name alone.
+    const onEspn = new Set(athletes.map((a) => Number(a.id)));
     let resolved = 0; let tried = 0;
     for (const id of phi) {
       const p = idx.get(id);
       if (p.position === 'DEF') continue;
+      if (!p.espnId || !onEspn.has(Number(p.espnId))) continue;
       tried += 1;
       // Strip the fast path, forcing the fallback to do the work.
       if (idx.resolveEspnId({ ...p, espnId: null }, athletes)) resolved += 1;
