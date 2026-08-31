@@ -32,7 +32,7 @@ import {
   setAutoDraft,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers } from '../core/player-index.js';
-import { loadRanking, rankingFor } from '../core/draft-ranking.js';
+import { loadRanking, rankingFor, scoringKeyFor } from '../core/draft-ranking.js';
 import {
   availablePool, filterPool, poolCounts, matchesFilter,
 } from '../core/league/draft-pool.js';
@@ -770,7 +770,12 @@ export async function load(app, { leagueId, league, teamId }) {
   // the ranking must still work, so this is best-effort.
   try {
     await loadRanking();
-    state.ranking = rankingFor(state.league?.settings?.scoring ?? 'ppr');
+    // ⚠️ RESOLVE THE MAP TO A KEY. `settings.scoring` is the weight map, not a
+    // name; handed to rankingFor raw it stringifies to "[object object]",
+    // matches nothing and silently falls back to PPR — so every half-ppr and
+    // standard league drafted off the PPR board, and off it the module
+    // autodrafted too, since this same list is what draft:get is sent.
+    state.ranking = rankingFor(scoringKeyFor(state.league?.settings?.scoring ?? 'ppr'));
   } catch {
     state.ranking = [];
   }
