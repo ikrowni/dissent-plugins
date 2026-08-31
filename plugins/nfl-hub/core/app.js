@@ -12,6 +12,7 @@ import { handleSDKMessage, getInitContext } from '../../plugin-sdk.js';
 import { POLL_LIVE_MS, POLL_IDLE_MS } from './config.js';
 import { createScheduler } from './scheduler.js';
 import { motion } from './motion.js';
+import { playClick, sfxEnabled, setSfxEnabled } from './sfx.js';
 import { store, KEY } from './store.js';
 import { stateMsg } from './ui.js';
 import { isReplayRequested, replayFixtureName } from './replay.js';
@@ -220,8 +221,17 @@ async function boot() {
     const t = e.target.closest('[data-act]');
     if (!t) return;
     const act = t.dataset.act;
+    // ⚠️ BEFORE the form-control return below, and before any handler runs. Every
+    // `[data-act]` click gets its tick — including a <select>, which the user
+    // certainly clicked even though its VALUE arrives later on `input`. The
+    // `input` listener deliberately does not sound: it fires per keystroke in a
+    // search box, and a tick per character is a different product.
+    playClick(act);
     if (act === 'nav') { app.router.go(t.dataset.view); return; }
     if (act === 'retry') { app.router.refresh(); return; }
+    // A global preference, so it is handled here rather than by whichever view
+    // happens to be mounted — the button lives in the topbar and outlives them all.
+    if (act === 'sfx-toggle') { toggleSfx(); return; }
     // 🔴 A FORM CONTROL REPORTS ITSELF ON `input`, NEVER ON `click`, and firing it
     // on click made every dropdown and search box in the hub nearly unusable.
     //
@@ -254,6 +264,31 @@ async function boot() {
   // Dissent, and would cost the full request timeout inside it if the host were slow.
   applyStoredMotionPref().catch(() => {});
   applySeasonLabel().catch(() => {});
+  paintSfxButton();
+}
+
+/**
+ * Flip the click sound.
+ *
+ * ⚠️ Turning it ON ticks once as confirmation. Turning it off cannot — there is
+ * nothing to confirm with, which is the correct asymmetry: silence IS the
+ * feedback for "sound off".
+ */
+export function toggleSfx() {
+  const on = !sfxEnabled();
+  setSfxEnabled(on);
+  if (on) playClick('tap');
+  paintSfxButton();
+}
+
+/** Keep the topbar button's label, title and pressed state honest. */
+export function paintSfxButton(doc = typeof document === 'undefined' ? null : document) {
+  const btn = doc?.querySelector('[data-act="sfx-toggle"]');
+  if (!btn) return;
+  const on = sfxEnabled();
+  btn.setAttribute('aria-pressed', String(on));
+  btn.textContent = on ? '\u{1F50A}' : '\u{1F507}';
+  btn.title = on ? 'Click sounds on \u2014 mute them' : 'Click sounds off \u2014 turn them on';
 }
 
 // Guarded so this module can be imported outside a browser — a unit test importing it

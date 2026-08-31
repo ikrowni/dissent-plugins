@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.38.1",
+  "version": "2.39.0",
   "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -203,7 +203,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "f7c9ecb997d09b0534c1633596e281004115f6e975d8a3bbb04ee22d41a888b9"
+      "sha256": "5ff0f6ca3fb53ddbfebdb5e7f5bbac4e46f339810db3a73ad315df9f80cecaec"
     },
     {
       "url": "core/cache.js",
@@ -402,6 +402,10 @@
       "sha256": "82adca44bedfc03f5117621a3a6aba00af11d2d779868bb87e7cdf6734f085ab"
     },
     {
+      "url": "core/sfx.js",
+      "sha256": "b824ac5ac48697385367ff34aca13260fb84bb1de4704a4b05650bf476f923bf"
+    },
+    {
       "url": "core/store.js",
       "sha256": "249b71375d3429ac01d89e7fe5866533dcd91b5ac41811edf90d26eae51c04e6"
     },
@@ -443,7 +447,7 @@
     },
     {
       "url": "styles/base.css",
-      "sha256": "38b01e1b851dcd836082920fe94c20caf779ee1e7085ad9283ea161c2678c6d1"
+      "sha256": "357f1bc5dae83d224f750815509f082358756a1daa7a438509661dcba79a6161"
     },
     {
       "url": "styles/booth.css",

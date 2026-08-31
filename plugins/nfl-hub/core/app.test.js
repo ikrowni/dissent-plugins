@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRouter, liveCadence, applyScoreFlip , isFormControl } from './app.js';
+import { createRouter, liveCadence, applyScoreFlip , isFormControl, toggleSfx, paintSfxButton } from './app.js';
+import { sfxEnabled, setSfxEnabled, _reset as _sfxReset } from './sfx.js';
 import { POLL_LIVE_MS, POLL_IDLE_MS } from './config.js';
 
 describe('liveCadence', () => {
@@ -197,4 +198,43 @@ describe('click delegation and form controls', () => {
     expect(isFormControl(undefined)).toBe(false);
   });
 
+});
+
+// ── The click-sound switch ───────────────────────────────────────────────────
+// The delegated listener itself is attached inside boot(), which a unit test
+// cannot reach without starting the whole hub. What IS reachable is the pair the
+// topbar button depends on, and the mapping that decides the note — the parts
+// that actually break.
+describe('the click-sound toggle', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    _sfxReset();
+    document.body.innerHTML =
+      '<button id="sfx-toggle" data-act="sfx-toggle" aria-pressed="true">x</button>';
+  });
+
+  it('paints the stored preference onto the button, since the HTML cannot know it', () => {
+    setSfxEnabled(false);
+    paintSfxButton();
+    const btn = document.getElementById('sfx-toggle');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    expect(btn.title).toMatch(/turn them on/i);
+  });
+
+  it('flips the preference and repaints', () => {
+    expect(sfxEnabled()).toBe(true);
+    toggleSfx();
+    expect(sfxEnabled()).toBe(false);
+    expect(document.getElementById('sfx-toggle').getAttribute('aria-pressed')).toBe('false');
+    toggleSfx();
+    expect(sfxEnabled()).toBe(true);
+    expect(document.getElementById('sfx-toggle').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  // The button is in the topbar, which exists before any view mounts and after
+  // every one unmounts — so a missing node is a normal state, not an error.
+  it('does not throw when the button is not in the document', () => {
+    document.body.innerHTML = '';
+    expect(() => paintSfxButton()).not.toThrow();
+  });
 });

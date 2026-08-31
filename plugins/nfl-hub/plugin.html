@@ -65,6 +65,12 @@
              read-only mirror, not this native league. -->
         <button data-act="nav" data-view="myleague" aria-current="false">Fantasy</button>
       </nav>
+      <!-- ⚠️ Global, so core/app.js owns it rather than a view: the topbar outlives
+           every mount. The label and pressed state are painted on boot by
+           paintSfxButton(), because the preference is stored per browser and the
+           served HTML cannot know it. -->
+      <button id="sfx-toggle" data-act="sfx-toggle" aria-pressed="true"
+              title="Click sounds on &#8212; mute them">&#128266;</button>
     </header>
     <main id="main">
       <div class="state"><div class="spinner"></div><div>Loading NFL Hub…</div></div>
