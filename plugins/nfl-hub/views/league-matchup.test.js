@@ -664,3 +664,99 @@ describe('your season fixture strip', () => {
     expect(render()).not.toContain('Your season');
   });
 })
+
+// The tab rendered the league's current week and offered no way to reach any
+// other, so a finished week became unreachable the moment the commissioner
+// advanced the season. The schedule holds every week; nothing surfaced them.
+describe('browsing the season', () => {
+  const sched = () => ({
+    season: 2025, startWeek: 1, teamIds: ['t1', 't2'],
+    weeks: [1, 2, 3].map((w) => ({ week: w, matchups: [{ home: 't1', away: 't2', bye: false }] })),
+  });
+  const at = (viewWeek) => Object.assign(_state, {
+    leagueId: 'lg', league: league(['t1', 't2']), week: 2, viewWeek,
+    scores: null, bracket: null, loaded: true, error: null, schedule: sched(),
+  });
+
+  it('offers a step in each direction', () => {
+    at(2);
+    const d = parse(render());
+    const btns = [...d.querySelectorAll('[data-act="matchup-week"]')]
+      .filter((b) => b.closest('.wk-nav'));
+    expect(btns.map((b) => b.dataset.week)).toContain('1');
+    expect(btns.map((b) => b.dataset.week)).toContain('3');
+  });
+
+  // ⚠️ Bounded by the SCHEDULE, not by 1..18 — stepping past either end offers a
+  // week with no pairings, which renders as an error and reads as a dead button.
+  it('disables the step that would leave the schedule', () => {
+    // ⚠️ Selected by TITLE, not by position. When you are off the live week a
+    // third "Today" button appears at the end, so nav[last] is not the forward
+    // step — an index-based selector tests whichever button happens to be last.
+    at(1);
+    const back = parse(render()).querySelector('[title="Previous week"]');
+    expect(back.disabled).toBe(true);
+    expect(parse(render()).querySelector('[title="Next week"]').disabled).toBe(false);
+
+    at(3);
+    expect(parse(render()).querySelector('[title="Next week"]').disabled).toBe(true);
+    expect(parse(render()).querySelector('[title="Previous week"]').disabled).toBe(false);
+  });
+
+  it('renders the viewed week, not the league week', () => {
+    at(3);
+    expect(render()).toContain('Week 3');
+  });
+
+  it('says when you are not looking at the live week, and offers the way back', () => {
+    at(3);
+    const html = render();
+    expect(html).toMatch(/not live/i);
+    expect(html).toContain('>Today<');
+    at(2);
+    expect(render()).not.toMatch(/not live/i);
+  });
+
+  it('defaults to the league week when nothing is chosen', () => {
+    at(null);
+    expect(render()).toContain('Week 2');
+  });
+
+  // The fixture chips double as the week picker.
+  it('makes each fixture chip jump to its week', () => {
+    at(2);
+    const chips = [...parse(render()).querySelectorAll('.fx')];
+    expect(chips.length).toBe(3);
+    for (const c of chips) expect(c.dataset.act).toBe('matchup-week');
+  });
+})
+
+describe('projected points and bye weeks in a lineup', () => {
+  const withLineup = () => Object.assign(_state, {
+    leagueId: 'lg', league: league(['t1', 't2']), week: 1, viewWeek: 1,
+    bracket: null, loaded: true, error: null,
+    schedule: { season: 2025, startWeek: 1, teamIds: ['t1', 't2'],
+      weeks: [{ week: 1, matchups: [{ home: 't1', away: 't2', bye: false }] }] },
+    scores: { teams: { t1: { total: 0, rows: [{ slot: 'QB', playerId: 'p1', points: 0 }] },
+      t2: { total: 0, rows: [{ slot: 'QB', playerId: 'p1', points: 0 }] } } },
+    expanded: 't1',
+  });
+
+  it('names both columns so the numbers are not a mystery', () => {
+    withLineup();
+    const html = render();
+    expect(html).toContain('>Proj<');
+    expect(html).toContain('>Bye<');
+    expect(html).toMatch(/whole season/i);
+  });
+
+  // ⚠️ 0 is a real projection for somebody not expected to play, so an unknown
+  // one must not render as 0. No ranking is loaded under test.
+  it('renders an unknown projection as a dash, never as zero', () => {
+    withLineup();
+    const d = parse(render());
+    const cells = [...d.querySelectorAll('.lineup-detail .proj')].map((n) => n.textContent.trim());
+    expect(cells.length).toBeGreaterThan(0);
+    for (const c of cells) expect(c).toBe('—');
+  });
+})

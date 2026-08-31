@@ -20,11 +20,19 @@ import { playerChip, positionColor, managerColor } from '../core/player-visuals.
 import { teamAvatar } from '../core/team-visuals.js';
 import { eligiblePositions } from '../core/league/slots.js';
 import { describe } from './league-home.js';
+import {
+  loadRanking, projectedPoints, byeWeekFor,
+} from '../core/draft-ranking.js';
 
 const state = {
   leagueId: null,
   league: null,
-  week: null,
+  week: null,      // the LEAGUE's current week — what "live" means
+  // ⚠️ SEPARATE FROM `week`, and the separation is the point. Browsing to week 6
+  // must not make the hub think the season has moved; `week` is the league's
+  // state and belongs to the commissioner, `viewWeek` is where this reader is
+  // looking. Collapsing them made every other tab follow the browse.
+  viewWeek: null,
   scores: null,
   schedule: null,  // the stored record, or null when none has been generated
   bracket: null,   // the postseason, or null before it starts
@@ -36,7 +44,7 @@ const state = {
 
 export function reset() {
   Object.assign(state, {
-    leagueId: null, league: null, week: null, scores: null, schedule: null,
+    leagueId: null, league: null, week: null, viewWeek: null, scores: null, schedule: null,
     bracket: null, loaded: false, error: null, busy: false, expanded: null,
   });
 }
@@ -52,6 +60,48 @@ export function reset() {
 export function pairingsFor(schedule, week) {
   if (!schedule || !week) return [];
   return (schedule.weeks ?? []).find((w) => w.week === Number(week))?.matchups ?? [];
+}
+
+/** Which week this reader is looking at — the league's current one by default. */
+export function viewedWeek() {
+  return Number(state.viewWeek ?? state.week);
+}
+
+/** The weeks the stored schedule actually contains, in order. */
+function scheduledWeeks() {
+  return (state.schedule?.weeks ?? []).map((w) => Number(w.week)).sort((a, b) => a - b);
+}
+
+/**
+ * Step back and forth through the season.
+ *
+ * 🔴 THIS TAB SHOWED ONE WEEK AND ONLY ONE. It rendered the league's current
+ * week with no way to reach any other, so a finished week was unreachable the
+ * moment the commissioner advanced the season — you could not check what a
+ * result had been, and in a league that had not started you could not look
+ * ahead at all. The schedule holds every week; nothing surfaced them.
+ *
+ * ⚠️ BOUNDED BY THE SCHEDULE, not by 1..18. A league's season is
+ * `startWeek` to `playoffWeekStart - 1`, so stepping past either end offers a
+ * week the stored record has no pairings for — which renders as "week N is not
+ * in the schedule" and reads as a broken button.
+ */
+function weekNav(shown) {
+  const weeks = scheduledWeeks();
+  if (weeks.length === 0) return `<span class="muted">Week ${esc(String(shown))}</span>`;
+  const i = weeks.indexOf(Number(shown));
+  const prev = i > 0 ? weeks[i - 1] : null;
+  const next = i > -1 && i < weeks.length - 1 ? weeks[i + 1] : null;
+  const live = Number(shown) === Number(state.week);
+
+  return `<span class="wk-nav">
+    <button class="btn tiny" data-act="matchup-week" data-week="${esc(String(prev ?? ''))}"
+            ${prev === null || state.busy ? 'disabled' : ''} title="Previous week">‹</button>
+    <span class="wk-label">Week ${esc(String(shown))}${live ? '' : ' <span class="muted">· not live</span>'}</span>
+    <button class="btn tiny" data-act="matchup-week" data-week="${esc(String(next ?? ''))}"
+            ${next === null || state.busy ? 'disabled' : ''} title="Next week">›</button>
+    ${live ? '' : `<button class="btn tiny" data-act="matchup-week" data-week="${esc(String(state.week))}">Today</button>`}
+  </span>`;
 }
 
 /**
@@ -70,7 +120,7 @@ export function pairingsFor(schedule, week) {
  * per week to fill it would be one request per week of the season on every
  * visit to this tab. The fixture is the honest half.
  */
-function myFixtures() {
+function myFixtures(shown) {
   const mine = (state.league?.myTeams ?? [])[0];
   if (!mine || !Array.isArray(state.schedule?.weeks)) return '';
 
@@ -86,18 +136,19 @@ function myFixtures() {
   }
   if (rows.length === 0) return '';
 
-  const now = Number(state.week);
+  const now = Number(shown ?? state.week);
   return `<div class="season-strip">
     <h4>Your season <span class="muted">${esc(teamName(mine))}</span></h4>
     <div class="fx-row">
       ${rows.map((r) => `
-        <div class="fx ${r.week === now ? 'now' : ''} ${r.week < now ? 'past' : ''}">
+        <button class="fx ${r.week === now ? 'now' : ''} ${r.week < now ? 'past' : ''}"
+                data-act="matchup-week" data-week="${esc(String(r.week))}">
           <span class="fx-wk">WK ${esc(String(r.week))}</span>
           ${r.bye
     ? '<span class="fx-opp muted">Bye</span>'
     : `<span class="fx-at">${r.home ? 'vs' : '@'}</span>
              <span class="fx-opp team-accent" style="--mgr:${esc(managerColor(r.opp))}">${esc(teamName(r.opp))}</span>`}
-        </div>`).join('')}
+        </button>`).join('')}
     </div>
   </div>`;
 }
@@ -141,12 +192,13 @@ export function render() {
       body: '<p class="muted">The season has not started. A commissioner sets the current week.</p>',
     });
   }
+  const shown = viewedWeek();
 
   // ⚠️ The bracket takes over from week `playoffWeekStart` onward. Showing the
   // regular-season pairing for a playoff week would name an opponent the team is
   // not actually playing.
   const playoffStart = state.league?.settings?.playoffWeekStart ?? 15;
-  if (hasBracket(state.bracket) || Number(state.week) >= playoffStart) {
+  if (hasBracket(state.bracket) || Number(shown) >= playoffStart) {
     return bracketPane(playoffStart);
   }
 
@@ -165,20 +217,20 @@ export function render() {
     });
   }
 
-  const pairs = pairingsFor(state.schedule, state.week);
+  const pairs = pairingsFor(state.schedule, shown);
   if (pairs.length === 0) {
     return panel({
       title: 'Matchups',
-      body: `<p class="muted">Week ${esc(String(state.week))} is not in the schedule
+      body: `<p class="muted">Week ${esc(String(shown))} is not in the schedule
              (weeks ${esc(String(state.schedule.startWeek))}–${esc(String(state.schedule.startWeek + (state.schedule.weeks?.length ?? 0) - 1))}).</p>`,
     });
   }
 
   return panel({
     title: 'Matchups',
-    right: `<span class="muted">Week ${esc(String(state.week))}</span>`,
+    right: weekNav(shown),
     body: `<div class="m-stagger">${pairs.map((m) => matchupCard(m)).join('')}</div>
-           ${myFixtures()}`,
+           ${myFixtures(shown)}`,
   });
 }
 
@@ -350,15 +402,31 @@ function lineupTable(teamId) {
   // views/league-roster.js exactly: a flexish slot takes RB's hue, because
   // colouring by the literal slot name finds no position and renders uncoloured.
   const playerOf = (id) => getIndex()?.[String(id)] ?? null;
+  const shown = viewedWeek();
   return `<table class="tbl lineup-detail">
+    <thead><tr>
+      <th></th><th>Player</th>
+      <th class="num" title="The week this player's NFL team does not play">Bye</th>
+      <th class="num" title="Projected points for the whole season, from preseason projections">Proj</th>
+      <th class="num" title="Points actually scored this week">Pts</th>
+    </tr></thead>
     <tbody>${rows.map((r) => {
     const p = r.playerId ? playerOf(r.playerId) : null;
     const hue = positionColor(eligiblePositions(r.slot).length > 1 ? 'RB' : r.slot);
-    return `<tr>
+    const proj = r.playerId ? projectedPoints(r.playerId, state.league?.settings?.scoring) : null;
+    const bye = byeWeekFor(p?.t);
+    // ⚠️ A BYE IN THE WEEK BEING VIEWED IS THE POINT OF THE COLUMN. It is the
+    // one thing that explains a 0.00 without the manager having done anything
+    // wrong, and it is flagged against the VIEWED week rather than the league's
+    // current one — otherwise browsing back to week 6 marks nobody.
+    const onBye = bye !== null && Number(bye) === Number(shown);
+    return `<tr class="${onBye ? 'row-bye' : ''}">
         <td class="slot" style="color:${esc(hue)}">${esc(r.slot)}</td>
         <td>${r.playerId
     ? (p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(r.playerId)))
     : '<span class="muted">empty</span>'}</td>
+        <td class="num bye ${onBye ? 'on-bye' : ''}">${bye === null ? '<span class="muted">—</span>' : esc(String(bye))}</td>
+        <td class="num proj">${proj === null ? '<span class="muted">—</span>' : esc(proj.toFixed(1))}</td>
         <td class="num">${Number(r.points ?? 0).toFixed(2)}</td>
       </tr>`;
   }).join('')}</tbody>
@@ -397,12 +465,15 @@ export async function load(app, { leagueId, league, week }) {
   app?.router?.refresh();
   try {
     await loadIndex();
+    // Feeds the Proj and Bye columns only; both already render "—" without it.
+    loadRanking().then(() => app?.router?.refresh()).catch(() => {});
     // Both are optional: a season with no schedule, and a week nobody has
     // scored, are normal states rather than failures.
     state.schedule = await getSchedule(leagueId, league?.season).catch(() => null);
     // ⚠️ Reading the bracket ADVANCES it — a round is decided when its week is
     // scored, and this read is what resolves that.
     state.bracket = await getPlayoffs(leagueId, league?.season).catch(() => null);
+    state.viewWeek = week;
     state.scores = week
       ? await getScores(leagueId, league?.season, week).catch(() => null)
       : null;
@@ -410,6 +481,33 @@ export async function load(app, { leagueId, league, week }) {
     state.error = describe(err);
   } finally {
     state.loaded = true;
+    app?.router?.refresh();
+  }
+}
+
+/**
+ * Look at a different week.
+ *
+ * ⚠️ SCORES ARE PER WEEK, so browsing has to fetch. The pairings come from the
+ * stored schedule and are already in hand, which is why the board redraws
+ * immediately and the scores fill in — rather than the whole tab blanking on a
+ * spinner every time somebody steps back one week.
+ *
+ * ⚠️ Any open lineup is closed. It belongs to a matchup in the week being left,
+ * and `state.expanded` is keyed on a home-team id that may not even play in the
+ * week being entered — so leaving it set opens a pane under an unrelated game.
+ */
+export async function showWeek(app, week) {
+  const n = Number(week);
+  if (!Number.isInteger(n) || n < 1) return;
+  state.viewWeek = n;
+  state.expanded = null;
+  state.busy = true;
+  app?.router?.refresh();
+  try {
+    state.scores = await getScores(state.leagueId, state.league?.season, n).catch(() => null);
+  } finally {
+    state.busy = false;
     app?.router?.refresh();
   }
 }

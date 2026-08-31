@@ -474,3 +474,58 @@ describe('trade pickers are tables, not a wall of checkboxes', () => {
     }
   });
 })
+
+// 🔴 THE TRADE SCREEN WAS UNUSABLE. `disabled` is decided at render time, and
+// the last render before you tick anybody is the one from choosing the other
+// team — when both sides are empty by definition. Ticking players updated state
+// and re-evaluated nothing, so Propose stayed disabled forever. The rows even
+// highlighted, because that is a CSS :has() rule needing no JavaScript, so every
+// visible signal said the selection had registered.
+describe('Propose enables as soon as a side is picked', () => {
+  const openTrade = () => {
+    setup();
+    _state.tradeWith = 't2';
+    _state.tradeMine = [];
+    _state.tradeTheirs = [];
+    document.body.innerHTML = render();
+  };
+  const btn = () => document.querySelector('[data-act="moves-propose"]');
+
+  it('starts disabled with nothing selected', () => {
+    openTrade();
+    expect(btn().disabled).toBe(true);
+  });
+
+  it('enables on the first pick, without a re-render', () => {
+    openTrade();
+    toggleTradePlayer('mine', 'qb1', true);
+    expect(btn().disabled).toBe(false);
+  });
+
+  it('enables from either side alone', () => {
+    openTrade();
+    toggleTradePlayer('theirs', 'rb2', true);
+    expect(btn().disabled).toBe(false);
+  });
+
+  it('disables again when the last pick is removed', () => {
+    openTrade();
+    toggleTradePlayer('mine', 'qb1', true);
+    toggleTradePlayer('mine', 'qb1', false);
+    expect(btn().disabled).toBe(true);
+  });
+
+  // ⚠️ It must not re-render. A refresh would destroy the checkbox mid-click and
+  // throw away the pick table's scroll position.
+  it('does not rebuild the pane', () => {
+    openTrade();
+    const before = document.querySelector('.pick-table');
+    toggleTradePlayer('mine', 'qb1', true);
+    expect(document.querySelector('.pick-table')).toBe(before);
+  });
+
+  it('is safe with no button on screen', () => {
+    document.body.innerHTML = '';
+    expect(() => toggleTradePlayer('mine', 'qb1', true)).not.toThrow();
+  });
+})

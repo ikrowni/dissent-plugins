@@ -537,6 +537,33 @@ export function toggleTradePlayer(side, playerId, on) {
   const id = String(playerId);
   const next = on ? [...new Set([...list, id])] : list.filter((x) => x !== id);
   if (side === 'mine') state.tradeMine = next; else state.tradeTheirs = next;
+  paintProposeEnabled();
+}
+
+/**
+ * Enable or disable Propose from the current selection, WITHOUT re-rendering.
+ *
+ * 🔴 THE BUTTON WAS PERMANENTLY DISABLED AND THE TRADE SCREEN COULD NOT BE
+ * USED AT ALL. `disabled` is decided when the pane renders, and the last render
+ * before ticking anybody is the one triggered by choosing the other team — at
+ * which point both sides are empty by definition, so it rendered disabled and
+ * nothing ever re-evaluated it. Ticking players updated the state correctly and
+ * changed nothing on screen; the boxes even highlighted, because that is a CSS
+ * `:has(.check:checked)` rule that needs no JavaScript at all. Every signal a
+ * manager could see said the selection had registered.
+ *
+ * ⚠️ A `router.refresh()` HERE WOULD BE THE WRONG FIX, which is why the toggle
+ * deliberately had none. Refresh is `innerHTML = …`: it would destroy the
+ * checkbox mid-click, throw away the scroll position of a 400-row pick table,
+ * and drop focus — the exact class of damage core/app.js skips form controls on
+ * `click` to avoid. One attribute is the whole change that was needed.
+ */
+function paintProposeEnabled() {
+  if (typeof document === 'undefined') return;
+  const btn = document.querySelector('[data-act="moves-propose"]');
+  if (!btn) return;
+  const empty = state.tradeMine.length === 0 && state.tradeTheirs.length === 0;
+  btn.disabled = Boolean(state.busy) || empty;
 }
 
 export async function claim(app, playerId) {

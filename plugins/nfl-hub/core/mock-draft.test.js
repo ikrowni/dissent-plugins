@@ -311,18 +311,71 @@ describe('simulating on the human\'s behalf', () => {
     expect(junk).toBe(2); // exactly the one starting K and the one starting DEF
   });
 
-  // ⚠️ THE OLD BEHAVIOUR, PINNED AS A COUNTER-EXAMPLE. If `available[0]` were
-  // still good enough there would be nothing to fix — this proves the naive pick
-  // really does produce the reported roster on the real board.
-  it('beats the naive available[0] it replaced', () => {
-    let m = runBotsUntilMyTurn(makeMock());
-    for (let guard = 0; guard < 400 && !isComplete(m); guard += 1) {
-      const avail = availableIn(m);
-      if (avail.length === 0) break;
-      m = runBotsUntilMyTurn(pick(m, avail[0].id));
+  // ⚠️ THE OLD BEHAVIOUR, PINNED AS A COUNTER-EXAMPLE — ON A BOARD WHERE IT
+  // ACTUALLY FAILS, which is not the same board the league drafts from.
+  //
+  // 🔴 THIS USED TO RUN AGAINST THE SHIPPED RANKING AND IT BROKE ON 2026-08-31,
+  // not because `bestPickFor` regressed but because the BOARD IMPROVED. The
+  // ranking became ADP-ordered, and ADP deliberately defers kickers and
+  // defences to the last rounds — so walking `available[0]` down it now yields
+  // a perfectly sane roster and the counter-example evaporated. Asserting
+  // "naive is bad" against a board that has since stopped making it bad is a
+  // tripwire for data churn, not a test of the picker.
+  //
+  // The claim worth keeping is about the CODE: when a board is NOT already
+  // positionally sane, taking the top name over-drafts the positions you only
+  // need one of, and `bestPickFor` does not. So the board is made unsane on
+  // purpose — kickers and defences hoisted to the front, which is what the old
+  // backward-looking VOR ranking genuinely looked like — and both strategies
+  // are run against it.
+  // ⚠️ INTERLEAVED, NOT STACKED, and that distinction is the whole test.
+  // `bestPickFor` only looks at a WINDOW of the top 20 available. Hoisting all
+  // 74 kickers and defences to the front puts nothing else in that window, so
+  // the picker cannot see a running back and drafts junk too — measured, 15 of
+  // 15. That would have tested the window size, not the need logic, and would
+  // have "proved" the picker was broken when it is not. Alternating keeps ten
+  // real players in view at all times, so the picker has a real choice to get
+  // right and the naive walk still has junk sitting at index 0.
+  const skewedBoard = () => {
+    const junk = ranking.filter((id) => positionOf(id) === 'K' || positionOf(id) === 'DEF');
+    const rest = ranking.filter((id) => positionOf(id) !== 'K' && positionOf(id) !== 'DEF');
+    const out = [];
+    for (let i = 0; i < Math.max(junk.length, rest.length); i += 1) {
+      if (junk[i]) out.push(junk[i]);
+      if (rest[i]) out.push(rest[i]);
     }
-    const naive = countBy(rosterOf(m, 'm1'));
+    return out;
+  };
+  const skewedMock = () => createMock({
+    teams: 12, rounds: ROSTER.length, slot: 1, rosterPositions: ROSTER,
+    ranking: skewedBoard(), positionOf, seed: 7,
+  });
+
+  it('beats the naive available[0] it replaced', () => {
+    let naiveM = runBotsUntilMyTurn(skewedMock());
+    for (let guard = 0; guard < 400 && !isComplete(naiveM); guard += 1) {
+      const avail = availableIn(naiveM);
+      if (avail.length === 0) break;
+      naiveM = runBotsUntilMyTurn(pick(naiveM, avail[0].id));
+    }
+    const naive = countBy(rosterOf(naiveM, 'm1'));
+
+    let smartM = runBotsUntilMyTurn(skewedMock());
+    for (let guard = 0; guard < 400 && !isComplete(smartM); guard += 1) {
+      const avail = availableIn(smartM);
+      if (avail.length === 0) break;
+      const mine = rosterOf(smartM, smartM.myTeam);
+      smartM = runBotsUntilMyTurn(pick(smartM, bestPickFor(avail, {
+        need: remainingNeed(ROSTER, mine.map((r) => r.pos)),
+        owned: mine.map((r) => r.pos),
+      })));
+    }
+    const smart = countBy(rosterOf(smartM, 'm1'));
+
+    // The naive walk fills up on positions a roster needs one of…
     expect((naive.K ?? 0) + (naive.DEF ?? 0)).toBeGreaterThan(2);
+    // …and the picker does not, on the very same board.
+    expect((smart.K ?? 0) + (smart.DEF ?? 0)).toBeLessThan((naive.K ?? 0) + (naive.DEF ?? 0));
   });
 
   // ⚠️ DETERMINISTIC, unlike a bot's. Somebody asking the computer to pick for

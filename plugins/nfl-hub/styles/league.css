@@ -832,3 +832,27 @@ h4 {
  * colour signal in the same chip competes with it. */
 .fx.now { border-color: var(--gold); color: var(--text); font-weight: 600; }
 .fx.past { opacity: 0.5; }
+
+/* Week navigation in the Matchups header. */
+.wk-nav { display: inline-flex; align-items: center; gap: 6px; }
+.wk-label { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+/* The fixture chips double as the week picker, so they take button reset. */
+.fx { font: inherit; text-align: left; cursor: pointer; }
+.fx:hover:not(.now) { border-color: var(--text-3); }
+
+/* Projected points and bye week, on the roster and in a matchup lineup. */
+.proj { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.bye { font-variant-numeric: tabular-nums; color: var(--text-3); }
+/* ⚠️ A bye in the week being viewed is the one thing that explains a 0.00
+ * without the manager having done anything wrong, so it is marked, not merely
+ * printed. `.past` dims a bye already gone by — still worth showing, because it
+ * explains an old zero, but it is no longer news. */
+.bye.on-bye { color: var(--gold); font-weight: 700; }
+.bye.past { opacity: 0.45; }
+.lineup-detail tr.row-bye td { background: rgba(255, 182, 18, 0.05); }
+.lineup-detail thead th, .tbl.lineup thead th {
+  font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; text-align: left; padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.lineup-detail thead th.num, .tbl.lineup thead th.num { text-align: right; }

@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { setRanking, getRanking, rankingFor } from './draft-ranking.js';
+import {
+  setRanking, getRanking, rankingFor,
+  scoringKeyFor, valueOf, projectedPoints, byeWeekFor,
+} from './draft-ranking.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const asset = JSON.parse(readFileSync(join(HERE, '..', 'assets', 'draft-ranking.json'), 'utf8'));
@@ -105,5 +108,80 @@ describe('rankingFor', () => {
   it('is empty rather than throwing when nothing is loaded', () => {
     expect(rankingFor('ppr')).toEqual([]);
     expect(getRanking()).toBe(null);
+  });
+});
+
+
+describe('scoringKeyFor', () => {
+  // ⚠️ `settings.scoring` is a WEIGHT MAP, not a name. Passing it to rankingFor
+  // stringifies it to "[object object]", matches no key and silently falls back
+  // to PPR — so a half or standard league quietly drafted off the PPR board.
+  it('resolves a weight map by its reception weight', () => {
+    expect(scoringKeyFor({ rec: 1 })).toBe('ppr');
+    expect(scoringKeyFor({ rec: 0.5 })).toBe('half');
+    expect(scoringKeyFor({ rec: 0 })).toBe('std');
+  });
+
+  it('passes a name straight through, lower-cased', () => {
+    expect(scoringKeyFor('HALF')).toBe('half');
+  });
+
+  it('never returns an object, whatever it is given', () => {
+    for (const v of [{ rec: 1 }, {}, null, undefined, 42, []]) {
+      expect(typeof scoringKeyFor(v)).toBe('string');
+      expect(scoringKeyFor(v)).not.toMatch(/object/i);
+    }
+  });
+
+  it('defaults to ppr when there is nothing to go on', () => {
+    expect(scoringKeyFor(undefined)).toBe('ppr');
+    expect(scoringKeyFor({})).toBe('ppr');
+  });
+});
+
+describe('byeWeekFor', () => {
+  beforeEach(() => setRanking({ byes: { SF: 8, NE: 11 } }));
+
+  it('finds a team, case-insensitively', () => {
+    expect(byeWeekFor('SF')).toBe(8);
+    expect(byeWeekFor('ne')).toBe(11);
+  });
+
+  // ⚠️ NULL, NEVER 0. Week 0 does not exist, and a 0 renders on a roster as a
+  // confident bye week that is simply wrong — a free agent has no team at all.
+  it('is null for a free agent or an unknown team', () => {
+    for (const t of [null, undefined, '', 'ZZZ']) {
+      expect(byeWeekFor(t), String(t)).toBe(null);
+    }
+  });
+
+  it('is null when no ranking is loaded', () => {
+    setRanking(null);
+    expect(byeWeekFor('SF')).toBe(null);
+  });
+});
+
+describe('projectedPoints and valueOf', () => {
+  beforeEach(() => setRanking({
+    ppr_p: { 1: 300.5 }, half_p: { 1: 250 }, ppr_v: { 1: 80 },
+  }));
+
+  it('reads the map for the league scoring', () => {
+    expect(projectedPoints('1', { rec: 1 })).toBe(300.5);
+    expect(projectedPoints('1', { rec: 0.5 })).toBe(250);
+    expect(valueOf('1', { rec: 1 })).toBe(80);
+  });
+
+  // ⚠️ 0 is a real projection for somebody not expected to play, so unknown
+  // must be null and the view must render it as a dash.
+  it('is null outside the ranking, never 0', () => {
+    expect(projectedPoints('999', 'ppr')).toBe(null);
+    expect(valueOf('999', 'ppr')).toBe(null);
+  });
+
+  it('is null when no ranking is loaded', () => {
+    setRanking(null);
+    expect(projectedPoints('1', 'ppr')).toBe(null);
+    expect(valueOf('1', 'ppr')).toBe(null);
   });
 });

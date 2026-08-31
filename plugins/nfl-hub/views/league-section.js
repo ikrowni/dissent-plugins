@@ -327,6 +327,10 @@ export async function onAction(act, target) {
     case 'matchup-start-playoffs':
       matchup.seedPlayoffs(app);
       return;
+    case 'matchup-week':
+      // An empty data-week is a disabled edge button; ignore rather than NaN.
+      if (target.dataset.week) matchup.showWeek(app, target.dataset.week);
+      return;
     case 'matchup-generate':
       matchup.generate(app);
       return;

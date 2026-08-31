@@ -15,6 +15,9 @@ import {
   splitRosterPositions, slotAccepts, irEligible, eligiblePositions,
 } from '../core/league/slots.js';
 import { describe } from './league-home.js';
+import {
+  loadRanking, projectedPoints, byeWeekFor,
+} from '../core/draft-ranking.js';
 
 const state = {
   leagueId: null,
@@ -66,6 +69,7 @@ export function render() {
         <section class="ros-col">
           <h4>Starters</h4>
           <table class="tbl lineup">
+            <thead><tr><th></th><th></th><th class="num" title="Projected points for the whole season, from preseason projections">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th></tr></thead>
             <tbody>${starters.map((slot, i) => slotRow(slot, i, state.lineup[i], bench)).join('')}</tbody>
           </table>
         </section>
@@ -73,6 +77,7 @@ export function render() {
           <h4>Bench <span class="muted">${bench.length}</span></h4>
           ${bench.length === 0 ? '<p class="muted">Nobody on the bench.</p>' : `
             <table class="tbl">
+              <thead><tr><th>Player</th><th class="num" title="Projected points for the whole season, from preseason projections">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th><th class="num"></th></tr></thead>
               <tbody>${bench.map((id) => benchRow(id)).join('')}</tbody>
             </table>`}
           ${irSection(roster, irSlots)}
@@ -113,7 +118,7 @@ function irSection(roster, irSlots) {
   ].join('');
 
   return `<h4>Injured reserve <span class="muted">${held.length} / ${irSlots}</span></h4>
-    <table class="tbl"><tbody>${rows}</tbody></table>
+    <table class="tbl"><thead><tr><th>Player</th><th class="num" title="Projected points for the whole season, from preseason projections">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th><th class="num"></th></tr></thead><tbody>${rows}</tbody></table>
     ${watchlistNote(roster)}`;
 }
 
@@ -221,6 +226,29 @@ function autoSubCell(slot, slotIndex, current, bench) {
  * it. The module refuses it too — this only stops the manager from finding out
  * the hard way.
  */
+/**
+ * Projected season points and bye week, as two cells.
+ *
+ * ⚠️ THE HEADINGS SAY WHAT THESE ARE. "Proj" is a PRESEASON SEASON TOTAL and
+ * does not move as the year goes on; "Bye" is the week the player's NFL team
+ * does not play. A number with no unit on a roster row gets read as this week's
+ * expectation, which it is not.
+ *
+ * ⚠️ A BYE IN THE PAST IS DIMMED, NOT HIDDEN. It still explains a zero in a
+ * week already played, and hiding it makes that zero look like a benching.
+ */
+function projCells(id) {
+  const p = getIndex()?.[String(id)] ?? null;
+  const proj = projectedPoints(id, state.league?.settings?.scoring);
+  const bye = byeWeekFor(p?.t);
+  const wk = Number(state.week);
+  const isNow = bye !== null && bye === wk;
+  const isPast = bye !== null && Number.isFinite(wk) && bye < wk;
+  return `<td class="num proj">${proj === null ? '<span class="muted">—</span>' : esc(proj.toFixed(1))}</td>
+    <td class="num bye ${isNow ? 'on-bye' : ''} ${isPast ? 'past' : ''}">${
+  bye === null ? '<span class="muted">—</span>' : esc(String(bye))}</td>`;
+}
+
 function benchRow(id, where = 'bench') {
   const p = getIndex()?.[String(id)] ?? null;
   const status = injuryOf(id);
@@ -231,6 +259,7 @@ function benchRow(id, where = 'bench') {
       ${p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(id))}
       ${status ? `<span class="inj-tag" title="Injury designation">${esc(status)}</span>` : ''}
     </td>
+    ${projCells(id)}
     <td class="num">
       ${where === 'bench'
     ? `<button class="btn tiny" data-act="roster-ir" data-player="${esc(id)}"

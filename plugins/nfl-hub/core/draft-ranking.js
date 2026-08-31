@@ -100,3 +100,36 @@ export function valueOf(playerId, scoring = 'ppr') {
   const v = ranking?.[`${scoringKeyFor(scoring)}_v`]?.[String(playerId)];
   return typeof v === 'number' ? v : null;
 }
+
+/**
+ * A player's projected season points, for a league's scoring.
+ *
+ * ⚠️ A SEASON TOTAL, NOT A WEEKLY ONE, and a caller must label it as such. It
+ * is preseason and does not move: nothing here re-projects after week 1, so a
+ * screen that implies "expected this week" would be wrong every week.
+ *
+ * Returns null outside the ranking's depth — rendered "—", never 0, because 0
+ * is a real projection for somebody who is not expected to play.
+ */
+export function projectedPoints(playerId, scoring = 'ppr') {
+  const v = ranking?.[`${scoringKeyFor(scoring)}_p`]?.[String(playerId)];
+  return typeof v === 'number' ? v : null;
+}
+
+/**
+ * The week an NFL team does not play.
+ *
+ * ⚠️ KEYED ON THE NFL TEAM, NOT THE PLAYER. A bye belongs to the team, so a
+ * traded or newly-signed player picks up his new team's bye the moment the
+ * index says he changed teams — which is the correct behaviour and is why this
+ * is not baked per player.
+ *
+ * Null for a free agent (`t` is null in the index) and for an unknown team,
+ * both of which are ordinary states rather than errors.
+ */
+export function byeWeekFor(team) {
+  const t = String(team ?? '').toUpperCase();
+  if (!t) return null;
+  const w = ranking?.byes?.[t];
+  return typeof w === 'number' ? w : null;
+}
