@@ -131,6 +131,12 @@ export const makePick = (leagueId, teamId, playerId, ranking = []) =>
   call('draft:pick', { leagueId, teamId, playerId, ranking });
 export const setQueue = (leagueId, teamId, queue) =>
   call('draft:queue', { leagueId, teamId, queue });
+// ⚠️ The MODULE owns the auto-draft flags, not plugin storage — server-scoped
+// storage is writable by every member of the server, so a manager could flag a
+// team they do not manage. This op is gated by `requireTeamControl`; the flags
+// come back on `draft:get`, and there is deliberately no other way to read them.
+export const setAutoDraft = (leagueId, teamId, auto) =>
+  call('draft:auto', { leagueId, teamId, auto: Boolean(auto) });
 export const setPaused = (leagueId, paused) => call('draft:pause', { leagueId, paused });
 export const finalizeDraft = (leagueId) => call('draft:finalize', { leagueId });
 

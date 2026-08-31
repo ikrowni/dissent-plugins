@@ -29,6 +29,7 @@ import { getIndex } from '../core/player-index.js';
 import { teamAvatar } from '../core/team-visuals.js';
 import {
   getDraft, makePick, startDraft, setPaused, finalizeDraft, formatClock, createDraft, setQueue,
+  setAutoDraft,
 } from '../core/league-api.js';
 import { loadIndex, searchPlayers } from '../core/player-index.js';
 import { loadRanking, rankingFor } from '../core/draft-ranking.js';
@@ -37,7 +38,7 @@ import {
 } from '../core/league/draft-pool.js';
 import { describe } from './league-home.js';
 import { formatDraftTime } from '../core/draft-schedule.js';
-import { createAutoFlags, autoPickTarget, bestAvailableFor } from '../core/draft-auto.js';
+import { autoPickTarget, bestAvailableFor } from '../core/draft-auto.js';
 import { playTurnAlert, becameMyTurn, alertEnabled, setAlertEnabled } from '../core/draft-alert.js';
 
 /** How often the board is re-read from the module. */
@@ -88,7 +89,6 @@ const state = {
 let pollTimer = null;
 let tickTimer = null;
 let idleTicks = 0;
-const autoFlags = createAutoFlags();
 // Was the clock mine on the PREVIOUS poll? The chime keys on the transition.
 let wasMyTurn = false;
 // The overall pick this client has already auto-submitted for, so a 3 s poll
@@ -705,6 +705,11 @@ async function poll(app) {
     const d = await getDraft(state.leagueId, state.ranking);
     state.draft = d;
     state.noDraft = false;
+    // ⚠️ THE MODULE IS THE ONLY SOURCE. These used to come from a separate
+    // server-storage read that any member could have written; they now ride
+    // along with the board that is already authoritative for everything else on
+    // it, so a flag set by another client shows up on the next poll for free.
+    state.autoDraft = d.autoDraft ?? {};
     // A good answer retires a stale failure banner and the backoff with it.
     state.error = null;
     state._failStreak = 0;
@@ -769,7 +774,6 @@ export async function load(app, { leagueId, league, teamId }) {
   } catch {
     state.ranking = [];
   }
-  state.autoDraft = await autoFlags.load(leagueId);
   await poll(app);
   startPolling(app);
   app?.router?.refresh();
@@ -820,15 +824,35 @@ function onDraftSettled(app, d) {
     .finally(() => app?.router?.refresh());
 }
 
-/** Commissioner (any team) or a manager (their own): flip auto-draft on a team. */
+/**
+ * Commissioner (any team) or a manager (their own): flip auto-draft on a team.
+ *
+ * ⚠️ THE MODULE DECIDES WHETHER THIS IS ALLOWED, not this function. `draft:auto`
+ * is gated by `requireTeamControl`, so a member who reaches past the UI to flag
+ * a team they do not manage is refused server-side — which is the entire reason
+ * the flags moved out of member-writable plugin storage.
+ *
+ * Painted optimistically because a draft board that lags a click feels broken,
+ * then REVERTED if the module refuses: leaving the optimistic state up would
+ * show a manager auto-drafting when the module knows they are not, which is the
+ * one lie this screen must not tell.
+ */
 export async function toggleAutoDraft(app, teamId) {
   const id = String(teamId ?? '');
   if (!id) return;
-  const next = { ...state.autoDraft };
-  if (next[id]) delete next[id]; else next[id] = true;
+  const before = state.autoDraft ?? {};
+  const auto = !before[id];
+  const next = { ...before };
+  if (auto) next[id] = true; else delete next[id];
   state.autoDraft = next;
   app?.router?.refresh();
-  await autoFlags.save(state.leagueId, next);
+  try {
+    await setAutoDraft(state.leagueId, id, auto);
+  } catch (err) {
+    state.autoDraft = before;
+    state.error = describe(err);
+    app?.router?.refresh();
+  }
 }
 
 /** Mute or unmute the on-the-clock chime. Remembered per browser. */

@@ -142,3 +142,51 @@ body.reduce-motion *::after {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* ── Scrollbars ────────────────────────────────────────────────────────────
+ *
+ * The hub is a dark, panelled surface and a platform scrollbar sits on top of
+ * it as a bright grey slab — on the draft board, the pool, the bracket and the
+ * main column at once. Reported 2026-08-31 as making the sections "look bad".
+ *
+ * ⚠️ SCROLLABILITY IS KEPT. `scrollbar-width: none` / `::-webkit-scrollbar`
+ * hide the CONTROL, never the overflow — every one of these regions still
+ * scrolls by wheel, trackpad, touch, arrow keys, Page Up/Down and Home/End.
+ * `overflow: hidden` would have been the wrong tool and is not used here.
+ *
+ * ⚠️ IT COMES BACK ON HOVER, and that is the deliberate half of this. A region
+ * with no scrollbar at rest and none on hover gives a mouse user nothing to
+ * grab and no hint that there is more below — so the bar is hidden until the
+ * pointer is over the region that owns it, then fades in thin and themed. That
+ * keeps the affordance for the people who rely on it while the surface stays
+ * clean when nobody is looking at it.
+ *
+ * ⚠️ Firefox has no hover-scoped equivalent of the WebKit pseudo-element, so it
+ * gets `thin` on hover and `none` at rest — the same behaviour, one step
+ * coarser. Do not try to unify them; `scrollbar-width` takes no colour and
+ * `::-webkit-scrollbar` does not exist there.
+ */
+* {
+  scrollbar-width: none;                 /* Firefox: hidden at rest */
+  scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: transparent; border-radius: 8px; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* The thumb belongs to the hovered region, so it is drawn only while the
+ * pointer is inside the element that scrolls. */
+:hover::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+:hover::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: content-box; }
+:hover { scrollbar-width: thin; }
+
+/* ⚠️ Someone navigating by keyboard never generates a hover, so a focused
+ * region shows its bar unconditionally. Without this the affordance is
+ * mouse-only, which is the accessibility trap this whole treatment invites. */
+:focus-within::-webkit-scrollbar-thumb { background: var(--line); border: 2px solid transparent; background-clip: content-box; }
+:focus-within { scrollbar-width: thin; }

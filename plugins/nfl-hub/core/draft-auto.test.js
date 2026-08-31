@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { autoPickTarget, bestAvailableFor, createAutoFlags, autoKey } from './draft-auto.js';
+import { describe, it, expect } from 'vitest';
+import { autoPickTarget, bestAvailableFor } from './draft-auto.js';
 
 const clock = (owner) => ({ owner, overall: 4 });
 
@@ -54,34 +54,5 @@ describe('bestAvailableFor', () => {
 
   it('compares as strings, so numeric ids still match', () => {
     expect(bestAvailableFor({ ranking: [123, 456], taken: new Set(['123']) })).toBe('456');
-  });
-});
-
-describe('createAutoFlags', () => {
-  it('round-trips flags at server scope, under a league-specific key', async () => {
-    const set = vi.fn().mockResolvedValue(true);
-    const get = vi.fn().mockResolvedValue({ t2: true });
-    const f = createAutoFlags({ storageGet: get, storageSet: set });
-
-    expect(await f.load('lg')).toEqual({ t2: true });
-    expect(get).toHaveBeenCalledWith(autoKey('lg'), 'server');
-
-    await f.save('lg', { t3: true });
-    expect(set).toHaveBeenCalledWith('fl:autodraft:lg', { t3: true }, 'server');
-  });
-
-  // A storage outage mid-draft must not stop the board.
-  it('degrades to no flags when storage fails', async () => {
-    const f = createAutoFlags({
-      storageGet: () => Promise.reject(new Error('down')),
-      storageSet: () => Promise.reject(new Error('down')),
-    });
-    expect(await f.load('lg')).toEqual({});
-    expect(await f.save('lg', { t1: true })).toBe(false);
-  });
-
-  it('ignores a non-object stored value rather than trusting it', async () => {
-    const f = createAutoFlags({ storageGet: () => Promise.resolve('nonsense'), storageSet: vi.fn() });
-    expect(await f.load('lg')).toEqual({});
   });
 });

@@ -63,3 +63,40 @@ export function rankingFor(scoring = 'ppr') {
   if (Array.isArray(list) && list.length) return list;
   return Array.isArray(ranking?.ppr) ? ranking.ppr : [];
 }
+
+/**
+ * Which ranking a league's scoring settings correspond to.
+ *
+ * ⚠️ `settings.scoring` IS A WEIGHT MAP, NOT A NAME. It is the full
+ * `{ rec: 1, rec_yd: 0.1, … }` object, so passing it straight to `rankingFor`
+ * stringifies it to "[object object]", matches no key, and silently falls back
+ * to PPR — a half-PPR or standard league would quietly get the PPR board and
+ * nothing would say so. The fallback is right for an unknown name and wrong as
+ * a way of handling a known object.
+ *
+ * The reception weight is the only thing that separates the three presets
+ * (`HALF_PPR_SCORING` and `STANDARD_SCORING` are `{...PPR_SCORING, rec}`), so it
+ * is what decides. A string passes through, which is what the mock draft sends.
+ */
+export function scoringKeyFor(scoring) {
+  if (typeof scoring === 'string') return scoring.toLowerCase();
+  const rec = scoring?.rec;
+  if (typeof rec !== 'number') return 'ppr';
+  if (rec >= 0.75) return 'ppr';
+  if (rec >= 0.25) return 'half';
+  return 'std';
+}
+
+/**
+ * A player's value over replacement, for a league's scoring.
+ *
+ * ⚠️ PRESEASON PROJECTION, and callers must say so on screen. It is what the
+ * draft board was built from — useful for weighing a trade precisely because
+ * both sides were drafted against it — but it knows nothing about what has
+ * happened since. Returns null when the player is outside the ranking's depth,
+ * which is normal and must render as "—" rather than as zero.
+ */
+export function valueOf(playerId, scoring = 'ppr') {
+  const v = ranking?.[`${scoringKeyFor(scoring)}_v`]?.[String(playerId)];
+  return typeof v === 'number' ? v : null;
+}

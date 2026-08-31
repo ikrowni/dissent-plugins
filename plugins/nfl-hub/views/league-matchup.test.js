@@ -593,3 +593,74 @@ describe('a league with no postseason yet', () => {
     expect(html).not.toContain('matchup-generate');
   });
 });
+
+// The Matchups tab was four rows tall in a page-tall pane. The fixture strip is
+// what fills it — chosen because it answers something no other part of the tab
+// does: who you play next, and when.
+describe('your season fixture strip', () => {
+  const sched = (weeks) => ({ season: 2025, startWeek: 1, teamIds: ['t1', 't2'], weeks });
+  const base = (over = {}) => Object.assign(_state, {
+    leagueId: 'lg', league: league(['t1', 't2']), week: 2,
+    scores: null, bracket: null, loaded: true, error: null,
+    schedule: sched([
+      { week: 1, matchups: [{ home: 't1', away: 't2', bye: false }] },
+      { week: 2, matchups: [{ home: 't2', away: 't1', bye: false }] },
+      { week: 3, matchups: [{ home: 't1', away: 't2', bye: false }] },
+    ]),
+    ...over,
+  });
+
+  it('lists every week the reader has a fixture in', () => {
+    base();
+    const html = render();
+    expect(html).toContain('Your season');
+    expect(html).toContain('WK 1');
+    expect(html).toContain('WK 3');
+  });
+
+  // Home and away are different games and the strip has to say which.
+  it('distinguishes home from away', () => {
+    base();
+    const d = parse(render());
+    const ats = [...d.querySelectorAll('.fx-at')].map((n) => n.textContent.trim());
+    expect(ats).toEqual(['vs', '@', 'vs']);
+  });
+
+  it('marks the current week and dims the played ones', () => {
+    base();
+    const d = parse(render());
+    expect(d.querySelectorAll('.fx.now').length).toBe(1);
+    expect(d.querySelectorAll('.fx.past').length).toBe(1);
+  });
+
+  // ⚠️ The bye is in a LATER week, and the current week has a real pairing.
+  // Putting the bye in the current week makes the view take its "week N is not
+  // in the schedule" branch instead, and the test then passes or fails for a
+  // reason that has nothing to do with byes.
+  it('says Bye rather than inventing an opponent', () => {
+    base({
+      week: 1,
+      schedule: sched([
+        { week: 1, matchups: [{ home: 't1', away: 't2', bye: false }] },
+        { week: 2, matchups: [{ home: 't1', away: null, bye: true }] },
+      ]),
+    });
+    const html = render();
+    expect(html).toContain('Your season');
+    expect(html).toContain('Bye');
+  });
+
+  // ⚠️ It is additive. A league with no schedule must still get the pane that
+  // offers to generate one, not a half-rendered strip.
+  it('renders nothing without a schedule', () => {
+    base({ schedule: null });
+    const html = render();
+    expect(html).not.toContain('Your season');
+    expect(html).toContain('matchup-generate');
+  });
+
+  it('renders nothing for someone with no team in the league', () => {
+    base({ league: league(['t1', 't2'], { myTeams: [] }) });
+    expect(render()).not.toContain('Your season');
+  });
+})

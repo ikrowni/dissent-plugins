@@ -404,3 +404,73 @@ describe('team accent on the trade board', () => {
   });
 
 });
+
+// 🔴 These rows replaced a wall of inline `<label class="check">` elements that
+// reflowed into a paragraph at roster size — reported 2026-08-31 as "the way
+// you choose players on this screen does not look very good". The point of a
+// table is that the same fact sits in the same place on every row.
+describe('trade pickers are tables, not a wall of checkboxes', () => {
+  const openTrade = () => {
+    setup();
+    _state.tradeWith = 't2';
+  };
+
+  it('puts each selectable player in its own row', () => {
+    openTrade();
+    const d = parse(render());
+    expect(d.querySelectorAll('.pick-table tbody tr').length).toBeGreaterThan(0);
+    expect(d.querySelectorAll('.pick-table thead').length).toBeGreaterThan(0);
+  });
+
+  // The click target is the whole name, not a 13px box.
+  it('labels every checkbox so the name is clickable', () => {
+    openTrade();
+    const d = parse(render());
+    // Membership in an id set rather than a `#id` selector: these ids contain
+    // characters a selector would need escaping for, and CSS.escape is not
+    // present in this environment.
+    const inputIds = new Set([...d.querySelectorAll('.pick-table input[type="checkbox"]')]
+      .map((n) => n.id));
+    const labels = [...d.querySelectorAll('.pick-label')];
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      const forId = label.getAttribute('for');
+      expect(forId, 'label has no for=').toBeTruthy();
+      expect(inputIds.has(forId), `no checkbox with id ${forId}`).toBe(true);
+    }
+  });
+
+  it('keeps the checkbox wired to the same action as before', () => {
+    openTrade();
+    const d = parse(render());
+    const acts = new Set([...d.querySelectorAll('.pick-table input[data-act]')]
+      .map((n) => n.dataset.act));
+    expect(acts.has('moves-trade-mine') || acts.has('moves-trade-theirs')).toBe(true);
+  });
+
+  it('names the columns, including what the value number is', () => {
+    openTrade();
+    const html = render();
+    expect(html).toContain('>Val<');
+    expect(html).toMatch(/preseason projections/i);
+  });
+
+  // ⚠️ 0 IS A REAL VALUE IN THESE UNITS, so an absent one must not render as 0 —
+  // a replacement-level player scores exactly 0 value over replacement, and a
+  // manager cannot tell "worth nothing" from "we don't know" if they look alike.
+  //
+  // 🔴 THE FIRST VERSION OF THIS TEST WAS VACUOUS and only breaking it showed
+  // that: it allowed `'—' || /^-?\d+$/`, and "0" matches that regex, so the
+  // exact regression it names passed. No ranking asset is loaded under test, so
+  // every value is unknown here and every cell must be a dash.
+  it('renders an unranked player as a dash, never as zero', () => {
+    openTrade();
+    const d = parse(render());
+    const vals = [...d.querySelectorAll('.pick-table tbody tr')]
+      .map((tr) => tr.querySelectorAll('td')[3]?.textContent.trim());
+    expect(vals.length).toBeGreaterThan(0);
+    for (const v of vals) {
+      expect(v, 'an unknown value must not render as a number').toBe('—');
+    }
+  });
+})

@@ -93,7 +93,14 @@ describe('render', () => {
   it('moves a started player out of the bench list', () => {
     setSlot(null, 0, 'qb1');
     const html = render();
-    const bench = html.slice(html.indexOf('<h4>Bench</h4>'));
+    // ⚠️ Anchored on the heading's PREFIX, not its exact text. The heading
+    // carries a count span since the two-column layout landed, and an exact
+    // match silently became indexOf === -1 → slice(-1) → the string ">", which
+    // passes `not.toContain` for free and fails the positive assertion. A
+    // brittle anchor turns half of this test into a no-op without saying so.
+    const benchAt = html.indexOf('<h4>Bench');
+    expect(benchAt).toBeGreaterThan(-1);
+    const bench = html.slice(benchAt);
     expect(bench).not.toContain('Quinn Back');
     expect(bench).toContain('Ray Bee');
   });
@@ -294,3 +301,53 @@ describe('with no league loaded at all', () => {
     expect(render()).toMatch(/do not have a team/i);
   });
 });
+
+// The starter rows are a slot label plus a select capped at 260px, so on a
+// desktop pane the right two-thirds of every row was empty while the bench sat
+// below the fold — reported 2026-08-31. Setting a lineup means moving a player
+// between the two lists, and they were never visible at once.
+// The starter rows are a slot label plus a select capped at 260px, so on a
+// desktop pane the right two-thirds of every row was empty while the bench sat
+// below the fold — reported 2026-08-31. Setting a lineup means moving a player
+// between the two lists, and they were never visible at once.
+//
+// ⚠️ Asserted on the MARKUP, not through a DOM. This file runs in the `node`
+// environment; adding jsdom just for these would change the environment every
+// other test in it already passes under.
+describe('two-column roster', () => {
+  const count = (html, needle) => html.split(needle).length - 1;
+
+  it('puts starters and bench in separate columns of one grid', () => {
+    const html = render();
+    expect(count(html, 'class="ros-cols"')).toBe(1);
+    expect(count(html, 'class="ros-col"')).toBe(2);
+  });
+
+  it('keeps the starters first and the bench second', () => {
+    const html = render();
+    expect(html.indexOf('Starters')).toBeGreaterThan(-1);
+    expect(html.indexOf('Starters')).toBeLessThan(html.indexOf('<h4>Bench'));
+  });
+
+  // ⚠️ IR belongs with the bench, not stranded under the starters — a player
+  // reaches IR from the bench, so the two lists are read together.
+  it('keeps IR in the bench column', () => {
+    _state.league.settings.rosterPositions = ['QB', 'RB', 'FLEX', 'BN', 'IR'];
+    const html = render();
+    expect(html.indexOf('Injured reserve')).toBeGreaterThan(html.indexOf('<h4>Bench'));
+    // Inside the bench column: no column has closed between the heading and it.
+    const between = html.slice(html.indexOf('<h4>Bench'), html.indexOf('Injured reserve'));
+    expect(count(between, '</section>')).toBe(0);
+  });
+
+  // The save/refresh row is shared by both columns and must not land inside one.
+  //
+  // ⚠️ Counted between the grid and the button, NOT via lastIndexOf('</section>')
+  // — `panel()` wraps the whole body in its own <section>, so the last one is
+  // always the panel's and that assertion can never fail.
+  it('leaves the actions outside the columns', () => {
+    const html = render();
+    const region = html.slice(html.indexOf('class="ros-cols"'), html.indexOf('roster-save'));
+    expect(count(region, '</section>')).toBe(2);
+  });
+})

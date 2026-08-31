@@ -62,18 +62,22 @@ export function render() {
     right: state.week ? `<span class="muted">Week ${state.week}</span>` : '',
     body: `
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
-      <h4>Starters</h4>
-      <table class="tbl lineup">
-        <tbody>${starters.map((slot, i) => slotRow(slot, i, state.lineup[i], bench)).join('')}</tbody>
-      </table>
-
-      <h4>Bench</h4>
-      ${bench.length === 0 ? '<p class="muted">Nobody on the bench.</p>' : `
-        <table class="tbl">
-          <tbody>${bench.map((id) => benchRow(id)).join('')}</tbody>
-        </table>`}
-
-      ${irSection(roster, irSlots)}
+      <div class="ros-cols">
+        <section class="ros-col">
+          <h4>Starters</h4>
+          <table class="tbl lineup">
+            <tbody>${starters.map((slot, i) => slotRow(slot, i, state.lineup[i], bench)).join('')}</tbody>
+          </table>
+        </section>
+        <section class="ros-col">
+          <h4>Bench <span class="muted">${bench.length}</span></h4>
+          ${bench.length === 0 ? '<p class="muted">Nobody on the bench.</p>' : `
+            <table class="tbl">
+              <tbody>${bench.map((id) => benchRow(id)).join('')}</tbody>
+            </table>`}
+          ${irSection(roster, irSlots)}
+        </section>
+      </div>
 
       <div class="row-actions">
         <button class="btn primary" data-act="roster-save" ${state.busy ? 'disabled' : ''}>

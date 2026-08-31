@@ -18,6 +18,8 @@ import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-
 import { playerChip, managerColor } from '../core/player-visuals.js';
 import { teamAvatar } from '../core/team-visuals.js';
 import { loadTrending, formatCount } from '../core/trending.js';
+import { loadRanking, valueOf } from '../core/draft-ranking.js';
+import { irEligible } from '../core/league/slots.js';
 import { getJson } from '../core/http.js';
 import { describe } from './league-home.js';
 
@@ -156,6 +158,74 @@ function claimsPane() {
  * player leads somewhere — the propose form below is ours. On a read-only mirror
  * it could only ever be a noticeboard, because Sleeper cannot be written to.
  */
+/** A player's injury designation, or null. Only ~9% of the index carries one. */
+function injuryOf(id) {
+  return getIndex()?.[String(id)]?.i ?? null;
+}
+
+/**
+ * A selectable player, as a table row.
+ *
+ * 🔴 THESE USED TO BE INLINE `<label class="check">` ELEMENTS, and at roster
+ * size they wrapped into a paragraph — twenty checkboxes and twenty names
+ * reflowing as one block of prose across the full width of the pane. Reported
+ * 2026-08-31: "the way you choose players on this screen does not look very
+ * good". You cannot skim a trade in that, which is the only thing the screen is
+ * for. Rows line the same fact up in the same place on every player.
+ *
+ * ⚠️ THE COLUMNS ARE THE ONES A TRADE TURNS ON. Position and NFL team come free
+ * inside `playerChip`, so they are not duplicated; what is added is the two
+ * things you cannot see from a name — whether he is hurt, and what he is worth.
+ *
+ * ⚠️ VALUE IS A PRESEASON PROJECTION AND THE HEADER SAYS SO. It is the number
+ * the draft board was built from, which is exactly why it is fair for weighing
+ * a trade: both managers drafted against it. It is not a live valuation and
+ * must never be presented as one. Absent means outside the ranking's depth —
+ * rendered "—", never 0, because 0 is a real value in these units.
+ */
+function pickRow(id, { act, checked, count = 0 }) {
+  const p = getIndex()?.[String(id)] ?? null;
+  const status = injuryOf(id);
+  const v = valueOf(id, state.league?.settings?.scoring);
+  return `<tr>
+    <td class="pick-cell">
+      <input type="checkbox" class="check" id="tp-${esc(act)}-${esc(id)}"
+             data-act="${esc(act)}" data-player="${esc(String(id))}" ${checked ? 'checked' : ''}>
+    </td>
+    <td><label for="tp-${esc(act)}-${esc(id)}" class="pick-label">
+      ${p ? playerChip(p, { size: 28, compact: true }) : esc(playerLabel(id))}
+    </label></td>
+    <td class="num">${status ? `<span class="inj-tag" title="Injury designation">${esc(status)}</span>` : ''}</td>
+    <td class="num">${v === null ? '<span class="muted">—</span>' : esc(String(v))}</td>
+    ${count === null ? '' : `<td class="num">${count > 0
+    ? `<span class="tb-count" title="${count} team${count === 1 ? '' : 's'} interested">♥ ${count}</span>`
+    : ''}</td>`}
+  </tr>`;
+}
+
+/** The shared header, so both sides of a trade read the same way. */
+function pickHead(withCount = false) {
+  return `<thead><tr>
+    <th class="pick-cell"></th><th>Player</th>
+    <th class="num" title="Injury designation">Inj</th>
+    <th class="num" title="Value over replacement, from this season's preseason projections — the same number the draft board was built from">Val</th>
+    ${withCount ? '<th class="num" title="How many teams have registered interest">Want</th>' : ''}
+  </tr></thead>`;
+}
+
+/** A whole selectable side of a trade. */
+function pickTable(ids, selected, act, { counts = null } = {}) {
+  if (ids.length === 0) return '<p class="muted">No players.</p>';
+  return `<div class="pick-table"><table class="tbl">
+    ${pickHead(Boolean(counts))}
+    <tbody>${ids.map((id) => pickRow(id, {
+    act,
+    checked: selected.includes(String(id)),
+    count: counts ? (counts[String(id)] ?? 0) : null,
+  })).join('')}</tbody>
+  </table></div>`;
+}
+
 /**
  * Who is sitting on waivers, and until when.
  *
@@ -202,24 +272,13 @@ function tradeBlockPane() {
   const theirRows = othersBlocking.map(([t, e]) => `
     <div class="tb-team team-accent" style="--mgr:${esc(managerColor(t))}">
       <h5>${teamAvatar(teams[t] ?? { id: t, name: String(t) }, { size: 22 })}<span class="tm-name">${esc(teams[t]?.name ?? t)}</span></h5>
-      ${e.players.map((id) => `<label class="check">
-        <input type="checkbox" data-act="moves-interest-toggle" data-player="${esc(String(id))}"
-               ${myInterest.includes(String(id)) ? 'checked' : ''}>
-        ${esc(playerLabel(id))}
-      </label>`).join('')}
+      ${pickTable(e.players.map(String), myInterest.map(String), 'moves-interest-toggle')}
     </div>`).join('');
 
   // ⚠️ The count is shown on MY players, because that is the question a manager
   // actually has — not "who is popular", but "would anyone take him?".
-  const myRows = mine.map((id) => {
-    const n = state.counts?.[String(id)] ?? 0;
-    return `<label class="check">
-      <input type="checkbox" data-act="moves-block-toggle" data-player="${esc(id)}"
-             ${myBlock.includes(id) ? 'checked' : ''}>
-      ${esc(playerLabel(id))}
-      ${n > 0 ? `<span class="tb-count" title="${n} team${n === 1 ? '' : 's'} interested">♥ ${n}</span>` : ''}
-    </label>`;
-  }).join('');
+  const myRows = pickTable(mine.map(String), myBlock.map(String), 'moves-block-toggle',
+    { counts: state.counts ?? {} });
 
   return panel({
     title: 'Trade block',
@@ -247,13 +306,7 @@ function tradePane() {
     ? (state.league?.assets?.rosters?.[state.tradeWith]?.players ?? [])
     : [];
 
-  const picker = (ids, selected, act) => (ids.length === 0
-    ? '<p class="muted">No players.</p>'
-    : ids.map((id) => `<label class="check">
-        <input type="checkbox" data-act="${act}" data-player="${esc(id)}"
-               ${selected.includes(String(id)) ? 'checked' : ''}>
-        ${esc(playerLabel(id))}
-      </label>`).join(''));
+  const picker = (ids, selected, act) => pickTable(ids.map(String), selected.map(String), act);
 
   return panel({
     title: 'Propose a trade',
@@ -422,6 +475,11 @@ export async function load(app, { leagueId, league, teamId, week }) {
   app?.router?.refresh();
   try {
     await loadIndex();
+    // ⚠️ NOT AWAITED INTO THE CRITICAL PATH and never fatal. It feeds one
+    // COLUMN; a dead CDN must cost that column, not the trade screen. The
+    // value cells already render "—" for anyone the ranking does not carry, so
+    // a failed load is a state the table can already draw.
+    loadRanking().then(() => app?.router?.refresh()).catch(() => {});
     // Both are optional: a league with no waiver week and no trades is normal.
     state.claims = week ? await listClaims(leagueId, week).catch(() => null) : null;
     state.trades = await listTrades(leagueId).catch(() => []);

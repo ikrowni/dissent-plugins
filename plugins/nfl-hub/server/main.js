@@ -20,7 +20,7 @@ import {
 } from "./ops-league.js";
 import {
   createLeagueDraft, startLeagueDraft, getDraft, makeDraftPick,
-  setDraftQueue, setDraftPaused, finalizeDraft,
+  setDraftQueue, setDraftAuto, setDraftPaused, finalizeDraft,
 } from "./ops-draft.js";
 import {
   submitClaim, cancelClaim, listClaims, runWaivers, sweepWaiverWire, getWaiverWire,
@@ -98,6 +98,7 @@ const OPS = {
   "draft:get": getDraft,
   "draft:pick": makeDraftPick,
   "draft:queue": setDraftQueue,
+  "draft:auto": setDraftAuto,
   "draft:pause": setDraftPaused,
   "draft:finalize": finalizeDraft,
 

@@ -752,3 +752,83 @@ h4 {
  * has everyone's attention. */
 .draft-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
 .draft-controls .btn.on { border-color: var(--win, #35c46a); color: var(--text); }
+
+/* ── My Roster: two columns ────────────────────────────────────────────────
+ *
+ * ⚠️ THE STARTER ROWS CANNOT FILL A WIDE PANE AND SHOULD NOT TRY. Each is a
+ * slot label plus a <select> capped at 260px (`.tbl.lineup select`), so on a
+ * desktop pane the right two-thirds of every row was empty while the bench sat
+ * far below the fold. Reported 2026-08-31 as "a lot of empty space". Putting
+ * the bench in that space is not decoration: setting a lineup means moving a
+ * player between the two lists, and they were never visible at once.
+ *
+ * ⚠️ NOT A 50/50 SPLIT. The starters column carries the selects and needs the
+ * room; the bench is name chips and two buttons. `1.15fr 1fr` gives the wider
+ * half to the side that has wide controls in it.
+ *
+ * ⚠️ COLLAPSES BEFORE THE SELECTS DO. Below 900px a 260px select plus its slot
+ * label and chip no longer fits in half a pane, so the columns stack rather
+ * than squeezing — the phone layout is the old one-column layout, which was
+ * always correct at that width and is why this was only ever a desktop
+ * complaint.
+ */
+.ros-cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 6px 26px; align-items: start; }
+.ros-col { min-width: 0; }
+/* The first heading in each column lines up with the other's; the panel's own
+ * padding already provides the space above. */
+.ros-col > h4:first-child { margin-top: 0; }
+@media (max-width: 900px) { .ros-cols { grid-template-columns: 1fr; gap: 0 0; } }
+
+/* ── Selectable player tables (trade block, trade proposal) ────────────────
+ *
+ * 🔴 REPLACES A WALL OF INLINE CHECKBOXES. `<label class="check">` per player
+ * reflowed twenty names into a paragraph across the full pane width, which is
+ * unreadable at roster size and is the state this screen shipped in.
+ *
+ * ⚠️ The whole name is a <label> for its checkbox, so the click target is the
+ * row rather than a 13px box. That is the single biggest usability difference
+ * here and it costs one `for=` attribute.
+ */
+.pick-table { max-height: 340px; overflow-y: auto; }
+.pick-table table { width: 100%; }
+/* ⚠️ Sticky so the columns stay named while the list scrolls under them —
+ * otherwise "Inj" and "Val" are two unexplained numbers ten rows down. */
+.pick-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--ink-2);
+  font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; text-align: left;
+  padding: 5px 8px; border-bottom: 1px solid var(--line);
+}
+.pick-table thead th.num { text-align: right; }
+.pick-table td { padding: 3px 8px; vertical-align: middle; }
+.pick-cell { width: 22px; padding-right: 0 !important; }
+.pick-label { display: block; cursor: pointer; min-width: 0; }
+.pick-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+/* A checked row is visibly part of the offer without re-reading the boxes. */
+.pick-table tbody tr:has(.check:checked) { background: rgba(255, 182, 18, 0.07); }
+
+/* The two sides of a proposal sit in the existing .trade-cols grid; this keeps
+ * each side's table from being squeezed under its own header. */
+.trade-cols .pick-table { max-height: 420px; }
+
+/* ── "Your season" fixture strip, under the week's pairings ────────────────
+ * Wraps rather than scrolls: an 14-week season is two tidy rows on a desktop
+ * pane and the whole point is seeing the run of it at once. */
+.season-strip { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.season-strip h4 { margin: 0 0 9px; }
+.fx-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.fx {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  background: var(--ink-2); border: 1px solid var(--line);
+  font-size: 12px; color: var(--text-2); min-width: 0;
+}
+.fx-wk { font-size: 9.5px; letter-spacing: 0.07em; color: var(--text-3); font-weight: 700; }
+.fx-at { font-size: 10px; color: var(--text-3); }
+.fx-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+/* ⚠️ The current week is marked by BORDER AND WEIGHT, not by colour alone —
+ * the opponent name already carries that manager's accent colour, so a second
+ * colour signal in the same chip competes with it. */
+.fx.now { border-color: var(--gold); color: var(--text); font-weight: 600; }
+.fx.past { opacity: 0.5; }

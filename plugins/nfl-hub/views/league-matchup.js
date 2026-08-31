@@ -55,6 +55,54 @@ export function pairingsFor(schedule, week) {
 }
 
 /**
+ * The reader's own fixture list for the season.
+ *
+ * ⚠️ FILLS THE SPACE UNDER THE PAIRINGS WITH THE ONE THING NOT ALREADY ON
+ * SCREEN. A league's week is four or five rows tall and the pane is a page
+ * tall, so this tab was mostly empty — reported 2026-08-31. The candidates were
+ * standings (the League tab owns those), this week's leaders (the same four
+ * rows re-sorted) and the schedule. Only the schedule answers something the
+ * rest of the tab cannot: who you play next, and when.
+ *
+ * ⚠️ NO RESULTS COLUMN, DELIBERATELY. This view loads scores for the CURRENT
+ * week only, so a W/L column would be blank for every other week — and a blank
+ * result reads as "nobody played", not as "not loaded here". Fetching a score
+ * per week to fill it would be one request per week of the season on every
+ * visit to this tab. The fixture is the honest half.
+ */
+function myFixtures() {
+  const mine = (state.league?.myTeams ?? [])[0];
+  if (!mine || !Array.isArray(state.schedule?.weeks)) return '';
+
+  const rows = [];
+  for (const w of state.schedule.weeks) {
+    const m = (w.matchups ?? []).find(
+      (x) => String(x.home) === String(mine) || String(x.away) === String(mine));
+    if (!m) continue;
+    const bye = m.bye || (!m.home || !m.away);
+    const opp = String(m.home) === String(mine) ? m.away : m.home;
+    const home = String(m.home) === String(mine);
+    rows.push({ week: w.week, opp, home, bye });
+  }
+  if (rows.length === 0) return '';
+
+  const now = Number(state.week);
+  return `<div class="season-strip">
+    <h4>Your season <span class="muted">${esc(teamName(mine))}</span></h4>
+    <div class="fx-row">
+      ${rows.map((r) => `
+        <div class="fx ${r.week === now ? 'now' : ''} ${r.week < now ? 'past' : ''}">
+          <span class="fx-wk">WK ${esc(String(r.week))}</span>
+          ${r.bye
+    ? '<span class="fx-opp muted">Bye</span>'
+    : `<span class="fx-at">${r.home ? 'vs' : '@'}</span>
+             <span class="fx-opp team-accent" style="--mgr:${esc(managerColor(r.opp))}">${esc(teamName(r.opp))}</span>`}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/**
  * Is this an actual seeded postseason?
  *
  * 🔴 TRUTHINESS IS NOT ENOUGH, and trusting it cost a league its Matchups tab.
@@ -129,7 +177,8 @@ export function render() {
   return panel({
     title: 'Matchups',
     right: `<span class="muted">Week ${esc(String(state.week))}</span>`,
-    body: `<div class="m-stagger">${pairs.map((m) => matchupCard(m)).join('')}</div>`,
+    body: `<div class="m-stagger">${pairs.map((m) => matchupCard(m)).join('')}</div>
+           ${myFixtures()}`,
   });
 }
 

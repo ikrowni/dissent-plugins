@@ -208,6 +208,44 @@ export function setDraftQueue({ p, payload }) {
   return { teamId, queued: queue.length };
 }
 
+/**
+ * Auto-draft: flag a team so a client that is present picks for it immediately
+ * instead of letting its clock run out.
+ *
+ * 🔴 THIS LIVES HERE, IN THE SIGNED MODULE, BECAUSE OF WHO MAY SET IT. The flags
+ * shipped in 2.37.0 in server-scoped plugin STORAGE, which every member of the
+ * server can write — so a manager could flag somebody else's team and have the
+ * commissioner's open board pick on their behalf. That was mischief rather than
+ * privilege escalation (every pick is still authorised against the client
+ * submitting it, and the commissioner's board is legitimately allowed to pick
+ * for anyone), but being opted into autodraft is not something a league mate
+ * gets to decide for you. `requireTeamControl` is the whole point of moving it.
+ *
+ * Stored on the league meta beside `draftQueues`, which is the same problem
+ * already solved the same way: per-team state, written by its own manager, read
+ * by the board.
+ */
+export function setDraftAuto({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamControl(p, teams, meta, teamId);
+  if (err) refuse(err);
+
+  const auto = Boolean(payload?.auto);
+  // ⚠️ DELETE rather than store `false`. The flag map is read as a plain
+  // truthiness lookup by both the board and this module, and a map that
+  // accumulates a `false` for every team that ever toggled off is a map that
+  // grows for the life of the league and reads worse for it.
+  mutate(KEY.meta(lg), (m) => {
+    const flags = { ...(m.autoDraft ?? {}) };
+    if (auto) flags[teamId] = true; else delete flags[teamId];
+    return { ...m, autoDraft: flags };
+  }, meta);
+  return { teamId, auto };
+}
+
 /** Commissioner: pause or resume. */
 export function setDraftPaused({ p, payload }) {
   const lg = requireLeagueId(payload);
@@ -285,6 +323,11 @@ function draftView(draft, meta, p) {
     picks: draft.picks,
     order: draft.order,
     isCommissioner: isCommissioner(meta, p.userId),
+    // ⚠️ THE BOARD'S ONLY SOURCE FOR THESE. They used to be fetched separately
+    // from plugin storage by the client; returning them with the board is what
+    // lets the storage copy go away entirely rather than leaving two answers to
+    // "is this team autodrafting".
+    autoDraft: meta?.autoDraft ?? {},
   };
 }
 

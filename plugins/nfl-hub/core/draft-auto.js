@@ -10,42 +10,17 @@
 // cannot help once they actually leave — which is the whole case. The
 // commissioner is present for the draft by definition, and the signed module
 // already lets them pick for any team (`requireTeamControl` returns null for a
-// commissioner), so no module change and no owner signature is needed.
+// commissioner), so the pick itself needs no new authority.
 //
-// ⚠️ TRUST BOUNDARY: these flags live in server-scoped PLUGIN storage, which any
-// league member can write. A member could therefore flag someone else's team and
-// have the commissioner's board pick for them. That is mischief, not privilege
-// escalation — every pick is still authorised server-side against the CLIENT
-// submitting it, so no member gains the ability to act as another. Moving the
-// flags inside the signed module is what would close it, at the cost of a
-// rebuild and a signature.
-import { storageGet as hostGet, storageSet as hostSet } from '../../plugin-sdk.js';
-
-export const autoKey = (leagueId) => `fl:autodraft:${leagueId}`;
-
-export function createAutoFlags({ storageGet = hostGet, storageSet = hostSet } = {}) {
-  return {
-    async load(leagueId) {
-      if (!leagueId) return {};
-      try {
-        const v = await storageGet(autoKey(leagueId), 'server');
-        return v && typeof v === 'object' ? v : {};
-      } catch {
-        // A storage failure must never block a draft.
-        return {};
-      }
-    },
-    async save(leagueId, flags) {
-      if (!leagueId) return false;
-      try {
-        await storageSet(autoKey(leagueId), flags ?? {}, 'server');
-        return true;
-      } catch {
-        return false;
-      }
-    },
-  };
-}
+// ⚠️ THE FLAGS ARE THE MODULE'S, AND THIS FILE HOLDS NO COPY OF THEM. They
+// shipped in 2.37.0 in server-scoped plugin storage, which every member of the
+// server can write, so a manager could flag someone else's team and have the
+// commissioner's board pick for them — mischief rather than privilege
+// escalation, since every pick is still authorised against the submitting
+// client, but nobody should be opted into autodraft by a league mate. They now
+// live on the league meta behind `draft:auto` (`requireTeamControl`), arrive on
+// the board with `draft:get`, and the storage path is GONE rather than kept
+// alongside: two answers to "is this team autodrafting" is worse than the bug.
 
 /**
  * The team this client should auto-pick for right now, or null.
