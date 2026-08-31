@@ -135,6 +135,47 @@ export function vetoTrade(trade, teamId, now, settings) {
   return done({ ...trade, vetoes });
 }
 
+/**
+ * Where a trade's veto vote stands.
+ *
+ * PURE, and it lives beside `vetoTrade` ON PURPOSE: the eligibility rule — a
+ * party to the trade cannot veto it — is enforced there and displayed from
+ * here, and two copies of that rule would drift into a screen that offers a
+ * vote the module refuses.
+ *
+ * ⚠️ THE DENOMINATOR IS ELIGIBLE VOTERS, NOT TEAMS. A veto needs
+ * `vetoVotesNeeded` votes but only non-parties may cast one, so in an 8-team
+ * league a two-party trade has 6 possible voters. Reporting "2 of 8" would
+ * describe a vote nobody is running.
+ *
+ * ⚠️ `reachable` IS THE POINT OF THIS FUNCTION. The shipped default is 6, which
+ * in an 8-team league means EVERY eligible team must vote to block a trade —
+ * unanimity, presented as an ordinary threshold. It is not a bug in the count;
+ * it is a league setting nobody could see. A screen that shows "0 of 6" without
+ * saying that 6 IS everybody has told the reader nothing.
+ */
+export function vetoProgress(trade, settings, teamCount) {
+  const parties = (trade?.parties ?? []).map(String);
+  const voters = Object.keys(trade?.vetoes ?? {}).map(String);
+  const total = Number(teamCount);
+  // Unknown team count degrades to "cannot say" rather than to a wrong number.
+  const eligible = Number.isFinite(total) ? Math.max(0, total - parties.length) : null;
+  const rawNeeded = Number(settings?.vetoVotesNeeded);
+  const needed = Number.isFinite(rawNeeded) && rawNeeded > 0 ? rawNeeded : null;
+
+  return {
+    cast: voters.length,
+    voters,
+    needed,
+    eligible,
+    remaining: needed === null ? null : Math.max(0, needed - voters.length),
+    // Enough eligible teams exist to reach the threshold at all.
+    reachable: needed === null || eligible === null ? null : needed <= eligible,
+    // …and it takes every last one of them, which is worth saying out loud.
+    unanimous: needed === null || eligible === null ? null : needed >= eligible && eligible > 0,
+  };
+}
+
 /** A commissioner forcing the outcome either way, bypassing review. */
 export function commissionerResolve(trade, approve, now) {
   if (trade.status !== TRADE_STATUS.PROPOSED && trade.status !== TRADE_STATUS.REVIEW) {

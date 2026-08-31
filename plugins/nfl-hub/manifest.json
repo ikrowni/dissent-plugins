@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.42.0",
+  "version": "2.43.0",
   "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -331,7 +331,7 @@
     },
     {
       "url": "core/league/settings.js",
-      "sha256": "85a16299aea424d361eaf3a99dcc3cd45b9868d20276a73c36b85ef30bae6815"
+      "sha256": "4163d890e136b8d3f49765b182ddeaee432ea91a852e7475e485a3b17890f676"
     },
     {
       "url": "core/league/slots.js",
@@ -347,7 +347,7 @@
     },
     {
       "url": "core/league/trades.js",
-      "sha256": "73df24ecf456e590203a6e26712615bfb92a6e659a9c76152238ccbd18917f3d"
+      "sha256": "fc2741984e5538a5851903ff38269cd96c6f43c6619b42c2db585a4985a18cb2"
     },
     {
       "url": "core/league/waiver-wire.js",
@@ -475,7 +475,7 @@
     },
     {
       "url": "styles/league.css",
-      "sha256": "9f6e646cc0f6df8d8175d7aaee551301f74d91f0d9260e164d9945474245e68d"
+      "sha256": "a4685d4b01f8681df98535cbbc0fd6bbee4c0dfcb82686b8a3c7fd1d851c042f"
     },
     {
       "url": "styles/ledger.css",
@@ -547,7 +547,7 @@
     },
     {
       "url": "views/league-home.js",
-      "sha256": "42d1da77c249c154f78f6400cdad9cfc0617333e343b5c662d041e22eb6ad684"
+      "sha256": "f1f2160215296ce32877aa576a225af32a2c7dc8c1b6b9905f7492b66289fef6"
     },
     {
       "url": "views/league-identity.js",
@@ -563,7 +563,7 @@
     },
     {
       "url": "views/league-moves.js",
-      "sha256": "5b6e0ee0a19ac0e1c7f4d593cce409884b53175b83699407041c9cec1ae92acc"
+      "sha256": "d0a5aaafe234e3c36461cf62086ddb5d7e945d26e9202996229dfb318855b149"
     },
     {
       "url": "views/league-roster.js",

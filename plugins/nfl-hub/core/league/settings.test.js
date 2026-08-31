@@ -360,3 +360,42 @@ describe('draftScheduledAt', () => {
     expect(canApplySettings(base, next, { draftStatus: 'active' }).ok).toBe(true);
   });
 });
+
+describe('the veto threshold is measured against eligible voters', () => {
+  const at = (numTeams, vetoVotesNeeded) => validateSettings(normalizeSettings({
+    numTeams, vetoVotesNeeded, playoffTeams: 2,
+  }));
+
+  // ⚠️ A PARTY CANNOT VETO ITS OWN TRADE, so a two-team trade is judged by
+  // numTeams - 2. The old rule compared against numTeams, which let a league
+  // ship a threshold no vote could ever reach — a veto system that silently
+  // does nothing rather than a visible misconfiguration.
+  it('refuses a threshold no two-team trade could reach', () => {
+    const check = at(8, 7);
+    expect(check.valid).toBe(false);
+    expect(check.errors.join(' ')).toMatch(/6 teams eligible/);
+  });
+
+  // ⚠️ EQUAL IS ALLOWED, deliberately. That is unanimity, a legitimate way to
+  // run a league — and it is the shipped default at 8 teams, so refusing it
+  // would invalidate leagues running correctly today.
+  it('permits a threshold equal to the eligible count', () => {
+    expect(at(8, 6).valid).toBe(true);
+  });
+
+  it('accepts the shipped default', () => {
+    expect(validateSettings(DEFAULT_SETTINGS).valid).toBe(true);
+    expect(DEFAULT_SETTINGS.numTeams - 2).toBeGreaterThanOrEqual(DEFAULT_SETTINGS.vetoVotesNeeded);
+  });
+
+  it('refuses a threshold that is not a whole number of at least one', () => {
+    for (const n of [0, -1, 1.5]) expect(at(12, n).valid, String(n)).toBe(false);
+  });
+
+  // 0 review days is a real setting: execute immediately, no vote taken.
+  it('accepts a zero review period but not a negative one', () => {
+    const s = normalizeSettings({});
+    expect(validateSettings({ ...s, tradeReviewDays: 0 }).valid).toBe(true);
+    expect(validateSettings({ ...s, tradeReviewDays: -1 }).valid).toBe(false);
+  });
+});

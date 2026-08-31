@@ -281,8 +281,25 @@ export function validateSettings(settings) {
   if (s.waiverType === WAIVER_TYPE.FAAB && s.waiverBudget <= 0) {
     errors.push('a FAAB league needs a waiver budget above 0');
   }
-  if (s.vetoVotesNeeded > s.numTeams) {
-    errors.push(`vetoVotesNeeded (${s.vetoVotesNeeded}) exceeds numTeams (${s.numTeams})`);
+  // ⚠️ MEASURED AGAINST ELIGIBLE VOTERS, NOT TEAMS. A party to a trade cannot
+  // veto its own, so a two-team trade is judged by `numTeams - 2` teams — and a
+  // threshold above that can NEVER be met, which reads as a veto system that
+  // silently does nothing rather than as a misconfiguration.
+  //
+  // ⚠️ Deliberately still permits a threshold EQUAL to the eligible count. That
+  // is unanimity, which is a legitimate way to run a league and is also the
+  // shipped default at 12 teams — refusing it would invalidate leagues that are
+  // running correctly today. The settings form says when a value means
+  // unanimity; only the impossible case is an error.
+  const vetoEligible = s.numTeams - 2;
+  if (s.vetoVotesNeeded > vetoEligible) {
+    errors.push(`vetoVotesNeeded (${s.vetoVotesNeeded}) exceeds the ${vetoEligible} teams eligible to vote on a two-team trade`);
+  }
+  if (!Number.isInteger(s.vetoVotesNeeded) || s.vetoVotesNeeded < 1) {
+    errors.push('vetoVotesNeeded must be a whole number of at least 1');
+  }
+  if (!Number.isInteger(s.tradeReviewDays) || s.tradeReviewDays < 0) {
+    errors.push('tradeReviewDays must be 0 (execute immediately) or a whole number of days');
   }
 
   // Roster shape and the draft that fills it.

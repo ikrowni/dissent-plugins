@@ -369,6 +369,17 @@ function settingsPane(league) {
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(label)}</option>`;
   const shape = splitRosterPositions(st.rosterPositions);
   const capacity = activeRosterSize(st);
+  // ⚠️ ELIGIBLE VOTERS, NOT TEAMS. A party to a trade cannot veto its own, so a
+  // two-team trade is judged by everyone else — which is what makes the shipped
+  // default of 6 mean UNANIMITY in an 8-team league. That was invisible: this
+  // control did not exist, so nobody could see the number, let alone that it
+  // was every eligible team.
+  const teamCount = Object.keys(league.teams ?? {}).length;
+  const vetoEligible = Math.max(0, teamCount - 2);
+  const needed = Number(st.vetoVotesNeeded ?? 6);
+  const vetoNote = vetoEligible > 0 && needed >= vetoEligible
+    ? `<strong>At ${needed} that is every one of them</strong> — today a trade can only be blocked unanimously.`
+    : '';
   // ⚠️ Named because saving is not enough. A draft already built keeps the
   // rounds it was built with, so a commissioner who changes them here and never
   // rebuilds sees the old number on the board and no reason why.
@@ -450,6 +461,21 @@ function settingsPane(league) {
             Draft day is shown to everyone in their own timezone; leave it empty for no set
             time. It does not start the draft — you still press Start.
             ${draftNote}</p>
+        </fieldset>
+
+        <fieldset class="lg-set-group">
+          <legend>Trades</legend>
+          <label>Review period (days)
+            <input name="tradeReviewDays" type="number" min="0" max="14" value="${esc(st.tradeReviewDays ?? 2)}">
+          </label>
+          <label>Votes needed to veto
+            <input name="vetoVotesNeeded" type="number" min="1" max="${Math.max(1, teamCount - 2)}"
+                   value="${esc(st.vetoVotesNeeded ?? 6)}">
+          </label>
+          <p class="tiny">A trade the parties have accepted sits in review, and any team NOT in
+            it may vote to veto — so ${vetoEligible} of your ${teamCount} teams can vote on a
+            two-team trade. ${vetoNote} 0 review days executes trades immediately and no vote
+            is taken.</p>
         </fieldset>
 
         <label class="inline"><input type="checkbox" name="tradesEnabled"${st.tradesEnabled !== false ? ' checked' : ''}> Trades allowed</label>
@@ -655,6 +681,8 @@ export async function saveSettings(app, form) {
     draftRounds: Number(form.draftRounds),
     pickTimerSeconds: Number(form.pickTimerSeconds),
     draftType: String(form.draftType),
+    tradeReviewDays: Number(form.tradeReviewDays),
+    vetoVotesNeeded: Number(form.vetoVotesNeeded),
     // ⚠️ A datetime-local field is the COMMISSIONER'S wall clock. Converted to
     // an absolute instant here so every other manager reads the same moment in
     // their own zone; an empty field clears the schedule rather than storing 0.

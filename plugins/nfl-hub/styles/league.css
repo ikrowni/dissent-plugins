@@ -856,3 +856,18 @@ h4 {
   border-bottom: 1px solid var(--line);
 }
 .lineup-detail thead th.num, .tbl.lineup thead th.num { text-align: right; }
+
+/* ── Trade veto vote ───────────────────────────────────────────────────────
+ * A trade in review used to show the word "review" and a date. The vote behind
+ * it was fully implemented and completely invisible. */
+.veto-pane { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); }
+.veto-pane p { margin: 5px 0 0; }
+/* One pip per vote NEEDED, filled per vote CAST — so the threshold is legible
+ * at a glance without reading the sentence, and "6 pips" makes a unanimous
+ * requirement obvious in a way "6" does not. */
+.veto-bar { display: flex; gap: 4px; }
+.veto-pip {
+  width: 26px; height: 5px; border-radius: 3px;
+  background: var(--line); transition: background 160ms ease;
+}
+.veto-pip.on { background: var(--loss, #b0455a); }

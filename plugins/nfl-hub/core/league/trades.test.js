@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TRADE_STATUS, proposeTrade, tradeParties, acceptTrade, rejectTrade, cancelTrade,
-  vetoTrade, commissionerResolve, resolveDueTrades, applyTrade, tradingIsOpen,
+  vetoTrade, commissionerResolve, resolveDueTrades, applyTrade, tradingIsOpen, vetoProgress,
 } from './trades.js';
 import { normalizeSettings } from './settings.js';
 import { emptyRosters, addPlayer, ownerOf } from './rosters.js';
@@ -249,5 +249,61 @@ describe('tradingIsOpen', () => {
 
   it('respects a league that disabled trading entirely', () => {
     expect(tradingIsOpen(normalizeSettings({ tradesEnabled: false }), 1)).toBe(false);
+  });
+});
+
+// 🔴 THE VOTE WAS FULLY IMPLEMENTED AND COMPLETELY INVISIBLE. `vetoTrade` has
+// counted ballots since the engine shipped and the module has always routed
+// them, but a trade in review showed the word "review" and a date — no tally,
+// no threshold, no indication a vote was running at all. This is what the
+// screen reads to say otherwise.
+describe('vetoProgress', () => {
+  const t = (over = {}) => ({ parties: ['t1', 't2'], vetoes: {}, ...over });
+
+  it('counts ballots cast and how many remain', () => {
+    const v = vetoProgress(t({ vetoes: { t3: 1, t4: 2 } }), { vetoVotesNeeded: 4 }, 8);
+    expect(v.cast).toBe(2);
+    expect(v.needed).toBe(4);
+    expect(v.remaining).toBe(2);
+    expect(v.voters).toEqual(['t3', 't4']);
+  });
+
+  // ⚠️ THE DENOMINATOR IS ELIGIBLE VOTERS, NOT TEAMS — a party cannot veto its
+  // own trade, so "2 of 8" would describe a vote nobody is running.
+  it('excludes the trading parties from the eligible count', () => {
+    expect(vetoProgress(t(), { vetoVotesNeeded: 3 }, 8).eligible).toBe(6);
+    expect(vetoProgress(t({ parties: ['t1', 't2', 't3'] }), { vetoVotesNeeded: 3 }, 8).eligible).toBe(5);
+  });
+
+  // ⚠️ THE SHIPPED DEFAULT IS UNANIMITY AT 8 TEAMS. 6 needed, 6 eligible — every
+  // last team must vote to block, presented as an ordinary threshold.
+  it('flags a threshold that means every eligible team', () => {
+    expect(vetoProgress(t(), { vetoVotesNeeded: 6 }, 8).unanimous).toBe(true);
+    expect(vetoProgress(t(), { vetoVotesNeeded: 5 }, 8).unanimous).toBe(false);
+  });
+
+  it('flags a threshold no league could ever reach', () => {
+    expect(vetoProgress(t(), { vetoVotesNeeded: 7 }, 8).reachable).toBe(false);
+    expect(vetoProgress(t(), { vetoVotesNeeded: 6 }, 8).reachable).toBe(true);
+  });
+
+  it('never reports a negative remainder once the threshold is passed', () => {
+    const v = vetoProgress(t({ vetoes: { t3: 1, t4: 1, t5: 1 } }), { vetoVotesNeeded: 2 }, 8);
+    expect(v.remaining).toBe(0);
+  });
+
+  // Degrades to "cannot say" rather than to a wrong number.
+  it('reports null rather than guessing without a team count or a threshold', () => {
+    expect(vetoProgress(t(), { vetoVotesNeeded: 3 }, undefined).eligible).toBe(null);
+    expect(vetoProgress(t(), {}, 8).needed).toBe(null);
+    expect(vetoProgress(t(), { vetoVotesNeeded: 0 }, 8).needed).toBe(null);
+  });
+
+  it('agrees with vetoTrade about who may vote', () => {
+    const trade = { ...t(), status: TRADE_STATUS.REVIEW };
+    // A party is refused by the engine…
+    expect(vetoTrade(trade, 't1', 1, { vetoVotesNeeded: 3 }).ok).toBe(false);
+    // …and is not counted among the eligible here.
+    expect(vetoProgress(trade, { vetoVotesNeeded: 3 }, 8).eligible).toBe(6);
   });
 });

@@ -18,6 +18,7 @@ import { loadIndex, searchPlayers, playerLabel, getIndex } from '../core/player-
 import { playerChip, managerColor } from '../core/player-visuals.js';
 import { teamAvatar } from '../core/team-visuals.js';
 import { loadTrending, formatCount } from '../core/trending.js';
+import { vetoProgress } from '../core/league/trades.js';
 import { loadRanking, valueOf } from '../core/draft-ranking.js';
 import { loadWeekProjections } from '../core/weekly-projections.js';
 import { byeProjCells, byeProjHead } from '../core/lineup-cells.js';
@@ -364,7 +365,12 @@ export function actionsFor(trade, teamId) {
     if (isParty && !accepted) return ['accept', 'reject'];
     return [];
   }
-  if (trade.status === 'review' && !isParty) return ['veto'];
+  // ⚠️ ONCE ONLY. `vetoTrade` refuses a second ballot from the same team, so
+  // offering the button again is offering a refusal.
+  if (trade.status === 'review' && !isParty) {
+    const voted = (trade.vetoes ?? {})[String(teamId)] !== undefined;
+    return voted ? [] : ['veto'];
+  }
   return [];
 }
 
@@ -417,6 +423,56 @@ async function saveTradeBlock(app, patch) {
   }
 }
 
+/**
+ * Where the league's veto vote stands, for a trade in review.
+ *
+ * 🔴 THIS WAS THE WHOLE OF WHAT "review" TOLD YOU: the word, and a date. The
+ * vote was fully implemented — `vetoTrade` counts ballots, the module routes
+ * them, the button is even offered to non-parties — and NOTHING anywhere said a
+ * vote was running, how many votes it took, or how many had been cast. Reported
+ * 2026-08-31 as wanting "voting on trades like other fantasy sites": the league
+ * already had it and could not see it.
+ *
+ * ⚠️ SAYS WHEN THE THRESHOLD IS UNANIMITY, because the shipped default makes it
+ * so. `vetoVotesNeeded` defaults to 6, and in an 8-team league a two-party trade
+ * has exactly 6 eligible voters — so every single one must vote to block. That
+ * is a legitimate way to run a league and an astonishing thing to discover by
+ * accident, so it is stated rather than left to be inferred from two numbers.
+ *
+ * ⚠️ NAMES WHO HAS VOTED. A blind tally invites the question it is meant to
+ * answer, and a veto is a public act in every league that runs one — Sleeper,
+ * ESPN and Yahoo all show it.
+ */
+function vetoPane(t) {
+  if (t.status !== 'review') return '';
+  const teamCount = Object.keys(state.league?.teams ?? {}).length;
+  const v = vetoProgress(t, state.league?.settings, teamCount);
+  if (v.needed === null) return '';
+
+  const iVoted = v.voters.includes(String(state.teamId));
+  const isParty = (t.parties ?? []).includes(String(state.teamId));
+  const names = v.voters.map((id) => esc(teamName(id))).join(', ');
+
+  return `<div class="veto-pane">
+    <div class="veto-bar" role="img"
+         aria-label="${esc(String(v.cast))} of ${esc(String(v.needed))} veto votes cast">
+      ${Array.from({ length: v.needed }, (_, i) =>
+    `<span class="veto-pip ${i < v.cast ? 'on' : ''}"></span>`).join('')}
+    </div>
+    <p class="tiny">
+      <strong>${esc(String(v.cast))} of ${esc(String(v.needed))}</strong> veto votes
+      ${v.remaining > 0 ? `— ${esc(String(v.remaining))} more block this trade` : '— this trade is blocked'}.
+      ${v.eligible === null ? '' : `${esc(String(v.eligible))} team${v.eligible === 1 ? '' : 's'} may vote
+        (everyone except the two trading).`}
+      ${v.unanimous ? '<strong>That is every eligible team</strong> — this league requires unanimity to block a trade.' : ''}
+      ${v.reachable === false ? '<strong>No trade can be vetoed in this league</strong>: it asks for more votes than there are teams able to cast one.' : ''}
+    </p>
+    ${names ? `<p class="tiny muted">Voted to veto: ${names}.</p>` : ''}
+    ${isParty ? '<p class="tiny muted">You are in this trade, so you cannot vote on it.</p>' : ''}
+    ${iVoted ? '<p class="tiny">You have voted to veto.</p>' : ''}
+  </div>`;
+}
+
 function tradeRow(t) {
   const legs = (t.legs ?? []).map((l) =>
     `${esc(teamName(l.from))} → ${esc(teamName(l.to))}: ${esc(playerLabel(l.playerId))}`).join('<br>');
@@ -427,6 +483,7 @@ function tradeRow(t) {
       ${t.reviewEndsAt ? `<span class="muted">review ends ${new Date(t.reviewEndsAt).toLocaleString()}</span>` : ''}
     </div>
     <div class="trade-legs">${legs || '<span class="muted">picks / FAAB only</span>'}</div>
+    ${vetoPane(t)}
     ${acts.length ? `<div class="row-actions">${acts.map((a) => `
       <button class="btn tiny ${a === 'veto' || a === 'reject' ? 'danger' : ''}"
               data-act="moves-trade-act" data-trade="${esc(t.id)}" data-action="${a}"

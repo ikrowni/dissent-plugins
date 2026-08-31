@@ -576,3 +576,89 @@ describe('trade tables carry bye and projection', () => {
     expect(html).toContain('>Proj<');
   });
 })
+
+// 🔴 A trade in review showed the word "review" and a date. The vote was fully
+// implemented — ballots counted, module routing them, button offered — and
+// nothing said a vote was running. Reported as wanting "voting on trades like
+// other fantasy sites": the league already had it and could not see it.
+describe('a trade in review shows its vote', () => {
+  // ⚠️ FOUR TEAMS, not the file's default two. Both of the default league's
+  // teams are the trading parties, which leaves ZERO eligible voters — a real
+  // state (and correctly reported as "no trade can be vetoed"), but not the one
+  // these tests are about.
+  const fourTeams = () => ({
+    t1: { id: 't1', name: 'Alice FC' }, t2: { id: 't2', name: 'Bob United' },
+    t3: { id: 't3', name: 'Cara City' }, t4: { id: 't4', name: 'Dee Town' },
+  });
+  const inReview = (over = {}) => {
+    setup();
+    _state.league.teams = fourTeams();
+    _state.league.settings = { ..._state.league.settings, vetoVotesNeeded: 3 };
+    _state.trades = [{
+      id: 'x1', status: 'review', parties: ['t1', 't2'], proposedBy: 't1',
+      acceptances: { t1: 1, t2: 1 }, vetoes: {}, reviewEndsAt: Date.now() + 8.64e7,
+      legs: [{ from: 't1', to: 't2', playerId: 'qb1' }], ...over,
+    }];
+    return render();
+  };
+
+  it('shows the tally and how many more would block it', () => {
+    const html = inReview({ vetoes: { t3: 1 } });
+    expect(html).toContain('1 of 3');
+    expect(html).toMatch(/2 more block this trade/i);
+  });
+
+  // ⚠️ The denominator is ELIGIBLE VOTERS — a party cannot veto its own trade,
+  // so "of 8 teams" would describe a vote nobody is running.
+  it('counts only the teams that may actually vote', () => {
+    const html = inReview();
+    expect(html).toMatch(/2 teams may vote/i);
+    expect(html).toMatch(/everyone except the two trading/i);
+  });
+
+  it('names who has voted', () => {
+    const html = inReview({ vetoes: { t3: 1 } });
+    expect(html).toMatch(/Voted to veto/i);
+  });
+
+  // ⚠️ THE SHIPPED DEFAULT IS UNANIMITY IN AN 8-TEAM LEAGUE. Two numbers do not
+  // say that; the sentence does.
+  it('says so when the threshold means every eligible team', () => {
+    setup();
+    _state.league.teams = fourTeams();
+    _state.league.settings = { ..._state.league.settings, vetoVotesNeeded: 2 };
+    _state.trades = [{
+      id: 'x2', status: 'review', parties: ['t1', 't2'], proposedBy: 't1',
+      acceptances: {}, vetoes: {}, reviewEndsAt: Date.now(), legs: [],
+    }];
+    expect(render()).toMatch(/every eligible team/i);
+  });
+
+  it('says outright when no trade could ever be vetoed', () => {
+    setup();
+    _state.league.teams = fourTeams();
+    _state.league.settings = { ..._state.league.settings, vetoVotesNeeded: 99 };
+    _state.trades = [{
+      id: 'x3', status: 'review', parties: ['t1', 't2'], proposedBy: 't1',
+      acceptances: {}, vetoes: {}, reviewEndsAt: Date.now(), legs: [],
+    }];
+    expect(render()).toMatch(/No trade can be vetoed/i);
+  });
+
+  it('tells a party why it has no vote', () => {
+    const html = inReview();
+    expect(html).toMatch(/You are in this trade, so you cannot vote/i);
+  });
+
+  // ⚠️ vetoTrade refuses a second ballot, so offering the button again offers a
+  // refusal.
+  it('withdraws the button once you have voted', () => {
+    expect(actionsFor({ status: 'review', parties: ['t2'], vetoes: {} }, 't1')).toEqual(['veto']);
+    expect(actionsFor({ status: 'review', parties: ['t2'], vetoes: { t1: 1 } }, 't1')).toEqual([]);
+  });
+
+  it('shows nothing for a trade that is not in review', () => {
+    const html = inReview({ status: 'executed', reviewEndsAt: null });
+    expect(html).not.toMatch(/veto votes/i);
+  });
+})
