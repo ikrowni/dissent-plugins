@@ -36,6 +36,7 @@ import {
   availablePool, filterPool, poolCounts, matchesFilter,
 } from '../core/league/draft-pool.js';
 import { describe } from './league-home.js';
+import { formatDraftTime } from '../core/draft-schedule.js';
 
 /** How often the board is re-read from the module. */
 const POLL_MS = 3000;
@@ -135,6 +136,7 @@ function noDraftPane() {
     title: 'Draft',
     body: `
       <p class="muted">No draft has been set up for this league yet.</p>
+      ${scheduleLine(state.league?.settings)}
       ${teams < 2
     ? `<p class="muted">A draft needs at least two teams — this league has ${teams}.
          Invite people to the server and have them join from the League tab.</p>`
@@ -145,6 +147,24 @@ function noDraftPane() {
        </button>`
     : '<p class="muted">A commissioner needs to create it.</p>'}`,
   });
+}
+
+/**
+ * The scheduled draft time, for a draft that has not started.
+ *
+ * ⚠️ ABSOLUTE TIME AND RELATIVE TIME TOGETHER, never one alone. "in 2 days"
+ * cannot be written in a calendar, and a bare timestamp makes every reader do
+ * the arithmetic the page could have done. The absolute half carries the
+ * reader's own timezone name so two managers comparing notes can tell whether
+ * they are looking at the same moment.
+ */
+function scheduleLine(settings) {
+  const when = formatDraftTime(settings?.draftScheduledAt);
+  if (!when) return '';
+  return when.past
+    ? `<p class="notice">Draft day was <strong>${esc(when.absolute)}</strong> (${esc(when.relative)}).
+         It has not been started yet.</p>`
+    : `<p class="notice">Draft day: <strong>${esc(when.absolute)}</strong> — ${esc(when.relative)}.</p>`;
 }
 
 /**
@@ -181,6 +201,7 @@ function prePane(d) {
     body: `
       <p class="muted">${d.order.length} picks over ${d.rounds} round${d.rounds === 1 ? '' : 's'},
       ${esc(d.type)} order. Pick clock ${d.pickTimerSeconds}s.</p>
+      ${scheduleLine(state.league?.settings)}
       ${stale.length && d.isCommissioner
     ? `<p class="notice">This draft was built before your latest settings change, so it still
          uses ${esc(stale.join(', '))}. Rebuilding discards nothing — no pick has been made —

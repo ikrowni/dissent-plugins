@@ -622,3 +622,53 @@ describe('a prepared draft that no longer matches the league settings', () => {
     expect(html).not.toContain('→');
   });
 });
+
+describe('draft day on the draft panes', () => {
+  const soon = () => Date.now() + 3 * 86400000;
+  const past = () => Date.now() - 3 * 86400000;
+
+  const preDraft = (draftScheduledAt) => setup({
+    draft: {
+      status: 'pre', type: 'snake', rounds: 15, pickTimerSeconds: 90,
+      pickEndsAt: null, msRemaining: null, onClock: null, picks: {},
+      order: [{ overall: 1, round: 1, slot: 't1', owner: 't1' }],
+      isCommissioner: true,
+    },
+    league: league(8, { settings: { draftRounds: 15, draftType: 'snake', pickTimerSeconds: 90, draftScheduledAt } }),
+  });
+
+  it('announces the scheduled time with how far away it is', () => {
+    preDraft(soon());
+    const html = render();
+    expect(html).toContain('Draft day');
+    expect(html).toMatch(/in 3 days/);
+  });
+
+  // ⚠️ Answering "when is the draft" only once a draft object exists answers it
+  // only for people who are already past the question.
+  it('answers the question before a draft has even been created', () => {
+    setup({ draft: null, noDraft: true, league: league(8, { settings: { draftScheduledAt: soon() } }) });
+    expect(render()).toContain('Draft day');
+  });
+
+  it('says nothing when no time is set', () => {
+    preDraft(null);
+    expect(render()).not.toContain('Draft day');
+  });
+
+  // A time that has passed with the draft unstarted is exactly when somebody
+  // comes looking for an explanation, so the board keeps reporting it.
+  it('still reports a time that has passed, and says it has', () => {
+    preDraft(past());
+    const html = render();
+    expect(html).toContain('Draft day was');
+    expect(html).toMatch(/3 days ago/);
+    expect(html).toContain('has not been started yet');
+  });
+
+  it('is shown to managers, not just the commissioner', () => {
+    preDraft(soon());
+    _state.draft.isCommissioner = false;
+    expect(render()).toContain('Draft day');
+  });
+});

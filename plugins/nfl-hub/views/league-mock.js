@@ -132,9 +132,21 @@ function setupPane() {
       <div class="row-actions">
         <button class="btn primary" data-act="mock-start">Start mock draft</button>
       </div>
-      <p class="tiny">Players are ranked by last season’s fantasy points. That is a real
-      ranking, not a projection — it knows nothing about rookies or a changed depth chart.</p>`,
+      <p class="tiny">Players are ranked by average draft position for the ${esc(rankingSeason())} season,
+      with projections behind it for anyone the market has not priced yet. Rookies are included.</p>`,
   });
+}
+
+/**
+ * The season the loaded ranking is for.
+ *
+ * ⚠️ READ FROM THE ASSET, never written here as a constant. The old copy stated
+ * the basis of the ranking in prose and there was nothing to keep the two in
+ * step — so when the asset changed the sentence describing it silently became a
+ * false claim on screen.
+ */
+function rankingSeason() {
+  return state.ranking?.season ?? 'current';
 }
 
 function boardPane() {

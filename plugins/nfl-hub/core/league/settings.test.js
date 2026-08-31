@@ -325,3 +325,38 @@ describe('canApplySettings', () => {
     expect(res.error).toMatch(/t2/);
   });
 });
+
+describe('draftScheduledAt', () => {
+  const base = normalizeSettings({});
+
+  it('defaults to unscheduled', () => {
+    expect(base.draftScheduledAt).toBe(null);
+  });
+
+  it('accepts a millisecond timestamp or null', () => {
+    expect(validateSettings({ ...base, draftScheduledAt: Date.UTC(2026, 8, 6, 20) }).valid).toBe(true);
+    expect(validateSettings({ ...base, draftScheduledAt: null }).valid).toBe(true);
+  });
+
+  // ⚠️ SECONDS ARE THE LIKELY MISTAKE, and merely checking for a finite number
+  // accepts them. A seconds timestamp lands in 1970 and renders as a draft that
+  // already happened — which reads as data corruption rather than a unit error.
+  it('refuses a seconds timestamp', () => {
+    const check = validateSettings({ ...base, draftScheduledAt: 1788400800 });
+    expect(check.valid).toBe(false);
+    expect(check.errors.join(' ')).toMatch(/milliseconds/);
+  });
+
+  it('refuses values that are not a time at all', () => {
+    for (const v of ['saturday', NaN, Infinity, {}]) {
+      expect(validateSettings({ ...base, draftScheduledAt: v }).valid, String(v)).toBe(false);
+    }
+  });
+
+  // Scheduling is advisory and independent of the board, so it must not be
+  // caught by the structural freeze that guards rounds/type/clock.
+  it('is not a structural change, so it can be set during a draft', () => {
+    const next = { ...base, draftScheduledAt: Date.UTC(2026, 8, 6, 20) };
+    expect(canApplySettings(base, next, { draftStatus: 'active' }).ok).toBe(true);
+  });
+});

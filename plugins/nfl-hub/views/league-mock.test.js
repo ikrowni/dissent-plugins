@@ -40,11 +40,21 @@ describe('setup', () => {
     expect(html).toContain('Your seat');
   });
 
-  // ⚠️ The ranking is last season's points, not a projection. Somebody who
-  // thinks otherwise will draw wrong conclusions from a working board.
+  // ⚠️ THIS TEST EXISTS SO THE SCREEN CANNOT LIE ABOUT ITS OWN BOARD, and it
+  // has now caught that once. It used to assert the copy said "last season",
+  // which was true until the ranking became ADP for the season being drafted —
+  // and the sentence would have gone on claiming the old basis, on screen, with
+  // every other test still green. Update it WITH the basis; never delete it.
   it('states what the ranking actually is', () => {
-    expect(render()).toMatch(/last season/i);
-    expect(render()).toMatch(/not a projection/i);
+    expect(render()).toMatch(/average draft position/i);
+    expect(render()).not.toMatch(/last season/i);
+  });
+
+  // The season is read from the loaded asset rather than written into the copy,
+  // so the sentence cannot disagree with the file it describes.
+  it('names the season from the ranking asset, not a constant', () => {
+    _state.ranking = { season: 2031, ppr: [] };
+    expect(render()).toContain('2031');
   });
 
   it('says nothing is saved, because nothing is', () => {

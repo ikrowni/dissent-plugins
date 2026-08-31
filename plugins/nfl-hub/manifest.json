@@ -1,8 +1,8 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.34.0",
-  "description": "A full NFL broadcast center \u2014 live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
+  "version": "2.35.0",
+  "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -39,7 +39,7 @@
   "resources": [
     {
       "url": "assets/draft-ranking.json",
-      "sha256": "b256837dbf1a2d30f3262732397f3eba20eb522615b877d32e354c4a82bf8ad2"
+      "sha256": "d27244fa11bd272283cd1ec901ab7f7d192d4a9fb1fd27cc87ce81a15ad551cb"
     },
     {
       "url": "assets/fonts/barlow-condensed-600-latin-ext.woff2",
@@ -219,7 +219,11 @@
     },
     {
       "url": "core/draft-ranking.js",
-      "sha256": "92d59b2c567e2088f4b3e494f9863878a7a92c5534b72e192ff83dce63ceb50d"
+      "sha256": "d4f193ede0d4fbcc5ffd33725fe6570bd3538e2829882c915952bb98464e6dcc"
+    },
+    {
+      "url": "core/draft-schedule.js",
+      "sha256": "4a31a7f0e956e686009c0645d533c033c7a34da4bb3c7413eebd378d317c1618"
     },
     {
       "url": "core/espn-client.js",
@@ -319,7 +323,7 @@
     },
     {
       "url": "core/league/settings.js",
-      "sha256": "ac86fcb65b099f07b7325a98a755218be08b86f160f6e73feb878af7ac9f34c8"
+      "sha256": "85a16299aea424d361eaf3a99dcc3cd45b9868d20276a73c36b85ef30bae6815"
     },
     {
       "url": "core/league/slots.js",
@@ -411,7 +415,7 @@
     },
     {
       "url": "scripts/build-draft-ranking.mjs",
-      "sha256": "eec83ed8481c8586c1d052c2efe545dc0b97b246e720436be83d1ad0d1b93994"
+      "sha256": "62297cff28efe47e79fffe6b7fa981d007119852d0cf20b28615fa4944b86cd2"
     },
     {
       "url": "scripts/build-player-index.mjs",
@@ -519,11 +523,11 @@
     },
     {
       "url": "views/league-draft.js",
-      "sha256": "fb9409f8c8fd07187c19ea045e83ed75b9cb44e093263e96fe39afc8b96efd63"
+      "sha256": "bf7f0983c02a77c2a65619d5d7c580147565e9ec5e645edf65544b2a4eb92aa9"
     },
     {
       "url": "views/league-home.js",
-      "sha256": "d59b018289f4091138f1c599ca92ea821a59d2b017a6ae5c6859505696675021"
+      "sha256": "bd94ac13d304cbf2da00bcfb145f4826883ce82116934879d4658f4845828c3c"
     },
     {
       "url": "views/league-identity.js",
@@ -535,7 +539,7 @@
     },
     {
       "url": "views/league-mock.js",
-      "sha256": "6bf0804d9c54d125dc3f4f75e9ac35f35f481ba95fa06445c41e51a6174b7f09"
+      "sha256": "2fc09c38b1150389f99fd3b0eb0c0c0ed5f79f9c9ee536e9fa12e1d8afed894d"
     },
     {
       "url": "views/league-moves.js",

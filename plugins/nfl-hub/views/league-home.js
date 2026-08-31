@@ -23,6 +23,9 @@ import {
   WAIVER_TYPE, MAX_BENCH_SLOTS, MAX_IR_SLOTS, MAX_DRAFT_ROUNDS, activeRosterSize,
 } from '../core/league/settings.js';
 import { splitRosterPositions } from '../core/league/slots.js';
+import {
+  toLocalInputValue, fromLocalInputValue, formatDraftTime,
+} from '../core/draft-schedule.js';
 import { latestRecap } from '../core/league/recap.js';
 import { toScoredWeeks, toRosters, hasEnoughForPower } from '../core/league/power-adapter.js';
 import { powerRankings } from '../core/power.js';
@@ -147,6 +150,7 @@ function leaguePane(league, scores, standings) {
       ${joinCta}
       ${recapPanel(league)}
       ${powerPanel(league)}
+      ${draftDayCallout(league)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
       ${settingsPane(league)}
@@ -240,6 +244,23 @@ function powerPanel(league) {
     <p class="tiny">Luck is real wins minus what an all-play record predicts. Positive means
     the schedule has been kind.</p>
   </div>`;
+}
+
+/**
+ * When the draft is, on the landing surface.
+ *
+ * ⚠️ HERE AS WELL AS ON THE DRAFT TAB, deliberately. "What time is the draft?"
+ * is asked by people who have not opened the Draft tab and have no reason to —
+ * answering it only there means answering it only for those who already looked.
+ *
+ * Rendered in the READER'S timezone, named on screen. It disappears once the
+ * time has passed rather than sitting there as a stale claim; the draft board
+ * still reports it, because that is where somebody would go to ask why.
+ */
+function draftDayCallout(league) {
+  const when = formatDraftTime(league?.settings?.draftScheduledAt);
+  if (!when || when.past) return '';
+  return `<p class="notice">Draft day: <strong>${esc(when.absolute)}</strong> — ${esc(when.relative)}.</p>`;
 }
 
 /**
@@ -376,6 +397,10 @@ function settingsPane(league) {
           <label>Pick clock (seconds)
             <input name="pickTimerSeconds" type="number" min="0" max="3600" value="${esc(st.pickTimerSeconds ?? 90)}">
           </label>
+          <label>Draft day
+            <input name="draftScheduledAt" type="datetime-local"
+                   value="${esc(toLocalInputValue(st.draftScheduledAt))}">
+          </label>
           <label>Draft order
             <select name="draftType">
               ${opt('snake', st.draftType ?? 'snake', 'Snake')}
@@ -384,6 +409,8 @@ function settingsPane(league) {
           </label>
           <p class="tiny">Rounds cannot exceed the ${capacity} roster spots — a longer draft
             hands every team more players than they may hold. 0 seconds means no pick clock.
+            Draft day is shown to everyone in their own timezone; leave it empty for no set
+            time. It does not start the draft — you still press Start.
             ${draftNote}</p>
         </fieldset>
 
@@ -590,6 +617,10 @@ export async function saveSettings(app, form) {
     draftRounds: Number(form.draftRounds),
     pickTimerSeconds: Number(form.pickTimerSeconds),
     draftType: String(form.draftType),
+    // ⚠️ A datetime-local field is the COMMISSIONER'S wall clock. Converted to
+    // an absolute instant here so every other manager reads the same moment in
+    // their own zone; an empty field clears the schedule rather than storing 0.
+    draftScheduledAt: fromLocalInputValue(form.draftScheduledAt),
     // ⚠️ An unchecked checkbox is ABSENT from FormData, not `false`.
     tradesEnabled: Boolean(form.tradesEnabled),
     addsEnabled: Boolean(form.addsEnabled),

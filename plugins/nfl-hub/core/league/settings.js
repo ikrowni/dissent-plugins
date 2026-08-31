@@ -116,6 +116,19 @@ export const DEFAULT_SETTINGS = Object.freeze({
   draftRounds: 15,
   draftType: 'snake',
   pickTimerSeconds: 90,
+  // When the draft is scheduled to happen, epoch milliseconds, or null for
+  // "not scheduled yet".
+  //
+  // ⚠️ UTC MILLISECONDS, NEVER A LOCAL STRING OR AN HOUR. A league's managers
+  // are in different timezones — that is why the feature was asked for — so any
+  // representation without an absolute instant means the draft happens at a
+  // different moment for each of them. Readers convert to their own zone.
+  //
+  // ⚠️ ADVISORY ONLY: nothing starts a draft at this time. The commissioner
+  // still presses Start. Auto-starting on a clock would need the scheduler, and
+  // the scheduler floor is five minutes — see the deadline-on-read note in
+  // core/league/draft.js for why that cannot drive a draft.
+  draftScheduledAt: null,
 });
 
 /** Formats in which roster ownership persists across seasons. */
@@ -299,6 +312,16 @@ export function validateSettings(settings) {
   }
   if (!Number.isInteger(s.pickTimerSeconds) || s.pickTimerSeconds < 0) {
     errors.push('pickTimerSeconds must be 0 (no clock) or a whole number of seconds');
+  }
+  // null is the ordinary state — most leagues never schedule one.
+  if (s.draftScheduledAt !== null && s.draftScheduledAt !== undefined) {
+    const t = s.draftScheduledAt;
+    // Bounded rather than merely finite: a seconds-based timestamp sent where
+    // milliseconds were meant lands in 1970 and renders as a draft that already
+    // happened, which reads as corruption rather than as the unit error it is.
+    if (!Number.isFinite(t) || t < Date.UTC(2000, 0, 1) || t > Date.UTC(2100, 0, 1)) {
+      errors.push('draftScheduledAt must be a timestamp in milliseconds, or null');
+    }
   }
 
   // ⚠️ Keeper and taxi rules on a redraft league are silently meaningless, which
