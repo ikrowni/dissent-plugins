@@ -246,8 +246,7 @@ function matchupCard(m) {
     <div class="vs">vs</div>
     ${side(m.away, away, awayWins, best)}
   </div>
-  ${state.expanded === m.home ? lineupTable(m.home) : ''}
-  ${state.expanded === m.away ? lineupTable(m.away) : ''}`;
+  ${state.expanded === String(m.home) ? lineupsFor(m) : ''}`;
 }
 
 function side(teamId, points, winning, best = null) {
@@ -263,6 +262,30 @@ function side(teamId, points, winning, best = null) {
     <span class="pts">${points === null ? '—' : points.toFixed(2)}</span>
     ${points === null ? '' : `<span class="mu-bar"><span class="mu-bar-fill" style="width:${pct}%"></span></span>`}
   </button>`;
+}
+
+/**
+ * Both lineups, side by side, because comparing them IS the screen.
+ *
+ * 🔴 THIS USED TO RENDER ONE SIDE. `state.expanded` held a single teamId and the
+ * card asked `expanded === m.home ? … : ''` beside `expanded === m.away ? … : ''`
+ * — two tests of one value, so only ever one could be true. Expanding a matchup
+ * showed the side you clicked and nothing to compare it against, which is how it
+ * was reported on 2026-08-31: "it's not showing each person's team setup".
+ *
+ * Keyed on the HOME team, so either side opens and closes the same pane. Keying
+ * on the clicked team means clicking the opponent of an open matchup re-opens
+ * the pane it is already showing, which reads as a dead click.
+ */
+function lineupsFor(m) {
+  const col = (teamId) => `<div class="lineup-col">
+    <div class="lineup-head team-accent" style="--mgr:${esc(managerColor(teamId))}">
+      ${teamAvatar(teamOf(teamId), { size: 20 })}
+      <span class="team">${esc(teamName(teamId))}</span>
+    </div>
+    ${lineupTable(teamId)}
+  </div>`;
+  return `<div class="lineups">${col(m.home)}${col(m.away)}</div>`;
 }
 
 function lineupTable(teamId) {
@@ -374,10 +397,23 @@ export async function seedPlayoffs(app) {
   }
 }
 
-/** Toggle one team's lineup open. */
+/**
+ * Toggle a MATCHUP's lineups open — both of them, from either side.
+ *
+ * The pairing's home team is the canonical key, so the away button toggles the
+ * same pane rather than a second one. A team with no pairing (no schedule loaded
+ * yet) falls back to its own id, which simply opens nothing extra.
+ */
 export function expand(app, teamId) {
-  state.expanded = state.expanded === String(teamId) ? null : String(teamId);
+  const key = matchupKeyFor(String(teamId));
+  state.expanded = state.expanded === key ? null : key;
   app?.router?.refresh();
+}
+
+function matchupKeyFor(teamId) {
+  const m = pairingsFor(state.schedule, state.week)
+    .find((p) => String(p.home) === teamId || String(p.away) === teamId);
+  return m ? String(m.home) : teamId;
 }
 
 export { state as _state };

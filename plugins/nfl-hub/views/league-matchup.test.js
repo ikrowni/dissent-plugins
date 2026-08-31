@@ -147,6 +147,55 @@ describe('render', () => {
     expect(html).toContain('10.00');
   });
 
+  // 🔴 A MATCHUP HAS TWO SIDES AND THE POINT IS COMPARING THEM. `state.expanded`
+  // held a single teamId and matchupCard rendered `expanded === m.home ? … : ''`
+  // beside `expanded === m.away ? … : ''`, so only one of the two could ever be
+  // true: expanding showed the side you clicked and nothing to compare it with.
+  // Reported 2026-08-31 as "it's not showing each person's team setup".
+  it('shows BOTH lineups when a matchup is expanded', () => {
+    setIndex({ p1: { n: 'Pat One', p: 'QB', t: 'KC' }, p2: { n: 'Rival Two', p: 'QB', t: 'BUF' } });
+    setup({
+      scores: { teams: {
+        t1: { total: 10, rows: [{ slot: 'QB', playerId: 'p1', points: 10 }] },
+        t2: { total: 5, rows: [{ slot: 'QB', playerId: 'p2', points: 5 }] },
+      } },
+    });
+    expand(null, 't1');
+    const html = render();
+    expect(html).toContain('Pat One');
+    expect(html).toContain('Rival Two');
+  });
+
+  // Either side opens the SAME matchup — the pane is a property of the pairing,
+  // not of the team whose name happened to be clicked.
+  it('opens the same pair from the away side', () => {
+    setIndex({ p1: { n: 'Pat One', p: 'QB', t: 'KC' }, p2: { n: 'Rival Two', p: 'QB', t: 'BUF' } });
+    setup({
+      scores: { teams: {
+        t1: { total: 10, rows: [{ slot: 'QB', playerId: 'p1', points: 10 }] },
+        t2: { total: 5, rows: [{ slot: 'QB', playerId: 'p2', points: 5 }] },
+      } },
+    });
+    expand(null, 't2');
+    const html = render();
+    expect(html).toContain('Pat One');
+    expect(html).toContain('Rival Two');
+  });
+
+  // Clicking the partner of an open matchup CLOSES it. Keying on the clicked
+  // team would silently re-open the same pane and read as a dead click.
+  it('closes from the other side of an open matchup', () => {
+    setup({
+      scores: { teams: {
+        t1: { total: 10, rows: [{ slot: 'QB', playerId: 'p1', points: 10 }] },
+        t2: { total: 5, rows: [] },
+      } },
+    });
+    expand(null, 't1');
+    expand(null, 't2');
+    expect(render()).not.toContain('Pat One');
+  });
+
   it('toggles the same team closed again', () => {
     setup({ scores: { teams: { t1: { total: 10, rows: [{ slot: 'QB', playerId: 'p1', points: 10 }] } } } });
     expand(null, 't1');

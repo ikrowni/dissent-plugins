@@ -165,6 +165,31 @@ input[data-act]:focus, select[data-act]:focus {
 .matchup .side.winning .pts { color: var(--win); }
 .matchup .vs { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
 .matchup.bye { color: var(--text-3); }
+
+/* Both lineups of an expanded matchup, side by side.
+ *
+ * ⚠️ TWO COLUMNS IS THE FEATURE, not decoration. A single full-width `.tbl`
+ * strands the points column against the far edge of a wide pane, metres from the
+ * player it belongs to — which is what the one-sided version looked like. Halving
+ * the width pulls the number back beside the name and puts the two lineups where
+ * they can be read against each other. Collapses to one column when two no
+ * longer fit, since a squeezed pair is worse than a stack. */
+.lineups {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin: -2px 0 10px;
+}
+.lineup-col { min-width: 0; }
+.lineup-head {
+  display: flex; align-items: center; gap: 7px; padding: 7px 9px;
+  border: 1px solid var(--line); border-bottom: none;
+  border-radius: var(--r) var(--r) 0 0; background: var(--ink-2);
+  font-size: 12px; font-weight: 700; color: var(--text-2);
+}
+.lineup-head.team-accent { padding-left: 9px; }
+.lineup-head .team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The head is the table's cap, so no gap between them. */
+.lineups .tbl { margin: 0; border: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); }
+@media (max-width: 760px) { .lineups { grid-template-columns: 1fr; } }
 .matchup.bracket-game .seed {
   font-family: var(--f-mono); font-size: 11px; color: var(--text-3);
   min-width: 26px; flex-shrink: 0;
