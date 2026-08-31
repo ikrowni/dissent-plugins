@@ -240,14 +240,26 @@ describe('end-to-end join against a real ESPN roster', () => {
     const phi = Object.entries(REAL).filter(([, v]) => v.t === 'PHI').map(([id]) => id);
     // ⚠️ ONLY PLAYERS ESPN ACTUALLY CARRIES. Measuring over every Sleeper PHI
     // entry conflates "the matcher works" with "these two sources list the same
-    // people", and after final cuts they emphatically do not: Sleeper keeps
-    // listing the practice squad while ESPN's active roster drops to 53. On
-    // 2026-08-31 that alone took the ratio to 0.66 with the matcher untouched,
-    // and no threshold can survive that — it is the input data changing shape,
-    // which is the exact trap the sibling assertion above was already loosened
-    // for. Restricting the denominator to players on BOTH lists tests the
-    // matcher and nothing else. Not circular: the id is stripped before the
-    // matcher runs, so it still has to find them by name alone.
+    // people", and they do not: the index and this fixture are drawn at
+    // different moments, so each holds names the other has never heard of. The
+    // matcher cannot find somebody who is not in the list it is searching, and
+    // counting those as failures makes this a tripwire for roster churn — the
+    // exact trap the sibling assertion above was already loosened for.
+    //
+    // Measured 2026-08-31, and worth recording because the direction is easy to
+    // get backwards: this ESPN fixture holds 92 athletes, the refreshed index
+    // holds 56 non-DEF PHI players. So it is SLEEPER that is the shorter list
+    // here, not ESPN. Of those 56, five are unresolvable by construction — two
+    // carry no espn id at all and three carry one this fixture does not list —
+    // and all five were misses. Excluding them moves 50/56 (0.893, a fail) to
+    // 50/51 (0.980). The NUMERATOR IS UNCHANGED: not one additional player was
+    // made to resolve, five impossible ones stopped being counted.
+    //
+    // Not circular: the id is used only to establish that both sources describe
+    // the same person, then stripped before the matcher runs, so the matcher
+    // still has to find them by name alone. That is how you score a fuzzy
+    // matcher against a labelled set — the label picks the population, the
+    // matcher has to recover it without seeing the label.
     const onEspn = new Set(athletes.map((a) => Number(a.id)));
     let resolved = 0; let tried = 0;
     for (const id of phi) {
