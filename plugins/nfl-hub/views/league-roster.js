@@ -15,8 +15,9 @@ import {
   splitRosterPositions, slotAccepts, irEligible, eligiblePositions,
 } from '../core/league/slots.js';
 import { describe } from './league-home.js';
-import { loadRanking, byeWeekFor } from '../core/draft-ranking.js';
-import { loadWeekProjections, projectedThisWeek } from '../core/weekly-projections.js';
+import { loadRanking } from '../core/draft-ranking.js';
+import { loadWeekProjections } from '../core/weekly-projections.js';
+import { byeProjCells, byeProjHead } from '../core/lineup-cells.js';
 
 const state = {
   leagueId: null,
@@ -68,7 +69,7 @@ export function render() {
         <section class="ros-col">
           <h4>Starters</h4>
           <table class="tbl lineup">
-            <thead><tr><th></th><th></th><th class="num" title="Projected points for this week, scored with this league's own rules">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th></tr></thead>
+            <thead><tr><th></th><th></th>${byeProjHead()}</tr></thead>
             <tbody>${starters.map((slot, i) => slotRow(slot, i, state.lineup[i], bench)).join('')}</tbody>
           </table>
         </section>
@@ -76,7 +77,7 @@ export function render() {
           <h4>Bench <span class="muted">${bench.length}</span></h4>
           ${bench.length === 0 ? '<p class="muted">Nobody on the bench.</p>' : `
             <table class="tbl">
-              <thead><tr><th>Player</th><th class="num" title="Projected points for this week, scored with this league's own rules">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th><th class="num"></th></tr></thead>
+              <thead><tr><th>Player</th>${byeProjHead()}<th class="num"></th></tr></thead>
               <tbody>${bench.map((id) => benchRow(id)).join('')}</tbody>
             </table>`}
           ${irSection(roster, irSlots)}
@@ -117,7 +118,7 @@ function irSection(roster, irSlots) {
   ].join('');
 
   return `<h4>Injured reserve <span class="muted">${held.length} / ${irSlots}</span></h4>
-    <table class="tbl"><thead><tr><th>Player</th><th class="num" title="Projected points for this week, scored with this league's own rules">Proj</th><th class="num" title="The week this player's NFL team does not play">Bye</th><th class="num"></th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="tbl"><thead><tr><th>Player</th>${byeProjHead()}<th class="num"></th></tr></thead><tbody>${rows}</tbody></table>
     ${watchlistNote(roster)}`;
 }
 
@@ -225,32 +226,14 @@ function autoSubCell(slot, slotIndex, current, bench) {
  * it. The module refuses it too — this only stops the manager from finding out
  * the hard way.
  */
-/**
- * Projected points for THIS WEEK, and the bye week, as two cells.
- *
- * ⚠️ WEEKLY, NOT SEASONAL. This shipped as a season total first and was wrong
- * for the screen: on a lineup you are deciding who to START, and a number that
- * does not move when a player is hurt, benched or on bye cannot answer that.
- * Scored from raw projected stats through the LEAGUE'S OWN weights, never from
- * Sleeper's `pts_ppr` — the same rule the real scoring follows.
- *
- * ⚠️ A BYE IN THE PAST IS DIMMED, NOT HIDDEN. It still explains a zero in a
- * week already played, and hiding it makes that zero look like a benching.
- */
+/** The bye and projection cells for a roster row. */
 function projCells(id) {
-  const p = getIndex()?.[String(id)] ?? null;
-  const proj = projectedThisWeek(id, {
+  return byeProjCells(id, {
+    team: getIndex()?.[String(id)]?.t,
     season: state.league?.season,
     week: state.week,
     scoring: state.league?.settings?.scoring,
   });
-  const bye = byeWeekFor(p?.t);
-  const wk = Number(state.week);
-  const isNow = bye !== null && bye === wk;
-  const isPast = bye !== null && Number.isFinite(wk) && bye < wk;
-  return `<td class="num proj">${proj === null ? '<span class="muted">—</span>' : esc(proj.toFixed(1))}</td>
-    <td class="num bye ${isNow ? 'on-bye' : ''} ${isPast ? 'past' : ''}">${
-  bye === null ? '<span class="muted">—</span>' : esc(String(bye))}</td>`;
 }
 
 function benchRow(id, where = 'bench') {

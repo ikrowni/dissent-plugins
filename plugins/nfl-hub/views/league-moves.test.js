@@ -466,8 +466,12 @@ describe('trade pickers are tables, not a wall of checkboxes', () => {
   it('renders an unranked player as a dash, never as zero', () => {
     openTrade();
     const d = parse(render());
-    const vals = [...d.querySelectorAll('.pick-table tbody tr')]
-      .map((tr) => tr.querySelectorAll('td')[3]?.textContent.trim());
+    // ⚠️ Selected by ITS OWN CLASS, not by column index or position. Two
+    // columns were inserted before Val, and `td[3]` silently began reading a
+    // different cell while still passing; `:last-child` then picked up the
+    // optional Want column instead. A cell worth asserting on is worth naming.
+    const vals = [...d.querySelectorAll('.pick-table tbody tr td.val')]
+      .map((td) => td.textContent.trim());
     expect(vals.length).toBeGreaterThan(0);
     for (const v of vals) {
       expect(v, 'an unknown value must not render as a number').toBe('—');
@@ -527,5 +531,48 @@ describe('Propose enables as soon as a side is picked', () => {
   it('is safe with no button on screen', () => {
     document.body.innerHTML = '';
     expect(() => toggleTradePlayer('mine', 'qb1', true)).not.toThrow();
+  });
+})
+
+// The trade block and the proposal share pickTable, so both get the same
+// columns — a bye clash is exactly the kind of thing a trade turns on.
+describe('trade tables carry bye and projection', () => {
+  const openTrade = () => { setup(); _state.tradeWith = 't2'; };
+
+  it('names Bye and Proj alongside Val', () => {
+    openTrade();
+    const html = render();
+    expect(html).toContain('>Bye<');
+    expect(html).toContain('>Proj<');
+    expect(html).toContain('>Val<');
+  });
+
+  it('gives every row all three cells', () => {
+    openTrade();
+    const rows = [...parse(render()).querySelectorAll('.pick-table tbody tr')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const tr of rows) {
+      expect(tr.querySelector('td.bye'), 'no bye cell').toBeTruthy();
+      expect(tr.querySelector('td.proj'), 'no proj cell').toBeTruthy();
+      expect(tr.querySelector('td.val'), 'no val cell').toBeTruthy();
+    }
+  });
+
+  // ⚠️ Val and Proj are different quantities and the tooltips must not blur
+  // them: Val is season-long and static, Proj is this week's.
+  it('distinguishes the season value from the weekly projection', () => {
+    openTrade();
+    const html = render();
+    expect(html).toMatch(/does not change week to week/i);
+    expect(html).toMatch(/this week/i);
+  });
+
+  it('applies to the trade block too, not only the proposal', () => {
+    setup();
+    _state.tradeWith = '';
+    _state.block = { t1: { players: ['qb1'], picks: [] } };
+    const html = render();
+    expect(html).toContain('>Bye<');
+    expect(html).toContain('>Proj<');
   });
 })

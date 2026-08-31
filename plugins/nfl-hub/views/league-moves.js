@@ -19,6 +19,8 @@ import { playerChip, managerColor } from '../core/player-visuals.js';
 import { teamAvatar } from '../core/team-visuals.js';
 import { loadTrending, formatCount } from '../core/trending.js';
 import { loadRanking, valueOf } from '../core/draft-ranking.js';
+import { loadWeekProjections } from '../core/weekly-projections.js';
+import { byeProjCells, byeProjHead } from '../core/lineup-cells.js';
 import { irEligible } from '../core/league/slots.js';
 import { getJson } from '../core/http.js';
 import { describe } from './league-home.js';
@@ -196,7 +198,13 @@ function pickRow(id, { act, checked, count = 0 }) {
       ${p ? playerChip(p, { size: 28, compact: true }) : esc(playerLabel(id))}
     </label></td>
     <td class="num">${status ? `<span class="inj-tag" title="Injury designation">${esc(status)}</span>` : ''}</td>
-    <td class="num">${v === null ? '<span class="muted">—</span>' : esc(String(v))}</td>
+    ${byeProjCells(id, {
+    team: p?.t,
+    season: state.league?.season,
+    week: state.week,
+    scoring: state.league?.settings?.scoring,
+  })}
+    <td class="num val">${v === null ? '<span class="muted">—</span>' : esc(String(v))}</td>
     ${count === null ? '' : `<td class="num">${count > 0
     ? `<span class="tb-count" title="${count} team${count === 1 ? '' : 's'} interested">♥ ${count}</span>`
     : ''}</td>`}
@@ -208,7 +216,8 @@ function pickHead(withCount = false) {
   return `<thead><tr>
     <th class="pick-cell"></th><th>Player</th>
     <th class="num" title="Injury designation">Inj</th>
-    <th class="num" title="Value over replacement, from this season's preseason projections — the same number the draft board was built from">Val</th>
+    ${byeProjHead()}
+    <th class="num" title="Value over replacement for the whole season, from preseason projections — the same number the draft board was built from. Unlike Proj, it does not change week to week.">Val</th>
     ${withCount ? '<th class="num" title="How many teams have registered interest">Want</th>' : ''}
   </tr></thead>`;
 }
@@ -480,6 +489,11 @@ export async function load(app, { leagueId, league, teamId, week }) {
     // value cells already render "—" for anyone the ranking does not carry, so
     // a failed load is a state the table can already draw.
     loadRanking().then(() => app?.router?.refresh()).catch(() => {});
+    // ⚠️ Half a megabyte, so never awaited into the critical path — the trade
+    // tables are usable without it and the Proj cells already draw "—".
+    if (week) {
+      loadWeekProjections(league?.season, week).then(() => app?.router?.refresh()).catch(() => {});
+    }
     // Both are optional: a league with no waiver week and no trades is normal.
     state.claims = week ? await listClaims(leagueId, week).catch(() => null) : null;
     state.trades = await listTrades(leagueId).catch(() => []);

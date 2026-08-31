@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.41.0",
+  "version": "2.42.0",
   "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "Dissent Official",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -358,6 +358,10 @@
       "sha256": "02f2931f7b53ab01fb3cac555b7903264d6b898c76e5f11fac0f84ae5d3ebcc7"
     },
     {
+      "url": "core/lineup-cells.js",
+      "sha256": "7ce496ca843aa145ead14be1fbc5ef37c82130f144f8f78874befa6038b41e32"
+    },
+    {
       "url": "core/mock-draft.js",
       "sha256": "49ea18c3b1a2f6dad9b1c71aa7d30ea6988f692c9635ca98134d44d9aecb4935"
     },
@@ -551,7 +555,7 @@
     },
     {
       "url": "views/league-matchup.js",
-      "sha256": "bdc94327435a6bd736c0ced0929af163a3ea12e741cb7d184e6a6467e687d026"
+      "sha256": "f950880768d0b3798567537c1fb116962b48c011a2e73464897fc38e87ebcda9"
     },
     {
       "url": "views/league-mock.js",
@@ -559,11 +563,11 @@
     },
     {
       "url": "views/league-moves.js",
-      "sha256": "9d7c94a000e0c54a5cc9e45b590779f3b2158c901c7fa0e890ad0a60cc3b533b"
+      "sha256": "5b6e0ee0a19ac0e1c7f4d593cce409884b53175b83699407041c9cec1ae92acc"
     },
     {
       "url": "views/league-roster.js",
-      "sha256": "20cba91c17991ff9f85279b25e2f9565f206f22a9e24f24d127d18aa96caaba5"
+      "sha256": "bdcddbf3657056882822ffd33f60fdc48165241e7316622d13685e203eaa3bdb"
     },
     {
       "url": "views/league-section.js",

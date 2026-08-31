@@ -20,8 +20,9 @@ import { playerChip, positionColor, managerColor } from '../core/player-visuals.
 import { teamAvatar } from '../core/team-visuals.js';
 import { eligiblePositions } from '../core/league/slots.js';
 import { describe } from './league-home.js';
-import { loadRanking, byeWeekFor } from '../core/draft-ranking.js';
-import { loadWeekProjections, projectedThisWeek } from '../core/weekly-projections.js';
+import { loadRanking } from '../core/draft-ranking.js';
+import { loadWeekProjections } from '../core/weekly-projections.js';
+import { byeProjCells, byeProjHead, isOnBye } from '../core/lineup-cells.js';
 
 const state = {
   leagueId: null,
@@ -405,8 +406,7 @@ function lineupTable(teamId) {
   return `<table class="tbl lineup-detail">
     <thead><tr>
       <th></th><th>Player</th>
-      <th class="num" title="The week this player's NFL team does not play">Bye</th>
-      <th class="num" title="Projected points for this week, scored with this league's own rules">Proj</th>
+      ${byeProjHead()}
       <th class="num" title="Points actually scored this week">Pts</th>
     </tr></thead>
     <tbody>${rows.map((r) => {
@@ -414,22 +414,15 @@ function lineupTable(teamId) {
     const hue = positionColor(eligiblePositions(r.slot).length > 1 ? 'RB' : r.slot);
     // ⚠️ For the VIEWED week, not the league's current one — browsing back to
     // week 6 must show week 6's projection beside week 6's actual score.
-    const proj = r.playerId ? projectedThisWeek(r.playerId, {
-      season: state.league?.season, week: shown, scoring: state.league?.settings?.scoring,
-    }) : null;
-    const bye = byeWeekFor(p?.t);
-    // ⚠️ A BYE IN THE WEEK BEING VIEWED IS THE POINT OF THE COLUMN. It is the
-    // one thing that explains a 0.00 without the manager having done anything
-    // wrong, and it is flagged against the VIEWED week rather than the league's
-    // current one — otherwise browsing back to week 6 marks nobody.
-    const onBye = bye !== null && Number(bye) === Number(shown);
+    const onBye = isOnBye(p?.t, shown);
     return `<tr class="${onBye ? 'row-bye' : ''}">
         <td class="slot" style="color:${esc(hue)}">${esc(r.slot)}</td>
         <td>${r.playerId
     ? (p ? playerChip(p, { size: 30, compact: true }) : esc(playerLabel(r.playerId)))
     : '<span class="muted">empty</span>'}</td>
-        <td class="num bye ${onBye ? 'on-bye' : ''}">${bye === null ? '<span class="muted">—</span>' : esc(String(bye))}</td>
-        <td class="num proj">${proj === null ? '<span class="muted">—</span>' : esc(proj.toFixed(1))}</td>
+        ${byeProjCells(r.playerId, {
+    team: p?.t, season: state.league?.season, week: shown, scoring: state.league?.settings?.scoring,
+  })}
         <td class="num">${Number(r.points ?? 0).toFixed(2)}</td>
       </tr>`;
   }).join('')}</tbody>
