@@ -96,6 +96,65 @@ describe('the live board', () => {
     ...over,
   });
 
+  // ── Auto-draft + turn alert controls ───────────────────────────────────────
+  // 🔴 The 90-second problem: a manager who does not turn up costs the room the
+  // full pick clock every round, because the module only autodrafts on EXPIRY.
+  describe('the draft controls', () => {
+    it('offers the commissioner auto-draft and a manual pick for the absent team', () => {
+      setup({ draft: live(), teamId: 't1' });   // t2 is on the clock, I am t1 + commissioner
+      const d = parse(render());
+      expect(d.querySelector('[data-act="draft-auto-toggle"]')?.dataset.team).toBe('t2');
+      expect(d.querySelector('[data-act="draft-pick-for"]')).toBeTruthy();
+    });
+
+    it('does not offer to pick for them when the clock is MINE', () => {
+      setup({ draft: live({ onClock: { overall: 1, round: 1, teamId: 't1' } }), teamId: 't1' });
+      const d = parse(render());
+      expect(d.querySelector('[data-act="draft-pick-for"]')).toBeNull();
+      // ...but I may still auto-draft my own picks before stepping away.
+      expect(d.querySelector('[data-act="draft-auto-toggle"]')?.dataset.team).toBe('t1');
+    });
+
+    // A plain manager must not be handed controls over someone else's team.
+    it('offers a non-commissioner nothing for another team', () => {
+      setup({ draft: live({ isCommissioner: false }), teamId: 't1', league: league(4, { isCommissioner: false }) });
+      const d = parse(render());
+      expect(d.querySelector('[data-act="draft-pick-for"]')).toBeNull();
+      expect(d.querySelector('[data-act="draft-auto-toggle"]')).toBeNull();
+    });
+
+    it('shows the flag as engaged once a team is set to auto-draft', () => {
+      setup({ draft: live(), teamId: 't1', autoDraft: { t2: true } });
+      const btn = parse(render()).querySelector('[data-act="draft-auto-toggle"]');
+      expect(btn.className).toContain('on');
+      expect(btn.textContent).toMatch(/Auto-drafting/);
+    });
+
+    it('always offers the turn-alert toggle while the draft runs', () => {
+      setup({ draft: live(), teamId: 't1' });
+      expect(parse(render()).querySelector('[data-act="draft-alert-toggle"]')).toBeTruthy();
+    });
+
+    // ⚠️ A commissioner pauses BECAUSE somebody is missing, so the toggle has to
+    // survive the pause — but taking the pick by hand still needs a live clock.
+    it('keeps the auto-draft toggle while paused, without the manual pick', () => {
+      setup({ draft: live({ status: 'paused' }), teamId: 't1' });
+      const d = parse(render());
+      expect(d.querySelector('[data-act="draft-auto-toggle"]')).toBeTruthy();
+      expect(d.querySelector('[data-act="draft-pick-for"]')).toBeNull();
+    });
+
+    // ⚠️ This passes through the COMPLETE pane, not draftControls' own status
+    // guard — a finished draft never reaches that function at all. Asserted
+    // because it is real user-visible behaviour, but the guard inside
+    // draftControls is defensive and no render test can reach it. Said plainly
+    // rather than left looking like coverage it does not have.
+    it('shows no controls on a completed draft (which renders its own pane)', () => {
+      setup({ draft: live({ status: 'complete', onClock: null }), teamId: 't1' });
+      expect(parse(render()).querySelector('.draft-controls')).toBeNull();
+    });
+  });
+
   const setupLive = (over = {}) => {
     Object.assign(_state, {
       leagueId: 'lg', teamId: 't1', error: null, busy: false, notice: null,

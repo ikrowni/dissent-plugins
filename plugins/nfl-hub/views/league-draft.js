@@ -37,6 +37,8 @@ import {
 } from '../core/league/draft-pool.js';
 import { describe } from './league-home.js';
 import { formatDraftTime } from '../core/draft-schedule.js';
+import { createAutoFlags, autoPickTarget, bestAvailableFor } from '../core/draft-auto.js';
+import { playTurnAlert, becameMyTurn, alertEnabled, setAlertEnabled } from '../core/draft-alert.js';
 
 /** How often the board is re-read from the module. */
 const POLL_MS = 3000;
@@ -86,6 +88,12 @@ const state = {
 let pollTimer = null;
 let tickTimer = null;
 let idleTicks = 0;
+const autoFlags = createAutoFlags();
+// Was the clock mine on the PREVIOUS poll? The chime keys on the transition.
+let wasMyTurn = false;
+// The overall pick this client has already auto-submitted for, so a 3 s poll
+// landing before that pick registers cannot fire the same one twice.
+let autoSubmittedFor = null;
 // Consecutive failed polls, and how many ticks to sit out before retrying.
 // ⚠️ NOT a reason to stop — see poll()'s catch. Backing off is how a client
 // survives a node outage without spending POLL_MS-rate invocations on it.
@@ -103,8 +111,10 @@ export function reset() {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
     ranking: [], queue: [], filter: 'ALL', query: '', noDraft: false,
-    _failStreak: 0, _skipTicks: 0,
+    _failStreak: 0, _skipTicks: 0, autoDraft: {},
   });
+  wasMyTurn = false;
+  autoSubmittedFor = null;
 }
 
 export function render() {
@@ -351,6 +361,43 @@ function normalizeClock(d) {
   return full ?? { ...d.onClock, owner: d.onClock.teamId, pickInRound: d.onClock.overall };
 }
 
+/**
+ * The controls that stop an absent manager costing the room 90 seconds a round,
+ * plus the chime toggle.
+ *
+ * ⚠️ The auto-draft toggle is offered for the team ON THE CLOCK, not for a list
+ * of every team, because that is the only one it can act on right now and a
+ * twelve-row grid of toggles is a worse answer to "Dave isn't here" than one
+ * button in the place you are already looking.
+ */
+function draftControls(d, clock, mine, paused) {
+  // ⚠️ PAUSED COUNTS. A commissioner pauses precisely BECAUSE somebody is
+  // missing, so hiding the auto-draft toggle then hides it exactly when it is
+  // being reached for. Taking the pick manually still requires a running clock.
+  if (!clock || (d.status !== 'active' && d.status !== 'paused')) return '';
+  const onClockTeam = String(clock.owner ?? '');
+  const flagged = Boolean(state.autoDraft?.[onClockTeam]);
+  const canActForThem = Boolean(d.isCommissioner) || mine;
+  const label = mine ? 'my picks' : teamName(onClockTeam);
+  return `<div class="draft-controls">
+    <button class="btn btn-sm" data-act="draft-alert-toggle"
+      title="Plays a short chime when you go on the clock">
+      ${alertEnabled() ? '&#128276; Turn alert on' : '&#128277; Turn alert off'}
+    </button>
+    ${canActForThem ? `
+      <button class="btn btn-sm ${flagged ? 'on' : ''}" data-act="draft-auto-toggle"
+        data-team="${esc(onClockTeam)}"
+        title="Pick automatically for this team instead of waiting out the clock">
+        ${flagged ? '&#9209; Auto-drafting' : '&#9193;'} Auto-draft ${esc(label)}
+      </button>` : ''}
+    ${d.isCommissioner && !mine && !paused ? `
+      <button class="btn btn-sm" data-act="draft-pick-for"
+        title="Take this pick now, on their behalf">
+        Pick for ${esc(teamName(onClockTeam))}
+      </button>` : ''}
+  </div>`;
+}
+
 function livePane(d) {
   const clock = normalizeClock(d);
   const mine = Boolean(clock) && String(clock.owner) === String(state.teamId);
@@ -409,6 +456,7 @@ function livePane(d) {
       ${state.notice ? `<p class="notice">${esc(state.notice)}</p>` : ''}
       ${paused ? '<p class="notice">The draft is paused. The clock resumes where it stopped.</p>' : ''}
       ${stage}
+      ${draftControls(d, clock, mine, paused)}
       <div class="mock-cols">
         <div class="mock-pool-col">
           ${pickPool(mine && !paused)}
@@ -671,6 +719,8 @@ async function poll(app) {
     if (d.autoPicked?.length) {
       state.notice = `${d.autoPicked.length} pick${d.autoPicked.length === 1 ? '' : 's'} auto-drafted after the clock expired.`;
     }
+
+    onDraftSettled(app, d);
   } catch (err) {
     // ⚠️ A league with no draft is not a failure, and polling it forever is
     // pointless — the answer cannot change until somebody creates one. This is
@@ -719,11 +769,83 @@ export async function load(app, { leagueId, league, teamId }) {
   } catch {
     state.ranking = [];
   }
+  state.autoDraft = await autoFlags.load(leagueId);
   await poll(app);
   startPolling(app);
   app?.router?.refresh();
   paintClock();
   bindParallax();
+}
+
+/**
+ * Everything that must happen the moment a poll settles: the chime, and the
+ * auto-pick a flagged absent manager needs.
+ *
+ * ⚠️ Side effects of a SETTLED BOARD, so they live here and not in render() —
+ * render runs on every keystroke and would chime for each one.
+ */
+function onDraftSettled(app, d) {
+  const clock = normalizeClock(d);
+  const mine = Boolean(clock) && String(clock.owner) === String(state.teamId);
+  if (becameMyTurn(wasMyTurn, mine)) playTurnAlert();
+  wasMyTurn = mine;
+
+  const target = autoPickTarget({
+    status: d.status,
+    clock,
+    flags: state.autoDraft,
+    isCommissioner: Boolean(state.league?.isCommissioner),
+    myTeamId: state.teamId,
+  });
+  if (!target) return;
+
+  // ⚠️ ONCE PER PICK. Submitting is async and the board keeps polling, so without
+  // this the same overall is auto-picked repeatedly while the first is in flight.
+  const overall = clock?.overall ?? null;
+  if (overall === null || autoSubmittedFor === overall) return;
+  autoSubmittedFor = overall;
+
+  const playerId = bestAvailableFor({
+    ranking: state.ranking,
+    queue: target === state.teamId ? state.queue : [],
+    taken: takenIds(),
+  });
+  // Nothing left to pick: leave it to the module's expiry cascade rather than
+  // submitting a null and turning a slow pick into a failed one.
+  if (!playerId) return;
+
+  Promise.resolve(makePick(state.leagueId, target, playerId, state.ranking))
+    .then(() => poll(app))
+    .catch(() => { autoSubmittedFor = null; })   // a failed auto-pick may retry
+    .finally(() => app?.router?.refresh());
+}
+
+/** Commissioner (any team) or a manager (their own): flip auto-draft on a team. */
+export async function toggleAutoDraft(app, teamId) {
+  const id = String(teamId ?? '');
+  if (!id) return;
+  const next = { ...state.autoDraft };
+  if (next[id]) delete next[id]; else next[id] = true;
+  state.autoDraft = next;
+  app?.router?.refresh();
+  await autoFlags.save(state.leagueId, next);
+}
+
+/** Mute or unmute the on-the-clock chime. Remembered per browser. */
+export function toggleAlert(app) {
+  setAlertEnabled(!alertEnabled());
+  app?.router?.refresh();
+}
+
+export { alertEnabled as isAlertEnabled };
+
+/** Commissioner: take the pick for whoever is on the clock, right now. */
+export async function pickForOnClock(app) {
+  const clock = normalizeClock(state.draft ?? {});
+  if (!clock) return;
+  const playerId = bestAvailableFor({ ranking: state.ranking, queue: [], taken: takenIds() });
+  if (!playerId) return;
+  await act(app, () => makePick(state.leagueId, String(clock.owner), playerId, state.ranking));
 }
 
 /** Every id already drafted — the set the pool must exclude. */

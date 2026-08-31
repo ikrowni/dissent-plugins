@@ -472,6 +472,15 @@ export async function onAction(act, target) {
     case 'draft-rebuild':
       draft.rebuild(app);
       return;
+    case 'draft-auto-toggle':
+      draft.toggleAutoDraft(app, target.dataset.team);
+      return;
+    case 'draft-alert-toggle':
+      draft.toggleAlert(app);
+      return;
+    case 'draft-pick-for':
+      draft.pickForOnClock(app);
+      return;
     case 'draft-pause':
       draft.pause(app, target.dataset.paused !== 'true');
       return;

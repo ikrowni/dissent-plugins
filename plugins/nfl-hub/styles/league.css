@@ -746,3 +746,9 @@ h4 {
 .cr-actions { display: flex; gap: 8px; width: 100%; }
 .cr-actions .btn { flex: 1; }
 .cr-out { margin: 0; font-size: 10px; color: var(--text-3); }
+
+/* Draft controls: the chime toggle and the auto-draft escape hatch for a manager
+ * who has not turned up. Sits directly under the stage, where the clock already
+ * has everyone's attention. */
+.draft-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.draft-controls .btn.on { border-color: var(--win, #35c46a); color: var(--text); }
