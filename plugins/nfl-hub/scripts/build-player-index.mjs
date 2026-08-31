@@ -11,7 +11,7 @@
 // espn_id is the important one: without it, a Sleeper roster and ESPN's live game data
 // cannot be joined at all, which is what makes "your receiver is on the field right
 // now" possible.
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { TEAMS, normalizeAbbr } from '../core/config.js';
 
 const SRC = 'https://api.sleeper.app/v1/players/nfl';
@@ -62,6 +62,7 @@ for (const [id, p] of Object.entries(all)) {
 //
 // ⚠️ AT BUILD TIME, NEVER AT RUNTIME. 32 requests once, when this is regenerated;
 // a browser doing that per session would be far worse than the missing portraits.
+await carryForwardEspnIds(index);
 await enrichFromEspn(index);
 
 // Single-letter keys deliberately: this file ships to every viewer, and n/p/t/e versus
@@ -94,6 +95,36 @@ function norm(s) {
     .replace(/[^a-z ]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Keep espn ids the SOURCE has stopped returning.
+ *
+ * 🔴 Sleeper drops `espn_id` from players it still lists — measured 2026-08-31,
+ * 582 of them, 452 currently rostered, and Sleeper returned an id for none of
+ * them any more. A plain rebuild therefore LOSES ids the previous index had
+ * correctly resolved, silently degrading every ESPN join ("your receiver is on
+ * the field right now") as a side effect of refreshing rosters.
+ *
+ * Carrying them forward is sound because these are Sleeper player ids: they
+ * identify the person, not the team or the season, so an id resolved once stays
+ * correct after a trade, a cut or a year off.
+ */
+async function carryForwardEspnIds(index) {
+  let prev;
+  try {
+    prev = JSON.parse(await readFile(OUT, 'utf8'));
+  } catch {
+    console.log('no previous index to carry ids forward from');
+    return;
+  }
+  let kept = 0;
+  for (const [id, p] of Object.entries(index)) {
+    if (p.e !== null) continue;
+    const before = prev[id]?.e;
+    if (typeof before === 'number' && Number.isFinite(before)) { p.e = before; kept += 1; }
+  }
+  console.log(`carried forward ${kept} espn ids the source no longer returns`);
 }
 
 async function enrichFromEspn(index) {
