@@ -27,6 +27,17 @@
   color: var(--text-2); font-size: 12.5px; line-height: 1.5;
 }
 
+/* ⚠️ USED SINCE BEFORE THIS FILE AND NEVER DEFINED, so every form error in the
+ * league section — including the settings form's validation refusals — rendered
+ * as plain body text among plain body text. An error nobody's eye catches is an
+ * error that reads as "the save did nothing". Found by auditing the classes the
+ * views emit against the ones the stylesheets define. */
+.imp-bad {
+  margin: 8px 0; padding: 8px 11px; border-radius: var(--r);
+  background: rgba(176, 69, 90, 0.12); border: 1px solid rgba(176, 69, 90, 0.4);
+  color: #e8798c; font-size: 12.5px; line-height: 1.45;
+}
+
 .section-body { padding-bottom: 24px; }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */

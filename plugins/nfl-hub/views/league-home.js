@@ -151,6 +151,7 @@ function leaguePane(league, scores, standings) {
       ${recapPanel(league)}
       ${powerPanel(league)}
       ${draftDayCallout(league)}
+      ${scheduleCallout(league, teams.length)}
       ${rosterCallout(league, teams.length)}
       ${commissionerStrip(league, week)}
       ${settingsPane(league)}
@@ -261,6 +262,43 @@ function draftDayCallout(league) {
   const when = formatDraftTime(league?.settings?.draftScheduledAt);
   if (!when || when.past) return '';
   return `<p class="notice">Draft day: <strong>${esc(when.absolute)}</strong> — ${esc(when.relative)}.</p>`;
+}
+
+/**
+ * A season with teams, a week, and no schedule.
+ *
+ * ⚠️ SAME REASONING AS `rosterCallout`: naming the missing thing is the
+ * difference between a league that looks broken and one that is waiting. A
+ * league whose draft has just finished has every reason to expect matchups, and
+ * without a schedule the Matchups tab, the standings and the weekly recap are
+ * all correctly empty — which together read as a dead feature.
+ *
+ * Reported exactly that way on 2026-08-31: "we finished our draft but nothing
+ * shows up in Matchups". The schedule genuinely had not been generated, and
+ * nothing anywhere said so on the surface people actually land on.
+ *
+ * ⚠️ POINTS AT THE BUTTON RATHER THAN DUPLICATING IT. `schedule:generate`
+ * freezes the team order for the whole season, so exactly one place should own
+ * that action — views/league-matchup.js, which already explains what it does.
+ */
+function scheduleCallout(league, teamCount) {
+  if (teamCount < 2) return '';              // rosterCallout covers this
+  if (league?.currentWeek == null) return ''; // commissionerStrip covers this
+  if (Array.isArray(state.schedule?.weeks)) return '';
+
+  // ⚠️ Only classes that EXIST. `btn-link` was written here first and no
+  // stylesheet defines it — it would have rendered as a raw browser button in
+  // the middle of a sentence. `.notice` + `.row-actions` + `.btn` are the
+  // vocabulary the rest of this view already uses.
+  return `<p class="notice">This season has no schedule yet, so Matchups and the standings
+    stay empty until one is generated.${league?.isCommissioner
+    ? ''
+    : ' A commissioner generates it from the Matchups tab.'}</p>
+    ${league?.isCommissioner
+    ? `<div class="row-actions">
+         <button class="btn" data-act="lg-tab" data-tab="matchup">Generate the schedule</button>
+       </div>`
+    : ''}`;
 }
 
 /**

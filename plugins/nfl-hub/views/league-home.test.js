@@ -417,3 +417,48 @@ describe('the commissioner settings form', () => {
     expect(first.textContent).toMatch(/leave/i);
   });
 });
+
+// ⚠️ THE REPORT THIS EXISTS FOR: "we finished our draft but nothing shows up in
+// Matchups". The schedule genuinely had not been generated — and every surface
+// was correctly empty without any of them saying why, which together reads as a
+// broken feature rather than a league waiting on one click.
+describe('a season with no schedule', () => {
+  it('names the missing thing on the landing surface', () => {
+    setup({ schedule: null });
+    const html = render();
+    expect(html).toMatch(/no schedule yet/i);
+    expect(html).toContain('data-tab="matchup"');
+  });
+
+  it('says nothing once a schedule exists', () => {
+    setup({ schedule: { weeks: [{ week: 1, matchups: [] }] } });
+    expect(render()).not.toMatch(/no schedule yet/i);
+  });
+
+  // ⚠️ The SDK's null envelope reaches here too — league-home loads the
+  // schedule for its recap. A truthy `{ok:true,data:null}` must not read as a
+  // schedule that exists, or the callout vanishes for exactly the league that
+  // needs it.
+  it('is not fooled by the SDK null envelope', () => {
+    setup({ schedule: { ok: true, data: null } });
+    expect(render()).toMatch(/no schedule yet/i);
+  });
+
+  // These two states have their own callouts; stacking a third would bury them.
+  it('defers to the roster callout before there are two teams', () => {
+    setup({ schedule: null, league: league({ teams: { t1: { id: 't1', name: 'Solo' } } }) });
+    expect(render()).not.toMatch(/no schedule yet/i);
+  });
+
+  it('defers to the season strip before a week is set', () => {
+    setup({ schedule: null, league: league({ currentWeek: null }) });
+    expect(render()).not.toMatch(/no schedule yet/i);
+  });
+
+  it('tells a manager who can fix it, without offering them the control', () => {
+    setup({ schedule: null, league: league({ isCommissioner: false }) });
+    const html = render();
+    expect(html).toMatch(/commissioner generates it/i);
+    expect(html).not.toContain('data-tab="matchup"');
+  });
+});
