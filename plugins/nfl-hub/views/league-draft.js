@@ -86,6 +86,11 @@ const state = {
 let pollTimer = null;
 let tickTimer = null;
 let idleTicks = 0;
+// Consecutive failed polls, and how many ticks to sit out before retrying.
+// ⚠️ NOT a reason to stop — see poll()'s catch. Backing off is how a client
+// survives a node outage without spending POLL_MS-rate invocations on it.
+const FAIL_STREAK_MAX = 5;
+const FAIL_SKIP_MAX = 10;   // x POLL_MS = 30 s at worst
 let lastClockText = null;
 let stopGlowLoop = null;
 let glowPhase = 0;
@@ -98,6 +103,7 @@ export function reset() {
     leagueId: null, league: null, teamId: null, draft: null,
     error: null, busy: false, notice: null, localDeadline: null, frozenRemaining: null,
     ranking: [], queue: [], filter: 'ALL', query: '', noDraft: false,
+    _failStreak: 0, _skipTicks: 0,
   });
 }
 
@@ -602,6 +608,9 @@ function startPolling(app) {
       if (idleTicks % IDLE_POLL_EVERY !== 0) return;
     }
 
+    // Sit out the backoff earned by consecutive failures, without ever stopping.
+    if (state._skipTicks > 0) { state._skipTicks -= 1; return; }
+
     // ⚠️ COUNT THE PICKS, do not just compare the fingerprint. The fingerprint also
     // changes on a pause or a commissioner change, and sweeping the stage for those
     // would spend the gesture on nothing.
@@ -648,6 +657,10 @@ async function poll(app) {
     const d = await getDraft(state.leagueId, state.ranking);
     state.draft = d;
     state.noDraft = false;
+    // A good answer retires a stale failure banner and the backoff with it.
+    state.error = null;
+    state._failStreak = 0;
+    state._skipTicks = 0;
 
     // Re-anchor the local countdown to the server's answer on every poll.
     const paused = d.status === 'paused';
@@ -660,17 +673,31 @@ async function poll(app) {
     }
   } catch (err) {
     // ⚠️ A league with no draft is not a failure, and polling it forever is
-    // pointless — the answer cannot change until somebody creates one.
+    // pointless — the answer cannot change until somebody creates one. This is
+    // the ONLY error that may stop the board.
     if (/no draft/i.test(String(err?.message ?? err))) {
       state.noDraft = true;
       state.draft = null;
       state.error = null;
-    } else {
-      state.error = describe(err);
+      stopPolling();
+      return;
     }
-    stopPolling();
+    // 🔴 EVERYTHING ELSE IS TRANSIENT AND MUST NOT STOP THE BOARD. This used to
+    // fall through to stopPolling(), which clears BOTH timers — so one network
+    // blip, module timeout, 429 or node restart permanently killed that client's
+    // draft: it never fetched again and the clock froze mid-count, with no way
+    // back but a remount. That is why ctrl+R and tab-switching "fixed" it, and
+    // why over a long draft it eventually hit everyone. Reported 2026-08-31.
+    state.error = describe(err);
+    state._failStreak = Math.min((state._failStreak ?? 0) + 1, FAIL_STREAK_MAX);
+    state._skipTicks = Math.min(2 ** state._failStreak, FAIL_SKIP_MAX);
   }
 }
+
+/** Is the board still live? False means only a remount will bring it back. */
+export function isPolling() { return pollTimer !== null; }
+
+export { poll as _poll, startPolling as _startPolling };
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
