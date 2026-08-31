@@ -20,9 +20,8 @@ import { playerChip, positionColor, managerColor } from '../core/player-visuals.
 import { teamAvatar } from '../core/team-visuals.js';
 import { eligiblePositions } from '../core/league/slots.js';
 import { describe } from './league-home.js';
-import {
-  loadRanking, projectedPoints, byeWeekFor,
-} from '../core/draft-ranking.js';
+import { loadRanking, byeWeekFor } from '../core/draft-ranking.js';
+import { loadWeekProjections, projectedThisWeek } from '../core/weekly-projections.js';
 
 const state = {
   leagueId: null,
@@ -407,13 +406,17 @@ function lineupTable(teamId) {
     <thead><tr>
       <th></th><th>Player</th>
       <th class="num" title="The week this player's NFL team does not play">Bye</th>
-      <th class="num" title="Projected points for the whole season, from preseason projections">Proj</th>
+      <th class="num" title="Projected points for this week, scored with this league's own rules">Proj</th>
       <th class="num" title="Points actually scored this week">Pts</th>
     </tr></thead>
     <tbody>${rows.map((r) => {
     const p = r.playerId ? playerOf(r.playerId) : null;
     const hue = positionColor(eligiblePositions(r.slot).length > 1 ? 'RB' : r.slot);
-    const proj = r.playerId ? projectedPoints(r.playerId, state.league?.settings?.scoring) : null;
+    // ⚠️ For the VIEWED week, not the league's current one — browsing back to
+    // week 6 must show week 6's projection beside week 6's actual score.
+    const proj = r.playerId ? projectedThisWeek(r.playerId, {
+      season: state.league?.season, week: shown, scoring: state.league?.settings?.scoring,
+    }) : null;
     const bye = byeWeekFor(p?.t);
     // ⚠️ A BYE IN THE WEEK BEING VIEWED IS THE POINT OF THE COLUMN. It is the
     // one thing that explains a 0.00 without the manager having done anything
@@ -474,6 +477,9 @@ export async function load(app, { leagueId, league, week }) {
     // scored, and this read is what resolves that.
     state.bracket = await getPlayoffs(leagueId, league?.season).catch(() => null);
     state.viewWeek = week;
+    if (week) {
+      loadWeekProjections(league?.season, week).then(() => app?.router?.refresh()).catch(() => {});
+    }
     state.scores = week
       ? await getScores(leagueId, league?.season, week).catch(() => null)
       : null;
@@ -505,6 +511,8 @@ export async function showWeek(app, week) {
   state.busy = true;
   app?.router?.refresh();
   try {
+    // Both are per-week and both follow the browse.
+    loadWeekProjections(state.league?.season, n).then(() => app?.router?.refresh()).catch(() => {});
     state.scores = await getScores(state.leagueId, state.league?.season, n).catch(() => null);
   } finally {
     state.busy = false;

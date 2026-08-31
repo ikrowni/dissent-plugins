@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   setRanking, getRanking, rankingFor,
-  scoringKeyFor, valueOf, projectedPoints, byeWeekFor,
+  scoringKeyFor, valueOf, byeWeekFor,
 } from './draft-ranking.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -161,27 +161,19 @@ describe('byeWeekFor', () => {
   });
 });
 
-describe('projectedPoints and valueOf', () => {
-  beforeEach(() => setRanking({
-    ppr_p: { 1: 300.5 }, half_p: { 1: 250 }, ppr_v: { 1: 80 },
-  }));
+describe('valueOf', () => {
+  beforeEach(() => setRanking({ ppr_v: { 1: 80 }, half_v: { 1: 65 } }));
 
-  it('reads the map for the league scoring', () => {
-    expect(projectedPoints('1', { rec: 1 })).toBe(300.5);
-    expect(projectedPoints('1', { rec: 0.5 })).toBe(250);
+  it('reads the value map for the league scoring', () => {
     expect(valueOf('1', { rec: 1 })).toBe(80);
+    expect(valueOf('1', { rec: 0.5 })).toBe(65);
   });
 
-  // ⚠️ 0 is a real projection for somebody not expected to play, so unknown
-  // must be null and the view must render it as a dash.
+  // ⚠️ 0 is a real value in these units — a replacement-level player is exactly
+  // 0 over replacement — so unknown must be null and render as a dash.
   it('is null outside the ranking, never 0', () => {
-    expect(projectedPoints('999', 'ppr')).toBe(null);
     expect(valueOf('999', 'ppr')).toBe(null);
-  });
-
-  it('is null when no ranking is loaded', () => {
     setRanking(null);
-    expect(projectedPoints('1', 'ppr')).toBe(null);
     expect(valueOf('1', 'ppr')).toBe(null);
   });
 });

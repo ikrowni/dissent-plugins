@@ -742,12 +742,17 @@ describe('projected points and bye weeks in a lineup', () => {
     expanded: 't1',
   });
 
-  it('names both columns so the numbers are not a mystery', () => {
+  // ⚠️ PINS THE WEEKLY CLAIM, and it has already caught the copy drifting once:
+  // this shipped saying "for the whole season" and the number behind it became
+  // a weekly one. A column whose tooltip describes a different quantity than
+  // the cells hold is worse than an unlabelled column.
+  it('names both columns, and says the projection is weekly', () => {
     withLineup();
     const html = render();
     expect(html).toContain('>Proj<');
     expect(html).toContain('>Bye<');
-    expect(html).toMatch(/whole season/i);
+    expect(html).toMatch(/this week/i);
+    expect(html).not.toMatch(/whole season/i);
   });
 
   // ⚠️ 0 is a real projection for somebody not expected to play, so an unknown

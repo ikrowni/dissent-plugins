@@ -170,12 +170,12 @@ for (const [key, ptsField, adpField] of SCORING) {
   // downloaded by every browser that opens a mock, and two decimal places of
   // projected fantasy points is precision the projection does not have.
   out[`${key}_v`] = Object.fromEntries(kept.map((r) => [r.id, Math.round(r.vor)]));
-  // ⚠️ PROJECTED SEASON POINTS, shipped ALONGSIDE value rather than instead of
-  // it. They answer different questions and a roster needs the first: value over
-  // replacement says "is he worth his slot", projected points say "what will he
-  // score". One decimal, because a whole-number season projection reads as
-  // precision the projection does not have and two is noise.
-  out[`${key}_p`] = Object.fromEntries(kept.map((r) => [r.id, Math.round(r.pts * 10) / 10]));
+  // ⚠️ NO SEASON PROJECTED-POINTS MAP HERE, deliberately. One shipped briefly on
+  // 2026-08-31 and was removed the same day: the screens that wanted a
+  // projection wanted THIS WEEK'S, which changes weekly and cannot be baked at
+  // build time. core/weekly-projections.js fetches that per week at runtime.
+  // A season total left in the asset would be dead weight and, worse, an
+  // inviting fallback that silently answers a different question.
 
   const top = kept.slice(0, 12).map((r) => positionOf(r.id));
   console.log(`  ${key.padEnd(4)} ${kept.length} players (${priced.length} priced) · round 1: ${top.join(' ')}`);

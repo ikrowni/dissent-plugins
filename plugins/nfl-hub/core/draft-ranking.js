@@ -102,21 +102,6 @@ export function valueOf(playerId, scoring = 'ppr') {
 }
 
 /**
- * A player's projected season points, for a league's scoring.
- *
- * ⚠️ A SEASON TOTAL, NOT A WEEKLY ONE, and a caller must label it as such. It
- * is preseason and does not move: nothing here re-projects after week 1, so a
- * screen that implies "expected this week" would be wrong every week.
- *
- * Returns null outside the ranking's depth — rendered "—", never 0, because 0
- * is a real projection for somebody who is not expected to play.
- */
-export function projectedPoints(playerId, scoring = 'ppr') {
-  const v = ranking?.[`${scoringKeyFor(scoring)}_p`]?.[String(playerId)];
-  return typeof v === 'number' ? v : null;
-}
-
-/**
  * The week an NFL team does not play.
  *
  * ⚠️ KEYED ON THE NFL TEAM, NOT THE PLAYER. A bye belongs to the team, so a
