@@ -146,9 +146,30 @@ export async function invokeModule(payload, timeoutMs = 15000) {
   // The node wraps the module's own {ok, data|error} envelope in its transport
   // envelope, so a refusal arrives as a SUCCESSFUL call carrying ok:false.
   // Unwrapping it here means callers write one error path, not two.
-  const inner = res?.data ?? res;
+  // 🔴 `'data' in x`, NEVER `x?.data ?? x`. `??` cannot tell "there is no data
+  // key" from "the data key holds null", so an op answering "there is nothing
+  // here" used to fall back to THE ENVELOPE ITSELF and reach the caller as a
+  // truthy {ok:true, data:null}. On 2026-08-31 nfl-hub's getPlayoffs returned
+  // null for a league with no bracket, league-matchup.js branched on it being
+  // truthy, and a league in week 1 rendered an empty postseason pane over its
+  // regular season — hiding the "Generate schedule" button a freshly drafted
+  // league needs. A null answer must arrive as null.
+  // ⚠️ CHECKED ON THE ENVELOPE, BEFORE THE UNWRAP, and again after. Reading the
+  // refusal only after unwrapping loses it whenever a module answers
+  // {ok:false, error, data:null} — the unwrap yields null, null is falsy, and the
+  // error vanishes into a successful-looking null. The old `??` masked that by
+  // never unwrapping a null; `'data' in` does unwrap it, so the check has to move
+  // up to keep the refusal path exactly as reachable as it was.
+  if (res && typeof res === 'object' && res.ok === false) {
+    throw new Error(res.error || 'module refused the request');
+  }
+  const inner = res && typeof res === 'object' && 'data' in res ? res.data : res;
+  // ⚠️ Pre-existing and deliberately unchanged: this cannot tell a refusal from
+  // a legitimate payload that merely carries its own ok:false field, because by
+  // here both look identical. Ops whose data has an `ok` key should not use
+  // false for it. Tracked in plugin-sdk.test.js.
   if (inner && inner.ok === false) throw new Error(inner.error || 'module refused the request');
-  return inner?.data ?? inner;
+  return inner && typeof inner === 'object' && 'data' in inner ? inner.data : inner;
 }
 
 export async function realtimePublish(eventName, data) {
