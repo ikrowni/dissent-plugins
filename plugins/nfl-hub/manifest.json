@@ -30,10 +30,10 @@
     "fantasy"
   ],
   "server_module": {
-    "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module-3c95fef3f134.wasm",
-    "sha256": "3c95fef3f134721aa6b741e20c6316b2d6a5884b8519a9468970095ca6eeea74",
-    "size": 2569614,
-    "signature": "9b153b950f5f6b3c4fd715aac4f2136fde08883c096dd7520deda2cdc4080d998d7267adffa98ef87f511db39cf7a07029e2586d35b195c47039bd5f7e850d07"
+    "url": "https://plugins.dissent.chat/plugins/nfl-hub/server/module-032d47ea2156.wasm",
+    "sha256": "032d47ea21567a93c053d0d1ba86d2a9c65fb50c6a61215d608ff6e1237e7374",
+    "size": 2608239,
+    "signature": "b1cceaf5339b7eeee3093fae9f1215dd9ebc2927c4af4a8bcc3af6641c7163ae61aa3963bf2ef95daf4b90b47dd12d9fdb5f0f21d24e5634989ec0f328d26b01"
   },
   "sdk_version": "1",
   "resources": [
