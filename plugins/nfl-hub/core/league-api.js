@@ -12,7 +12,46 @@
 
 import { invokeModule } from '../../plugin-sdk.js';
 
-const call = (op, payload) => invokeModule({ op, payload });
+/**
+ * Is this the SDK's mangled form of a module op that returned null?
+ *
+ * 🔴 THE SDK CANNOT TELL "no data" FROM "data is null", AND IT SHOWS.
+ * `invokeModule` unwraps the module's `{ok, data}` envelope with
+ * `return inner?.data ?? inner` — and `??` treats a null `data` as "absent" and
+ * falls back to THE ENVELOPE ITSELF. So an op that answers "there is nothing
+ * here" hands the caller a truthy `{ok:true, data:null}` object.
+ *
+ * That is not a cosmetic difference. `getPlayoffs` returns null when a league
+ * has no bracket, and views/league-matchup.js branches on `state.bracket` being
+ * truthy — so on 2026-08-31 a league in WEEK 1 rendered the postseason pane,
+ * empty, and the regular season was unreachable behind it. The "Generate
+ * schedule" button lives on that unreachable branch, so a freshly drafted league
+ * had no way to create the schedule its matchups needed. `getSchedule` returns
+ * null the same way, so fixing only the bracket would have revealed it next.
+ *
+ * ⚠️ The real fix belongs in the SDK, which is EMBEDDED IN THE GO BINARY
+ * (internal/api/handlers/pluginsdk/plugin-sdk.js, served by ServePluginSDKShim)
+ * — so it needs a dissent-core release and affects every plugin. This narrows
+ * the blast radius to nfl-hub until that happens.
+ *
+ * ⚠️ MATCHED EXACTLY, never loosely. Only the precise two-key envelope counts,
+ * so an op whose legitimate answer merely CONTAINS an `ok` field is untouched.
+ */
+function isNullEnvelope(v) {
+  return v !== null
+    && typeof v === 'object'
+    && !Array.isArray(v)
+    && v.ok === true
+    && v.data === null
+    && Object.keys(v).length === 2;
+}
+
+const call = async (op, payload) => {
+  const res = await invokeModule({ op, payload });
+  return isNullEnvelope(res) ? null : res;
+};
+
+export { isNullEnvelope as _isNullEnvelope };
 
 // ── League lifecycle ─────────────────────────────────────────────────────────
 export const listLeagues = () => call('league:list', {});

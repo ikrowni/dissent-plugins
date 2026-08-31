@@ -480,3 +480,67 @@ describe('team accent on the bracket and byes', () => {
     expect(bye.getAttribute('style')).toContain('--mgr:');
   });
 });
+
+// 🔴 THE BUG THIS FILE'S NEWEST TESTS EXIST FOR — reported 2026-08-31 as
+// "we finished our draft but nothing shows up in Matchups".
+//
+// The SDK's `invokeModule` unwraps with `inner?.data ?? inner`, and `??` reads a
+// null `data` as ABSENT and falls back to the envelope. So `getPlayoffs`
+// answering "this league has no bracket" arrived as a truthy
+// `{ok:true, data:null}`, the view's `if (state.bracket || …)` fired in WEEK 1,
+// and the postseason pane rendered — empty, because there were no rounds to
+// draw. The regular season sat behind it, unreachable, and with it the
+// "Generate schedule" button a freshly drafted league needs.
+//
+// These test the VIEW's contract: a bracket-shaped value that carries no
+// postseason must not displace the regular season.
+describe('a league with no postseason yet', () => {
+  const setup = (over = {}) => Object.assign(_state, {
+    leagueId: 'lg', league: league(['t1', 't2']), week: 1,
+    scores: null, schedule: null, bracket: null, loaded: true, error: null, ...over,
+  });
+
+  it('offers the schedule button in week 1, not an empty Playoffs pane', () => {
+    setup();
+    const html = render();
+    expect(html).toContain('matchup-generate');
+    expect(html).not.toContain('Playoffs');
+  });
+
+  // The regression itself: the value the SDK actually delivered.
+  it('is not fooled by the SDK\'s null envelope', () => {
+    setup({ bracket: { ok: true, data: null } });
+    const html = render();
+    expect(html).toContain('matchup-generate');
+    expect(html).not.toContain('Playoffs');
+  });
+
+  it('does not treat a null-enveloped schedule as a real one', () => {
+    setup({ schedule: { ok: true, data: null } });
+    const html = render();
+    expect(html).toContain('matchup-generate');
+  });
+
+  // The pane is still correct when it IS the postseason — the fix must not
+  // trade one wrong branch for another.
+  it('still shows the postseason once the playoff weeks arrive', () => {
+    setup({ week: 15 });
+    const html = render();
+    expect(html).toContain('Playoffs');
+    expect(html).toContain('matchup-start-playoffs');
+  });
+
+  it('still shows a real bracket whenever one exists', () => {
+    setup({ week: 15, bracket: { rounds: [{ round: 1, week: 15, games: [] }], byes: [] } });
+    expect(render()).toContain('Playoffs');
+  });
+
+  // A manager is not the one who can fix it, so they get the reason, not a
+  // button that will be refused.
+  it('tells a manager who needs to act', () => {
+    setup({ league: league(['t1', 't2'], { isCommissioner: false }) });
+    const html = render();
+    expect(html).toContain('commissioner needs to generate it');
+    expect(html).not.toContain('matchup-generate');
+  });
+});

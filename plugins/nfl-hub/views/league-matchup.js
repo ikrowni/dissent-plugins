@@ -54,6 +54,26 @@ export function pairingsFor(schedule, week) {
   return (schedule.weeks ?? []).find((w) => w.week === Number(week))?.matchups ?? [];
 }
 
+/**
+ * Is this an actual seeded postseason?
+ *
+ * 🔴 TRUTHINESS IS NOT ENOUGH, and trusting it cost a league its Matchups tab.
+ * `getPlayoffs` answers null for a league with no bracket, but the SDK's
+ * `invokeModule` unwraps with `inner?.data ?? inner` — and `??` reads a null
+ * `data` as absent and falls back to the envelope. "There is no postseason"
+ * therefore arrived as a truthy `{ok:true, data:null}`, this view took the
+ * playoff branch in WEEK 1, and rendered an empty Playoffs pane over the
+ * regular season — hiding the "Generate schedule" button a freshly drafted
+ * league needs. Reported as "nothing shows up in Matchups".
+ *
+ * ⚠️ A SEEDED BRACKET ALWAYS HAS ROUNDS. That is the property worth checking
+ * and it is true regardless of what the transport does, so this guard holds
+ * even after the SDK is fixed — and would have held before it broke.
+ */
+function hasBracket(b) {
+  return Boolean(b) && typeof b === 'object' && Array.isArray(b.rounds) && b.rounds.length > 0;
+}
+
 export function render() {
   if (state.error) {
     return panel({
@@ -78,11 +98,14 @@ export function render() {
   // regular-season pairing for a playoff week would name an opponent the team is
   // not actually playing.
   const playoffStart = state.league?.settings?.playoffWeekStart ?? 15;
-  if (state.bracket || Number(state.week) >= playoffStart) {
+  if (hasBracket(state.bracket) || Number(state.week) >= playoffStart) {
     return bracketPane(playoffStart);
   }
 
-  if (!state.schedule) {
+  // ⚠️ Same reasoning as `hasBracket` — a schedule record always carries weeks,
+  // and `getSchedule` returns null for a season with none, which reaches here as
+  // the same truthy envelope.
+  if (!state.schedule || !Array.isArray(state.schedule.weeks)) {
     return panel({
       title: 'Matchups',
       body: `<p class="muted">No schedule has been generated for this season yet.</p>
@@ -112,7 +135,7 @@ export function render() {
 
 /** The postseason. */
 function bracketPane(playoffStart) {
-  if (!state.bracket) {
+  if (!hasBracket(state.bracket)) {
     return panel({
       title: 'Playoffs',
       body: `<p class="muted">The postseason starts in week ${esc(String(playoffStart))} and has not been seeded yet.</p>
