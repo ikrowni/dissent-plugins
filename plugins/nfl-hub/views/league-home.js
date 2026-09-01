@@ -21,6 +21,7 @@ import {
 import { PPR_SCORING, HALF_PPR_SCORING, STANDARD_SCORING } from '../core/league/scoring.js';
 import {
   WAIVER_TYPE, MAX_BENCH_SLOTS, MAX_IR_SLOTS, MAX_DRAFT_ROUNDS, activeRosterSize,
+  defaultVetoVotes,
 } from '../core/league/settings.js';
 import { splitRosterPositions } from '../core/league/slots.js';
 import {
@@ -376,10 +377,18 @@ function settingsPane(league) {
   // was every eligible team.
   const teamCount = Object.keys(league.teams ?? {}).length;
   const vetoEligible = Math.max(0, teamCount - 2);
-  const needed = Number(st.vetoVotesNeeded ?? 6);
+  const needed = Number(st.vetoVotesNeeded ?? defaultVetoVotes(teamCount));
+  // ⚠️ RECOMMENDS A NUMBER RATHER THAN JUST ALLOWING ONE. Exposing the control
+  // was not enough on its own: a commissioner who has just discovered their
+  // veto requires unanimity still has to decide what it SHOULD be, and the
+  // right answer depends on the league size in a way that is not obvious.
+  const suggested = defaultVetoVotes(teamCount);
   const vetoNote = vetoEligible > 0 && needed >= vetoEligible
-    ? `<strong>At ${needed} that is every one of them</strong> — today a trade can only be blocked unanimously.`
-    : '';
+    ? `<strong>At ${needed} that is every one of them</strong> — a trade can only be blocked
+       unanimously today. For ${teamCount} teams we suggest <strong>${suggested}</strong>.`
+    : (needed === suggested
+      ? ''
+      : `For ${teamCount} teams we suggest <strong>${suggested}</strong>.`);
   // ⚠️ Named because saving is not enough. A draft already built keeps the
   // rounds it was built with, so a commissioner who changes them here and never
   // rebuilds sees the old number on the board and no reason why.

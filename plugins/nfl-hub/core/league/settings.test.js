@@ -5,6 +5,7 @@ import {
   normalizeSettings, validateSettings,
   isMultiSeason, requiresLineupSetting,
   setRosterShape, activeRosterSize, canApplySettings,
+  defaultVetoVotes,
   MAX_BENCH_SLOTS, MAX_IR_SLOTS, MAX_DRAFT_ROUNDS,
 } from './settings.js';
 
@@ -397,5 +398,64 @@ describe('the veto threshold is measured against eligible voters', () => {
     const s = normalizeSettings({});
     expect(validateSettings({ ...s, tradeReviewDays: 0 }).valid).toBe(true);
     expect(validateSettings({ ...s, tradeReviewDays: -1 }).valid).toBe(false);
+  });
+});
+
+describe('defaultVetoVotes', () => {
+  // 🔴 A FLAT NUMBER CANNOT BE RIGHT AT EVERY SIZE, which is what shipped: a
+  // hard 6 is a fair minority at 12 teams and UNANIMITY at 8, because a party
+  // may not veto its own trade and eight teams leave six eligible voters.
+  it('is never more than the teams eligible to vote', () => {
+    for (let n = 4; n <= 20; n += 1) {
+      expect(defaultVetoVotes(n), `${n} teams`).toBeLessThanOrEqual(n - 2);
+    }
+  });
+
+  // ⚠️ Above four teams it must leave room to disagree — a threshold equal to
+  // the eligible count is unanimity, which should be a choice, not a default.
+  it('is not unanimity for any league big enough to avoid it', () => {
+    for (let n = 5; n <= 20; n += 1) {
+      expect(defaultVetoVotes(n), `${n} teams`).toBeLessThan(n - 2);
+    }
+  });
+
+  // ⚠️ One veto is not a league vote, it is a heckler's veto.
+  it('always takes at least two teams once there are two to ask', () => {
+    for (let n = 4; n <= 20; n += 1) expect(defaultVetoVotes(n)).toBeGreaterThanOrEqual(2);
+  });
+
+  it('grows with the league', () => {
+    expect(defaultVetoVotes(8)).toBeLessThan(defaultVetoVotes(16));
+  });
+
+  it('produces a config validateSettings accepts, at every size', () => {
+    for (const n of [4, 6, 8, 10, 12, 14, 16, 18, 20]) {
+      const s = normalizeSettings({ numTeams: n, playoffTeams: 2, medianMatchup: n % 2 === 1 });
+      expect(validateSettings(s).valid, `${n} teams: ${validateSettings(s).errors}`).toBe(true);
+    }
+  });
+
+  it('degrades rather than throwing on nonsense', () => {
+    for (const v of [null, undefined, NaN, 0, -5, 'twelve']) {
+      expect(Number.isInteger(defaultVetoVotes(v)), String(v)).toBe(true);
+    }
+  });
+});
+
+describe('the derived default does not move a running league', () => {
+  // ⚠️ A veto threshold must never change under a season without the
+  // commissioner doing it. A stored league always carries the key, so it is
+  // derived only when the caller said nothing at all.
+  it('keeps a stored value even when it differs from the derived one', () => {
+    expect(normalizeSettings({ numTeams: 8, vetoVotesNeeded: 6 }).vetoVotesNeeded).toBe(6);
+  });
+
+  it('derives only for a caller that supplied none', () => {
+    expect(normalizeSettings({ numTeams: 8 }).vetoVotesNeeded).toBe(defaultVetoVotes(8));
+  });
+
+  it('survives a round trip through an unrelated settings change', () => {
+    const stored = normalizeSettings({ numTeams: 8, vetoVotesNeeded: 6 });
+    expect(normalizeSettings({ ...stored, name: 'Renamed' }).vetoVotesNeeded).toBe(6);
   });
 });

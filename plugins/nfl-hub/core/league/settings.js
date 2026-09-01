@@ -35,6 +35,34 @@ export const MAX_IR_SLOTS = 10;
 export const MAX_TAXI_SLOTS = 10;
 export const MAX_DRAFT_ROUNDS = 40;
 
+/**
+ * How many veto votes a league of this size should need.
+ *
+ * 🔴 A FLAT NUMBER CANNOT BE RIGHT AT EVERY LEAGUE SIZE, and shipping one was
+ * the bug. The default was a hard 6, which is a reasonable minority in a
+ * 12-team league and is UNANIMITY in an 8-team one — a party may not veto its
+ * own trade, so eight teams leave exactly six eligible voters. Leagues were
+ * running a veto that could never fire and nothing said so.
+ *
+ * A third of the league is the common shape across the platforms that run a
+ * league vote, and it holds at every size: enough that one aggrieved manager
+ * cannot kill a fair trade, few enough that a lopsided one gets stopped.
+ *
+ * ⚠️ CLAMPED TO THE ELIGIBLE VOTERS, never above them, or the veto becomes
+ * unreachable — the exact failure this replaces. At four teams that clamp
+ * produces unanimity, which is unavoidable rather than chosen: two teams trade,
+ * two are left.
+ *
+ * ⚠️ FLOOR OF 2 ON PURPOSE. A single veto blocking a trade is not a league
+ * vote, it is a heckler's veto.
+ */
+export function defaultVetoVotes(numTeams) {
+  const n = Number(numTeams);
+  if (!Number.isFinite(n) || n < 3) return 1;
+  const eligible = Math.max(1, n - 2);
+  return Math.max(1, Math.min(eligible, Math.max(2, Math.round(n / 3))));
+}
+
 /** The default league: 12-team PPR redraft, the most common shape by far. */
 export const DEFAULT_SETTINGS = Object.freeze({
   name: 'New League',
@@ -89,7 +117,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
   waiverDayOfWeek: 3,
   tradeDeadlineWeek: 12,
   tradeReviewDays: 2,
-  vetoVotesNeeded: 6,
+  // ⚠️ A STATIC FALLBACK ONLY. `normalizeSettings` derives this from the team
+  // count whenever a caller does not supply one — see `defaultVetoVotes`. This
+  // value is what a 12-team league gets, which is the shape of DEFAULT_SETTINGS.
+  vetoVotesNeeded: 4,
   tradesEnabled: true,
   pickTradingEnabled: true,
   addsEnabled: true,
@@ -163,6 +194,13 @@ export function normalizeSettings(partial = {}) {
   // The number is the source of truth and the array is derived from it, with
   // one exception: a caller who passes `rosterPositions` and NOT the number is
   // describing the shape with the array, so the number follows it instead.
+  // ⚠️ Derived only when the caller SAID NOTHING. A stored league always carries
+  // the key, so an existing league keeps whatever it is running — a veto
+  // threshold must never move under a season without the commissioner doing it.
+  if (partial.vetoVotesNeeded === undefined) {
+    merged.vetoVotesNeeded = defaultVetoVotes(merged.numTeams);
+  }
+
   const ir = reserveCount(partial, positions, 'irSlots', 'IR', merged);
   const taxi = reserveCount(partial, positions, 'taxiSlots', 'TAXI', merged);
 
