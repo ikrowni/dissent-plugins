@@ -19,6 +19,7 @@
   <p>Saved value: <code id="saved">—</code></p>
   <p><input id="val" placeholder="type something" /> <button id="save">Save</button></p>
   <p>Off-lane call (<code>files:list</code>): <code id="offlane">—</code></p>
+  <p>Current run: <code id="run">—</code></p>
 </div>
 <script>
 // A test plugin for personal installs (Phase 2 plan 1). It speaks the raw host protocol
@@ -35,6 +36,7 @@ function request(action, params) {
 window.addEventListener('message', async (e) => {
   const m = e.data;
   if (m?.type === 'dissent:response' && pending[m.id]) { pending[m.id](m); delete pending[m.id]; return; }
+  if (m?.type === 'dissent:event' && m.event === 'game.saves.changed') { location.reload(); return; }
   if (m?.type !== 'dissent:init') return;
   document.getElementById('ctx').textContent =
     `contextType=${m.context.contextType ?? '?'} placement=${m.context.placement ?? '?'}`;
@@ -42,6 +44,11 @@ window.addEventListener('message', async (e) => {
   document.getElementById('saved').textContent = got.ok ? JSON.stringify(got.data?.value ?? null) : `error: ${got.error}`;
   const off = await request('files:list', {});
   document.getElementById('offlane').textContent = off.ok ? 'ALLOWED (unexpected)' : `refused: ${off.error}`;
+  const run = await request('game.saves.currentRun', { game: 'slay-the-spire-2' });
+  const d = run.data || {};
+  document.getElementById('run').textContent = !run.ok ? `error: ${run.error}`
+    : d.status !== 'ok' ? `status: ${d.status}`
+    : `${d.character} · act ${d.act.index + 1} · ${d.players[0].hp}/${d.players[0].max_hp} HP · ${d.players[0].deck.length} cards · act boss ${d.act.boss}`;
 });
 document.getElementById('save').addEventListener('click', async () => {
   const value = document.getElementById('val').value;
