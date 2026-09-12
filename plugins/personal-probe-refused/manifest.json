@@ -1,0 +1,25 @@
+{
+  "id": "personal-probe-refused",
+  "name": "Personal Probe (refused)",
+  "version": "1.0.0",
+  "description": "Test plugin that declares fetch:external. A personal install must be refused, naming that permission.",
+  "author": "Dissent test",
+  "tier": 1,
+  "context": [
+    "personal"
+  ],
+  "url": "https://plugins.dissent.chat/plugins/personal-probe-refused/plugin.html",
+  "declared_permissions": [
+    "storage:user",
+    "fetch:external"
+  ],
+  "allowed_fetch_domains": [
+    "example.com"
+  ],
+  "config_schema": null,
+  "categories": [
+    "testing"
+  ],
+  "sdk_version": "1",
+  "resources": []
+}

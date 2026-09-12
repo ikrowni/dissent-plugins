@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Personal Probe</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0a0a12; color: rgba(255,255,255,0.85); margin: 0; padding: 24px; }
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; max-width: 480px; }
+  code { color: #c4b5fd; }
+  input, button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: inherit; }
+  p { margin: 8px 0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Personal Probe</h2>
+  <p>Context: <code id="ctx">waiting for dissent:init…</code></p>
+  <p>Saved value: <code id="saved">—</code></p>
+  <p><input id="val" placeholder="type something" /> <button id="save">Save</button></p>
+  <p>Off-lane call (<code>files:list</code>): <code id="offlane">—</code></p>
+</div>
+<script>
+// A test plugin for personal installs (Phase 2 plan 1). It speaks the raw host protocol
+// so it depends on no SDK copy: dissent:init in, dissent:request out, dissent:response in.
+let nextId = 1;
+const pending = {};
+function request(action, params) {
+  return new Promise((resolve) => {
+    const id = nextId++;
+    pending[id] = resolve;
+    parent.postMessage({ type: 'dissent:request', id, action, params }, '*');
+  });
+}
+window.addEventListener('message', async (e) => {
+  const m = e.data;
+  if (m?.type === 'dissent:response' && pending[m.id]) { pending[m.id](m); delete pending[m.id]; return; }
+  if (m?.type !== 'dissent:init') return;
+  document.getElementById('ctx').textContent =
+    `contextType=${m.context.contextType ?? '?'} placement=${m.context.placement ?? '?'}`;
+  const got = await request('storage:get', { scope: 'user', key: 'probe' });
+  document.getElementById('saved').textContent = got.ok ? JSON.stringify(got.data?.value ?? null) : `error: ${got.error}`;
+  const off = await request('files:list', {});
+  document.getElementById('offlane').textContent = off.ok ? 'ALLOWED (unexpected)' : `refused: ${off.error}`;
+});
+document.getElementById('save').addEventListener('click', async () => {
+  const value = document.getElementById('val').value;
+  const r = await request('storage:set', { scope: 'user', key: 'probe', value });
+  document.getElementById('saved').textContent = r.ok ? JSON.stringify(value) : `error: ${r.error}`;
+});
+</script>
+</body>
+</html>

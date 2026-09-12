@@ -1,0 +1,16 @@
+{
+  "id": "personal-probe",
+  "name": "Personal Probe",
+  "version": "1.0.0",
+  "description": "Test plugin for personal installs: shows its context, saves one value, and shows that an off-lane action is refused.",
+  "author": "Dissent test",
+  "tier": 1,
+  "context": ["personal"],
+  "url": "https://plugins.dissent.chat/plugins/personal-probe/plugin.html",
+  "declared_permissions": ["storage:user"],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["testing"],
+  "sdk_version": "1",
+  "resources": []
+}
