@@ -1,0 +1,43 @@
+/* STS2 Companion — theme values come from the host's dissent:init (core/host.js). */
+:root {
+  --bg: #0d0b12; --panel: rgba(255,255,255,0.04); --line: rgba(255,255,255,0.09);
+  --text: rgba(255,255,255,0.88); --muted: rgba(255,255,255,0.5); --accent: #c9a24a;
+  --blue: #7fb8ff; --red: #ff7a6b; --green: #7ee08a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+#app { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+#top { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; letter-spacing: .04em; color: var(--accent); }
+#sections button, .tab, .chip { background: none; border: 1px solid transparent; color: var(--muted); padding: 5px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
+#sections button[aria-current="true"], .tab[aria-selected="true"], .chip[aria-pressed="true"] { color: var(--text); border-color: var(--line); background: var(--panel); }
+#view { overflow: auto; min-height: 0; }
+#credits { padding: 6px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+#credits a { color: var(--muted); }
+
+.wiki { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
+.wiki-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; align-items: center; }
+.wiki-bar input[type="search"] { flex: 1 1 220px; background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 10px; font: inherit; }
+.wiki-bar select { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px; font: inherit; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding: 4px 16px 16px; align-content: start; }
+.tile { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; text-align: center; font: inherit; }
+.tile img, .tile .ph { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; display: block; border-radius: 8px; background: var(--panel); }
+.tile.icon img, .tile.icon .ph { aspect-ratio: 1; }
+.tile .label { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.empty { padding: 24px 16px; color: var(--muted); }
+
+.detail { display: grid; grid-template-columns: minmax(200px, 320px) 1fr; gap: 24px; padding: 16px; }
+.detail img { width: 100%; border-radius: 10px; }
+.detail h1 { margin: 0 0 4px; font-size: 22px; }
+.detail .sub { color: var(--muted); margin-bottom: 12px; }
+.detail .row { margin: 10px 0; }
+.back { margin: 12px 16px 0; }
+.game-text .term { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline dotted; }
+.t-blue { color: var(--blue); } .t-red { color: var(--red); } .t-green { color: var(--green); }
+.pattern { list-style: none; padding: 0; margin: 0; }
+.pattern li { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; background: var(--panel); }
+.tip { position: fixed; z-index: 10; max-width: 280px; padding: 10px 12px; border-radius: 10px; background: #1a1622; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.5); pointer-events: none; }
+.tip strong { display: block; margin-bottom: 4px; }
+@media (max-width: 560px) { .detail { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .tile img { transition: transform .12s ease; } .tile:hover img { transform: translateY(-2px); } }

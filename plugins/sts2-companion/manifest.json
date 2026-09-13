@@ -1,0 +1,16 @@
+{
+  "id": "sts2-companion",
+  "name": "STS2 Companion",
+  "version": "0.1.0",
+  "description": "A Slay the Spire 2 wiki — every card, relic, potion, power and enemy with real art, search, nested tooltips and move patterns. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games.",
+  "author": "Dissent Project",
+  "tier": 2,
+  "context": ["personal"],
+  "url": "https://plugins.dissent.chat/plugins/sts2-companion/plugin.html",
+  "declared_permissions": ["storage:user", "game:saves"],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["gaming", "slay-the-spire-2"],
+  "sdk_version": "1",
+  "resources": []
+}
