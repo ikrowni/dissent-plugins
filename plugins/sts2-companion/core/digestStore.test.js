@@ -70,6 +70,21 @@ describe('loadDigests', () => {
     expect(r).toMatchObject({ status: 'ok', skipped: 2 });
   });
 
+  // 🔴 Until the user approves 0.4.0's storage:local, the host refuses it: the shim's get answers null
+  // and set REJECTS. The cache is an optimisation; a refused write must never leave Insights stuck.
+  it('🔴 still answers when the device store refuses writes', async () => {
+    const local = { get: vi.fn(async () => null), set: vi.fn(async () => { throw new Error('storage:local not granted'); }) };
+    const r = await loadDigests({ saves: realSaves(), local, data: createData({ load }) });
+    expect(r.status).toBe('ok');
+    expect(r.digests.map((d) => d.id)).toEqual(['1773796874']);
+  });
+
+  it('still answers when the device store refuses reads', async () => {
+    const local = { get: vi.fn(async () => { throw new Error('refused'); }), set: vi.fn(async () => {}) };
+    const r = await loadDigests({ saves: realSaves(), local, data: createData({ load }) });
+    expect(r.status).toBe('ok');
+  });
+
   it('passes a non-ok status through (web answers desktop_only)', async () => {
     const r = await loadDigests({ saves: vi.fn(async () => ({ status: 'desktop_only' })), local: fakeLocal(), data: createData({ load }) });
     expect(r).toEqual({ status: 'desktop_only' });

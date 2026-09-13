@@ -13,7 +13,9 @@ export const PAGE = 100;
 const MAX_PAGES = 100;
 
 export async function loadDigests({ saves, local, data, onProgress = () => {} }) {
-  const stored = await local.get(CACHE_KEY);
+  // The cache is an optimisation. A device store that refuses (storage:local not yet approved after an
+  // update, or unavailable) costs a slow load, never the section.
+  const stored = await local.get(CACHE_KEY).catch(() => null);
   const valid = stored?.version === DIGEST_VERSION && stored.digests && typeof stored.digests === 'object';
   const cache = valid ? stored : { version: DIGEST_VERSION, digests: {} };
   // True only when the cache really changes: a reset, a new digest, or a forgotten run.
@@ -53,6 +55,6 @@ export async function loadDigests({ saves, local, data, onProgress = () => {} })
     if (!present.has(id)) { delete cache.digests[id]; changed = true; }
   }
 
-  if (changed) await local.set(CACHE_KEY, cache);
+  if (changed) await local.set(CACHE_KEY, cache).catch(() => {});
   return { status: 'ok', digests: ids.map((id) => cache.digests[id]).filter(Boolean), skipped };
 }
