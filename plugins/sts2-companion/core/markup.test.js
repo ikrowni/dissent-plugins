@@ -57,4 +57,10 @@ describe('no HTML-string APIs anywhere in the plugin', () => {
     const offenders = files(root).filter((f) => /\.(innerHTML|outerHTML)\b|insertAdjacentHTML\s*\(/.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });
+
+  // Charts draw once. The overlay's frame budget (spec §3) is met by never animating.
+  it('🔴 no requestAnimationFrame', () => {
+    const offenders = files(root).filter((f) => /requestAnimationFrame/.test(readFileSync(f, 'utf8')));
+    expect(offenders).toEqual([]);
+  });
 });
