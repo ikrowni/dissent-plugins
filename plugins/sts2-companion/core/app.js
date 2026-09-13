@@ -25,6 +25,7 @@ const SECTIONS = {
   wiki: () => import('../views/wiki.js').then((m) => m.mountWiki),
   deck: () => import('../views/deck.js').then((m) => m.mountDeck),
   history: () => import('../views/history.js').then((m) => m.mountHistory),
+  insights: () => import('../views/insights.js').then((m) => m.mountInsights),
 };
 
 let current = null;

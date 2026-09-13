@@ -15,7 +15,7 @@ describe('manifest overlay block', () => {
   const o = manifest.overlay;
 
   it('declares exactly the permissions the plugin uses', () => {
-    expect([...manifest.declared_permissions].sort()).toEqual(['game:saves', 'overlay:context', 'storage:user']);
+    expect([...manifest.declared_permissions].sort()).toEqual(['game:saves', 'overlay:context', 'storage:local', 'storage:user']);
   });
 
   it('targets Slay the Spire 2 by its catalog id', () => {
