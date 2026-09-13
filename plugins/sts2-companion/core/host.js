@@ -1,6 +1,6 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
-import { handleSDKMessage, request, storageGetUser, storageSetUser } from '../../plugin-sdk.js';
+import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
 
@@ -18,6 +18,7 @@ export function connect({ onInit, onEvent }) {
 export const store = {
   get: (key) => storageGetUser(key),
   set: (key, value) => storageSetUser(key, value),
+  del: (key) => storageDelete(key, 'user'),
 };
 
 /** Every answer is data with a `status` (spec §5.3 of the platform spec). Never throws. */
