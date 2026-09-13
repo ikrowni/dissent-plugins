@@ -1,0 +1,3 @@
+/* Insights — tables and panels reuse base.css and runs.css; this only marks thin samples. */
+.insights .panel { margin-bottom: 16px; }
+.insights td.low-sample { opacity: 0.6; font-style: italic; }
