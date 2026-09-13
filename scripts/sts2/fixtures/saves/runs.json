@@ -1,0 +1,24 @@
+{
+  "game": "slay-the-spire-2",
+  "runs": [
+    {
+      "abandoned": false,
+      "ascension": 0,
+      "build": "v0.99.1",
+      "characters": [
+        "CHARACTER.IRONCLAD",
+        "CHARACTER.IRONCLAD"
+      ],
+      "floors": 39,
+      "game_mode": "standard",
+      "id": "1773796874",
+      "killed_by": "ENCOUNTER.SOUL_NEXUS_ELITE",
+      "players": 2,
+      "run_time": 8260,
+      "started_at": 1773796874,
+      "win": false
+    }
+  ],
+  "skipped": 0,
+  "status": "ok"
+}

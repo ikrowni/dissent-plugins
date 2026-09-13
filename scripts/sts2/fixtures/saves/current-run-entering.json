@@ -1,0 +1,893 @@
+{
+  "act": {
+    "boss": "ENCOUNTER.WATERFALL_GIANT_BOSS",
+    "id": "ACT.UNDERDOCKS",
+    "index": 0
+  },
+  "ascension": 0,
+  "character": "CHARACTER.IRONCLAD",
+  "floors": [
+    {
+      "act": 0,
+      "players": [
+        {
+          "ancient_choices": [
+            {
+              "id": "LEAD_PAPERWEIGHT",
+              "picked": false
+            },
+            {
+              "id": "ARCANE_SCROLL",
+              "picked": true
+            },
+            {
+              "id": "PRECARIOUS_SHEARS",
+              "picked": false
+            }
+          ],
+          "bought_relics": [],
+          "card_choices": [],
+          "cards_gained": [
+            "CARD.FEED"
+          ],
+          "cards_removed": [],
+          "cards_transformed": [],
+          "damage_taken": 0,
+          "event_choices": [
+            "ARCANE_SCROLL.title"
+          ],
+          "gold": 99,
+          "gold_gained": 0,
+          "gold_lost": 0,
+          "gold_spent": 0,
+          "hp": 80,
+          "hp_healed": 80,
+          "max_hp": 80,
+          "max_hp_gained": 0,
+          "max_hp_lost": 0,
+          "player": 1,
+          "potion_choices": [],
+          "potions_used": [],
+          "relic_choices": [
+            {
+              "id": "RELIC.ARCANE_SCROLL",
+              "picked": true
+            }
+          ],
+          "rest_site_choices": [],
+          "upgraded_cards": []
+        }
+      ],
+      "rooms": [
+        {
+          "id": "EVENT.NEOW",
+          "monsters": [],
+          "turns": 0,
+          "type": "event"
+        }
+      ],
+      "type": "ancient"
+    }
+  ],
+  "game": "slay-the-spire-2",
+  "game_mode": "standard",
+  "map": {
+    "boss": {
+      "children": [],
+      "col": 3,
+      "row": 16,
+      "type": "boss"
+    },
+    "height": 16,
+    "nodes": [
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 3
+          }
+        ],
+        "col": 0,
+        "row": 2,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 0,
+            "row": 7
+          }
+        ],
+        "col": 0,
+        "row": 6,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 8
+          }
+        ],
+        "col": 0,
+        "row": 7,
+        "type": "elite"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 2
+          },
+          {
+            "col": 0,
+            "row": 2
+          }
+        ],
+        "col": 1,
+        "row": 1,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 3
+          }
+        ],
+        "col": 1,
+        "row": 2,
+        "type": "shop"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 4
+          }
+        ],
+        "col": 1,
+        "row": 3,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 6
+          },
+          {
+            "col": 0,
+            "row": 6
+          }
+        ],
+        "col": 1,
+        "row": 5,
+        "type": "shop"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 7
+          }
+        ],
+        "col": 1,
+        "row": 6,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 1,
+            "row": 8
+          }
+        ],
+        "col": 1,
+        "row": 7,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 9
+          },
+          {
+            "col": 1,
+            "row": 9
+          }
+        ],
+        "col": 1,
+        "row": 8,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 10
+          }
+        ],
+        "col": 1,
+        "row": 9,
+        "type": "treasure"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 3
+          }
+        ],
+        "col": 2,
+        "row": 2,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 4
+          }
+        ],
+        "col": 2,
+        "row": 3,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 5
+          },
+          {
+            "col": 1,
+            "row": 5
+          }
+        ],
+        "col": 2,
+        "row": 4,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 7
+          }
+        ],
+        "col": 2,
+        "row": 6,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 8
+          }
+        ],
+        "col": 2,
+        "row": 7,
+        "type": "elite"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 9
+          }
+        ],
+        "col": 2,
+        "row": 8,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 10
+          }
+        ],
+        "col": 2,
+        "row": 9,
+        "type": "treasure"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 11
+          }
+        ],
+        "col": 2,
+        "row": 10,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 12
+          }
+        ],
+        "col": 2,
+        "row": 11,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 13
+          }
+        ],
+        "col": 2,
+        "row": 12,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 14
+          }
+        ],
+        "col": 2,
+        "row": 13,
+        "type": "elite"
+      },
+      {
+        "children": [
+          {
+            "col": 2,
+            "row": 2
+          }
+        ],
+        "col": 3,
+        "row": 1,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 6
+          },
+          {
+            "col": 2,
+            "row": 6
+          },
+          {
+            "col": 3,
+            "row": 6
+          }
+        ],
+        "col": 3,
+        "row": 5,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 7
+          }
+        ],
+        "col": 3,
+        "row": 6,
+        "type": "elite"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 10
+          }
+        ],
+        "col": 3,
+        "row": 9,
+        "type": "treasure"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 11
+          }
+        ],
+        "col": 3,
+        "row": 10,
+        "type": "elite"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 13
+          },
+          {
+            "col": 4,
+            "row": 13
+          }
+        ],
+        "col": 3,
+        "row": 12,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 14
+          }
+        ],
+        "col": 3,
+        "row": 13,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 15
+          }
+        ],
+        "col": 3,
+        "row": 14,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 2
+          }
+        ],
+        "col": 4,
+        "row": 1,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 3
+          }
+        ],
+        "col": 4,
+        "row": 2,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 4
+          }
+        ],
+        "col": 4,
+        "row": 3,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 5
+          }
+        ],
+        "col": 4,
+        "row": 4,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 7
+          }
+        ],
+        "col": 4,
+        "row": 6,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 8
+          }
+        ],
+        "col": 4,
+        "row": 7,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 9
+          }
+        ],
+        "col": 4,
+        "row": 8,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 10
+          }
+        ],
+        "col": 4,
+        "row": 9,
+        "type": "treasure"
+      },
+      {
+        "children": [
+          {
+            "col": 5,
+            "row": 11
+          }
+        ],
+        "col": 4,
+        "row": 10,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 12
+          },
+          {
+            "col": 4,
+            "row": 12
+          }
+        ],
+        "col": 4,
+        "row": 11,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 13
+          }
+        ],
+        "col": 4,
+        "row": 12,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 14
+          },
+          {
+            "col": 3,
+            "row": 14
+          }
+        ],
+        "col": 4,
+        "row": 13,
+        "type": "shop"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 15
+          }
+        ],
+        "col": 4,
+        "row": 14,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 16
+          }
+        ],
+        "col": 4,
+        "row": 15,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 4,
+            "row": 9
+          }
+        ],
+        "col": 5,
+        "row": 8,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 12
+          }
+        ],
+        "col": 5,
+        "row": 11,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 2
+          }
+        ],
+        "col": 6,
+        "row": 1,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 3
+          }
+        ],
+        "col": 6,
+        "row": 2,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 4
+          }
+        ],
+        "col": 6,
+        "row": 3,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 5
+          }
+        ],
+        "col": 6,
+        "row": 4,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 6
+          }
+        ],
+        "col": 6,
+        "row": 5,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 7
+          }
+        ],
+        "col": 6,
+        "row": 6,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 5,
+            "row": 8
+          },
+          {
+            "col": 6,
+            "row": 8
+          }
+        ],
+        "col": 6,
+        "row": 7,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 9
+          }
+        ],
+        "col": 6,
+        "row": 8,
+        "type": "monster"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 10
+          }
+        ],
+        "col": 6,
+        "row": 9,
+        "type": "treasure"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 11
+          }
+        ],
+        "col": 6,
+        "row": 10,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 12
+          }
+        ],
+        "col": 6,
+        "row": 11,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 13
+          }
+        ],
+        "col": 6,
+        "row": 12,
+        "type": "rest_site"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 14
+          }
+        ],
+        "col": 6,
+        "row": 13,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 6,
+            "row": 15
+          }
+        ],
+        "col": 6,
+        "row": 14,
+        "type": "unknown"
+      },
+      {
+        "children": [
+          {
+            "col": 3,
+            "row": 16
+          }
+        ],
+        "col": 6,
+        "row": 15,
+        "type": "rest_site"
+      }
+    ],
+    "start": {
+      "children": [
+        {
+          "col": 1,
+          "row": 1
+        },
+        {
+          "col": 3,
+          "row": 1
+        },
+        {
+          "col": 4,
+          "row": 1
+        },
+        {
+          "col": 6,
+          "row": 1
+        }
+      ],
+      "col": 3,
+      "row": 0,
+      "type": "ancient"
+    },
+    "visited": [
+      {
+        "col": 3,
+        "row": 0
+      },
+      {
+        "col": 3,
+        "row": 1
+      }
+    ],
+    "width": 7
+  },
+  "players": [
+    {
+      "character": "CHARACTER.IRONCLAD",
+      "deck": [
+        {
+          "id": "CARD.STRIKE_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.STRIKE_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.STRIKE_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.STRIKE_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.STRIKE_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.DEFEND_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.DEFEND_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.DEFEND_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.DEFEND_IRONCLAD",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.BASH",
+          "upgrades": 0
+        },
+        {
+          "id": "CARD.FEED",
+          "upgrades": 0
+        }
+      ],
+      "gold": 99,
+      "hp": 80,
+      "max_energy": 3,
+      "max_hp": 80,
+      "player": 1,
+      "potion_slots": 3,
+      "relics": [
+        "RELIC.BURNING_BLOOD",
+        "RELIC.ARCANE_SCROLL"
+      ]
+    }
+  ],
+  "saved_at": 1789244273,
+  "status": "ok"
+}
