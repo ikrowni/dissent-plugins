@@ -35,6 +35,12 @@ describe('packImages', () => {
     expect(() => packImages([img('HUGE', 101)], { maxBytes: 100 })).toThrow(/HUGE/);
   });
 
+  // 🔴 Found 2026-09-13: a conversion that failed left an empty cached file, which packed as a
+  // zero-length entry. Reading it returned the NEXT image's bytes — a valid-looking header.
+  it('🔴 refuses an empty image, naming it', () => {
+    expect(() => packImages([img('A', 3), img('EMPTY', 0)], { maxBytes: 100 })).toThrow(/EMPTY/);
+  });
+
   it('refuses a duplicate id', () => {
     expect(() => packImages([img('A', 1), img('A', 1)], { maxBytes: 100 })).toThrow(/duplicate.*A/i);
   });

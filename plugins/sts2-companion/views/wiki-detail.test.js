@@ -24,6 +24,8 @@ describe('a card page', () => {
     el.querySelector('[data-act="upgrade"]').click();
     await new Promise((r) => setTimeout(r, 0));
     expect(text()).toContain('10');
+    // No upgraded images ship (the 16 MB plugin cap), so the base art is marked instead.
+    expect(el.querySelector('.card-art').classList.contains('upgraded')).toBe(true);
   });
 
   it('links game terms to their pages', async () => {

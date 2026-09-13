@@ -31,6 +31,8 @@ export function packImages(images, { maxBytes = MAX_PACK_BYTES } = {}) {
 
   for (const { id, group, bytes } of images) {
     if (index[id]) throw new Error(`duplicate image id ${id}`);
+    // An empty entry reads as the NEXT image's bytes: a broken image that looks valid.
+    if (bytes.length === 0) throw new Error(`image ${id} is empty`);
     if (bytes.length > maxBytes) throw new Error(`image ${id} is ${bytes.length} bytes, over the ${maxBytes} pack cap`);
     let cur = open.get(group);
     if (cur && cur.size + bytes.length > maxBytes) { close(group); cur = undefined; }

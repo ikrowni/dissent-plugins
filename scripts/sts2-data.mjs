@@ -15,11 +15,11 @@
  * REFUSES — exits 1, writing nothing into the plugin — when:
  *   - any pack or data file would exceed 2 MB (the node's per-resource cap)
  *   - the plugin would exceed 256 files (the node's resource-count cap)
+ *   - the plugin's data + art would exceed 16 MB in total (the node's resource-total cap)
  *   - any card, relic, potion, power or monster has no downloadable image at all
- *     (an UPGRADED card image is optional: reported as a warning, never silently dropped)
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { normalize, imageJobs } from './sts2/normalize.mjs';
@@ -30,6 +30,9 @@ const CACHE = join(ROOT, 'scripts/sts2/.cache');
 const PLUGIN = join(ROOT, 'plugins/sts2-companion');
 const MAX_FILE = 2 * 1024 * 1024;
 const MAX_FILES = 256;
+// The node's maxResourceTotal. Kept below it so the plugin's own code still fits.
+const MAX_TOTAL = 16 * 1024 * 1024;
+const BUDGET_FOR_BUNDLE = 14 * 1024 * 1024;
 const refresh = process.argv.includes('--refresh');
 
 mkdirSync(join(CACHE, 'img'), { recursive: true });
@@ -44,24 +47,30 @@ async function pace() {
   if (at > now) await new Promise((r) => setTimeout(r, at - now));
 }
 
+/** A cache entry counts only if it is non-empty. A failed write or conversion leaves an empty
+ *  file, and trusting it packed 18 zero-length cards on 2026-09-13. */
+const usable = (p) => existsSync(p) && statSync(p).size > 0;
+
 async function download(url, dest) {
   await pace();
   const res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'dissent-sts2-companion-build' } });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  writeFileSync(dest, buf);
+  if (buf.length === 0) throw new Error(`empty response ${url}`);
+  writeFileSync(`${dest}.part`, buf);
+  renameSync(`${dest}.part`, dest);
   return buf;
 }
 
 async function cachedJson(name, url) {
   const p = join(CACHE, name);
-  if (refresh || !existsSync(p)) await download(url, p);
+  if (refresh || !usable(p)) await download(url, p);
   return JSON.parse(readFileSync(p, 'utf8'));
 }
 
 async function main() {
   const zip = join(CACHE, 'export-eng.zip');
-  if (refresh || !existsSync(zip)) await download('https://spire-codex.com/api/exports/eng', zip);
+  if (refresh || !usable(zip)) await download('https://spire-codex.com/api/exports/eng', zip);
   const fromZip = (f) => JSON.parse(execFileSync('unzip', ['-p', zip, f], { maxBuffer: 64 * 1024 * 1024 }));
 
   const data = normalize({
@@ -93,21 +102,23 @@ async function main() {
   const queue = [...jobs];
   async function worker() {
     for (let job = queue.shift(); job; job = queue.shift()) {
-      const key = createHash('sha1').update(job.url + (job.resize ?? '')).digest('hex');
-      const cached = join(CACHE, 'img', `${key}.webp`);
+      // Originals and resized variants are cached SEPARATELY, so changing a size re-derives
+      // from disk instead of re-downloading from Spire Codex.
+      const srcKey = createHash('sha1').update(job.url).digest('hex');
+      // ⚠️ Keep the real extension: ImageMagick reads `.raw` as camera RAW (DNG) and fails.
+      const original = join(CACHE, 'img', `${srcKey}.webp`);
+      const cached = join(CACHE, 'img', `${createHash('sha1').update(`${job.url}|${job.resize ?? ''}`).digest('hex')}.variant.webp`);
       try {
-        if (!existsSync(cached)) {
-          // ⚠️ NOT `.raw`: ImageMagick reads that extension as camera RAW (DNG) and every
-          // resize fails. Keep the real image extension so format detection is by content.
-          const raw = join(CACHE, 'img', `${key}.src.webp`);
-          await download(job.url, raw);
-          if (job.resize) {
-            execFileSync('convert', [raw, '-resize', `${job.resize}x${job.resize}>`, '-quality', '80', `webp:${cached}`]);
-            rmSync(raw);
-          } else {
-            writeFileSync(cached, readFileSync(raw));
-            rmSync(raw);
-          }
+        if (!usable(original)) await download(job.url, original);
+        if (!usable(cached)) {
+          const part = `${cached}.part.webp`;
+          // `[0]`: some cards ("ancient") are ANIMATED WebP, and ImageMagick 6 cannot write a
+          // resized animation ("Invalid frame dimensions"). Frame 0 is the complete card, and
+          // the plugin animates nothing anyway (the overlay's frame-budget rule).
+          if (job.resize) execFileSync('convert', [`${original}[0]`, '-resize', job.resize, '-quality', '78', `webp:${part}`]);
+          else writeFileSync(part, readFileSync(original));
+          if (statSync(part).size === 0) throw new Error('conversion produced an empty file');
+          renameSync(part, cached);
         }
         images.push({ ...job, bytes: new Uint8Array(readFileSync(cached)) });
       } catch (e) {
@@ -140,6 +151,11 @@ async function main() {
   files.set('art/index.json', Buffer.from(JSON.stringify(index)));
   for (const p of packs) files.set(`art/${p.name}`, Buffer.from(p.bytes));
 
+  const total = [...files.values()].reduce((n, b) => n + b.length, 0);
+  if (total > BUDGET_FOR_BUNDLE) {
+    console.error(`sts2-data: REFUSING — data + art is ${(total / 1e6).toFixed(1)} MB; the node caps a plugin at ${MAX_TOTAL / 1048576} MB in total and ${BUDGET_FOR_BUNDLE / 1048576} MB is left for data + art`);
+    process.exit(1);
+  }
   const tooBig = [...files].filter(([, b]) => b.length > MAX_FILE).map(([n, b]) => `${n} (${b.length})`);
   if (tooBig.length) {
     console.error(`sts2-data: REFUSING — over the node's 2 MB per-file cap:\n  ${tooBig.join('\n  ')}`);
@@ -159,7 +175,6 @@ async function main() {
     mkdirSync(dirname(join(PLUGIN, name)), { recursive: true });
     writeFileSync(join(PLUGIN, name), bytes);
   }
-  const total = [...files.values()].reduce((n, b) => n + b.length, 0);
   console.log(`sts2-data: game ${data.meta.gameVersion} · ${data.cards.length} cards · ${images.length} images in ${packs.length} packs · ${(total / 1e6).toFixed(1)} MB · ${files.size} files`);
 }
 

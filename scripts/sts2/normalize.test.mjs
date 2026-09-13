@@ -39,21 +39,20 @@ describe('normalize', () => {
 describe('imageJobs', () => {
   const jobs = imageJobs(normalize(S));
 
-  it('asks for base and upgraded card art, and resizes only monsters', () => {
-    const ids = jobs.map((j) => j.id);
-    expect(ids).toContain('card:BASH');
-    expect(ids).toContain('card-upg:BASH');
-    expect(ids).toContain('relic:AKABEKO');
-    expect(ids).toContain('monster:AEONGLASS');
-    expect(jobs.find((j) => j.id === 'monster:AEONGLASS').resize).toBe(480);
-    expect(jobs.find((j) => j.id === 'card:BASH').resize).toBeUndefined();
+  // 🔴 The node caps a plugin's declared resources at 16 MB in TOTAL (registry_integrity.go
+  // maxResourceTotal — a mirroring-node security bound). Full-size art came to 49.6 MB.
+  it('🔴 sizes every image to fit the 16 MB plugin budget, never upscaling', () => {
+    const geom = (id) => jobs.find((j) => j.id === id).resize;
+    expect(geom('card:BASH')).toBe('300x>');
+    expect(geom('monster:AEONGLASS')).toBe('320x320>');
+    expect(geom('relic:AKABEKO')).toBe('160x160>');
+    for (const j of jobs) expect(j.resize, j.id).toMatch(/>$/);
   });
 
-  // ⚠️ Spire Codex lists upgraded URLs that 404 (WITHER, 2026-09-13). A missing UPGRADED image
-  // must not fail the build: the Upgraded toggle keeps the base art.
-  it('marks upgraded card art optional, and base art required', () => {
-    expect(jobs.find((j) => j.id === 'card-upg:BASH').optional).toBe(true);
-    expect(jobs.find((j) => j.id === 'card:BASH').optional).toBeUndefined();
+  // Upgraded images would double the card budget (~6 MB) and put the plugin over the cap.
+  // The view shows upgraded TEXT on the base art; a larger cap would only need a rebuild.
+  it('ships no separate upgraded card images', () => {
+    expect(jobs.some((j) => j.id.startsWith('card-upg:'))).toBe(false);
   });
 
   it('resolves relative image URLs against spire-codex.com', () => {
@@ -66,6 +65,5 @@ describe('imageJobs', () => {
     const job = imageJobs(n).find((j) => j.id === 'card:BASH');
     expect(job.url).toBe('https://spire-codex.com/static/images/cards/bash.webp');
     expect(job.fallback).toBe(true);
-    expect(imageJobs(n).some((j) => j.id === 'card-upg:BASH')).toBe(false);
   });
 });

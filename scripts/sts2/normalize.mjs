@@ -86,21 +86,27 @@ export function normalize(src) {
   };
 }
 
-/** Every image the plugin needs, as download jobs. `resize` is a max edge in px. */
+/**
+ * Every image the plugin needs, as download jobs. `resize` is an ImageMagick geometry that
+ * only ever SHRINKS (`>`).
+ *
+ * 🔴 SIZED TO THE NODE'S 16 MB PLUGIN TOTAL (registry_integrity.go maxResourceTotal — it bounds
+ * what a mirroring node fetches, so raising it is a security decision, not a build tweak).
+ * Full-size art measured 49.6 MB on 2026-09-13. Cards at 300 px wide stay legible (~11 KB).
+ *
+ * ⚠️ NO UPGRADED CARD IMAGES: they would add ~6 MB and cross the cap. The view shows the
+ * upgraded text on the base art, and already falls back when a `card-upg:` image is absent —
+ * so if the cap is ever raised, re-adding them is this function and a rebuild, nothing else.
+ */
 export function imageJobs(data) {
   const jobs = [];
   for (const c of data.cards) {
-    if (c.image) {
-      jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.image });
-      // Optional: an upgraded image missing upstream falls back to the base art in the view.
-      if (c.imageUpgraded) jobs.push({ id: `card-upg:${c.id}`, group: 'cards-upg', url: c.imageUpgraded, optional: true });
-    } else if (c.portrait) {
-      jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.portrait, fallback: true });
-    }
+    if (c.image) jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.image, resize: '300x>' });
+    else if (c.portrait) jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.portrait, fallback: true, resize: '300x>' });
   }
-  for (const r of data.relics) if (r.image) jobs.push({ id: `relic:${r.id}`, group: 'relics', url: r.image });
-  for (const p of data.potions) if (p.image) jobs.push({ id: `potion:${p.id}`, group: 'potions', url: p.image });
-  for (const p of data.powers) if (p.image) jobs.push({ id: `power:${p.id}`, group: 'powers', url: p.image });
-  for (const m of data.monsters) if (m.image) jobs.push({ id: `monster:${m.id}`, group: 'monsters', url: m.image, resize: 480 });
+  for (const r of data.relics) if (r.image) jobs.push({ id: `relic:${r.id}`, group: 'relics', url: r.image, resize: '160x160>' });
+  for (const p of data.potions) if (p.image) jobs.push({ id: `potion:${p.id}`, group: 'potions', url: p.image, resize: '160x160>' });
+  for (const p of data.powers) if (p.image) jobs.push({ id: `power:${p.id}`, group: 'powers', url: p.image, resize: '96x96>' });
+  for (const m of data.monsters) if (m.image) jobs.push({ id: `monster:${m.id}`, group: 'monsters', url: m.image, resize: '320x320>' });
   return jobs;
 }

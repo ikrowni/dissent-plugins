@@ -80,7 +80,7 @@ export async function renderDetail(ref, ctx) {
   const setText = (s) => { clear(text).append(renderGameText(s)); linkTerms(text, ctx); };
   setText(item.description);
 
-  const side = h('div', {});
+  const side = h('div', { class: 'card-art' });
   const main = h('div', {}, h('h1', {}, item.name), bookmark);
 
   if (ref.kind === 'card') {
@@ -95,6 +95,9 @@ export async function renderDetail(ref, ctx) {
         upgraded = !upgraded;
         toggle.setAttribute('aria-pressed', String(upgraded));
         setText(upgraded ? item.upgradeDescription : item.description);
+        // ⚠️ No upgraded images ship — they would cross the node's 16 MB plugin cap — so the
+        // base art is badged. If a `card-upg:` image is ever bundled, it is used instead.
+        side.classList.toggle('upgraded', upgraded);
         const url = await ctx.art.url(`${upgraded ? 'card-upg' : 'card'}:${item.id}`);
         if (url && side.firstChild?.tagName === 'IMG') side.firstChild.src = url;
       });

@@ -29,6 +29,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 
 .detail { display: grid; grid-template-columns: minmax(200px, 320px) 1fr; gap: 24px; padding: 16px; }
 .detail img { width: 100%; border-radius: 10px; }
+.card-art { position: relative; align-self: start; }
+.card-art.upgraded::after { content: "Upgraded"; position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--green); color: #07140a; font-weight: 700; font-size: 12px; }
 .detail h1 { margin: 0 0 4px; font-size: 22px; }
 .detail .sub { color: var(--muted); margin-bottom: 12px; }
 .detail .row { margin: 10px 0; }
