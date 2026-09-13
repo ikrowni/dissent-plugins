@@ -61,7 +61,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "52d5318218aed3290efb35b6f662329d329da5aaa43b50a4c5f03829c6e52f87"
+      "sha256": "81967acf06fb9559512cdb5425c1a60262c7498f5c0e30d501356ef9fbe14467"
     },
     {
       "url": "core/archetypes.js",
@@ -72,6 +72,10 @@
       "sha256": "9e6d2e78f8b80d2b4209d1c09ee4843de909e349c89a7406fb190c6f301aec91"
     },
     {
+      "url": "core/classify.js",
+      "sha256": "70c2ff5c92691e98cf4772523dedec79d4759a3a3c9c09cc09171ed463854fca"
+    },
+    {
       "url": "core/data.js",
       "sha256": "cc8c19119a409274c505ceae9dfec9af78acb12cd342a0ad5fd7be6b6426b9fc"
     },
@@ -80,12 +84,24 @@
       "sha256": "2f94b9af9bec5f6ff3e28621789d081a252253c4ee418f1bf231a2f611e8a46c"
     },
     {
+      "url": "core/digest.js",
+      "sha256": "edc3ee299d0e8b28ee739f0aad25de2b3cf00243a83ca929a2a4366b09c348d1"
+    },
+    {
+      "url": "core/digestStore.js",
+      "sha256": "572dd268c7ced132399a9d37dd0f8ec54f8dfa28c27e0039154a0bc7f7a0edd9"
+    },
+    {
       "url": "core/dom.js",
       "sha256": "54e3c87f60c47fa171a477d0ab601f173681a212da7efc63aaf4f477584b8e1a"
     },
     {
       "url": "core/host.js",
-      "sha256": "8f1279a942b2fa34c6d5a00aafd930b6e55668e11c1ed8618e44c8b7e1227aa8"
+      "sha256": "ca9d57443be7bd8ba7c6646b937330b0c21a7e8f899a6a305dcf32ac2c749803"
+    },
+    {
+      "url": "core/insights.js",
+      "sha256": "02d4b7d73e2b0b7ec5288b234a14ebf7ceb66a682d3ec0f23e4a998e5ca7f70b"
     },
     {
       "url": "core/markup.js",
@@ -106,6 +122,10 @@
     {
       "url": "core/search.js",
       "sha256": "55ad7a668c43ceeaea5f3eb9dad4ba3caa1f82985edd224f5cc57b86721f65d9"
+    },
+    {
+      "url": "core/wilson.js",
+      "sha256": "6209df4db9c1aaf7ed45fc32fc96af47c844d7ae9f26fa95bee48260d328a67e"
     },
     {
       "url": "data/cards.json",
@@ -152,6 +172,10 @@
       "sha256": "34c709b317341ebd7b3261403256eebd96d1de1a7d993ec1694596b646aa4ba4"
     },
     {
+      "url": "styles/insights.css",
+      "sha256": "d650ae613218bf46a3337478a7334b31ba92fe748d0e49158276db08a7ad1675"
+    },
+    {
       "url": "styles/runs.css",
       "sha256": "f7d66eda33e12e1832f8295631a92567fef7993adb0105e132b0cb84b30ba68e"
     },
@@ -174,6 +198,10 @@
     {
       "url": "views/history.js",
       "sha256": "b49d3a96f9554f7fa64438258225bf398b4bd569eff8a5fb5dba067f6e78b86a"
+    },
+    {
+      "url": "views/insights.js",
+      "sha256": "ac01699314218c8d8daef7cdff8d38bc55848a5149109ceda0b1caeda695b09a"
     },
     {
       "url": "views/run-detail.js",
