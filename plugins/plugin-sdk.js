@@ -273,6 +273,12 @@ export async function storageLocalDelete(key) {
   return request('storage:localDelete', { key });
 }
 
+/** net:direct — HTTPS from the user's computer to approved domains. Desktop only.
+ *  Answers { status, body, content_type, etag, truncated }; rejects with a "net:direct: …" reason. */
+export async function netFetch(url, { method = 'GET', body, headers } = {}) {
+  return request('net.fetch', { url, method, body, headers }, 20000);
+}
+
 export async function storageGetCompanion(registryId, key, scope = 'server') {
   try { const r = await request('storage:get-companion', { registryId, key, scope }); return r?.value ?? null; } catch { return null; }
 }
