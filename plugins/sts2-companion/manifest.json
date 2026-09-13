@@ -1,8 +1,8 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.2.0",
-  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games.",
+  "version": "0.3.0",
+  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
   "context": [
@@ -11,7 +11,8 @@
   "url": "https://plugins.dissent.chat/plugins/sts2-companion/plugin.html",
   "declared_permissions": [
     "storage:user",
-    "game:saves"
+    "game:saves",
+    "overlay:context"
   ],
   "allowed_fetch_domains": [],
   "config_schema": null,
@@ -181,5 +182,32 @@
       "url": "views/wiki.js",
       "sha256": "853541159da16e41efa3e6f5370b6b29eeba225ce98c3c3ab1596ce763ce2a62"
     }
-  ]
+  ],
+  "overlay": {
+    "games": [
+      "slay-the-spire-2"
+    ],
+    "surfaces": [
+      {
+        "id": "wiki",
+        "title": "Wiki",
+        "layer": "panel",
+        "anchor": "right",
+        "size": [
+          440,
+          760
+        ]
+      },
+      {
+        "id": "deck",
+        "title": "Deck",
+        "layer": "panel",
+        "anchor": "left",
+        "size": [
+          460,
+          760
+        ]
+      }
+    ]
+  }
 }
