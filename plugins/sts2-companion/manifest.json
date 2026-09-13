@@ -1,8 +1,8 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.1.0",
-  "description": "A Slay the Spire 2 wiki — every card, relic, potion, power and enemy with real art, search, nested tooltips and move patterns. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games.",
+  "version": "0.2.0",
+  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games.",
   "author": "Dissent Project",
   "tier": 2,
   "context": [

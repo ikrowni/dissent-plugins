@@ -16,6 +16,7 @@
 //   node scripts/plugin-harness.mjs nfl-hub               # sweep every view
 //   node scripts/plugin-harness.mjs nfl-hub --shot out.png --view standings
 import { chromium } from 'playwright';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const plugin = process.argv[2] ?? 'nfl-hub';
 const arg = (n, d = null) => {
@@ -26,7 +27,7 @@ const APP = 'https://app.dissent.chat';
 const PLUGIN_URL = `https://plugins.dissent.chat/plugins/${plugin}/plugin.html`;
 
 /** The host half: injected into the PARENT page, replies over postMessage. */
-function installHost({ pluginUrl, csp }) {
+function installHost({ pluginUrl, csp, saves }) {
   const store = new Map();
 
   window.addEventListener('message', async (e) => {
@@ -55,7 +56,9 @@ function installHost({ pluginUrl, csp }) {
           reply(true, r);
           return;
         }
-        case 'storage:get': reply(true, store.get(msg.params.key) ?? null); return;
+        // ⚠️ The real host answers { value } (dissent-core personal_plugin_data.go); the SDK reads
+        // `.value`. Replying the bare value made every stored read look empty.
+        case 'storage:get': reply(true, store.has(msg.params.key) ? { value: store.get(msg.params.key) } : null); return;
         case 'storage:set': store.set(msg.params.key, msg.params.value); reply(true, true); return;
         case 'storage:delete': store.delete(msg.params.key); reply(true, true); return;
         case 'identity:get': reply(true, { id: 'harness-user', displayName: 'Harness' }); return;
@@ -63,6 +66,11 @@ function installHost({ pluginUrl, csp }) {
         // ⚠️ Refused rather than faked: a module call needs a real install and a
         // verified session, and a stubbed answer would test the stub.
         case 'module:invoke': reply(false, null, 'module:invoke unavailable in the harness'); return;
+        // Real projection snapshots (--saves), or what web answers without them.
+        case 'game.saves.currentRun': reply(true, saves ? saves['current-run-after'] : { status: 'desktop_only' }); return;
+        case 'game.saves.runs': reply(true, saves ? saves.runs : { status: 'desktop_only' }); return;
+        case 'game.saves.run': reply(true, !saves ? { status: 'desktop_only' } : saves[`run-${msg.params.id}`] ?? { status: 'not_found' }); return;
+        case 'game.saves.profileStats': reply(true, saves ? saves['profile-stats'] : { status: 'desktop_only' }); return;
         default: reply(false, null, `unknown action: ${msg.action}`); return;
       }
     } catch (err) {
@@ -130,25 +138,37 @@ const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'no
   + `connect-src ${assetOrigins} https://node.dissent.chat; media-src blob: ${assetOrigins}; `
   + `frame-src 'none'; form-action 'none'; base-uri ${assetOrigins}">`;
 
-await page.evaluate(installHost, { pluginUrl: PLUGIN_URL, csp });
+// --saves <dir>: answer game.saves.* from REAL projection snapshots (scripts/sts2/save-snapshots.mjs).
+// Without it the harness answers as web does: desktop_only.
+const savesDir = arg('--saves');
+const saves = savesDir
+  ? Object.fromEntries(readdirSync(savesDir).filter((f) => f.endsWith('.json') && f !== 'provenance.json')
+    .map((f) => [f.replace(/\.json$/, ''), JSON.parse(readFileSync(`${savesDir}/${f}`, 'utf8'))]))
+  : null;
+
+await page.evaluate(installHost, { pluginUrl: PLUGIN_URL, csp, saves });
 const frame = await (await page.waitForSelector('#pf')).contentFrame();
 await page.waitForTimeout(6000);
 
 const only = arg('--view');
-const views = only ? [only] : ['league', 'game', 'standings', 'leaders', 'news', 'fantasy', 'myleague'];
+// --click 'sel|sel|…' drives any plugin; --root names the element whose content is measured.
+const rootSel = arg('--root', '#main');
+const clicks = arg('--click');
+const steps = clicks ? clicks.split('|')
+  : (only ? [only] : ['league', 'game', 'standings', 'leaders', 'news', 'fantasy', 'myleague']).map((v) => `[data-view="${v}"]`);
 
-console.log(`\n${plugin} — ${views.length} view(s)\n`);
-for (const v of views) {
+console.log(`\n${plugin} — ${steps.length} step(s)\n`);
+for (const step of steps) {
   const before = errors.length;
-  await frame.locator(`[data-view="${v}"]`).click().catch(() => {});
+  await frame.locator(step).first().click({ timeout: 5000 }).catch(() => console.log(`  ⚠ NOT FOUND ${step}`));
   await page.waitForTimeout(5000);
-  const text = (await frame.locator('#main').textContent().catch(() => '')) ?? '';
+  const text = (await frame.locator(rootSel).textContent().catch(() => '')) ?? '';
   const chars = text.trim().length;
-  const imgs = await frame.locator('#main img').count().catch(() => 0);
-  const broken = await frame.evaluate(() => [...document.querySelectorAll('#main img')]
-    .filter((i) => i.complete && i.naturalWidth === 0).length).catch(() => 0);
+  const imgs = await frame.locator(`${rootSel} img`).count().catch(() => 0);
+  const broken = await frame.evaluate((sel) => [...document.querySelectorAll(`${sel} img`)]
+    .filter((i) => i.complete && i.naturalWidth === 0).length, rootSel).catch(() => 0);
   const flag = chars < 60 ? ' ⚠ EMPTY' : '';
-  console.log(`  ${v.padEnd(10)} chars=${String(chars).padStart(6)}  imgs=${String(imgs).padStart(3)}`
+  console.log(`  ${step.slice(0, 34).padEnd(34)} chars=${String(chars).padStart(6)}  imgs=${String(imgs).padStart(3)}`
     + `  brokenImgs=${broken}  newErrors=${errors.length - before}${flag}`);
 }
 

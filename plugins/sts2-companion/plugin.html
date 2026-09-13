@@ -7,6 +7,7 @@
   <!-- No ?v= cache-busters: /plugins/** is served no-store, and a buster on a module script
        makes a second module instance (see nfl-hub/plugin.html). -->
   <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/runs.css">
 </head>
 <body>
   <div id="app">
@@ -14,6 +15,8 @@
       <span class="brand">STS2 Companion</span>
       <nav id="sections" aria-label="Sections">
         <button type="button" data-section="wiki" aria-current="true">Wiki</button>
+        <button type="button" data-section="deck" aria-current="false">Deck</button>
+        <button type="button" data-section="history" aria-current="false">Run History</button>
       </nav>
     </header>
     <main id="view" aria-live="polite"></main>

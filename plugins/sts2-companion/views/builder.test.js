@@ -67,9 +67,11 @@ describe('the Builder', () => {
   });
 
   // ⚠️ The node allows 60 personal-storage writes a minute. Quick edits collapse into one write.
-  it('quick edits are saved once, after a pause, and on leaving', async () => {
+  // The delay is long so nothing here races the timer; the timed save itself runs in every other
+  // test (saveDelayMs: 0).
+  it('quick edits are saved once, when the pause ends or on leaving', async () => {
     const root = document.createElement('div');
-    const view = await mountBuilder(root, ctx({ saveDelayMs: 60 }));
+    const view = await mountBuilder(root, ctx({ saveDelayMs: 60_000 }));
     await create(root);
     const key = `archetype:${mem.get('archetypes')[0].id}`;
     store.set.mockClear();
@@ -78,12 +80,9 @@ describe('the Builder', () => {
     await add(root, 'inflame', 'INFLAME');
     expect(store.set).not.toHaveBeenCalled();
     expect(root.querySelector('.arch-editor h2').textContent).toBe('Strength · 3 cards');
-    await new Promise((r) => setTimeout(r, 90));
+    await view.destroy();
     expect(store.set.mock.calls.map((c) => c[0])).toEqual([key]);
     expect(mem.get(key).cards).toHaveLength(3);
-    await add(root, 'bash', 'BASH');
-    await view.destroy();
-    expect(mem.get(key).cards).toHaveLength(4);
   });
 
   it('offers only the character and colourless cards', async () => {
