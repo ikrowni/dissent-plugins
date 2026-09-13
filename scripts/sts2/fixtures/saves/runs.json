@@ -1,5 +1,6 @@
 {
   "game": "slay-the-spire-2",
+  "next_before": null,
   "runs": [
     {
       "abandoned": false,

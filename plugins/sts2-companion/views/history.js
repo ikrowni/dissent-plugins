@@ -26,17 +26,25 @@ export async function mountHistory(root, ctx) {
   clear(root).append(h('div', { class: 'section' }, h('div', { class: 'wiki-bar' }, tabs), body));
 
   /**
-   * ⚠️ Rust's `runs` takes `limit` ids, THEN drops unreadable files into `skipped`, and has no
-   * cursor past a skipped id. A page with nothing readable returns `runs: []`, which as a cursor
-   * would mean "from the top" — so it ends paging instead of looping.
+   * ⚠️ Rust's `runs` takes `limit` ids, THEN drops unreadable files into `skipped`. Desktop apps from
+   * the contract-draft §3.11 build answer `next_before`, the last id considered, and paging follows it
+   * until null. Older ones do not: then the last run returned is the cursor, and a page with nothing
+   * readable ends paging rather than looping back to the top.
    */
   async function loadPage() {
-    const before = state.runs.at(-1)?.id;
+    // next_before (contract draft §3.11) is the host's cursor past unreadable files; older desktop
+    // apps do not send it, and then the last run returned is the only cursor there is.
+    const before = state.cursor !== undefined ? state.cursor : state.runs.at(-1)?.id;
     const r = await saves('runs', { limit: PAGE, ...(before ? { before } : {}) });
     if (r?.status !== 'ok') { state.failed = r; state.done = true; return; }
     state.runs.push(...r.runs);
     state.skipped += r.skipped ?? 0;
-    state.done = r.runs.length === 0 || r.runs.length + (r.skipped ?? 0) < PAGE;
+    if ('next_before' in r) {
+      state.cursor = r.next_before;
+      state.done = r.next_before === null;
+    } else {
+      state.done = r.runs.length === 0 || r.runs.length + (r.skipped ?? 0) < PAGE;
+    }
   }
 
   async function runRow(s) {
@@ -62,7 +70,11 @@ export async function mountHistory(root, ctx) {
     } else {
       if (!state.runs.length && !state.done) await loadPage();
       if (state.failed) el = statusBlock(state.failed);
-      else if (!state.runs.length) el = h('p', { class: 'empty' }, state.skipped ? 'Your finished runs could not be read.' : 'No finished runs yet.');
+      else if (!state.runs.length) {
+        el = h('div', { class: 'run-list' },
+          h('p', { class: 'empty' }, state.skipped ? 'These runs could not be read — most likely saved by a different game version.' : 'No finished runs yet.'),
+          state.done ? null : h('button', { type: 'button', class: 'chip', dataset: { act: 'more' }, onclick: async () => { await loadPage(); paint(); } }, 'Load older runs'));
+      }
       else {
         el = h('div', { class: 'run-list' },
           await Promise.all(state.runs.map(runRow)),

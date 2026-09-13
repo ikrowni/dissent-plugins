@@ -46,6 +46,40 @@ describe('the run list', () => {
     expect(root.textContent).toMatch(/could not be read/);
   });
 
+  // Contract draft §3.11: a host that answers next_before lets paging continue past a page of
+  // unreadable runs; without it (older desktop apps) an empty page still ends paging.
+  it('follows next_before past a page with nothing readable', async () => {
+    const run = snapshot('runs').runs[0];
+    saves
+      .mockResolvedValueOnce({ status: 'ok', runs: [{ ...run, id: '9000' }], skipped: PAGE - 1, next_before: '8981' })
+      .mockResolvedValueOnce({ status: 'ok', runs: [], skipped: PAGE, next_before: '8961' })
+      .mockResolvedValueOnce({ status: 'ok', runs: [{ ...run, id: '100' }], skipped: 0, next_before: null });
+    const root = document.createElement('div');
+    await mountHistory(root, ctx());
+    await flush();
+    root.querySelector('[data-act="more"]').click();
+    await flush();
+    expect(saves).toHaveBeenLastCalledWith('runs', { limit: PAGE, before: '8981' });
+    root.querySelector('[data-act="more"]').click();
+    await flush();
+    expect(saves).toHaveBeenLastCalledWith('runs', { limit: PAGE, before: '8961' });
+    expect(root.querySelector('[data-run="100"]')).not.toBeNull();
+    expect(root.querySelector('[data-act="more"]')).toBeNull();
+  });
+
+  it('a first page with nothing readable still offers older runs when the host has a cursor', async () => {
+    saves.mockResolvedValueOnce({ status: 'ok', runs: [], skipped: PAGE, next_before: '5000' })
+      .mockResolvedValueOnce({ status: 'ok', runs: [{ ...snapshot('runs').runs[0], id: '42' }], skipped: 0, next_before: null });
+    const root = document.createElement('div');
+    await mountHistory(root, ctx());
+    await flush();
+    expect(root.textContent).toMatch(/could not be read/);
+    root.querySelector('[data-act="more"]').click();
+    await flush();
+    expect(saves).toHaveBeenLastCalledWith('runs', { limit: PAGE, before: '5000' });
+    expect(root.querySelector('[data-run="42"]')).not.toBeNull();
+  });
+
   it('on web, says it needs the desktop app', async () => {
     saves.mockResolvedValue({ status: 'desktop_only' });
     const root = document.createElement('div');
