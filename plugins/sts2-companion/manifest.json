@@ -67,7 +67,7 @@
     },
     {
       "url": "core/chart.js",
-      "sha256": "c6ffdcb9e375224754172c2518dae845d8b28ad83cd9a694eb31bbeddc1d27a4"
+      "sha256": "9e6d2e78f8b80d2b4209d1c09ee4843de909e349c89a7406fb190c6f301aec91"
     },
     {
       "url": "core/data.js",
@@ -143,7 +143,7 @@
     },
     {
       "url": "styles/runs.css",
-      "sha256": "9f32aff3bfebdd592462a4da1f6ef1499ce163389a715b75a4b4ec4645434054"
+      "sha256": "f7d66eda33e12e1832f8295631a92567fef7993adb0105e132b0cb84b30ba68e"
     },
     {
       "url": "views/builder.js",
@@ -167,7 +167,7 @@
     },
     {
       "url": "views/run-detail.js",
-      "sha256": "f99fd69f9b19ae9b2cf6df28481de41d0dee6a9a0abef4a9d4976e29f4609b44"
+      "sha256": "e332e199d61852d7bc862cc7dddded5a6d0d97e744eb9a2dd3c25b5187a2fe02"
     },
     {
       "url": "views/status.js",
