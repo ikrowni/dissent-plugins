@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createData, saveIdToDataId } from './data.js';
+import { createData, saveIdToDataId, humanizeId } from './data.js';
 
 const DATA = new URL('../data/', import.meta.url);
 const load = async (name) => JSON.parse(readFileSync(new URL(`${name}.json`, DATA)));
@@ -45,10 +45,10 @@ describe('the data module over the REAL bundled data', () => {
     'CARD.GRAPPLE': 'absent from 1.3.0',
   };
 
-  it('🔴 maps every card and relic id in the scrubbed save fixtures', async () => {
+  it('🔴 maps every card, relic, potion, encounter, event and monster id in the scrubbed save fixtures', async () => {
     const text = ['current_run_after_first_combat.save', 'finished_coop_loss.run']
       .map((f) => readFileSync(FIXTURES + f, 'utf8')).join('\n');
-    const ids = [...new Set(text.match(/"(CARD|RELIC)\.[A-Z0-9_]+"/g).map((s) => s.slice(1, -1)))];
+    const ids = [...new Set(text.match(/"(CARD|RELIC|POTION|ENCOUNTER|EVENT|MONSTER)\.[A-Z0-9_]+"/g).map((s) => s.slice(1, -1)))];
     const unmapped = [];
     for (const raw of ids) {
       const { kind, id } = saveIdToDataId(raw);
@@ -62,5 +62,30 @@ describe('the data module over the REAL bundled data', () => {
       const { kind, id } = saveIdToDataId(raw);
       expect(await data.get(kind, id), raw).toMatchObject({ unknown: true, id });
     }
+  });
+});
+
+describe('humanizeId', () => {
+  it('turns an id the data has no records for into words', () => {
+    expect(humanizeId('ACT.UNDERDOCKS')).toBe('Underdocks');
+    expect(humanizeId('CHARACTER.IRONCLAD')).toBe('Ironclad');
+    expect(humanizeId('HEAL')).toBe('Heal');
+    expect(humanizeId('THE_FUTURE_OF_POTIONS')).toBe('The Future Of Potions');
+    expect(humanizeId(null)).toBe('');
+  });
+});
+
+describe('data.label', () => {
+  const data = createData({ load });
+  it('names a save id from the data', async () => {
+    expect(await data.label('CARD.BASH')).toEqual({ name: 'Bash', unknown: false });
+    expect((await data.label('ENCOUNTER.NIBBITS_WEAK')).unknown).toBe(false);
+  });
+  // A card removed since this data build still shows, by its raw id, marked unknown.
+  it('keeps the raw id, marked, for an id the data lacks', async () => {
+    expect(await data.label('CARD.GRAPPLE')).toEqual({ name: 'GRAPPLE', unknown: true });
+  });
+  it('humanizes a kind the data has no records of', async () => {
+    expect(await data.label('ACT.UNDERDOCKS')).toEqual({ name: 'Underdocks', unknown: false });
   });
 });

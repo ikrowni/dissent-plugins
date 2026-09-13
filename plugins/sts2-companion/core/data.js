@@ -13,6 +13,13 @@ export function saveIdToDataId(raw) {
   return { kind: KINDS[kind] ? kind : null, id: raw.slice(i + 1) };
 }
 
+/** `ACT.UNDERDOCKS` → `Underdocks`. For ids the bundled data holds no records of (acts, characters, rest choices). */
+export function humanizeId(raw) {
+  if (raw == null) return '';
+  return saveIdToDataId(String(raw)).id.toLowerCase().split('_').filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
 const defaultLoad = async (name) => {
   const r = await fetch(`data/${name}.json`);
   if (!r.ok) throw new Error(`data ${name}: ${r.status}`);
@@ -38,6 +45,13 @@ export function createData({ load = defaultLoad } = {}) {
     async get(kind, id) {
       if (!KINDS[kind]) return unknown(kind, id);
       return (await category(KINDS[kind])).byId.get(id) ?? unknown(kind, id);
+    },
+    /** A save id as something to show. Unknown records keep their raw id and say so. */
+    async label(raw) {
+      const { kind, id } = saveIdToDataId(String(raw ?? ''));
+      if (!kind) return { name: humanizeId(raw), unknown: false };
+      const item = await this.get(kind, id);
+      return { name: item.unknown ? id : item.name, unknown: Boolean(item.unknown) };
     },
     /** Game text names powers ("Vulnerable"); the data keys them by id. */
     async powerByName(name) {
