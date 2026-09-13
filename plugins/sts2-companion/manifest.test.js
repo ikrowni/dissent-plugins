@@ -25,7 +25,9 @@ describe('manifest overlay block', () => {
   });
 
   it('🔴 every surface passes the node’s rules', () => {
-    expect(Object.keys(o).sort()).toEqual(['games', 'surfaces']);
+    // overlay.api: optional at the node (absent = 1); this plugin declares the contract it targets.
+    expect(Object.keys(o).sort()).toEqual(['api', 'games', 'surfaces']);
+    expect(o.api).toBe(1);
     expect(o.surfaces.length).toBeGreaterThanOrEqual(1);
     expect(o.surfaces.length).toBeLessThanOrEqual(8);
     expect(new Set(o.surfaces.map((s) => s.id)).size).toBe(o.surfaces.length);
