@@ -1,0 +1,559 @@
+{
+ "cards": [
+  {
+   "id": "ABRASIVE",
+   "name": "Abrasive",
+   "description": "Gain 1 [gold]Dexterity[/gold].\nGain 4 [gold]Thorns[/gold].",
+   "description_raw": "Gain {DexterityPower:diff()} [gold]Dexterity[/gold].\nGain {ThornsPower:diff()} [gold]Thorns[/gold].",
+   "cost": 3,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Power",
+   "rarity": "Rare",
+   "target": "Self",
+   "color": "silent",
+   "damage": null,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": [
+    {
+     "power": "Thorns",
+     "amount": 4,
+     "power_key": "Thorns"
+    },
+    {
+     "power": "Dexterity",
+     "amount": 1,
+     "power_key": "Dexterity"
+    }
+   ],
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": [
+    "Sly"
+   ],
+   "tags": null,
+   "spawns_cards": null,
+   "vars": {
+    "ThornsPower": 4,
+    "Thorns": 4,
+    "DexterityPower": 1,
+    "Dexterity": 1
+   },
+   "upgrade": {
+    "thornspower": "+2"
+   },
+   "image_url": "/static/images/cards/abrasive.webp",
+   "beta_image_url": "/static/images/cards/beta/abrasive.png",
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "upgrade_description": "Gain 1 [gold]Dexterity[/gold].\nGain 6 [gold]Thorns[/gold].",
+   "type_key": "Power",
+   "rarity_key": "Rare",
+   "keywords_key": [
+    "Sly"
+   ],
+   "compendium_order": 147
+  },
+  {
+   "id": "BASH",
+   "name": "Bash",
+   "description": "Deal 8 damage.\nApply 2 [gold]Vulnerable[/gold].",
+   "description_raw": "Deal {Damage:diff()} damage.\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+   "cost": 2,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Attack",
+   "rarity": "Basic",
+   "target": "AnyEnemy",
+   "color": "ironclad",
+   "damage": 8,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": [
+    {
+     "power": "Vulnerable",
+     "amount": 2,
+     "power_key": "Vulnerable"
+    }
+   ],
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": null,
+   "tags": null,
+   "spawns_cards": null,
+   "vars": {
+    "Damage": 8,
+    "VulnerablePower": 2,
+    "Vulnerable": 2
+   },
+   "upgrade": {
+    "damage": "+2",
+    "vulnerable": "+1"
+   },
+   "image_url": "/static/images/cards/bash.webp",
+   "beta_image_url": null,
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "upgrade_description": "Deal 10 damage.\nApply 3 [gold]Vulnerable[/gold].",
+   "type_key": "Attack",
+   "rarity_key": "Basic",
+   "compendium_order": 0
+  },
+  {
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "description": "Deal 6 damage.",
+   "description_raw": "Deal {Damage:diff()} damage.",
+   "cost": 1,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Attack",
+   "rarity": "Basic",
+   "target": "AnyEnemy",
+   "color": "ironclad",
+   "damage": 6,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": null,
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": null,
+   "tags": [
+    "Strike"
+   ],
+   "spawns_cards": null,
+   "vars": {
+    "Damage": 6
+   },
+   "upgrade": {
+    "damage": "+3"
+   },
+   "image_url": "/static/images/cards/strike_ironclad.webp",
+   "beta_image_url": null,
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "upgrade_description": "Deal 9 damage.",
+   "type_key": "Attack",
+   "rarity_key": "Basic",
+   "compendium_order": 2
+  }
+ ],
+ "apiCards": [
+  {
+   "id": "ABRASIVE",
+   "name": "Abrasive",
+   "description": "Gain 1 [gold]Dexterity[/gold].\nGain 4 [gold]Thorns[/gold].",
+   "description_raw": "Gain {DexterityPower:diff()} [gold]Dexterity[/gold].\nGain {ThornsPower:diff()} [gold]Thorns[/gold].",
+   "cost": 3,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Power",
+   "type_key": "Power",
+   "rarity": "Rare",
+   "rarity_key": "Rare",
+   "target": "Self",
+   "color": "silent",
+   "damage": null,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": [
+    {
+     "power": "Thorns",
+     "power_key": "Thorns",
+     "amount": 4
+    },
+    {
+     "power": "Dexterity",
+     "power_key": "Dexterity",
+     "amount": 1
+    }
+   ],
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": [
+    "Sly"
+   ],
+   "keywords_key": [
+    "Sly"
+   ],
+   "tags": null,
+   "spawns_cards": null,
+   "vars": {
+    "ThornsPower": 4,
+    "Thorns": 4,
+    "DexterityPower": 1,
+    "Dexterity": 1
+   },
+   "upgrade": {
+    "thornspower": "+2"
+   },
+   "upgrade_description": "Gain 1 [gold]Dexterity[/gold].\nGain 6 [gold]Thorns[/gold].",
+   "image_url": "/static/images/cards/abrasive.webp",
+   "beta_image_url": "/static/images/cards/beta/abrasive.png",
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "multiplayer_only": null,
+   "compendium_order": 147,
+   "sources": null,
+   "image_url_card": "https://cdn.spire-codex.com/cards-full/stable/abrasive.webp",
+   "image_url_card_upg": "https://cdn.spire-codex.com/cards-full/stable/abrasive_upg.webp"
+  },
+  {
+   "id": "BASH",
+   "name": "Bash",
+   "description": "Deal 8 damage.\nApply 2 [gold]Vulnerable[/gold].",
+   "description_raw": "Deal {Damage:diff()} damage.\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+   "cost": 2,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Attack",
+   "type_key": "Attack",
+   "rarity": "Basic",
+   "rarity_key": "Basic",
+   "target": "AnyEnemy",
+   "color": "ironclad",
+   "damage": 8,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": [
+    {
+     "power": "Vulnerable",
+     "power_key": "Vulnerable",
+     "amount": 2
+    }
+   ],
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": null,
+   "keywords_key": null,
+   "tags": null,
+   "spawns_cards": null,
+   "vars": {
+    "Damage": 8,
+    "VulnerablePower": 2,
+    "Vulnerable": 2
+   },
+   "upgrade": {
+    "damage": "+2",
+    "vulnerable": "+1"
+   },
+   "upgrade_description": "Deal 10 damage.\nApply 3 [gold]Vulnerable[/gold].",
+   "image_url": "/static/images/cards/bash.webp",
+   "beta_image_url": null,
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "multiplayer_only": null,
+   "compendium_order": 0,
+   "sources": null,
+   "image_url_card": "https://cdn.spire-codex.com/cards-full/stable/bash.webp",
+   "image_url_card_upg": "https://cdn.spire-codex.com/cards-full/stable/bash_upg.webp"
+  },
+  {
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "description": "Deal 6 damage.",
+   "description_raw": "Deal {Damage:diff()} damage.",
+   "cost": 1,
+   "is_x_cost": null,
+   "is_x_star_cost": null,
+   "star_cost": null,
+   "type": "Attack",
+   "type_key": "Attack",
+   "rarity": "Basic",
+   "rarity_key": "Basic",
+   "target": "AnyEnemy",
+   "color": "ironclad",
+   "damage": 6,
+   "block": null,
+   "hit_count": null,
+   "powers_applied": null,
+   "cards_draw": null,
+   "energy_gain": null,
+   "hp_loss": null,
+   "keywords": null,
+   "keywords_key": null,
+   "tags": [
+    "Strike"
+   ],
+   "spawns_cards": null,
+   "vars": {
+    "Damage": 6
+   },
+   "upgrade": {
+    "damage": "+3"
+   },
+   "upgrade_description": "Deal 9 damage.",
+   "image_url": "/static/images/cards/strike_ironclad.webp",
+   "beta_image_url": null,
+   "type_variants": null,
+   "can_be_generated_in_combat": null,
+   "multiplayer_only": null,
+   "compendium_order": 2,
+   "sources": null,
+   "image_url_card": "https://cdn.spire-codex.com/cards-full/stable/strike_ironclad.webp",
+   "image_url_card_upg": "https://cdn.spire-codex.com/cards-full/stable/strike_ironclad_upg.webp"
+  }
+ ],
+ "relics": [
+  {
+   "id": "AKABEKO",
+   "name": "Akabeko",
+   "description": "At the start of each combat, gain [blue]8[/blue] [gold]Vigor[/gold].",
+   "description_raw": "At the start of each combat, gain [blue]{VigorPower}[/blue] [gold]Vigor[/gold].",
+   "flavor": "[red]Details for this relic will be revealed in the future...[/red]",
+   "rarity": "Uncommon Relic",
+   "pool": "shared",
+   "merchant_price": {
+    "base": 225,
+    "min": 191,
+    "max": 259
+   },
+   "image_url": "/static/images/relics/akabeko.webp",
+   "image_variants": null,
+   "name_variants": null,
+   "notes": null,
+   "rarity_key": "Uncommon",
+   "compendium_order": 40
+  },
+  {
+   "id": "BURNING_BLOOD",
+   "name": "Burning Blood",
+   "description": "At the end of combat, heal [green]6[/green] HP.",
+   "description_raw": "At the end of combat, heal [green]{Heal}[/green] HP.",
+   "flavor": "[red]Details for this relic will be revealed in the future...[/red]",
+   "rarity": "Starter Relic",
+   "pool": "ironclad",
+   "merchant_price": null,
+   "image_url": "/static/images/relics/burning_blood.webp",
+   "image_variants": null,
+   "name_variants": null,
+   "notes": null,
+   "rarity_key": "Starter",
+   "compendium_order": 2
+  }
+ ],
+ "potions": [
+  {
+   "id": "ASHWATER",
+   "name": "Ashwater",
+   "description": "[gold]Exhaust[/gold] any number of cards in your [gold]Hand[/gold].",
+   "description_raw": "[gold]Exhaust[/gold] any number of cards in your [gold]Hand[/gold].",
+   "rarity": "Uncommon",
+   "image_url": "/static/images/potions/ashwater.webp",
+   "rarity_key": "Uncommon",
+   "compendium_order": 20,
+   "pool": "ironclad"
+  },
+  {
+   "id": "ATTACK_POTION",
+   "name": "Attack Potion",
+   "description": "Choose [blue]1[/blue] of [blue]3[/blue] random Attack cards to add into your [gold]Hand[/gold]. It's free to play this turn.",
+   "description_raw": "Choose [blue]1[/blue] of [blue]3[/blue] random Attack cards to add into your [gold]Hand[/gold]. It's free to play this turn.",
+   "rarity": "Common",
+   "image_url": "/static/images/potions/attack_potion.webp",
+   "rarity_key": "Common",
+   "compendium_order": 0,
+   "pool": "shared"
+  }
+ ],
+ "powers": [
+  {
+   "id": "DEXTERITY",
+   "name": "Dexterity",
+   "description": "Increases [gold]Block[/gold] gained from cards by [blue][/blue].",
+   "description_raw": "{Amount:cond:<0?Decreases|Increases} [gold]Block[/gold] gained from cards by [blue]{Amount:abs()}[/blue].",
+   "type": "Buff",
+   "stack_type": "Counter",
+   "allow_negative": true,
+   "image_url": "/static/images/powers/dexterity_power.webp"
+  },
+  {
+   "id": "THORNS",
+   "name": "Thorns",
+   "description": "When hit by an attack, deal damage back.",
+   "description_raw": null,
+   "type": "Buff",
+   "stack_type": "Counter",
+   "allow_negative": null,
+   "image_url": "/static/images/powers/thorns_power.webp"
+  },
+  {
+   "id": "VIGOR",
+   "name": "Vigor",
+   "description": "[gold]This creature's[/gold] next Attack deals [blue][Amount][/blue] additional damage.",
+   "description_raw": "{OnPlayer:Your|[gold]{OwnerName}'s[/gold]} next Attack deals [blue]{Amount}[/blue] additional damage.",
+   "type": "Buff",
+   "stack_type": "Counter",
+   "allow_negative": null,
+   "image_url": "/static/images/powers/vigor_power.webp"
+  },
+  {
+   "id": "VULNERABLE",
+   "name": "Vulnerable",
+   "description": "Receive [blue]50%[/blue] more damage from Attacks for [blue][Amount][/blue] turns.",
+   "description_raw": "Receive [blue]{DamageIncrease:percentMore()}%[/blue] more damage from Attacks for [blue]{Amount}[/blue] {Amount:plural:turn|turns}.",
+   "type": "Debuff",
+   "stack_type": "Counter",
+   "allow_negative": null,
+   "image_url": "/static/images/powers/vulnerable_power.webp"
+  }
+ ],
+ "monsters": [
+  {
+   "id": "AEONGLASS",
+   "name": "Aeonglass",
+   "type": "Boss",
+   "min_hp": 512,
+   "max_hp": null,
+   "min_hp_ascension": 535,
+   "max_hp_ascension": null,
+   "moves": [
+    {
+     "id": "EBB",
+     "name": "Ebb",
+     "intent": "Attack + Defend",
+     "block": 33,
+     "damage": {
+      "normal": 26,
+      "ascension": 32
+     }
+    },
+    {
+     "id": "EYE_LASERS",
+     "name": "Eye Lasers",
+     "intent": "Attack",
+     "damage": {
+      "normal": 11,
+      "ascension": 12,
+      "hit_count": 2
+     }
+    },
+    {
+     "id": "INCREASING_INTENSITY",
+     "name": "Increasing Intensity",
+     "intent": "Status + Buff"
+    }
+   ],
+   "damage_values": {
+    "Ebb": {
+     "normal": 26,
+     "ascension": 32
+    },
+    "EyeLasers": {
+     "normal": 11,
+     "ascension": 12,
+     "hit_count": 2
+    }
+   },
+   "block_values": {
+    "Ebb": 33
+   },
+   "encounters": [
+    {
+     "encounter_id": "AEONGLASS_BOSS",
+     "encounter_name": "Aeonglass",
+     "room_type": "Boss",
+     "act": "Act 3 - Glory",
+     "is_weak": false
+    }
+   ],
+   "innate_powers": [
+    {
+     "power_id": "ARTIFACT",
+     "amount": 3
+    }
+   ],
+   "attack_pattern": {
+    "type": "cycle",
+    "initial_move": "EBB",
+    "states": [
+     {
+      "id": "EBB_MOVE",
+      "type": "move",
+      "move_id": "EBB",
+      "next": "EYE_LASERS_MOVE"
+     },
+     {
+      "id": "EYE_LASERS_MOVE",
+      "type": "move",
+      "move_id": "EYE_LASERS",
+      "next": "INCREASING_INTENSITY_MOVE"
+     },
+     {
+      "id": "INCREASING_INTENSITY_MOVE",
+      "type": "move",
+      "move_id": "INCREASING_INTENSITY",
+      "next": "EBB_MOVE"
+     }
+    ],
+    "description": "Ebb → Eye Lasers → Increasing Intensity → repeat"
+   },
+   "image_url": "/static/images/monsters/aeonglass.webp",
+   "beta_image_url": null
+  }
+ ],
+ "keywords": [
+  {
+   "id": "ETERNAL",
+   "name": "Eternal",
+   "description": "Cannot be removed or transformed from your [gold]Deck[/gold]."
+  },
+  {
+   "id": "ETHEREAL",
+   "name": "Ethereal",
+   "description": "If this card is in your [gold]Hand[/gold] at the end of this turn, it is [gold]Exhausted[/gold]."
+  },
+  {
+   "id": "EXHAUST",
+   "name": "Exhaust",
+   "description": "Removed until the end of combat."
+  },
+  {
+   "id": "INNATE",
+   "name": "Innate",
+   "description": "Start each combat with this card in your [gold]Hand[/gold]."
+  },
+  {
+   "id": "RETAIN",
+   "name": "Retain",
+   "description": "Retained cards are not discarded at the end of turn."
+  },
+  {
+   "id": "SLY",
+   "name": "Sly",
+   "description": "If this card is discarded from your [gold]Hand[/gold] before the end of your turn, play it for free."
+  },
+  {
+   "id": "UNPLAYABLE",
+   "name": "Unplayable",
+   "description": "Unplayable cards cannot be played."
+  }
+ ],
+ "changelogs": [
+  {
+   "app_id": 2868840,
+   "game_version": "1.3.0",
+   "build_id": "",
+   "tag": "1.3.0",
+   "date": "2026-09-10",
+   "title": "Run replays, the site in 15 languages, profile insights, per-character Elo, a bestiary with encounter stats, Steam-only sign-in, and a new stats engine",
+   "summary": {
+    "added": 0,
+    "removed": 0,
+    "changed": 0
+   },
+   "steam_url": null
+  }
+ ]
+}
