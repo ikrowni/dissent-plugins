@@ -21,6 +21,15 @@ export const store = {
   del: (key) => storageDelete(key, 'user'),
 };
 
+/** overlay.context — { game, surface, width, height, panelOpen }, or null outside the overlay or if refused. */
+export async function overlayContext() {
+  try {
+    return await request('overlay.context', {});
+  } catch {
+    return null;
+  }
+}
+
 /** Every answer is data with a `status` (spec §5.3 of the platform spec). Never throws. */
 export async function saves(action, params = {}) {
   try {

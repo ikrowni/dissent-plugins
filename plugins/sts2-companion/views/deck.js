@@ -10,7 +10,7 @@ import { mountBuilder } from './builder.js';
 
 const TABS = [['current', 'Current run'], ['builder', 'Builder']];
 
-export async function renderCurrentRun(run, ctx, { openBuilder } = {}) {
+export async function renderCurrentRun(run, ctx, { openBuilder, compact = false } = {}) {
   if (run?.status !== 'ok') {
     const extra = run?.status === 'desktop_only' && openBuilder
       ? h('button', { type: 'button', class: 'chip', dataset: { act: 'open-builder' }, onclick: openBuilder }, 'Plan a deck in the Builder')
@@ -30,7 +30,7 @@ export async function renderCurrentRun(run, ctx, { openBuilder } = {}) {
       // ⚠️ The game writes its save on entering and leaving a room — never mid-fight.
       h('p', { class: 'sub asof' }, `As of entering this room${saved ? ` (saved ${saved})` : ''}. The game saves when you change rooms, not during a fight.`)),
     h('section', { class: 'panel' }, h('h3', {}, 'Relics'), await relicRow(ctx, p.relics)),
-    h('div', { class: 'panels' }, curvePanel(entries), coveragePanel(keywordCoverage(entries))),
+    h('div', { class: 'panels' }, curvePanel(entries), compact ? null : coveragePanel(keywordCoverage(entries))),
     deckGrid(groupDeck(entries)));
 }
 
@@ -38,17 +38,20 @@ export async function mountDeck(root, ctx) {
   let tab = 'current';
   let child = null;
   let pull = 0;
+  // Overlay (spec §5): the run in progress and its curve. The Builder stays in the app.
+  const compact = ctx.placement === 'overlay';
 
   const tabs = h('div', { class: 'wiki-tabs', role: 'tablist' }, TABS.map(([key, label]) =>
     h('button', { type: 'button', class: 'tab', role: 'tab', dataset: { tab: key }, 'aria-selected': String(key === tab), onclick: () => show(key) }, label)));
   const body = h('div', { class: 'section-body' });
-  clear(root).append(h('div', { class: 'section' }, h('div', { class: 'wiki-bar' }, tabs), body));
+  const bar = compact ? null : h('div', { class: 'wiki-bar' }, tabs);
+  clear(root).append(h('div', { class: 'section' }, ...(bar ? [bar] : []), body));
 
   async function paintCurrent() {
     const mine = ++pull;
     const run = await saves('currentRun');
     if (mine !== pull || tab !== 'current') return; // a newer pull, or the Builder, won
-    const el = await renderCurrentRun(run, ctx, { openBuilder: () => show('builder') });
+    const el = await renderCurrentRun(run, ctx, { openBuilder: () => show('builder'), compact });
     if (mine !== pull || tab !== 'current') return;
     clear(body).append(el);
     loadArt(body, ctx);
@@ -68,6 +71,8 @@ export async function mountDeck(root, ctx) {
   await show('current');
 
   return {
+    /** Overlay: the panel was opened — re-read the save (overlay frames get no save cue). */
+    refresh() { if (tab === 'current') paintCurrent(); },
     destroy() {
       pull += 1;
       off?.();

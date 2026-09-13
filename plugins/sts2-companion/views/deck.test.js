@@ -94,3 +94,29 @@ describe('every non-ok status is said plainly', () => {
     expect(root.querySelector('[data-tab="builder"]').getAttribute('aria-selected')).toBe('true');
   });
 });
+describe('the Deck panel in the overlay', () => {
+  const overlay = () => ({ ...makeCtx(), placement: 'overlay' });
+
+  it('shows the current run with its curve — no tabs, no Builder, no coverage', async () => {
+    saves.mockResolvedValue(snapshot('current-run-after'));
+    const root = document.createElement('div');
+    await mountDeck(root, overlay());
+    await flush();
+    expect(root.querySelector('[data-tab]')).toBeNull();
+    expect(root.querySelector('.curve svg')).not.toBeNull();
+    expect(root.querySelector('.coverage')).toBeNull();
+    expect(root.querySelectorAll('.deck-tile')).toHaveLength(4);
+  });
+
+  // Overlay frames never hear game.saves.changed: opening the overlay is the cue to re-read.
+  it('re-pulls on refresh', async () => {
+    saves.mockResolvedValueOnce(snapshot('current-run-entering')).mockResolvedValueOnce(snapshot('current-run-after'));
+    const root = document.createElement('div');
+    const view = await mountDeck(root, overlay());
+    await flush();
+    expect(root.querySelector('.run-head').textContent).toContain('80/80 HP');
+    view.refresh();
+    await flush(); await flush();
+    expect(root.querySelector('.run-head').textContent).toContain('75/83 HP');
+  });
+});

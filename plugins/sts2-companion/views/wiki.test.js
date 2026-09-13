@@ -58,3 +58,17 @@ describe('the wiki grid', () => {
     expect(c.art.releaseAll).toHaveBeenCalled();
   });
 });
+describe('in the overlay', () => {
+  it('focuses and selects the search box when asked', async () => {
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    const view = await mountWiki(root, { ...ctx(), placement: 'overlay' });
+    const input = root.querySelector('input[type="search"]');
+    input.value = 'bash';
+    view.focusSearch();
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(4);
+    root.remove();
+  });
+});

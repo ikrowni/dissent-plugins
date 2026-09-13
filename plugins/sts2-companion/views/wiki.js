@@ -108,6 +108,12 @@ export async function mountWiki(root, ctx) {
   await paint();
 
   return {
+    /** Overlay: the panel was opened — put the cursor in search, ready to type over. */
+    focusSearch() {
+      window.focus();
+      input.focus();
+      input.select();
+    },
     destroy() {
       removeTips();
       observer?.disconnect();
