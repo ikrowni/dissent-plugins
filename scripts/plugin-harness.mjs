@@ -29,6 +29,7 @@ const PLUGIN_URL = `https://plugins.dissent.chat/plugins/${plugin}/plugin.html`;
 /** The host half: injected into the PARENT page, replies over postMessage. */
 function installHost({ pluginUrl, csp, saves, overlay }) {
   const store = new Map();
+  const localStore = new Map();
 
   window.addEventListener('message', async (e) => {
     const msg = e.data;
@@ -61,6 +62,10 @@ function installHost({ pluginUrl, csp, saves, overlay }) {
         case 'storage:get': reply(true, store.has(msg.params.key) ? { value: store.get(msg.params.key) } : null); return;
         case 'storage:set': store.set(msg.params.key, msg.params.value); reply(true, true); return;
         case 'storage:delete': store.delete(msg.params.key); reply(true, true); return;
+        // Device-local KV — the real host (dissent-client providers/storage.ts) answers { value } too.
+        case 'storage:localGet': reply(true, { value: localStore.has(msg.params.key) ? localStore.get(msg.params.key) : null }); return;
+        case 'storage:localSet': localStore.set(msg.params.key, msg.params.value); reply(true, null); return;
+        case 'storage:localDelete': localStore.delete(msg.params.key); reply(true, null); return;
         // --overlay: answered as dissent-client providers/overlayContext.ts does.
         case 'overlay.context':
           if (overlay) reply(true, { game: overlay.game, surface: overlay.surface, width: overlay.width, height: overlay.height, panelOpen: true });

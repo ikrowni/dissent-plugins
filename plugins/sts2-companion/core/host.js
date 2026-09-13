@@ -1,6 +1,6 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
-import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete } from '../../plugin-sdk.js';
+import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
 
@@ -19,6 +19,12 @@ export const store = {
   get: (key) => storageGetUser(key),
   set: (key, value) => storageSetUser(key, value),
   del: (key) => storageDelete(key, 'user'),
+};
+
+/** Device-local, never leaves this computer (storage:local). Used for caches, not for anything to keep. */
+export const local = {
+  get: (key) => storageLocalGet(key),
+  set: (key, value) => storageLocalSet(key, value),
 };
 
 /** overlay.context — { game, surface, width, height, panelOpen }, or null outside the overlay or if refused. */
