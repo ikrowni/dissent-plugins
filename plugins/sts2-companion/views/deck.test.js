@@ -66,6 +66,7 @@ describe('the Deck section over the REAL current-run projection', () => {
     saves.mockResolvedValue(snapshot('current-run-after'));
     const ctx = makeCtx();
     const view = await mountDeck(document.createElement('div'), ctx);
+    expect(ctx.listeners.size).toBe(1); // else "0 after destroy" proves nothing
     view.destroy();
     expect(ctx.listeners.size).toBe(0);
     expect(ctx.art.releaseAll).toHaveBeenCalled();
