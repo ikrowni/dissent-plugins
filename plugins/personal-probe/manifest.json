@@ -1,7 +1,7 @@
 {
   "id": "personal-probe",
   "name": "Personal Probe",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Test plugin for personal installs: shows its context, saves one value, shows an off-lane action refused, and reads the Slay the Spire 2 run in progress.",
   "author": "Dissent test",
   "tier": 1,
@@ -11,7 +11,8 @@
   "url": "https://plugins.dissent.chat/plugins/personal-probe/plugin.html",
   "declared_permissions": [
     "storage:user",
-    "game:saves"
+    "game:saves",
+    "overlay:context"
   ],
   "allowed_fetch_domains": [],
   "config_schema": null,
@@ -19,5 +20,22 @@
     "testing"
   ],
   "sdk_version": "1",
-  "resources": []
+  "resources": [],
+  "overlay": {
+    "games": [
+      "slay-the-spire-2"
+    ],
+    "surfaces": [
+      {
+        "id": "probe",
+        "title": "Probe",
+        "layer": "panel",
+        "anchor": "center",
+        "size": [
+          520,
+          420
+        ]
+      }
+    ]
+  }
 }
