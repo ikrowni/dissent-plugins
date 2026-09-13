@@ -36,6 +36,20 @@ describe('a card page', () => {
     expect(c.open).toHaveBeenCalledWith(expect.objectContaining({ kind: 'power' }));
   });
 
+  // Found in the real browser 2026-09-13: clicking a term replaced the page, so mouseleave never
+  // fired and the tooltip stayed over the NEXT page.
+  it('removes a term tooltip when the term is clicked', async () => {
+    const el = await renderDetail({ kind: 'card', id: 'BASH' }, make());
+    document.body.replaceChildren(el);
+    const term = el.querySelector('[data-term="Vulnerable"]');
+    term.dispatchEvent(new Event('mouseenter'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector('.tip')).not.toBeNull();
+    term.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector('.tip')).toBeNull();
+  });
+
   it('shows your own stats on desktop', async () => {
     saves.mockResolvedValue({ status: 'ok', cards: [{ id: 'CARD.BASH', picked: 3, skipped: 1, won: 5, lost: 7 }] });
     const el = await renderDetail({ kind: 'card', id: 'BASH' }, make());

@@ -9,8 +9,12 @@ import { h } from './dom.js';
 
 const TAG = /\[(\/?)([a-z]+)(?:=[^\]]*)?\]/g;
 const COLOURS = new Set(['blue', 'red', 'green', 'purple', 'orange', 'pink', 'aqua']);
+// A capitalised bracket is an unresolved amount ("for [Amount] turns"), never a tag — tags are
+// lowercase. Powers scale with a stack count, so there is no number to put there.
+const PLACEHOLDER = /\[[A-Z][A-Za-z]*\]/g;
 
-export function renderGameText(src) {
+export function renderGameText(raw) {
+  const src = String(raw ?? '').replace(PLACEHOLDER, 'X');
   const root = h('span', { class: 'game-text' });
   const stack = [root];
   let last = 0;
@@ -23,7 +27,7 @@ export function renderGameText(src) {
     });
   };
 
-  for (const m of String(src ?? '').matchAll(TAG)) {
+  for (const m of src.matchAll(TAG)) {
     pushText(src.slice(last, m.index));
     last = m.index + m[0].length;
     const [, closing, name] = m;
@@ -49,6 +53,6 @@ export function renderGameText(src) {
       stack.push(el);
     }
   }
-  pushText(String(src ?? '').slice(last));
+  pushText(src.slice(last));
   return root;
 }

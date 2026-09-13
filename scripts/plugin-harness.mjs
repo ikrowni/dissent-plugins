@@ -76,7 +76,12 @@ function installHost({ pluginUrl, csp }) {
     f.id = 'pf';
     f.setAttribute('sandbox', 'allow-scripts allow-popups allow-modals allow-forms');
     f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:99999';
-    f.srcdoc = html.replace('</head>', csp + '</head>');
+    // Mirror the app (dissent-client pluginSandbox.ts injectPluginHead): a <base> for the
+    // plugin's folder plus the CSP, at the TOP of <head>. Appending before </head> without a
+    // base resolved every relative link against app.dissent.chat, so a plugin using
+    // relative paths loaded nothing here while working in the real app (found 2026-09-13).
+    const dir = pluginUrl.slice(0, pluginUrl.lastIndexOf('/') + 1);
+    f.srcdoc = html.replace(/<head[^>]*>/i, (m) => `${m}<base href="${dir}">${csp}`);
     document.body.appendChild(f);
     await new Promise((r) => { f.onload = r; setTimeout(r, 4000); });
     // The plugin waits for dissent:init before it boots.

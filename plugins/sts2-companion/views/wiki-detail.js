@@ -41,6 +41,8 @@ function linkTerms(el, ctx) {
   };
   for (const term of el.querySelectorAll('[data-term]')) {
     term.addEventListener('click', async () => {
+      // The click replaces this page, so mouseleave will never fire for this term.
+      tip?.remove(); tip = null;
       const r = await resolve(term.dataset.term);
       if (r) ctx.open({ kind: r.kind, id: r.id });
     });
@@ -62,7 +64,13 @@ async function artImg(ctx, artId, alt) {
   return url ? h('img', { src: url, alt }) : h('span', { class: 'ph' });
 }
 
+/** A tooltip belongs to the page that made it; any page change removes every one. */
+export function removeTips() {
+  for (const t of document.querySelectorAll('.tip')) t.remove();
+}
+
 export async function renderDetail(ref, ctx) {
+  removeTips();
   const item = await ctx.data.get(ref.kind, ref.id);
   const key = `${ref.kind}:${ref.id}`;
   const bookmarks = (await store.get('bookmarks')) ?? [];

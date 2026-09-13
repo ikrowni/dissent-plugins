@@ -22,6 +22,13 @@ describe('renderGameText', () => {
     expect(el.querySelector('.t-blue').textContent).toBe('8');
   });
 
+  // Found in the real browser 2026-09-13: power text reads "for [Amount] turns". Powers scale
+  // with a stack count, so Spire Codex leaves a capitalised placeholder in place of the number.
+  it('renders an unresolved [Placeholder] as X', () => {
+    expect(text(renderGameText('Receive [blue]50%[/blue] more damage for [blue][Amount][/blue] turns.')))
+      .toBe('Receive 50% more damage for X turns.');
+  });
+
   it('drops tags it does not know, keeping their text', () => {
     expect(text(renderGameText('[sine]wobbly[/sine] words'))).toBe('wobbly words');
   });

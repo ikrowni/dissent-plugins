@@ -5,12 +5,133 @@
   "description": "A Slay the Spire 2 wiki — every card, relic, potion, power and enemy with real art, search, nested tooltips and move patterns. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games.",
   "author": "Dissent Project",
   "tier": 2,
-  "context": ["personal"],
+  "context": [
+    "personal"
+  ],
   "url": "https://plugins.dissent.chat/plugins/sts2-companion/plugin.html",
-  "declared_permissions": ["storage:user", "game:saves"],
+  "declared_permissions": [
+    "storage:user",
+    "game:saves"
+  ],
   "allowed_fetch_domains": [],
   "config_schema": null,
-  "categories": ["gaming", "slay-the-spire-2"],
+  "categories": [
+    "gaming",
+    "slay-the-spire-2"
+  ],
   "sdk_version": "1",
-  "resources": []
+  "resources": [
+    {
+      "url": "art/cards-00.pack",
+      "sha256": "863f2c2e8ceb420037e5385c03ca53ec8aa1b69e5944cdc595081a52782f4d16"
+    },
+    {
+      "url": "art/cards-01.pack",
+      "sha256": "71f7641c11a53990c6138285b3703a58ad537cf21d2d85244f77703c650d48cf"
+    },
+    {
+      "url": "art/cards-02.pack",
+      "sha256": "8349864ccffdd27cc86ad87e0fd9312ce7c7f097ba027b434f1d309b224c73a6"
+    },
+    {
+      "url": "art/cards-03.pack",
+      "sha256": "3d24636e0d48e46e0ab5425b87b8e6bf5d07b9847e584df2796450ebc69cb5ce"
+    },
+    {
+      "url": "art/index.json",
+      "sha256": "e97db8ce61413da121c019c112f6d1cf8a40585f701949627c564ff46321a3e1"
+    },
+    {
+      "url": "art/monsters-00.pack",
+      "sha256": "9cc0c193fde0edb0be9730c8e7ddf586fdf0c460379ad06a14bdb6543359cabe"
+    },
+    {
+      "url": "art/potions-00.pack",
+      "sha256": "75326556c82e8e1e70b26928fe77c17541901777e1a7e57f525abdd99eb290bb"
+    },
+    {
+      "url": "art/powers-00.pack",
+      "sha256": "cf51567ff1fab27578cdec2992c9e96214e20086e6f30efe732f5f7ef5c289f7"
+    },
+    {
+      "url": "art/relics-00.pack",
+      "sha256": "8f61f2f5259dd78ff6d74d6f280414961085b06e0b3a5d507c0f00ad0a65d3cc"
+    },
+    {
+      "url": "core/app.js",
+      "sha256": "589228416888b917d1448465f001d85cb4cd890e09c1c6d10bcd9797da02aa59"
+    },
+    {
+      "url": "core/data.js",
+      "sha256": "f0cc9a7d930d1a40b19ac6fef3e9e4a3234941becc50421ee5162ae8b2922f5f"
+    },
+    {
+      "url": "core/dom.js",
+      "sha256": "54e3c87f60c47fa171a477d0ab601f173681a212da7efc63aaf4f477584b8e1a"
+    },
+    {
+      "url": "core/host.js",
+      "sha256": "2cf3c2d9e87994b5f725e54c36ec5e1882ae0dcc0ad811a0390540adc483971b"
+    },
+    {
+      "url": "core/markup.js",
+      "sha256": "e753950e42c6b4742bbc0a64125980c1d0f94253e399a90d113faf71259c2e79"
+    },
+    {
+      "url": "core/pack.js",
+      "sha256": "20305e9b5793e05a3a7c4cc6dd1d1bea1baebc418b47a9bb9621247f74433f82"
+    },
+    {
+      "url": "core/search.js",
+      "sha256": "55ad7a668c43ceeaea5f3eb9dad4ba3caa1f82985edd224f5cc57b86721f65d9"
+    },
+    {
+      "url": "data/cards.json",
+      "sha256": "edd7972be48ef6929dc80468c29667ea937248319f2a0c9d3d5c717167c6941e"
+    },
+    {
+      "url": "data/encounters.json",
+      "sha256": "ea7e27928d532cd2ff9bfbbc66c938f52128a33f09fe6a5755542f6cb886ed6d"
+    },
+    {
+      "url": "data/events.json",
+      "sha256": "f5596bfa43f03b3b0f90d0a7042dd1db4debddd4522b51a5589c99e01aa61c20"
+    },
+    {
+      "url": "data/keywords.json",
+      "sha256": "b11eed752fffdaffcde4a967379acfa199ce275506a94693aac83c62be898e72"
+    },
+    {
+      "url": "data/meta.json",
+      "sha256": "f26f22b8cecd25ece3ebe266cb341ca7977a02a10e7684909685f29e2ac92829"
+    },
+    {
+      "url": "data/monsters.json",
+      "sha256": "1abbef03243fd5e628c077a01c94a7a71aa180dd01c698a7976a9013ee7120dd"
+    },
+    {
+      "url": "data/potions.json",
+      "sha256": "249bdfe09fa5fa38c5d6e350db266c16ae57e1071de693668d97b5a29866f216"
+    },
+    {
+      "url": "data/powers.json",
+      "sha256": "ecb607ee2d55aab18acc3ea84c1739f79c76982f391f14d17b3f8c62e2835f24"
+    },
+    {
+      "url": "data/relics.json",
+      "sha256": "8bf76eb546752948000b749d17c4e23d64d838c5f772bd2a16e7cff295fb03b0"
+    },
+    {
+      "url": "styles/base.css",
+      "sha256": "81ec53cf3d845eb641a7982bd72d2b4f9f85049df060190ee9360868029d92d7"
+    },
+    {
+      "url": "views/wiki-detail.js",
+      "sha256": "18b6c336340ce727c1d210bfdb2b4f2140566e531e94cafc3321de8b0e0be219"
+    },
+    {
+      "url": "views/wiki.js",
+      "sha256": "853541159da16e41efa3e6f5370b6b29eeba225ce98c3c3ab1596ce763ce2a62"
+    }
+  ]
 }

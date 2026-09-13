@@ -2,7 +2,7 @@
 
 import { h, clear } from '../core/dom.js';
 import { filterItems } from '../core/search.js';
-import { renderDetail } from './wiki-detail.js';
+import { renderDetail, removeTips } from './wiki-detail.js';
 
 const TABS = [
   { key: 'cards', kind: 'card', label: 'Cards', art: 'card', icon: false },
@@ -84,6 +84,7 @@ export async function mountWiki(root, ctx) {
   }
 
   async function paint() {
+    removeTips();
     const tab = TABS.find((t) => t.key === state.tab);
     if (state.trail.length) {
       const ref = state.trail[state.trail.length - 1];
@@ -108,6 +109,7 @@ export async function mountWiki(root, ctx) {
 
   return {
     destroy() {
+      removeTips();
       observer?.disconnect();
       ctx.art.releaseAll();
     },
