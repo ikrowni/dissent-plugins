@@ -8,3 +8,6 @@ build/
 
 # Local agent scratch — worktrees are their own repos and must never be committed.
 .claude/
+
+# STS2 Companion build cache — downloaded Spire Codex art and export, reused across builds
+scripts/sts2/.cache/
