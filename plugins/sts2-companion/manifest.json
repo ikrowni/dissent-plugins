@@ -60,7 +60,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "0e85dbcc35f4a92e6bda3f5a88f2e5cdbc1035a22b3fbb0b11f83ddda078e1b8"
+      "sha256": "52d5318218aed3290efb35b6f662329d329da5aaa43b50a4c5f03829c6e52f87"
     },
     {
       "url": "core/archetypes.js",
@@ -84,7 +84,7 @@
     },
     {
       "url": "core/host.js",
-      "sha256": "a615f017fa010b2acacf9571ad6d16a4270f56b2ccf2fcab3c4f14302a4d847e"
+      "sha256": "8f1279a942b2fa34c6d5a00aafd930b6e55668e11c1ed8618e44c8b7e1227aa8"
     },
     {
       "url": "core/markup.js",
@@ -93,6 +93,10 @@
     {
       "url": "core/pack.js",
       "sha256": "20305e9b5793e05a3a7c4cc6dd1d1bea1baebc418b47a9bb9621247f74433f82"
+    },
+    {
+      "url": "core/placement.js",
+      "sha256": "c2fae49e1c2494fa31bb1d1d9d0a07e577b2710d9ac3dc9bb4b16d63fd3a3c7e"
     },
     {
       "url": "core/runs.js",
@@ -143,6 +147,10 @@
       "sha256": "81ec53cf3d845eb641a7982bd72d2b4f9f85049df060190ee9360868029d92d7"
     },
     {
+      "url": "styles/compact.css",
+      "sha256": "34c709b317341ebd7b3261403256eebd96d1de1a7d993ec1694596b646aa4ba4"
+    },
+    {
       "url": "styles/runs.css",
       "sha256": "f7d66eda33e12e1832f8295631a92567fef7993adb0105e132b0cb84b30ba68e"
     },
@@ -160,7 +168,7 @@
     },
     {
       "url": "views/deck.js",
-      "sha256": "81e1fc24a81160228b113fe809ce110f469a63e9cbd0de00eeb606bac2ef40b6"
+      "sha256": "db766ba1f2af79fb5d810f3f42e5341fa0c8c4b9328d29fe85b0c4b97cc5aa57"
     },
     {
       "url": "views/history.js",
@@ -180,7 +188,7 @@
     },
     {
       "url": "views/wiki.js",
-      "sha256": "853541159da16e41efa3e6f5370b6b29eeba225ce98c3c3ab1596ce763ce2a62"
+      "sha256": "689b59907e78614fdf7dc229c718efa1653c91372d9de46b7bd3c23cdf9ab081"
     }
   ],
   "overlay": {

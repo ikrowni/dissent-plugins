@@ -27,7 +27,7 @@ const APP = 'https://app.dissent.chat';
 const PLUGIN_URL = `https://plugins.dissent.chat/plugins/${plugin}/plugin.html`;
 
 /** The host half: injected into the PARENT page, replies over postMessage. */
-function installHost({ pluginUrl, csp, saves }) {
+function installHost({ pluginUrl, csp, saves, overlay }) {
   const store = new Map();
 
   window.addEventListener('message', async (e) => {
@@ -61,6 +61,11 @@ function installHost({ pluginUrl, csp, saves }) {
         case 'storage:get': reply(true, store.has(msg.params.key) ? { value: store.get(msg.params.key) } : null); return;
         case 'storage:set': store.set(msg.params.key, msg.params.value); reply(true, true); return;
         case 'storage:delete': store.delete(msg.params.key); reply(true, true); return;
+        // --overlay: answered as dissent-client providers/overlayContext.ts does.
+        case 'overlay.context':
+          if (overlay) reply(true, { game: overlay.game, surface: overlay.surface, width: overlay.width, height: overlay.height, panelOpen: true });
+          else reply(false, null, 'not running in the overlay');
+          return;
         case 'identity:get': reply(true, { id: 'harness-user', displayName: 'Harness' }); return;
         case 'profile:read': reply(true, { displayName: 'Harness', avatarUrl: null }); return;
         // ⚠️ Refused rather than faked: a module call needs a real install and a
@@ -93,18 +98,43 @@ function installHost({ pluginUrl, csp, saves }) {
     document.body.appendChild(f);
     await new Promise((r) => { f.onload = r; setTimeout(r, 4000); });
     // The plugin waits for dissent:init before it boots.
-    f.contentWindow.postMessage({
+    // --overlay: init exactly as dissent-client src/overlay/pluginSurfaces.ts builds it.
+    f.contentWindow.postMessage(overlay ? {
+      type: 'dissent:init',
+      theme: {},
+      user: null,
+      context: {
+        serverId: '', serverName: '', pluginConfig: {},
+        contextType: 'personal', placement: 'overlay',
+        surface: overlay.surface, game: overlay.game, installId: 'harness', coreUrl: 'https://node.dissent.chat',
+      },
+    } : {
       type: 'dissent:init',
       user: { id: 'harness-user', username: 'harness', permissions: ['fetch:external', 'storage:server', 'storage:user', 'identity', 'members:read', 'realtime'] },
       theme: {},
       context: { serverId: 'harness', channelId: 'harness', installId: 'harness', coreUrl: 'https://node.dissent.chat' },
     }, '*');
+    if (overlay) {
+      // As OverlayShell.tsx does when the panel layer opens.
+      await new Promise((r) => setTimeout(r, 3000));
+      f.contentWindow.postMessage({ type: 'dissent:event', event: 'overlay.context.changed', data: null }, '*');
+    }
     return true;
   })();
 }
 
+// --overlay <surface id>: host the plugin as an overlay panel of that manifest surface, at its size.
+const overlaySurface = arg('--overlay');
+let overlay = null;
+if (overlaySurface) {
+  const manifest = JSON.parse(readFileSync(new URL(`../plugins/${plugin}/manifest.json`, import.meta.url), 'utf8'));
+  const surface = manifest.overlay?.surfaces?.find((x) => x.id === overlaySurface);
+  if (!surface) throw new Error(`${plugin} declares no overlay surface "${overlaySurface}"`);
+  overlay = { surface: surface.id, game: manifest.overlay.games[0], width: surface.size[0], height: surface.size[1] };
+}
+
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
+const page = await browser.newPage({ viewport: overlay ? { width: overlay.width, height: overlay.height } : { width: 1600, height: 1100 } });
 
 const errors = []; const badResponses = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 200)); });
@@ -146,10 +176,15 @@ const saves = savesDir
     .map((f) => [f.replace(/\.json$/, ''), JSON.parse(readFileSync(`${savesDir}/${f}`, 'utf8'))]))
   : null;
 
-await page.evaluate(installHost, { pluginUrl: PLUGIN_URL, csp, saves });
+await page.evaluate(installHost, { pluginUrl: PLUGIN_URL, csp, saves, overlay });
 const frame = await (await page.waitForSelector('#pf')).contentFrame();
 await page.waitForTimeout(6000);
 
+if (overlay) {
+  await page.waitForTimeout(3000);
+  const active = await frame.evaluate(() => { const a = document.activeElement; return a ? `${a.tagName.toLowerCase()}[${a.getAttribute('type') ?? ''}]` : 'none'; });
+  console.log(`overlay ${overlay.surface} ${overlay.width}x${overlay.height} — activeElement=${active}`);
+}
 const only = arg('--view');
 // --click 'sel|sel|…' drives any plugin; --root names the element whose content is measured.
 const rootSel = arg('--root', '#main');
