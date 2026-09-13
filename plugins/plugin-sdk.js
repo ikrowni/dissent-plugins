@@ -7,6 +7,14 @@ let _identity = null;
 let _initContext = null;
 
 // Init context from dissent:init (serverId, channelId, coreUrl, installId, hostHostname…).
+// Esc inside a frame never reaches the page around it. Forward it; the host decides (the
+// overlay closes; in the app it is ignored). Guarded: plugin unit tests import this in Node.
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') parent.postMessage({ type: 'dissent:escape' }, '*');
+  });
+}
+
 export function getInitContext() { return _initContext; }
 
 // Interactive capabilities (wallet signatures, native confirms) block on a human
