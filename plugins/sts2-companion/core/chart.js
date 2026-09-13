@@ -16,7 +16,7 @@ const frame = (label, width, height, cls) =>
   s('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': label, class: `chart ${cls}` }, s('title', {}, label));
 
 /** Vertical bars, `[{ label, n }]`, each with its count above and label below. */
-export function barChart(bars, { label, width = 280, height = 130 } = {}) {
+export function barChart(bars, { label, width = 360, height = 140 } = {}) {
   const svg = frame(label, width, height, 'bars');
   const max = Math.max(1, ...bars.map((b) => b.n));
   const slot = width / Math.max(1, bars.length);
@@ -35,7 +35,7 @@ export function barChart(bars, { label, width = 280, height = 130 } = {}) {
 }
 
 /** A value line (`y`) under a ceiling line (`max`), over `x`. `marks` draw labelled verticals. */
-export function lineChart(points, { label, width = 640, height = 170, marks = [] } = {}) {
+export function lineChart(points, { label, width = 1000, height = 220, marks = [] } = {}) {
   const svg = frame(label, width, height, 'line');
   if (!points.length) return svg;
   const pad = { l: 32, r: 10, t: 14, b: 22 };
@@ -50,7 +50,7 @@ export function lineChart(points, { label, width = 640, height = 170, marks = []
   for (const m of marks) {
     svg.appendChild(s('g', { class: 'mark' },
       s('line', { x1: X(m.x), x2: X(m.x), y1: pad.t, y2: height - pad.b }),
-      s('text', { x: X(m.x) + 3, y: pad.t + 8, class: 'l' }, m.label)));
+      s('text', { x: X(m.x) + 4, y: height - pad.b - 4, class: 'l' }, m.label)));
   }
   const maxPath = path('max');
   if (maxPath) svg.appendChild(s('path', { d: maxPath, class: 'max', fill: 'none' }));

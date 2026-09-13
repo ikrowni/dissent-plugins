@@ -25,10 +25,12 @@ async function floorItem(ctx, row) {
   const c = floorChanges(row.stats);
   const rooms = await Promise.all(row.rooms.filter((r) => r.id).map(async (r) =>
     h('span', { class: 'room' }, await name(ctx, r.id), r.turns ? ` · ${r.turns} turn${r.turns === 1 ? '' : 's'}` : '')));
+  // A shop's cards were for sale, not offered as a reward.
+  const shop = row.type === 'shop';
   const offered = c.cardPicked.length || c.cardSkipped.length
-    ? h('div', { class: 'change' }, h('span', { class: 'what' }, 'Card reward '),
+    ? h('div', { class: 'change' }, h('span', { class: 'what' }, shop ? 'Shop cards ' : 'Card reward '),
       ...(await Promise.all(c.cardPicked.map((id) => name(ctx, id, 'picked')))).flatMap((n) => [n, ' ']),
-      c.cardPicked.length ? '' : h('span', { class: 'sub' }, 'skipped: '),
+      c.cardPicked.length ? '' : h('span', { class: 'sub' }, shop ? 'none bought: ' : 'skipped: '),
       ...(await Promise.all(c.cardSkipped.map((id) => name(ctx, id, 'skipped')))).flatMap((n) => [n, ' ']))
     : null;
   const transformed = await Promise.all(c.transformed.map(async (t) =>

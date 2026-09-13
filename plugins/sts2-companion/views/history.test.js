@@ -81,6 +81,15 @@ describe('a REAL finished run', () => {
     expect(el.querySelectorAll('.deck-tile').length).toBeGreaterThan(0);
   });
 
+  // A shop's cards are for sale, not a reward: floor 5 of the real run is a shop where nothing was bought.
+  it('a shop says what was bought, never "card reward"', async () => {
+    const el = await renderRunDetail(snapshot('run-1773796874'), ctx(), { player: 1 });
+    const shop = el.querySelector('.timeline > li.type-shop');
+    expect(shop.textContent).not.toContain('Card reward');
+    expect(shop.textContent).toContain('Shop cards');
+    expect(shop.textContent).toContain('none bought');
+  });
+
   it('switches player; the removed card GRAPPLE is shown by id and marked', async () => {
     const onPlayer = vi.fn();
     const one = await renderRunDetail(snapshot('run-1773796874'), ctx(), { player: 1, onPlayer });

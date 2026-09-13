@@ -11,7 +11,10 @@ section.panel:not(.panels .panel) { margin: 12px 16px 0; }
 .panel h3, .deck-group h3, .run-detail > h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .deck-group h3, .run-detail > h3 { padding: 12px 16px 0; }
 
+/* An SVG scales its text with its width: each chart is capped at the size it was drawn for. */
 .chart { width: 100%; height: auto; display: block; }
+.chart.bars { max-width: 420px; }
+.chart.line { max-width: 1000px; }
 .chart rect { fill: var(--accent); }
 .chart text { fill: var(--muted); font-size: 11px; }
 .chart .n { fill: var(--text); }

@@ -59,11 +59,23 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "589228416888b917d1448465f001d85cb4cd890e09c1c6d10bcd9797da02aa59"
+      "sha256": "0e85dbcc35f4a92e6bda3f5a88f2e5cdbc1035a22b3fbb0b11f83ddda078e1b8"
+    },
+    {
+      "url": "core/archetypes.js",
+      "sha256": "e7523a08a2091e9906da62572eb8fd6b27dbeea836b76d9625d5eb3de2938e64"
+    },
+    {
+      "url": "core/chart.js",
+      "sha256": "c6ffdcb9e375224754172c2518dae845d8b28ad83cd9a694eb31bbeddc1d27a4"
     },
     {
       "url": "core/data.js",
-      "sha256": "f0cc9a7d930d1a40b19ac6fef3e9e4a3234941becc50421ee5162ae8b2922f5f"
+      "sha256": "cc8c19119a409274c505ceae9dfec9af78acb12cd342a0ad5fd7be6b6426b9fc"
+    },
+    {
+      "url": "core/deck.js",
+      "sha256": "2f94b9af9bec5f6ff3e28621789d081a252253c4ee418f1bf231a2f611e8a46c"
     },
     {
       "url": "core/dom.js",
@@ -71,7 +83,7 @@
     },
     {
       "url": "core/host.js",
-      "sha256": "2cf3c2d9e87994b5f725e54c36ec5e1882ae0dcc0ad811a0390540adc483971b"
+      "sha256": "a615f017fa010b2acacf9571ad6d16a4270f56b2ccf2fcab3c4f14302a4d847e"
     },
     {
       "url": "core/markup.js",
@@ -80,6 +92,10 @@
     {
       "url": "core/pack.js",
       "sha256": "20305e9b5793e05a3a7c4cc6dd1d1bea1baebc418b47a9bb9621247f74433f82"
+    },
+    {
+      "url": "core/runs.js",
+      "sha256": "48d8f673eabb934d631b43c84208f949630404bcb75a458c8fac96f4deb60e49"
     },
     {
       "url": "core/search.js",
@@ -124,6 +140,38 @@
     {
       "url": "styles/base.css",
       "sha256": "81ec53cf3d845eb641a7982bd72d2b4f9f85049df060190ee9360868029d92d7"
+    },
+    {
+      "url": "styles/runs.css",
+      "sha256": "9f32aff3bfebdd592462a4da1f6ef1499ce163389a715b75a4b4ec4645434054"
+    },
+    {
+      "url": "views/builder.js",
+      "sha256": "c73229506feb1afaf2eb7c80a4b3a661f02f94135368e44bcd5d45868ab2d491"
+    },
+    {
+      "url": "views/card-stats.js",
+      "sha256": "f993aa55c6acbd52579d0ba6f991c7714ce0df90b510eb9a163bc2f2813a07fe"
+    },
+    {
+      "url": "views/deck-parts.js",
+      "sha256": "c6f1f974c077a8e97d404849204885c34647c14acd3ad47d464ec993277fc42a"
+    },
+    {
+      "url": "views/deck.js",
+      "sha256": "81e1fc24a81160228b113fe809ce110f469a63e9cbd0de00eeb606bac2ef40b6"
+    },
+    {
+      "url": "views/history.js",
+      "sha256": "83796a3b2bc53f17cc81137a98581cec35cad550709ff67040749d2a0b72bbd7"
+    },
+    {
+      "url": "views/run-detail.js",
+      "sha256": "f99fd69f9b19ae9b2cf6df28481de41d0dee6a9a0abef4a9d4976e29f4609b44"
+    },
+    {
+      "url": "views/status.js",
+      "sha256": "1dec2e00df169c2d1390055211cbc6d5d8d1c9c97aebd4c58a0481d9615e1a65"
     },
     {
       "url": "views/wiki-detail.js",
