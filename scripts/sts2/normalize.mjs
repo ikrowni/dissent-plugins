@@ -92,7 +92,8 @@ export function imageJobs(data) {
   for (const c of data.cards) {
     if (c.image) {
       jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.image });
-      if (c.imageUpgraded) jobs.push({ id: `card-upg:${c.id}`, group: 'cards-upg', url: c.imageUpgraded });
+      // Optional: an upgraded image missing upstream falls back to the base art in the view.
+      if (c.imageUpgraded) jobs.push({ id: `card-upg:${c.id}`, group: 'cards-upg', url: c.imageUpgraded, optional: true });
     } else if (c.portrait) {
       jobs.push({ id: `card:${c.id}`, group: 'cards', url: c.portrait, fallback: true });
     }

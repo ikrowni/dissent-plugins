@@ -49,6 +49,13 @@ describe('imageJobs', () => {
     expect(jobs.find((j) => j.id === 'card:BASH').resize).toBeUndefined();
   });
 
+  // ⚠️ Spire Codex lists upgraded URLs that 404 (WITHER, 2026-09-13). A missing UPGRADED image
+  // must not fail the build: the Upgraded toggle keeps the base art.
+  it('marks upgraded card art optional, and base art required', () => {
+    expect(jobs.find((j) => j.id === 'card-upg:BASH').optional).toBe(true);
+    expect(jobs.find((j) => j.id === 'card:BASH').optional).toBeUndefined();
+  });
+
   it('resolves relative image URLs against spire-codex.com', () => {
     expect(jobs.find((j) => j.id === 'relic:AKABEKO').url).toBe('https://spire-codex.com/static/images/relics/akabeko.webp');
   });
