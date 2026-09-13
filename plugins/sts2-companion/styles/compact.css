@@ -1,0 +1,24 @@
+/* STS2 Companion — overlay panels (body.compact). One section, narrow, over a game. */
+.compact #top { display: none; }
+.compact #credits { font-size: 11px; padding: 4px 10px; }
+.compact .wiki-bar { padding: 8px 10px; gap: 6px; }
+.compact .wiki-bar select { display: none; }        /* search and tabs only; filters stay in the app */
+.compact .grid { grid-template-columns: 1fr; gap: 4px; padding: 0 10px 10px; }
+.compact .wiki .tile { display: flex; align-items: center; gap: 10px; text-align: left; padding: 4px; border-radius: 8px; }
+.compact .wiki .tile:hover { background: var(--panel); }
+.compact .wiki .tile img, .compact .wiki .tile .ph { width: 40px; flex: none; aspect-ratio: 3 / 4; }
+.compact .wiki .tile.icon img, .compact .wiki .tile.icon .ph { aspect-ratio: 1; }
+.compact .wiki .tile .label { margin: 0; font-size: 13px; color: var(--text); }
+.compact .detail { grid-template-columns: 1fr; gap: 12px; padding: 10px; }
+.compact .detail .card-art { max-width: 220px; }
+.compact .back { margin: 8px 10px 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .compact .detail { animation: slide-in .14s ease-out; }
+  @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+.compact .run-head { padding: 8px 10px 0; }
+.compact .run-head h2 { font-size: 16px; }
+.compact .panels { grid-template-columns: 1fr; padding: 8px 10px; }
+.compact section.panel:not(.panels .panel) { margin: 8px 10px 0; }
+.compact .deck-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; padding: 0 10px 10px; }
+.compact .deck-group h3 { padding: 8px 10px 0; }

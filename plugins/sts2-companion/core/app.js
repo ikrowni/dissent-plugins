@@ -1,6 +1,7 @@
 // core/app.js — bootstrap: data, art, the section router, the saves-changed bus, the credits footer.
 
-import { connect } from './host.js';
+import { connect, overlayContext } from './host.js';
+import { layoutFor, onPanelShown } from './placement.js';
 import { createData } from './data.js';
 import { createPackReader } from './pack.js';
 import { h, clear } from './dom.js';
@@ -42,32 +43,49 @@ async function show(name) {
   current = mounted;
 }
 
+// Resolved by the first dissent:init. The overlay posts init on the frame's load event, and every
+// panel loads the same page, so nothing is mounted until the page knows which panel it is.
+let resolveInit;
+const initReceived = new Promise((r) => { resolveInit = r; });
+const INIT_WAIT_MS = 3000;
+
 async function boot() {
-  const index = await fetch('art/index.json').then((r) => r.json());
+  const [index, meta, context] = await Promise.all([
+    fetch('art/index.json').then((r) => r.json()),
+    ctx.data.meta(),
+    Promise.race([initReceived, new Promise((r) => setTimeout(() => r({}), INIT_WAIT_MS))]),
+  ]);
   ctx.art = createPackReader({ index });
 
-  const meta = await ctx.data.meta();
   clear(credits).append(
     'Data: ', h('a', { href: meta.source, target: '_blank', rel: 'noopener' }, 'Spire Codex'),
     ' · ', h('a', { href: meta.game, target: '_blank', rel: 'noopener' }, meta.copyright),
     ` · game build ${meta.gameVersion}`,
   );
 
+  const layout = layoutFor(context);
+  document.body.classList.toggle('compact', layout.compact);
+  nav.hidden = layout.compact; // a panel is one section; the host's chrome names it
+
   nav.addEventListener('click', (e) => {
     const b = e.target.closest('[data-section]');
     if (b && SECTIONS[b.dataset.section]) show(b.dataset.section);
   });
-  await show('wiki');
+  await show(layout.section);
 }
 
 connect({
   onInit(msg) {
     ctx.placement = msg.context?.placement ?? 'page';
     ctx.contextType = msg.context?.contextType ?? null;
+    resolveInit(msg.context ?? {});
   },
-  onEvent(ev) {
+  async onEvent(ev) {
     if (ev.event === 'game.saves.changed' && ev.data?.game === 'slay-the-spire-2') {
       for (const fn of [...savesListeners]) fn(ev.data);
+    }
+    if (ev.event === 'overlay.context.changed') {
+      onPanelShown(current, await overlayContext());
     }
   },
 });
