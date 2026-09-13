@@ -1,3 +1,6 @@
 /* Insights — tables and panels reuse base.css and runs.css; this only marks thin samples. */
 .insights .panel { margin-bottom: 16px; }
 .insights td.low-sample { opacity: 0.6; font-style: italic; }
+/* The character filter is a toggle group (aria-pressed), not tabs; mark the pressed one as a tab is. */
+.tab[aria-pressed="true"] { color: var(--text); border-color: var(--line); background: var(--panel); }
+.insights [data-part="summary"] { color: var(--muted); margin: 0 16px 10px; }
