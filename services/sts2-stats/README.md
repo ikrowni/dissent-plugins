@@ -23,6 +23,7 @@ Design: `docs/superpowers/specs/2026-09-13-sts2-community-stats-design.md` (mono
 |---|---|
 | `POST /v1/runs` | `{ contributor_id, delete_token, runs: [1..20 contributions] }` → `{ ok, accepted, duplicates, refused: [{ index, reason }] }`. 403 on a token that does not match the id. Body ≤ 1 MB. |
 | `POST /v1/contributors/delete` | `{ contributor_id, delete_token }` → `{ ok, deleted }` |
+| `POST/GET /v1/party/<channel>/current` · `/finished` | Co-op party relay (`src/party.mjs`): sealed base64 only, **memory only** — the run in progress for 2 h after its last update, up to 10 finished runs for 7 days, 64 MB budget, 3600 requests/hour per address. A restart forgets everything here (guests re-receive the next room). |
 | `GET /v1/stats/latest.json`, `stats-<build>.json` | Static, served by Caddy with `ETag`; written nightly by `publish.mjs` |
 
 Limits: 300 runs/day per contributor, 600/day per address.
