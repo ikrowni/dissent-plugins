@@ -156,6 +156,17 @@ describe('syncRuns against the REAL service handler', () => {
     expect(storedRuns()).toBe(3);
   });
 
+  // Not a network failure: no backoff, and the user is told what to do.
+  for (const reason of ['net:direct not granted', 'net:direct needs the Dissent desktop app', 'net:direct: sts2-stats.plugins.dissent.chat is not an approved domain']) {
+    it(`"${reason}" reads as unavailable, not offline`, async () => {
+      const store = memory(); const local = memory();
+      await optIn(store, { now: NOW, backfill: true });
+      const refuse = async () => { throw new Error(reason); };
+      expect(await syncRuns({ saves: fakeSaves(history(2)), store, local, net: refuse, now: () => NOW })).toMatchObject({ status: 'unavailable', waiting: 2 });
+      expect(await syncRuns({ saves: fakeSaves(history(2)), store, local, net, now: () => NOW + 1 })).toMatchObject({ status: 'ok', sent: 2 });
+    });
+  }
+
   it('an implausible run is counted as refused and not retried', async () => {
     const store = memory(); const local = memory();
     await optIn(store, { now: NOW, backfill: true });

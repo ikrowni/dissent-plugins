@@ -1,0 +1,10 @@
+/* Community — sharing switches, the contribution preview, and the stats filters. Tables reuse runs.css. */
+.community .panel { margin: 0 16px 16px; }
+.community .switch { display: block; margin: 6px 0; cursor: pointer; }
+.community .switch:has(input:disabled) { opacity: 0.6; cursor: default; }
+.community details { margin: 10px 0; }
+.community summary { cursor: pointer; color: var(--muted); }
+.community pre.json { max-height: 320px; overflow: auto; font-size: 11px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; white-space: pre; }
+.community .wiki-bar { flex-wrap: wrap; gap: 6px; }
+.community h4 { margin: 14px 0 6px; font-size: 12px; color: var(--muted); }
+.community [data-act="delete"] { margin-top: 8px; }

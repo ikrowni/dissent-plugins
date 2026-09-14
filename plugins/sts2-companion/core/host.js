@@ -1,6 +1,6 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
-import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet } from '../../plugin-sdk.js';
+import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
 
@@ -25,7 +25,12 @@ export const store = {
 export const local = {
   get: (key) => storageLocalGet(key),
   set: (key, value) => storageLocalSet(key, value),
+  del: (key) => storageLocalDelete(key),
 };
+
+/** net:direct — HTTPS from this computer to the stats service only (the one domain the manifest declares).
+ *  Desktop only; rejects when not granted, on the web, or offline. */
+export const net = (url, opts) => netFetch(url, opts);
 
 /** overlay.context — { game, surface, width, height, panelOpen }, or null outside the overlay or if refused. */
 export async function overlayContext() {

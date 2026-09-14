@@ -15,7 +15,15 @@ describe('manifest overlay block', () => {
   const o = manifest.overlay;
 
   it('declares exactly the permissions the plugin uses', () => {
-    expect([...manifest.declared_permissions].sort()).toEqual(['game:saves', 'overlay:context', 'storage:local', 'storage:user']);
+    expect([...manifest.declared_permissions].sort()).toEqual(['game:saves', 'net:direct', 'overlay:context', 'storage:local', 'storage:user']);
+  });
+
+  // 🔴 net:direct reaches only what the user approved from this list, so the list is the promise: the stats
+  // service and nothing else. core/sharing.js and core/stats.js must talk to exactly this host.
+  it('🔴 net:direct declares only the stats service, and the code uses only that host', async () => {
+    expect(manifest.allowed_fetch_domains).toEqual(['sts2-stats.plugins.dissent.chat']);
+    const { STATS_HOST } = await import('./core/sharing.js');
+    expect(new URL(STATS_HOST).host).toBe(manifest.allowed_fetch_domains[0]);
   });
 
   it('targets Slay the Spire 2 by its catalog id', () => {

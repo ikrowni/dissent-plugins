@@ -25,6 +25,15 @@ const OFF = { enabled: false, backfill: false };
 
 const hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 
+/** A random v4 UUID from getRandomValues — randomUUID needs a secure context, which a sandboxed frame may not be. */
+function uuid() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const x = hex(b);
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+
 export async function readSettings(store) {
   const s = await Promise.resolve().then(() => store.get(SETTINGS_KEY)).catch(() => null);
   return s && typeof s === 'object' ? { ...OFF, ...s } : { ...OFF };
@@ -38,7 +47,7 @@ export async function optIn(store, { now = Date.now(), backfill = false } = {}) 
     enabled: true,
     backfill: backfill || s.backfill,
     since: s.since ?? Math.floor(now / 1000),
-    contributorId: s.contributorId ?? crypto.randomUUID(),
+    contributorId: s.contributorId ?? uuid(),
     deleteToken: s.deleteToken ?? hex(crypto.getRandomValues(new Uint8Array(32))),
   };
   await store.set(SETTINGS_KEY, next);
@@ -81,6 +90,9 @@ const post = async (net, path, payload) => {
   try { body = JSON.parse(r.body); } catch { /* not JSON: treated by status */ }
   return { status: r.status, body };
 };
+
+/** The host refused before any request left the computer: no permission, not desktop, or host not approved. */
+export const UNAVAILABLE = /not granted|needs the Dissent desktop|not an approved domain|unknown action/;
 
 let inFlight = null;
 
@@ -125,7 +137,11 @@ async function doSync({ saves, store, local, net, now = () => Date.now() }) {
     let r;
     try {
       r = await post(net, '/v1/runs', { contributor_id: settings.contributorId, delete_token: settings.deleteToken, runs });
-    } catch {
+    } catch (e) {
+      if (UNAVAILABLE.test(String(e?.message ?? e))) {
+        await save();
+        return { status: 'unavailable', ...totals, waiting: ids.length + queue.length };
+      }
       r = null;
     }
     if (!r || r.status >= 500 || r.status === 429) {
@@ -170,7 +186,8 @@ export async function deleteSharedData({ store, local, net }) {
   try {
     r = await post(net, '/v1/contributors/delete', { contributor_id: s.contributorId, delete_token: s.deleteToken });
   } catch (e) {
-    return { status: 'offline', error: String(e?.message ?? e) };
+    const error = String(e?.message ?? e);
+    return { status: UNAVAILABLE.test(error) ? 'unavailable' : 'offline', error };
   }
   if (r.status !== 200 || !r.body?.ok) return { status: 'error', error: r.body?.error ?? `HTTP ${r.status}` };
   await store.set(SETTINGS_KEY, { ...OFF });

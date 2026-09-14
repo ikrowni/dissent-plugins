@@ -1,6 +1,7 @@
 // core/app.js — bootstrap: data, art, the section router, the saves-changed bus, the credits footer.
 
-import { connect, overlayContext } from './host.js';
+import { connect, overlayContext, saves, store, local, net } from './host.js';
+import { syncRuns } from './sharing.js';
 import { layoutFor, onPanelShown } from './placement.js';
 import { createData } from './data.js';
 import { createPackReader } from './pack.js';
@@ -26,7 +27,18 @@ const SECTIONS = {
   deck: () => import('../views/deck.js').then((m) => m.mountDeck),
   history: () => import('../views/history.js').then((m) => m.mountHistory),
   insights: () => import('../views/insights.js').then((m) => m.mountInsights),
+  community: () => import('../views/community.js').then((m) => m.mountCommunity),
 };
+
+// Shared runs are sent whenever the plugin is open — its page or a panel — not only on the Community
+// section: a personal plugin runs only while open, and a run usually ends with the game in front
+// (community stats spec §4). syncRuns does nothing unless the user opted in, and never runs twice at once.
+// Debounced because the game writes its save several times as a run ends.
+let syncTimer = null;
+function syncSoon(ms) {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { syncRuns({ saves, store, local, net }).catch(() => {}); }, ms);
+}
 
 let current = null;
 let showing = 0;
@@ -73,6 +85,7 @@ async function boot() {
     if (b && SECTIONS[b.dataset.section]) show(b.dataset.section);
   });
   await show(layout.section);
+  syncSoon(5_000);
 }
 
 connect({
@@ -84,6 +97,7 @@ connect({
   async onEvent(ev) {
     if (ev.event === 'game.saves.changed' && ev.data?.game === 'slay-the-spire-2') {
       for (const fn of [...savesListeners]) fn(ev.data);
+      syncSoon(10_000);
     }
     if (ev.event === 'overlay.context.changed') {
       onPanelShown(current, await overlayContext());

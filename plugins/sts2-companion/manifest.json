@@ -1,8 +1,8 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.4.0",
-  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
+  "version": "0.5.0",
+  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
   "context": [
@@ -13,9 +13,12 @@
     "storage:user",
     "storage:local",
     "game:saves",
-    "overlay:context"
+    "overlay:context",
+    "net:direct"
   ],
-  "allowed_fetch_domains": [],
+  "allowed_fetch_domains": [
+    "sts2-stats.plugins.dissent.chat"
+  ],
   "config_schema": null,
   "categories": [
     "gaming",
@@ -61,11 +64,15 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "81967acf06fb9559512cdb5425c1a60262c7498f5c0e30d501356ef9fbe14467"
+      "sha256": "4c7200868b819779398f2c66e76bd20e1a01fb384f285f3348b9037ed160fcc2"
     },
     {
       "url": "core/archetypes.js",
       "sha256": "e7523a08a2091e9906da62572eb8fd6b27dbeea836b76d9625d5eb3de2938e64"
+    },
+    {
+      "url": "core/builds.js",
+      "sha256": "7334aafa91ff84069ba7bb615f175687fa8044d719dee05653f63a1fcbd7a8fe"
     },
     {
       "url": "core/chart.js",
@@ -74,6 +81,10 @@
     {
       "url": "core/classify.js",
       "sha256": "70c2ff5c92691e98cf4772523dedec79d4759a3a3c9c09cc09171ed463854fca"
+    },
+    {
+      "url": "core/contribution.js",
+      "sha256": "00406a4c3ae7be92f70a7904d8ca14394bb2e996bbcb4e35ff621e632d7188b3"
     },
     {
       "url": "core/data.js",
@@ -89,7 +100,7 @@
     },
     {
       "url": "core/digestStore.js",
-      "sha256": "572dd268c7ced132399a9d37dd0f8ec54f8dfa28c27e0039154a0bc7f7a0edd9"
+      "sha256": "641a5ca235f5be8179137c8496538f3a5df80db669cdc0e70a0ea92b03dd6627"
     },
     {
       "url": "core/dom.js",
@@ -97,7 +108,7 @@
     },
     {
       "url": "core/host.js",
-      "sha256": "ca9d57443be7bd8ba7c6646b937330b0c21a7e8f899a6a305dcf32ac2c749803"
+      "sha256": "12cb81c48d4f2e5aeb10a7f027b574776cebe85303dea07419ddaac04bf59bd8"
     },
     {
       "url": "core/insights.js",
@@ -116,6 +127,14 @@
       "sha256": "c2fae49e1c2494fa31bb1d1d9d0a07e577b2710d9ac3dc9bb4b16d63fd3a3c7e"
     },
     {
+      "url": "core/plausible.js",
+      "sha256": "62ba0f5ddbc5e90cee2349ce8d29558b2b64da6c2f57d87ff85a52a9ca0030e5"
+    },
+    {
+      "url": "core/runList.js",
+      "sha256": "65efe6c6976221d02b589a463e6bcee53578e5ad59c6214e3ca7b88fffdb8152"
+    },
+    {
       "url": "core/runs.js",
       "sha256": "48d8f673eabb934d631b43c84208f949630404bcb75a458c8fac96f4deb60e49"
     },
@@ -124,12 +143,24 @@
       "sha256": "55ad7a668c43ceeaea5f3eb9dad4ba3caa1f82985edd224f5cc57b86721f65d9"
     },
     {
+      "url": "core/sharing.js",
+      "sha256": "97a2117c0b64cd4c7fd4bc8a9223747cca4b3bae5129a8c8e59be6ac9047bc6b"
+    },
+    {
+      "url": "core/stats.js",
+      "sha256": "202c3d3a2daae48a04d17bf8d6652c4f3f295c89fc62114a752a73aa10e2a132"
+    },
+    {
       "url": "core/wilson.js",
       "sha256": "6209df4db9c1aaf7ed45fc32fc96af47c844d7ae9f26fa95bee48260d328a67e"
     },
     {
       "url": "data/cards.json",
       "sha256": "edd7972be48ef6929dc80468c29667ea937248319f2a0c9d3d5c717167c6941e"
+    },
+    {
+      "url": "data/community-snapshot.json",
+      "sha256": "278c296bd73d8daa17227ba11ce25c592bb23488c1b7a7cf097f0731b6c8ece3"
     },
     {
       "url": "data/encounters.json",
@@ -168,6 +199,10 @@
       "sha256": "81ec53cf3d845eb641a7982bd72d2b4f9f85049df060190ee9360868029d92d7"
     },
     {
+      "url": "styles/community.css",
+      "sha256": "711c1d59b2a23ea2f0f5422ff214ae0aefb3e0c9dc814f5f5162184c06d54fee"
+    },
+    {
       "url": "styles/compact.css",
       "sha256": "34c709b317341ebd7b3261403256eebd96d1de1a7d993ec1694596b646aa4ba4"
     },
@@ -186,6 +221,10 @@
     {
       "url": "views/card-stats.js",
       "sha256": "f993aa55c6acbd52579d0ba6f991c7714ce0df90b510eb9a163bc2f2813a07fe"
+    },
+    {
+      "url": "views/community.js",
+      "sha256": "623225ae4e0958ddedafec8e2cb1681766caeba49ac4fe7216f2151340162d9d"
     },
     {
       "url": "views/deck-parts.js",
