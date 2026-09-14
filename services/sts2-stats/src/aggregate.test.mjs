@@ -41,7 +41,7 @@ describe('aggregate', () => {
 
 describe('publish', () => {
   it('orders builds by version and keeps the newest three', () => {
-    expect(['v0.99.1', '1.3.0', 'v1.10.0', '1.2.9'].sort(compareBuilds)).toEqual(['1.2.9', '1.3.0', 'v1.10.0', 'v0.99.1'].sort(compareBuilds));
+    expect(['v0.99.1', '1.3.0', 'v1.10.0', '1.2.9'].sort(compareBuilds)).toEqual(['v0.99.1', '1.2.9', '1.3.0', 'v1.10.0']);
     expect(compareBuilds('v1.10.0', '1.3.0')).toBeGreaterThan(0);
   });
 
@@ -55,6 +55,8 @@ describe('publish', () => {
     expect(db.prepare('SELECT build FROM runs ORDER BY build').all().map((r) => r.build)).toEqual(['1.1.0', '1.2.0', '1.3.0']);
     const latest = JSON.parse(readFileSync(join(out, 'latest.json')));
     expect(latest).toMatchObject({ schema: 1, minRuns: MIN_RUNS, minOffers: MIN_OFFERS });
-    expect(Object.keys(latest.builds).sort()).toEqual(['1.1.0', '1.2.0', '1.3.0']);
+    expect(latest.available).toEqual(['1.1.0', '1.2.0', '1.3.0']);
+    expect(Object.keys(latest.builds)).toEqual(['1.3.0']); // newest only: size stays under net:direct's cap
+    expect(Object.keys(JSON.parse(readFileSync(join(out, 'stats-1.1.0.json'))).builds)).toEqual(['1.1.0']);
   });
 });

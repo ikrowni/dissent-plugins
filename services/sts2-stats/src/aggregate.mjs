@@ -11,6 +11,9 @@
 import { writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { classifyDeck, buildTypeLabel } from '../../../plugins/sts2-companion/core/classify.js';
+import { compareBuilds } from '../../../plugins/sts2-companion/core/builds.js';
+
+export { compareBuilds };
 
 export const MIN_RUNS = 50;
 export const MIN_OFFERS = 30;
@@ -25,17 +28,6 @@ const median = (v) => {
   const m = Math.floor(s.length / 2);
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
-
-/** Numeric version order, ignoring a leading "v". */
-export function compareBuilds(a, b) {
-  const parts = (x) => String(x).replace(/^v/, '').split('.').map((n) => Number(n) || 0);
-  const pa = parts(a); const pb = parts(b);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d) return d;
-  }
-  return 0;
-}
 
 function newCell(character, band, mode) {
   return { character, band, mode, runs: 0, wins: 0, floors: BUCKETS.map(() => 0), encounters: new Map(), builds: new Map(), cards: new Map() };
@@ -118,6 +110,11 @@ export async function publish({ db, data, outDir, keepBuilds = 3 }) {
   for (const build of keep) {
     writeAtomic(join(outDir, `stats-${build}.json`), JSON.stringify({ ...stats, builds: { [build]: stats.builds[build] } }));
   }
-  writeAtomic(join(outDir, 'latest.json'), JSON.stringify(stats));
+  // latest.json is the NEWEST build only: every build in one file could pass net:direct's 5 MB response
+  // cap at full size (cells × up to 400 cards). `builds` lists what else is published.
+  const newest = keep.at(-1);
+  writeAtomic(join(outDir, 'latest.json'), JSON.stringify({
+    ...stats, available: keep, builds: newest ? { [newest]: stats.builds[newest] } : {},
+  }));
   return stats;
 }
