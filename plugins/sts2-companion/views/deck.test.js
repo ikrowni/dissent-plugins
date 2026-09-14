@@ -4,7 +4,13 @@ import { readFileSync } from 'node:fs';
 import { createData } from '../core/data.js';
 
 const saves = vi.fn();
-vi.mock('../core/host.js', () => ({ saves, store: { get: vi.fn(async () => null), set: vi.fn(), del: vi.fn() } }));
+const noLinks = { list: vi.fn(async () => ({ friends: [] })), links: vi.fn(async () => ({ links: [] })), invite: vi.fn(), respond: vi.fn(), remove: vi.fn() };
+vi.mock('../core/host.js', () => ({
+  saves,
+  store: { get: vi.fn(async () => null), set: vi.fn(), del: vi.fn() },
+  local: { get: vi.fn(async () => null), set: vi.fn(async () => {}), del: vi.fn() },
+  friends: noLinks,
+}));
 const { mountDeck } = await import('./deck.js');
 const { STATUS_TEXT } = await import('./status.js');
 
@@ -73,13 +79,13 @@ describe('the Deck section over the REAL current-run projection', () => {
   // A guest's Deck: the run arrives from the party host (core/party.js makePartySaves), marked as such.
   it('a run sent by the party host says so, and opens on the guest', async () => {
     const run = snapshot('current-run-coop');
-    saves.mockResolvedValue({ ...run, you: 1, character: 'CHARACTER.SILENT', shared: { by: 'party', sentAt: Date.UTC(2026, 8, 14, 20, 5) } });
+    saves.mockResolvedValue({ ...run, you: 1, character: 'CHARACTER.SILENT', shared: { by: 'party', peer: 'KROWN', sentAt: Date.UTC(2026, 8, 14, 20, 5) } });
     const root = document.createElement('div');
     await mountDeck(root, makeCtx());
     await flush(); await flush();
     expect(root.querySelector('.run-head h2').textContent).toMatch(/^Silent · Act 2/);
     expect(root.querySelector('[data-player="1"]').textContent).toBe('Silent (you)');
-    expect(root.querySelector('[data-part="shared"]').textContent).toMatch(/^Sent by your party's host at /);
+    expect(root.querySelector('[data-part="shared"]').textContent).toMatch(/^Sent by KROWN at /);
   });
 
   it('solo: no player switcher', async () => {
@@ -115,7 +121,7 @@ describe('the Deck section over the REAL current-run projection', () => {
     saves.mockResolvedValue(snapshot('current-run-after'));
     const ctx = makeCtx();
     const view = await mountDeck(document.createElement('div'), ctx);
-    expect(ctx.listeners.size).toBe(1); // else "0 after destroy" proves nothing
+    expect(ctx.listeners.size).toBe(2); // the save cue and the co-op block; else "0 after destroy" proves nothing
     view.destroy();
     expect(ctx.listeners.size).toBe(0);
     expect(ctx.art.releaseAll).toHaveBeenCalled();

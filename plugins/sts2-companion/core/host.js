@@ -1,7 +1,7 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
 import { makePartySaves } from './party.js';
-import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch } from '../../plugin-sdk.js';
+import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch, friendsList, friendLinks, inviteFriend, respondToInvite, removeFriendLink, matchFriends, setAutoFriendLinks } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
 
@@ -27,6 +27,18 @@ export const local = {
   get: (key) => storageLocalGet(key),
   set: (key, value) => storageLocalSet(key, value),
   del: (key) => storageLocalDelete(key),
+};
+
+/** friends:link — this plugin on Dissent friends' accounts (core/party.js decides what flows). */
+export const friends = {
+  list: () => friendsList(),
+  links: () => friendLinks(),
+  invite: (handle, payload) => inviteFriend(handle, payload),
+  respond: (id, accept) => respondToInvite(id, accept),
+  remove: (id) => removeFriendLink(id),
+  /** Friends in the same game (run in progress, or a finished run by id) — matched by the desktop app. */
+  match: (run) => matchFriends('slay-the-spire-2', run),
+  setAuto: (enabled) => setAutoFriendLinks(enabled),
 };
 
 /** net:direct — HTTPS from this computer to the stats service only (the one domain the manifest declares).

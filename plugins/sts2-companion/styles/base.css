@@ -43,3 +43,10 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 .tip strong { display: block; margin-bottom: 4px; }
 @media (max-width: 560px) { .detail { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .tile img { transition: transform .12s ease; } .tile:hover img { transform: translateY(-2px); } }
+
+/* Co-op invites (views/coop.js) — shown in Deck, the Deck overlay panel, and Community. */
+.coop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 16px; }
+.coop .coop-invite { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel); width: 100%; }
+.coop .coop-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.coop .sub { margin: 0; width: 100%; }
+.coop.compact { margin: 6px 8px; font-size: 12px; }

@@ -7,6 +7,7 @@ import { resolveCards, groupDeck, keywordCoverage, defaultPlayer } from '../core
 import { deckGrid, curvePanel, coveragePanel, relicRow, loadArt } from './deck-parts.js';
 import { statusBlock } from './status.js';
 import { mountBuilder } from './builder.js';
+import { mountCoop } from './coop.js';
 
 const TABS = [['current', 'Current run'], ['builder', 'Builder']];
 
@@ -41,7 +42,7 @@ export async function renderCurrentRun(run, ctx, { openBuilder, compact = false,
       // ⚠️ The game writes its save on entering and leaving a room — never mid-fight.
       h('p', { class: 'sub asof' }, `As of entering this room${saved ? ` (saved ${saved})` : ''}. The game saves when you change rooms, not during a fight.`),
       run.shared ? h('p', { class: 'sub', dataset: { part: 'shared' } },
-        `Sent by your party's host at ${new Date(run.shared.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+        `Sent by ${run.shared.peer || 'your co-op host'} at ${new Date(run.shared.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
         + (run.you ? '' : ' Pick which player you are above.')) : null),
     h('section', { class: 'panel' }, h('h3', {}, 'Relics'), await relicRow(ctx, p.relics)),
     h('div', { class: 'panels' }, curvePanel(entries), compact ? null : coveragePanel(keywordCoverage(entries))),
@@ -53,8 +54,12 @@ export async function mountDeck(root, ctx) {
   let child = null;
   let pull = 0;
   let player = null; // co-op: the player being looked at; null until the user picks one
+  let lastRun = null;
   // Overlay (spec §5): the run in progress and its curve. The Builder stays in the app.
   const compact = ctx.placement === 'overlay';
+  // Invites and Accept live here too, so a guest sees an invite in the overlay panel mid-game.
+  // "Invite a friend" shows while THIS computer's run is co-op: the host is the one with something to share.
+  const coop = mountCoop(ctx, { compact, showInvite: () => lastRun?.status === 'ok' && lastRun.players?.length > 1 && !lastRun.shared });
 
   const tabs = h('div', { class: 'wiki-tabs', role: 'tablist' }, TABS.map(([key, label]) =>
     h('button', { type: 'button', class: 'tab', role: 'tab', dataset: { tab: key }, 'aria-selected': String(key === tab), onclick: () => show(key) }, label)));
@@ -66,12 +71,14 @@ export async function mountDeck(root, ctx) {
     const mine = ++pull;
     const run = await saves('currentRun');
     if (mine !== pull || tab !== 'current') return; // a newer pull, or the Builder, won
+    lastRun = run;
+    coop.refresh();
     const el = await renderCurrentRun(run, ctx, {
       openBuilder: () => show('builder'), compact, player,
       onPlayer: (n) => { player = n; paintCurrent(); },
     });
     if (mine !== pull || tab !== 'current') return;
-    clear(body).append(el);
+    clear(body).append(coop.el, el);
     loadArt(body, ctx);
   }
 
@@ -94,6 +101,7 @@ export async function mountDeck(root, ctx) {
     destroy() {
       pull += 1;
       off?.();
+      coop.destroy();
       child?.destroy?.();
       ctx.art.releaseAll();
     },

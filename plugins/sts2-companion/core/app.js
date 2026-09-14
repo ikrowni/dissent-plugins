@@ -1,8 +1,8 @@
 // core/app.js — bootstrap: data, art, the section router, the saves-changed bus, the credits footer.
 
-import { connect, overlayContext, rawSaves, store, local, net } from './host.js';
+import { connect, overlayContext, rawSaves, store, local, net, friends } from './host.js';
 import { syncRuns } from './sharing.js';
-import { readParty, pushParty, pullParty } from './party.js';
+import { refreshLinks, channelsFrom, pushParty, pullParty } from './party.js';
 import { layoutFor, onPanelShown } from './placement.js';
 import { createData } from './data.js';
 import { createPackReader } from './pack.js';
@@ -90,27 +90,34 @@ async function boot() {
   partyLoop();
 }
 
-// Co-op party (core/party.js). Polled, not cued: overlay panels get no save cue, and a guest's game
-// writes nothing to be cued by. Every PARTY_POLL_MS: send the run in progress if this computer has one
-// and it changed (a small file read and a hash when not), receive the party's, and when something
-// arrived tell the views to pull again through the same bus as a save change. Finished runs are listed
-// less often — that reads the history folder.
+// Co-op with friends (core/party.js). Polled, not cued: overlay panels get no save cue, and a guest's game
+// writes nothing to be cued by. Every PARTY_POLL_MS: read friends:link links (an invite shows up in an
+// overlay panel this way), then — when any link is accepted — send the run in progress if this computer has
+// one and it changed, receive friends' runs, and tell the views to pull again through the same bus as a
+// save change. Finished runs are listed less often: that reads the history folder.
 const PARTY_POLL_MS = 10_000;
 const PARTY_FINISHED_EVERY = 6;
 let partyTick = 0;
+let lastLinks = '';
+const tell = (extra) => { for (const fn of [...savesListeners]) fn({ game: 'slay-the-spire-2', ...extra }); };
 async function partyLoop() {
   try {
-    if (await readParty(store)) {
-      const withFinished = partyTick % PARTY_FINISHED_EVERY === 0;
-      const saves = withFinished ? rawSaves : async (action, params) => (action === 'runs'
-        ? { status: 'skipped' } : rawSaves(action, params));
-      await pushParty({ saves, store, local, net });
-      const got = await pullParty({ store, local, net });
-      if (got.current || got.imported) for (const fn of [...savesListeners]) fn({ game: 'slay-the-spire-2', party: true });
-      partyTick += 1;
+    const links = await refreshLinks({ friends, local });
+    const seen = JSON.stringify(links);
+    if (seen !== lastLinks) { lastLinks = seen; tell({ coop: true }); }
+    const channels = channelsFrom(links);
+    const withFinished = partyTick % PARTY_FINISHED_EVERY === 0;
+    const saves = withFinished ? rawSaves : async (action, params) => (action === 'runs' ? { status: 'skipped' } : rawSaves(action, params));
+    // Always: a co-op run on this computer is how friends get matched and linked in the first place.
+    const sent = await pushParty({ saves, store, local, net, friends, channels });
+    if (sent.current === 'sent') tell({ coop: true });
+    if (channels.length) {
+      const got = await pullParty({ store, local, net, channels });
+      if (got.current || got.imported) tell({ party: true });
     }
+    partyTick += 1;
   } catch (e) {
-    console.warn('[sts2-companion] party sync failed', e);
+    console.warn('[sts2-companion] co-op sync failed', e);
   }
   setTimeout(partyLoop, PARTY_POLL_MS);
 }

@@ -15,7 +15,7 @@ describe('manifest overlay block', () => {
   const o = manifest.overlay;
 
   it('declares exactly the permissions the plugin uses', () => {
-    expect([...manifest.declared_permissions].sort()).toEqual(['game:saves', 'net:direct', 'overlay:context', 'storage:local', 'storage:user']);
+    expect([...manifest.declared_permissions].sort()).toEqual(['friends:link', 'game:saves', 'net:direct', 'overlay:context', 'storage:local', 'storage:user']);
   });
 
   // 🔴 net:direct reaches only what the user approved from this list, so the list is the promise: the stats

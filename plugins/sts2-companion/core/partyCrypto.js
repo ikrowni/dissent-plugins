@@ -28,8 +28,10 @@ export const formatCode = (code) => {
 
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
+/** A party code, or a link secret from friends:link (32+ hex characters) — either keys a channel. */
 export async function deriveParty(code) {
-  const c = normalizeCode(code);
+  const secret = typeof code === 'string' && /^[a-f0-9]{32,}$/.test(code) ? code : null;
+  const c = secret ?? normalizeCode(code);
   if (!c) throw new Error('not a party code');
   const channel = hex(await crypto.subtle.digest('SHA-256', enc.encode(`sts2-companion party channel v1|${c}`))).slice(0, 32);
   const raw = await crypto.subtle.digest('SHA-256', enc.encode(`sts2-companion party key v1|${c}`));
