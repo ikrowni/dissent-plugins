@@ -11,7 +11,7 @@
 import { writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { classifyDeck, buildTypeLabel } from '../../../plugins/sts2-companion/core/classify.js';
-import { compareBuilds } from '../../../plugins/sts2-companion/core/builds.js';
+import { compareBuilds, bandOf } from '../../../plugins/sts2-companion/core/builds.js';
 
 export { compareBuilds };
 
@@ -20,7 +20,6 @@ export const MIN_OFFERS = 30;
 export const STATS_SCHEMA = 1;
 
 const BUCKETS = [[1, 10, '1–10'], [11, 20, '11–20'], [21, 30, '21–30'], [31, 40, '31–40'], [41, Infinity, '41+']];
-const bandOf = (a) => (a === 0 ? '0' : a <= 4 ? '1-4' : a <= 9 ? '5-9' : '10+');
 
 const median = (v) => {
   const s = [...v].sort((a, b) => a - b);

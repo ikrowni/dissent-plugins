@@ -1,4 +1,4 @@
-// core/builds.js — game build order, shared by the plugin and the stats service.
+// core/builds.js — game build order and ascension bands, shared by the plugin and the stats service.
 
 /** Numeric version order, ignoring a leading "v": v1.10.0 is after 1.3.0. */
 export function compareBuilds(a, b) {
@@ -10,3 +10,7 @@ export function compareBuilds(a, b) {
   }
   return 0;
 }
+
+/** The ascension bands community stats are published in (spec §6.1). */
+export const BANDS = ['0', '1-4', '5-9', '10+'];
+export const bandOf = (a) => (a === 0 ? '0' : a <= 4 ? '1-4' : a <= 9 ? '5-9' : '10+');
