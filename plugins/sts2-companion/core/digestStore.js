@@ -5,12 +5,10 @@
 // of what the saves already hold, so it never leaves the device and losing it costs one slow load.
 
 import { runDigest, DIGEST_VERSION } from './digest.js';
+import { listRunSummaries, PAGE } from './runList.js';
 
 export const CACHE_KEY = 'insights:digests';
-/** Rust clamps `limit` to 1–100 (game_saves/sts2/mod.rs). */
-export const PAGE = 100;
-/** A guard, not a limit anyone reaches: 100 pages is 10,000 runs. */
-const MAX_PAGES = 100;
+export { PAGE };
 
 export async function loadDigests({ saves, local, data, onProgress = () => {} }) {
   // The cache is an optimisation. A device store that refuses (storage:local not yet approved after an
@@ -21,23 +19,10 @@ export async function loadDigests({ saves, local, data, onProgress = () => {} })
   // True only when the cache really changes: a reset, a new digest, or a forgotten run.
   let changed = !valid;
 
-  const ids = [];
-  let skipped = 0;
-  let before;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const r = await saves('runs', { limit: PAGE, ...(before ? { before } : {}) });
-    if (r?.status !== 'ok') return { status: r?.status ?? 'error' };
-    ids.push(...r.runs.map((x) => String(x.id)));
-    skipped += r.skipped ?? 0;
-    // Same paging rule as views/history.js: next_before when the host sends it, else the last id.
-    if ('next_before' in r) {
-      if (r.next_before === null) break;
-      before = r.next_before;
-    } else {
-      if (r.runs.length === 0 || r.runs.length + (r.skipped ?? 0) < PAGE) break;
-      before = r.runs.at(-1).id;
-    }
-  }
+  const list = await listRunSummaries(saves);
+  if (list.status !== 'ok') return { status: list.status };
+  const ids = list.runs.map((x) => String(x.id));
+  let { skipped } = list;
 
   const missing = ids.filter((id) => !cache.digests[id]);
   let done = 0;
