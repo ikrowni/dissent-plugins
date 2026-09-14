@@ -2,7 +2,7 @@
   "id": "sts2-companion",
   "name": "STS2 Companion",
   "version": "0.7.0",
-  "description": "A Slay the Spire 2 companion \u2014 a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. In co-op, the host's Companion sends the run, sealed, to Dissent friends playing it (recognised by their connected Steam accounts, or by invite) through the same service. Data: Spire Codex. Slay the Spire 2 \u00a9 Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
+  "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. In co-op, the host's Companion sends the run, sealed, to Dissent friends playing it (recognised by their connected Steam accounts, or by invite) through the same service. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
   "context": [
@@ -65,7 +65,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "9bba729b3bbf676f884c0903ae0e291b43c70cda9bc5cebceb2d8d608e716d3f"
+      "sha256": "80a423739e4a873086e44fd80a4dbc2146762c544a10fceb190e890904401f4e"
     },
     {
       "url": "core/archetypes.js",
@@ -109,7 +109,7 @@
     },
     {
       "url": "core/host.js",
-      "sha256": "4dc9c5c0585373364820d91d4b343977f3012c3d03348a4c2e7ecdb92d8d17a3"
+      "sha256": "63ddcc9f1360d8cbbcdf498b1f3b7881fb94a6485a07f5a90b5fd8cf5cd63996"
     },
     {
       "url": "core/insights.js",
@@ -125,11 +125,11 @@
     },
     {
       "url": "core/party.js",
-      "sha256": "5d6c0bee70356302ca4515078d375719ed28292cbfc21cbb65cefda59c3455ee"
+      "sha256": "a77ed1d5a37064e6fcd3982189d24b0fc2909d0af807dfaf26c35d1e4cd92151"
     },
     {
       "url": "core/partyCrypto.js",
-      "sha256": "b2d391a5d5e79c7e8e1c9d869e8237e5cfa48020d426409f3974e862850fd4fe"
+      "sha256": "84be9b0ee0b7e0a33a2969a6ff6a53b6b324cd1ff41b520f2647545da97ca3c4"
     },
     {
       "url": "core/placement.js",
@@ -209,11 +209,11 @@
     },
     {
       "url": "styles/base.css",
-      "sha256": "81ec53cf3d845eb641a7982bd72d2b4f9f85049df060190ee9360868029d92d7"
+      "sha256": "8e18778a304ad85d86c4b4d2209092b63d2438618e635dcde9b1f0e11a914a00"
     },
     {
       "url": "styles/community.css",
-      "sha256": "371813ad7eccd6a2f0cdf047e8ba7e55b3d50a3746f70508002a2f8b51f37c22"
+      "sha256": "711c1d59b2a23ea2f0f5422ff214ae0aefb3e0c9dc814f5f5162184c06d54fee"
     },
     {
       "url": "styles/compact.css",
@@ -237,7 +237,11 @@
     },
     {
       "url": "views/community.js",
-      "sha256": "ab60fefa9b461d46e7876635702d01bb386d0b3b89c02a26a24f77d2d58a5e26"
+      "sha256": "c0f3987765e373359d60d3bc8a85fda0d9b9f8102bc1e98bf98905aff994a7fc"
+    },
+    {
+      "url": "views/coop.js",
+      "sha256": "02e52a8cc1a84344997605f6d035ecea79b9989dfba81411a6c4993a64b69c92"
     },
     {
       "url": "views/deck-parts.js",
@@ -245,7 +249,7 @@
     },
     {
       "url": "views/deck.js",
-      "sha256": "ee20c295f1b9690516f2676676c00787c003f79fcb1abecead12d056903b1893"
+      "sha256": "95ea99eb56d9202927db95cedfd93a3c5afb30a923d9bb45e430d2eba5d3902c"
     },
     {
       "url": "views/history.js",
