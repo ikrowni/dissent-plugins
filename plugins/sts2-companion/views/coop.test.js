@@ -116,3 +116,14 @@ describe('automatic sharing', () => {
     expect(auto).toBe(false);
   });
 });
+
+describe('before friend connections are approved', () => {
+  it('says how to approve them, instead of "no friends"', async () => {
+    const host = await as('host', { showInvite: true });
+    friends.list.mockRejectedValueOnce(new Error('friends.list failed: friends:link not granted'));
+    host.querySelector('[data-act="invite"]').click();
+    await flush();
+    expect(host.querySelector('[data-part="pick"]')).toBeNull();
+    expect(host.querySelector('[data-part="coop-error"]').textContent).toContain('Review permissions');
+  });
+});

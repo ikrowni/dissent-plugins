@@ -73,7 +73,7 @@ export function mountCoop(ctx, { showInvite = true, manage = false, compact = fa
           state.picking = true;
           state.friends = null;
           paint();
-          try { state.friends = (await friends.list()).friends; } catch (e) { state.friends = []; state.error = String(e?.message ?? e); }
+          try { state.friends = (await friends.list()).friends; } catch (e) { state.picking = false; state.error = String(e?.message ?? e); }
           paint();
         }));
       } else if (state.friends === null) {
@@ -92,7 +92,14 @@ export function mountCoop(ctx, { showInvite = true, manage = false, compact = fa
           act('Cancel', 'cancel', () => { state.picking = false; paint(); })));
       }
     }
-    if (state.error) rows.push(h('p', { class: 'sub', dataset: { part: 'coop-error' } }, `Could not do that: ${state.error}`));
+    if (state.error) {
+      // The one refusal a user can fix themselves: the permission is declared but not yet approved (or, on the
+      // node, not yet picked up — a registry re-add is what makes My plugins offer it).
+      const text = /not granted/.test(state.error)
+        ? 'Friend connections are not approved yet. Open My plugins → STS2 Companion → Review permissions and allow them. (If that button is missing, the node admin needs to add the STS2 Companion manifest to the registry again.)'
+        : `Could not do that: ${state.error}`;
+      rows.push(h('p', { class: 'sub', dataset: { part: 'coop-error' } }, text));
+    }
     clear(el).append(...rows);
     el.hidden = rows.length === 0;
   }
