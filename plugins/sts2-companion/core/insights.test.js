@@ -6,10 +6,12 @@ const SI = 'CHARACTER.SILENT';
 const solo = (over = {}, soloOver = {}) => ({
   v: 1, id: String(Math.random()), build: 'v0.99.1', ascension: 0, players: 1, characters: [IC],
   win: false, abandoned: false, floors: 20, killedBy: 'ENCOUNTER.A', fought: ['ENCOUNTER.A'],
-  solo: { character: IC, buildTags: ['Vulnerable'], damageByAct: [10, 20], choices: [], ...soloOver },
+  mine: { character: IC, buildTags: ['Vulnerable'], damageByAct: [10, 20], choices: [], ...soloOver },
   ...over,
 });
-const coop = (over = {}) => ({ ...solo(over), players: 2, characters: [IC, SI], solo: null });
+const coop = (over = {}) => ({ ...solo(over), players: 2, characters: [IC, SI], mine: null });
+/** A co-op run where the app knew which player was the user. */
+const coopMine = (over = {}, mineOver = {}) => ({ ...solo(over, mineOver), players: 2, characters: [IC, SI] });
 
 describe('insights', () => {
   it('ignores abandoned runs and runs that neither won nor died', () => {
@@ -17,12 +19,20 @@ describe('insights', () => {
     expect(r.runs).toBe(1);
   });
 
-  it('counts co-op runs for survivability but never for builds, HP or cards', () => {
+  it('counts a co-op run with no known player for survivability but never for builds, HP or cards', () => {
     const r = insights([coop(), solo()]);
-    expect(r).toMatchObject({ runs: 2, soloRuns: 1, coopRuns: 1 });
+    expect(r).toMatchObject({ runs: 2, soloRuns: 1, coopRuns: 1, yourRuns: 1 });
     expect(r.encounters.find((e) => e.id === 'ENCOUNTER.A')).toMatchObject({ fought: 2, deaths: 2 });
     expect(r.buildTypes).toHaveLength(1);
     expect(r.buildTypes[0].runs).toBe(1);
+  });
+
+  it('a co-op run where your player is known counts toward your builds and picks', () => {
+    const r = insights([coopMine({}, { buildTags: ['Poison'], character: SI }), solo(), coop()]);
+    expect(r).toMatchObject({ runs: 3, soloRuns: 1, coopRuns: 2, yourRuns: 2 });
+    expect(r.buildTypes.map((b) => b.label).sort()).toEqual(['Poison', 'Vulnerable']);
+    // Filtered to Silent: the co-op run counts because YOUR character was Silent.
+    expect(insights([coopMine({}, { character: SI })], { character: SI })).toMatchObject({ runs: 1, yourRuns: 1 });
   });
 
   it(`shows no rate under ${MIN_RATE_N} samples and marks few runs under ${LOW_SAMPLE_N}`, () => {

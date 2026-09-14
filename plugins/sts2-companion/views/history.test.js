@@ -97,6 +97,10 @@ describe('the run list', () => {
     await flush();
     expect(saves).toHaveBeenLastCalledWith('run', { id: '1773796874' });
     expect(root.querySelectorAll('.timeline > li')).toHaveLength(39);
+    // The app says this co-op run's local player was 2: it opens there, marked as you.
+    expect(root.querySelector('[data-player="2"]').getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelector('[data-player="2"]').textContent).toBe('Player 2 · Ironclad (you)');
+    expect(root.querySelector('[data-player="1"]').textContent).toBe('Player 1 · Ironclad');
     root.querySelector('[data-act="back"]').click();
     await flush();
     expect(root.querySelector('[data-run="1773796874"]')).not.toBeNull();

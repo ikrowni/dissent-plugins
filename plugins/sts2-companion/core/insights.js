@@ -27,7 +27,8 @@ function median(values) {
 export function insights(digests, { character = null } = {}) {
   const finished = (digests ?? []).filter((d) => d && !d.abandoned && (d.win || d.killedBy));
   const runs = character ? finished.filter((d) => d.characters.includes(character)) : finished;
-  const solo = runs.filter((d) => d.solo && (!character || d.solo.character === character));
+  // Runs where the app said which player was you: per-player figures come from these only.
+  const mine = runs.filter((d) => d.mine && (!character || d.mine.character === character));
 
   const floorBuckets = FLOOR_BUCKETS.map(([lo, hi, label]) => ({ label, n: runs.filter((d) => d.floors >= lo && d.floors <= hi).length }));
 
@@ -45,8 +46,8 @@ export function insights(digests, { character = null } = {}) {
     .sort((a, b) => b.deaths - a.deaths || (b.rate.rate ?? -1) - (a.rate.rate ?? -1) || a.id.localeCompare(b.id));
 
   const damageByAct = [];
-  for (const d of solo) {
-    d.solo.damageByAct.forEach((v, i) => {
+  for (const d of mine) {
+    d.mine.damageByAct.forEach((v, i) => {
       const a = damageByAct[i] ?? { act: i + 1, total: 0, n: 0 };
       a.total += v; a.n += 1;
       damageByAct[i] = a;
@@ -54,8 +55,8 @@ export function insights(digests, { character = null } = {}) {
   }
 
   const builds = new Map();
-  for (const d of solo) {
-    const label = buildTypeLabel(d.solo.buildTags);
+  for (const d of mine) {
+    const label = buildTypeLabel(d.mine.buildTags);
     const b = builds.get(label) ?? { label, runs: 0, wins: 0, floors: [] };
     b.runs += 1; if (d.win) b.wins += 1; b.floors.push(d.floors);
     builds.set(label, b);
@@ -65,8 +66,8 @@ export function insights(digests, { character = null } = {}) {
     .sort((a, b) => b.runs - a.runs || a.label.localeCompare(b.label));
 
   const cardMap = new Map();
-  for (const d of solo) {
-    for (const ch of d.solo.choices) {
+  for (const d of mine) {
+    for (const ch of d.mine.choices) {
       const c = cardMap.get(ch.id) ?? { id: ch.id, offered: 0, picked: 0, pickedWins: 0, skippedWins: 0 };
       c.offered += 1;
       if (ch.picked) { c.picked += 1; if (d.win) c.pickedWins += 1; } else if (d.win) c.skippedWins += 1;
@@ -82,8 +83,9 @@ export function insights(digests, { character = null } = {}) {
 
   return {
     runs: runs.length,
-    soloRuns: solo.length,
-    coopRuns: runs.length - solo.length,
+    soloRuns: runs.filter((d) => d.players === 1).length,
+    coopRuns: runs.filter((d) => d.players !== 1).length,
+    yourRuns: mine.length,
     wins: runs.filter((d) => d.win).length,
     floorBuckets,
     encounters,

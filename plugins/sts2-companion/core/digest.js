@@ -6,13 +6,15 @@
 //
 // 🔴 No time fields. The `id` is the run's start timestamp and is kept ONLY as the device-local cache
 // key; the community contribution built later drops it (community stats spec §3).
-// 🔴 Co-op: the save numbers players by net_id and cannot say which one is the user, so a co-op
-// digest has run-level facts only (`solo: null`).
+// 🔴 Per-player facts (`mine`) are kept only for the player the app says was this computer's
+// (`summary.you`: 1 in a solo run; in co-op matched from the Steam account folder, desktop v1.2.240+).
+// When it cannot say — an older desktop, an unmatched account — `mine` is null: never a guess at player 1.
 
 import { floorRows, floorChanges } from './runs.js';
 import { classifyDeck } from './classify.js';
 
-export const DIGEST_VERSION = 1;
+/** 2: per-player facts for YOUR player in co-op too (`mine`, was `solo`). */
+export const DIGEST_VERSION = 2;
 
 const FIGHTS = new Set(['monster', 'elite', 'boss']);
 
@@ -32,11 +34,12 @@ export async function runDigest(run, data) {
     floors: s.floors ?? floors.length,
     killedBy: s.killed_by ?? null,
     fought,
-    solo: null,
+    mine: null,
   };
-  if (digest.players !== 1 || run?.players?.length !== 1) return digest;
+  const you = s.you ?? (digest.players === 1 && run?.players?.length === 1 ? 1 : null);
+  const p = you == null ? null : run?.players?.find((x) => x.player === you);
+  if (!p) return digest;
 
-  const p = run.players[0];
   const damageByAct = [];
   const choices = new Map();
   for (const row of floorRows(run, p.player)) {
@@ -46,7 +49,7 @@ export async function runDigest(run, data) {
     for (const id of c.cardPicked) choices.set(id, true);
   }
   const build = await classifyDeck(p.deck, p.character, data);
-  digest.solo = {
+  digest.mine = {
     character: p.character,
     buildTags: build.tags,
     damageByAct: Array.from(damageByAct, (v) => v ?? 0),

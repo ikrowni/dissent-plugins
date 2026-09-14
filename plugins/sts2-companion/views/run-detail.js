@@ -66,7 +66,7 @@ export async function renderRunDetail(run, ctx, { player = 1, onPlayer } = {}) {
     run.players.length > 1
       ? h('div', { class: 'wiki-bar', role: 'group', 'aria-label': 'Player' }, run.players.map((p) => h('button', {
         type: 'button', class: 'chip', dataset: { player: String(p.player) }, 'aria-pressed': String(p.player === player),
-        onclick: () => onPlayer?.(p.player) }, `Player ${p.player} · ${humanizeId(p.character)}`)))
+        onclick: () => onPlayer?.(p.player) }, `Player ${p.player} · ${humanizeId(p.character)}${p.player === run.summary?.you ? ' (you)' : ''}`)))
       : null,
     h('section', { class: 'panel' }, h('h3', {}, 'HP by floor'),
       lineChart(hpSeries(rows), { label: `HP by floor for player ${player}`, marks: actMarks(rows) })),

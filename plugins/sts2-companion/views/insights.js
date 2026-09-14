@@ -65,7 +65,7 @@ export async function mountInsights(root, ctx) {
   }
 
   function buildTable(r) {
-    if (!r.soloRuns) return h('p', { class: 'empty' }, 'Build types come from solo runs — a co-op save cannot say which deck was yours.');
+    if (!r.yourRuns) return h('p', { class: 'empty' }, 'Build types need runs that say which player was you: every solo run, and co-op runs read by Dissent desktop 1.2.240 or newer.');
     return h('div', { class: 'table-wrap' }, h('table', { class: 'stats' },
       h('thead', {}, h('tr', {}, ['Build', 'Runs', 'Wins', 'Win rate', 'Median floor'].map((t) => h('th', { scope: 'col' }, t)))),
       h('tbody', {}, r.buildTypes.map((b) => h('tr', { dataset: { build: b.label } },
@@ -74,7 +74,7 @@ export async function mountInsights(root, ctx) {
   }
 
   async function cardTable(r) {
-    if (!r.soloRuns) return h('p', { class: 'empty' }, 'Card picks come from solo runs — a co-op save cannot say which picks were yours.');
+    if (!r.yourRuns) return h('p', { class: 'empty' }, 'Card picks need runs that say which player was you: every solo run, and co-op runs read by Dissent desktop 1.2.240 or newer.');
     const shown = r.cards.filter((c) => c.impact != null).slice(0, TOP_CARDS);
     if (!shown.length) return h('p', { class: 'empty' }, 'Not enough picks yet: a card needs 5 runs picking it and 5 skipping it.');
     const rows = await Promise.all(shown.map(async (c) => h('tr', { dataset: { card: c.id } },

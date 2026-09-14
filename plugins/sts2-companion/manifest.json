@@ -1,7 +1,7 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
@@ -96,7 +96,7 @@
     },
     {
       "url": "core/digest.js",
-      "sha256": "edc3ee299d0e8b28ee739f0aad25de2b3cf00243a83ca929a2a4366b09c348d1"
+      "sha256": "e37127359a7705a0dab69fc51867507fefa278212cd57ac390e019651c4df9c1"
     },
     {
       "url": "core/digestStore.js",
@@ -112,7 +112,7 @@
     },
     {
       "url": "core/insights.js",
-      "sha256": "02d4b7d73e2b0b7ec5288b234a14ebf7ceb66a682d3ec0f23e4a998e5ca7f70b"
+      "sha256": "656844dfb8fe17085f5b873288282d4fc3a82800f2e314aeabe71fd32cf70963"
     },
     {
       "url": "core/markup.js",
@@ -236,15 +236,15 @@
     },
     {
       "url": "views/history.js",
-      "sha256": "b49d3a96f9554f7fa64438258225bf398b4bd569eff8a5fb5dba067f6e78b86a"
+      "sha256": "f4ed42e601fae5e05be17b1ed1df08e50074251adbf7da293fd4fb03828af86c"
     },
     {
       "url": "views/insights.js",
-      "sha256": "ac01699314218c8d8daef7cdff8d38bc55848a5149109ceda0b1caeda695b09a"
+      "sha256": "fc0f9579af07ab1cb6de245592f078ed3d9abdb5e75fd0271a4c23a071891873"
     },
     {
       "url": "views/run-detail.js",
-      "sha256": "e332e199d61852d7bc862cc7dddded5a6d0d97e744eb9a2dd3c25b5187a2fe02"
+      "sha256": "7292418bc33bc51322e440f97a089819bf48f6695a6ac641d6de9b48f973e96a"
     },
     {
       "url": "views/status.js",

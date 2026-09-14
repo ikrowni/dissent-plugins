@@ -38,12 +38,24 @@ describe('Insights over the REAL co-op run', () => {
     expect(row.textContent).toContain('— (n=1)');
   });
 
-  it('explains why builds and cards are empty when every run was co-op', async () => {
+  it('the co-op run counts toward YOUR build types — the app said you were player 2', async () => {
     const root = document.createElement('div');
     await mountInsights(root, ctx());
     await flush();
-    expect(root.querySelector('[data-part="builds"]').textContent).toMatch(/solo runs/i);
-    expect(root.querySelector('[data-part="cards"]').textContent).toMatch(/solo runs/i);
+    expect(root.querySelector('[data-part="builds"] [data-build]')).not.toBeNull();
+  });
+
+  it('explains empty builds and cards when no run says which player was you', async () => {
+    saves.mockImplementation(async (action, params) => {
+      if (action === 'runs') return snapshot('runs');
+      if (action === 'run') return { ...snapshot('run-1773796874'), summary: { ...snapshot('run-1773796874').summary, you: null } };
+      return { status: 'error' };
+    });
+    const root = document.createElement('div');
+    await mountInsights(root, ctx());
+    await flush();
+    expect(root.querySelector('[data-part="builds"]').textContent).toMatch(/which player was you/i);
+    expect(root.querySelector('[data-part="cards"]').textContent).toMatch(/which player was you/i);
   });
 
   it('filters by character', async () => {

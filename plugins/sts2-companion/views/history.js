@@ -51,7 +51,7 @@ export async function mountHistory(root, ctx) {
     const killer = s.killed_by ? (await ctx.data.label(s.killed_by)).name : null;
     const date = Number.isFinite(s.started_at) ? new Date(s.started_at * 1000).toLocaleDateString() : '';
     return h('button', { type: 'button', class: `run-row ${s.win ? 'win' : 'loss'}`, dataset: { run: s.id },
-      onclick: () => { state.open = s.id; state.player = 1; paint(); } },
+      onclick: () => { state.open = s.id; state.player = s.you ?? 1; paint(); } },
     h('strong', {}, outcome(s)), ' ',
     h('span', {}, [s.characters.map(humanizeId).join(' + '), `${s.floors} floors`, s.ascension ? `A${s.ascension}` : null,
       formatDuration(s.run_time), killer ? `killed by ${killer}` : null, date].filter(Boolean).join(' · ')));
