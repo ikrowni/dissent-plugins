@@ -24,7 +24,10 @@ export async function loadDigests({ saves, local, data, onProgress = () => {} })
   const ids = list.runs.map((x) => String(x.id));
   let { skipped } = list;
 
-  const missing = ids.filter((id) => !cache.digests[id]);
+  // A digest made when the app could not say which player was you (`mine: null`) is stale once the list
+  // names you — the user updated Dissent desktop — so it is rebuilt with that player's figures.
+  const namesYou = new Set(list.runs.filter((x) => x.you != null).map((x) => String(x.id)));
+  const missing = ids.filter((id) => !cache.digests[id] || (cache.digests[id].mine === null && namesYou.has(id)));
   let done = 0;
   for (const id of missing) {
     const run = await saves('run', { id });

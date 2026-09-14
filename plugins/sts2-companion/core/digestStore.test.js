@@ -33,6 +33,27 @@ describe('loadDigests', () => {
     expect(Object.keys(local.peek().digests)).toEqual(['1773796874']);
   });
 
+  // A co-op run digested by a desktop that could not name the local player has `mine: null`. Once the
+  // list says which player was you (a newer desktop), that digest is rebuilt — not trusted forever.
+  it('rebuilds a co-op digest once the app can say which player was you', async () => {
+    const local = fakeLocal();
+    const noYou = (r) => ({ ...r, summary: { ...r.summary, you: null } });
+    const older = vi.fn(async (action) => (action === 'runs'
+      ? { ...snapshot('runs'), runs: snapshot('runs').runs.map((x) => ({ ...x, you: null })) }
+      : noYou(snapshot('run-1773796874'))));
+    const first = await loadDigests({ saves: older, local, data: createData({ load }) });
+    expect(first.digests[0].mine).toBeNull();
+
+    const saves = realSaves();
+    const second = await loadDigests({ saves, local, data: createData({ load }) });
+    expect(saves).toHaveBeenCalledWith('run', { id: '1773796874' });
+    expect(second.digests[0].mine).not.toBeNull();
+
+    saves.mockClear();
+    await loadDigests({ saves, local, data: createData({ load }) });
+    expect(saves).not.toHaveBeenCalledWith('run', expect.anything());
+  });
+
   it('🔴 reads no run it has already summarised, and writes nothing when nothing changed', async () => {
     const saves = realSaves(); const local = fakeLocal();
     await loadDigests({ saves, local, data: createData({ load }) });
