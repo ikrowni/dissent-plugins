@@ -14,6 +14,18 @@ const KIND_OF = { CARD: 'card', RELIC: 'relic', POTION: 'potion', ENCOUNTER: 'en
 
 export const MAX = { players: 4, floors: 80, deck: 200, relics: 60, potions: 10, choices: 400, ascension: 20, hp: 999, runMinutes: 1440, upgrades: 10, damage: 99999, unknownShare: 0.1 };
 
+// 🔴 Exactly these fields and no others. A contribution is stored as sent, so an extra field — a run id, a
+// Steam id, anything a modified client adds — would be kept verbatim. Refusing unknown fields is what makes
+// "no id, no timestamp" true of the database and not only of this plugin.
+const FIELDS = {
+  top: ['ascension', 'build', 'floors', 'killedBy', 'players', 'runMinutes', 'schema', 'win'],
+  player: ['character', 'choices', 'damageByAct', 'deck', 'floors', 'potions', 'relics'],
+  floor: ['act', 'damage', 'encounter', 'hp', 'maxHp', 'type'],
+  card: ['enchantment', 'id', 'upgrades'],
+  choice: ['id', 'picked'],
+};
+const onlyFields = (o, allowed) => Object.keys(o).every((k) => allowed.includes(k));
+
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const ids = (list, max) => Array.isArray(list) && list.length <= max && list.every((x) => typeof x === 'string' && ID.test(x));
 
@@ -36,6 +48,14 @@ export async function checkContribution(c, data) {
   if (!int(c.floors, 1, MAX.floors)) return fail('floors');
   if (c.runMinutes !== null && !int(c.runMinutes, 0, MAX.runMinutes)) return fail('run_minutes');
   if (!Array.isArray(c.players) || c.players.length < 1 || c.players.length > MAX.players) return fail('players');
+  if (!onlyFields(c, FIELDS.top)) return fail('fields');
+  for (const p of c.players) {
+    if (!p || typeof p !== 'object') return fail('players');
+    if (!onlyFields(p, FIELDS.player)) return fail('fields');
+    for (const [list, allowed] of [[p.floors, FIELDS.floor], [p.deck, FIELDS.card], [p.choices, FIELDS.choice]]) {
+      if (Array.isArray(list) && list.some((x) => x && typeof x === 'object' && !onlyFields(x, allowed))) return fail('fields');
+    }
+  }
 
   const seen = c.killedBy ? [c.killedBy] : [];
   for (const p of c.players) {

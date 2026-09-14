@@ -29,6 +29,10 @@ describe('checkContribution', () => {
     ['choices', (c) => { c.players[0].choices[0].picked = 'yes'; }],
     ['damage', (c) => { c.players[0].damageByAct = [-1]; }],
     ['floor_rows', (c) => { c.players[0].floors[0].hp = 5000; }],
+    ['fields', (c) => { c.runId = '1773796874'; }],
+    ['fields', (c) => { c.players[0].steamId = '7656119'; }],
+    ['fields', (c) => { c.players[0].floors[0].gold = 111; }],
+    ['fields', (c) => { c.players[0].deck[0].note = 'x'; }],
     ['unknown_ids', (c) => { c.players[0].deck = c.players[0].deck.map((d, i) => ({ ...d, id: `CARD.INVENTED_${i}` })); }],
   ];
   for (const [reason, mutate] of cases) {
