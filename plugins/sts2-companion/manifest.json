@@ -1,7 +1,7 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. In co-op, the host's Companion sends the run, sealed, to Dissent friends playing it (recognised by their connected Steam accounts, or by invite) through the same service. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
@@ -125,7 +125,7 @@
     },
     {
       "url": "core/party.js",
-      "sha256": "a77ed1d5a37064e6fcd3982189d24b0fc2909d0af807dfaf26c35d1e4cd92151"
+      "sha256": "2d5bf4147272284b8dee9ff8ece0023f9b342d6b0d26c3d3975a9a14cf7db21e"
     },
     {
       "url": "core/partyCrypto.js",

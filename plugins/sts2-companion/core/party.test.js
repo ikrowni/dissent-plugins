@@ -177,6 +177,22 @@ describe('automatic: friends playing the same run', () => {
     expect(channelsFrom(await refreshLinks(guest))).toEqual([]);
   });
 
+  // Found live 2026-09-14: before friends:link was approved the match was refused, and the room was remembered as
+  // matched anyway — so approving changed nothing until the run moved on, and an invite got there first.
+  it('a refused match is retried on the next sync, and links then', async () => {
+    const node = fakeNode();
+    const match = node.host.match;
+    let refused = true;
+    node.host.match = async (run) => { if (refused) throw new Error('friends.match failed: friends:link not granted'); return match(run); };
+    const { host, guest } = people(node);
+    expect(await sync(host, hostSaves)).toMatchObject({ sharingWith: [] });
+    refused = false; // the user approves
+    expect(await sync(host, hostSaves)).toMatchObject({ current: 'sent', sharingWith: ['jj'] });
+    expect(node.links[0]).toMatchObject({ auto: true, status: 'accepted' });
+    await receive(guest);
+    expect((await makePartySaves({ saves: guestSaves, ...guest, net })('currentRun')).you).toBe(1);
+  });
+
   it('a solo run is never sent, and no friend is asked about', async () => {
     const node = fakeNode();
     const { host } = people(node);

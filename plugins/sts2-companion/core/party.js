@@ -105,14 +105,15 @@ const getJson = async (net, path) => {
  */
 async function targetsFor({ friends, channels, run }) {
   const found = await safe(() => friends.match(run));
-  const matches = Array.isArray(found?.matches) ? found.matches : [];
+  const asked = Array.isArray(found?.matches); // false when refused (not approved yet), offline, or not desktop
+  const matches = asked ? found.matches : [];
   const matchedIds = new Set(matches.map((m) => m.link_id));
   const positions = Object.fromEntries(matches.map((m) => [m.handle, m.player]));
   // A link matching just made is not in `channels` (read before it existed): add it from the match itself.
   const fromMatch = matches.filter((m) => m.status === 'accepted' && m.secret && !channels.some((c) => c.linkId === m.link_id))
     .map((m) => ({ linkId: m.link_id, secret: m.secret, auto: true, since: 0, peer: { handle: m.handle, name: m.name } }));
   const targets = [...channels.filter((c) => matchedIds.has(c.linkId) || !c.auto), ...fromMatch];
-  return { targets, positions };
+  return { targets, positions, asked };
 }
 
 /**
@@ -132,8 +133,9 @@ export async function pushParty({ saves, store, local, net, friends, channels = 
     // Ask who is in this run only when something would be sent: a room change, or a run not yet matched.
     const matchedDigest = await safe(() => local.get('party:matchedDigest'));
     if (unsent.length || digest !== matchedDigest) {
-      await safe(() => local.set('party:matchedDigest', digest));
-      const { targets, positions } = await targetsFor({ friends, channels, run: undefined });
+      const { targets, positions, asked } = await targetsFor({ friends, channels, run: undefined });
+      // Remember the room as matched only when the node answered: a refused or failed match is tried again next sync.
+      if (asked) await safe(() => local.set('party:matchedDigest', digest));
       for (const t of targets) {
         if (digest === await safe(() => local.get(sentCurrentKey(t.linkId)))) continue;
         const { channel, key } = await deriveParty(t.secret);
@@ -168,7 +170,8 @@ export async function pushParty({ saves, store, local, net, friends, channels = 
         if (!sent.includes(id) && endedAt >= c.since) due.push(c);
       }
       if (!due.length) continue;
-      const { targets, positions } = await targetsFor({ friends, channels: due, run: id });
+      const { targets, positions, asked } = await targetsFor({ friends, channels: due, run: id });
+      if (!asked && due.some((c) => c.auto)) continue; // cannot tell who played it yet: decide on a later sync
       const run = targets.length ? await saves('run', { id }) : null;
       for (const c of due) {
         const sent = (await safe(() => local.get(sentFinishedKey(c.linkId)))) ?? [];
