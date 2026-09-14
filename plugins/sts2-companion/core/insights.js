@@ -6,6 +6,7 @@
 
 import { wilson } from './wilson.js';
 import { buildTypeLabel } from './classify.js';
+import { countsForStats } from './runFilter.js';
 
 export const MIN_RATE_N = 5;
 export const LOW_SAMPLE_N = 20;
@@ -25,7 +26,8 @@ function median(values) {
 }
 
 export function insights(digests, { character = null } = {}) {
-  const finished = (digests ?? []).filter((d) => d && !d.abandoned && (d.win || d.killedBy));
+  const ended = (digests ?? []).filter((d) => d && !d.abandoned && (d.win || d.killedBy));
+  const finished = ended.filter(countsForStats);
   const runs = character ? finished.filter((d) => d.characters.includes(character)) : finished;
   // Runs where the app said which player was you: per-player figures come from these only.
   const mine = runs.filter((d) => d.mine && (!character || d.mine.character === character));
@@ -83,6 +85,8 @@ export function insights(digests, { character = null } = {}) {
 
   return {
     runs: runs.length,
+    /** Runs left out: never past the first floor, or a custom game (core/runFilter.js). */
+    hidden: ended.length - finished.length,
     soloRuns: runs.filter((d) => d.players === 1).length,
     coopRuns: runs.filter((d) => d.players !== 1).length,
     yourRuns: mine.length,

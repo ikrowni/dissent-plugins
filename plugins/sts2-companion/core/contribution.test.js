@@ -37,6 +37,8 @@ describe('buildContribution on the REAL co-op run', () => {
     expect(buildContribution({ ...run, summary: { ...run.summary, killed_by: null, win: false } })).toBeNull();
     expect(buildContribution({ ...run, summary: { ...run.summary, game_mode: 'daily' } })).toBeNull();
     expect(buildContribution({ status: 'not_found' })).toBeNull();
+    // Started and left: never past the first floor.
+    expect(buildContribution({ ...run, summary: { ...run.summary, floors: 1 } })).toBeNull();
   });
 
   it('a win carries no killer', () => {

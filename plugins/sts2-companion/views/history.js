@@ -10,12 +10,13 @@ import { statusBlock } from './status.js';
 import { renderRunDetail } from './run-detail.js';
 import { renderCardStats } from './card-stats.js';
 import { loadArt } from './deck-parts.js';
+import { countsForStats } from '../core/runFilter.js';
 
 export const PAGE = 20;
 const TABS = [['runs', 'Runs'], ['stats', 'Card stats']];
 
 export async function mountHistory(root, ctx) {
-  const state = { tab: 'runs', runs: [], done: false, skipped: 0, failed: null, open: null, player: 1 };
+  const state = { tab: 'runs', runs: [], done: false, skipped: 0, failed: null, open: null, player: 1, showHidden: false };
   let alive = true;
   let paints = 0;
 
@@ -76,8 +77,15 @@ export async function mountHistory(root, ctx) {
           state.done ? null : h('button', { type: 'button', class: 'chip', dataset: { act: 'more' }, onclick: async () => { await loadPage(); paint(); } }, 'Load older runs'));
       }
       else {
+        // Runs never past floor 1 and custom games are hidden by default (core/runFilter.js), not deleted.
+        const hidden = state.runs.filter((r) => !countsForStats(r)).length;
+        const shown = state.showHidden ? state.runs : state.runs.filter(countsForStats);
+        const toggle = hidden ? h('button', { type: 'button', class: 'chip', dataset: { act: 'show-hidden' },
+          onclick: () => { state.showHidden = !state.showHidden; paint(); } },
+        state.showHidden ? `Hide ${hidden} unplayed or custom run${hidden === 1 ? '' : 's'}` : `Show ${hidden} unplayed or custom run${hidden === 1 ? '' : 's'}`) : null;
         el = h('div', { class: 'run-list' },
-          await Promise.all(state.runs.map(runRow)),
+          shown.length ? await Promise.all(shown.map(runRow)) : h('p', { class: 'empty' }, 'No played runs on this page.'),
+          toggle,
           state.skipped ? h('p', { class: 'sub' }, 'Some runs could not be read — most likely saved by a different game version.') : null,
           state.done ? null : h('button', { type: 'button', class: 'chip', dataset: { act: 'more' }, onclick: async () => { await loadPage(); paint(); } }, 'Load more'));
       }

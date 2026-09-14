@@ -88,6 +88,22 @@ describe('the run list', () => {
     expect(root.querySelector('.status p').textContent).toBe(STATUS_TEXT.desktop_only);
   });
 
+  it('hides runs that never got past floor 1 and custom games, with a way to show them', async () => {
+    const real = snapshot('runs');
+    const base = real.runs[0];
+    const runs = { ...real, runs: [base, { ...base, id: '1700000002', floors: 1 }, { ...base, id: '1700000001', game_mode: 'custom' }] };
+    saves.mockImplementation(async (action) => (action === 'runs' ? runs : { status: 'not_found' }));
+    const root = document.createElement('div');
+    await mountHistory(root, ctx());
+    await flush();
+    expect(root.querySelectorAll('[data-run]')).toHaveLength(1);
+    const toggle = root.querySelector('[data-act="show-hidden"]');
+    expect(toggle.textContent).toBe('Show 2 unplayed or custom runs');
+    toggle.click();
+    await flush();
+    expect(root.querySelectorAll('[data-run]')).toHaveLength(3);
+  });
+
   it('opens a run and comes back', async () => {
     saves.mockImplementation(async (action) => (action === 'runs' ? snapshot('runs') : snapshot('run-1773796874')));
     const root = document.createElement('div');

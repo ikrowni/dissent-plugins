@@ -8,6 +8,7 @@
 // would refuse real history forever.
 
 import { CONTRIBUTION_SCHEMA } from './contribution.js';
+import { MIN_FLOORS } from './runFilter.js';
 
 const ID = /^[A-Z]+\.[A-Z0-9_]+$/;
 const KIND_OF = { CARD: 'card', RELIC: 'relic', POTION: 'potion', ENCOUNTER: 'encounter' };
@@ -45,7 +46,7 @@ export async function checkContribution(c, data) {
   if (!int(c.ascension, 0, MAX.ascension)) return fail('ascension');
   if (typeof c.win !== 'boolean') return fail('win');
   if (c.win ? c.killedBy !== null : !(typeof c.killedBy === 'string' && ID.test(c.killedBy))) return fail('killed_by');
-  if (!int(c.floors, 1, MAX.floors)) return fail('floors');
+  if (!int(c.floors, MIN_FLOORS, MAX.floors)) return fail('floors'); // a run left on floor 1 is not a game played
   if (c.runMinutes !== null && !int(c.runMinutes, 0, MAX.runMinutes)) return fail('run_minutes');
   if (!Array.isArray(c.players) || c.players.length < 1 || c.players.length > MAX.players) return fail('players');
   if (!onlyFields(c, FIELDS.top)) return fail('fields');

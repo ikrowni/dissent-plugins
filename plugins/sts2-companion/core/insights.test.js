@@ -19,6 +19,12 @@ describe('insights', () => {
     expect(r.runs).toBe(1);
   });
 
+  it('ignores runs that never got past the first floor, and custom games', () => {
+    const r = insights([solo({ floors: 1 }), solo({ floors: 0 }), solo({ gameMode: 'custom' }), solo()]);
+    expect(r.runs).toBe(1);
+    expect(r.hidden).toBe(3);
+  });
+
   it('counts a co-op run with no known player for survivability but never for builds, HP or cards', () => {
     const r = insights([coop(), solo()]);
     expect(r).toMatchObject({ runs: 2, soloRuns: 1, coopRuns: 1, yourRuns: 1 });

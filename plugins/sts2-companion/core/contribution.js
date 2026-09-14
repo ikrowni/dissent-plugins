@@ -8,6 +8,7 @@
 // only rounded to ten minutes.
 
 import { floorRows, floorChanges } from './runs.js';
+import { countsForStats } from './runFilter.js';
 
 export const CONTRIBUTION_SCHEMA = 1;
 
@@ -45,7 +46,7 @@ function player(run, p) {
 export function buildContribution(run) {
   const s = run?.summary;
   if (run?.status !== 'ok' || !s) return null;
-  if (s.abandoned || s.game_mode !== 'standard' || (!s.win && !s.killed_by)) return null;
+  if (s.abandoned || s.game_mode !== 'standard' || (!s.win && !s.killed_by) || !countsForStats(s)) return null;
   return {
     schema: CONTRIBUTION_SCHEMA,
     build: String(s.build ?? ''),

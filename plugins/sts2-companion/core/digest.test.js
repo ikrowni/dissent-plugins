@@ -26,7 +26,7 @@ describe('the REAL co-op run', () => {
     expect(d).toMatchObject({
       v: DIGEST_VERSION, id: '1773796874', build: 'v0.99.1', ascension: 0, players: 2,
       characters: ['CHARACTER.IRONCLAD', 'CHARACTER.IRONCLAD'], win: false, abandoned: false,
-      floors: 39, killedBy: 'ENCOUNTER.SOUL_NEXUS_ELITE',
+      floors: 39, killedBy: 'ENCOUNTER.SOUL_NEXUS_ELITE', gameMode: 'standard',
     });
     expect(d.fought).toHaveLength(19);
     expect(new Set(d.fought).size).toBe(19);

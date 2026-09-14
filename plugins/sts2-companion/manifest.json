@@ -1,7 +1,7 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. In a co-op party, the host sends the run (sealed with the party code) to the other players through the same service. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
@@ -84,7 +84,7 @@
     },
     {
       "url": "core/contribution.js",
-      "sha256": "00406a4c3ae7be92f70a7904d8ca14394bb2e996bbcb4e35ff621e632d7188b3"
+      "sha256": "e3763a5ac278783d9fa2f3b370e5e7145ada9d2d3ef88da05b9c4e10efe46a14"
     },
     {
       "url": "core/data.js",
@@ -96,7 +96,7 @@
     },
     {
       "url": "core/digest.js",
-      "sha256": "e37127359a7705a0dab69fc51867507fefa278212cd57ac390e019651c4df9c1"
+      "sha256": "5d48e3f441d8a65360f5c4fbd8e9e962cf30f6075685bffa6dc7d78cbb0ec8d4"
     },
     {
       "url": "core/digestStore.js",
@@ -112,7 +112,7 @@
     },
     {
       "url": "core/insights.js",
-      "sha256": "656844dfb8fe17085f5b873288282d4fc3a82800f2e314aeabe71fd32cf70963"
+      "sha256": "e097db6378960fb5f837167d015bb9317d8ba1e8307cefa7ace16dcb57022637"
     },
     {
       "url": "core/markup.js",
@@ -136,7 +136,11 @@
     },
     {
       "url": "core/plausible.js",
-      "sha256": "62ba0f5ddbc5e90cee2349ce8d29558b2b64da6c2f57d87ff85a52a9ca0030e5"
+      "sha256": "efce933872e910040c0b7a3f71f5fb748d3372b3bc00effad2373bca098ee26e"
+    },
+    {
+      "url": "core/runFilter.js",
+      "sha256": "bb413b70b009a8b32db29d9c9843e426e325b3b009f829f1d026662e38696838"
     },
     {
       "url": "core/runList.js",
@@ -152,7 +156,7 @@
     },
     {
       "url": "core/sharing.js",
-      "sha256": "97a2117c0b64cd4c7fd4bc8a9223747cca4b3bae5129a8c8e59be6ac9047bc6b"
+      "sha256": "1d50e8814df2b75decb0b991ba8204e5f1644802fbcb419b568ec939bc06d6ad"
     },
     {
       "url": "core/stats.js",
@@ -244,11 +248,11 @@
     },
     {
       "url": "views/history.js",
-      "sha256": "b4bfa9de8830d5e9e32e8b7401f26adf7b2995700522d57b5afd4b20042b1b05"
+      "sha256": "1a0207dc0964d694a9322be5d4150201735af4900889b6f66e8e69ef3cded669"
     },
     {
       "url": "views/insights.js",
-      "sha256": "fc0f9579af07ab1cb6de245592f078ed3d9abdb5e75fd0271a4c23a071891873"
+      "sha256": "40424f54cbcc983c870294e0cfa60844e91b29f07e655a0338550010eaf9c454"
     },
     {
       "url": "views/run-detail.js",

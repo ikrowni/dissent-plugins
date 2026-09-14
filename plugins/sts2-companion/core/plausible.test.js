@@ -21,6 +21,7 @@ describe('checkContribution', () => {
     ['ascension', (c) => { c.ascension = 99; }],
     ['killed_by', (c) => { c.win = true; }],
     ['floors', (c) => { c.floors = 500; }],
+    ['floors', (c) => { c.floors = 1; }],
     ['run_minutes', (c) => { c.runMinutes = -10; }],
     ['players', (c) => { c.players = []; }],
     ['character', (c) => { c.players[0].character = 'RELIC.BURNING_BLOOD'; }],

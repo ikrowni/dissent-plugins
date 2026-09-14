@@ -13,8 +13,8 @@
 import { floorRows, floorChanges } from './runs.js';
 import { classifyDeck } from './classify.js';
 
-/** 2: per-player facts for YOUR player in co-op too (`mine`, was `solo`). */
-export const DIGEST_VERSION = 2;
+/** 2: per-player facts for YOUR player in co-op too (`mine`, was `solo`). 3: `gameMode`. */
+export const DIGEST_VERSION = 3;
 
 const FIGHTS = new Set(['monster', 'elite', 'boss']);
 
@@ -32,6 +32,7 @@ export async function runDigest(run, data) {
     win: Boolean(s.win),
     abandoned: Boolean(s.abandoned),
     floors: s.floors ?? floors.length,
+    gameMode: s.game_mode ?? null,
     killedBy: s.killed_by ?? null,
     fought,
     mine: null,

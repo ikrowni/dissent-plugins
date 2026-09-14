@@ -10,6 +10,7 @@
 
 import { buildContribution } from './contribution.js';
 import { listRunSummaries } from './runList.js';
+import { countsForStats } from './runFilter.js';
 
 export const STATS_HOST = 'https://sts2-stats.plugins.dissent.chat';
 export const SETTINGS_KEY = 'community:sharing';
@@ -65,7 +66,7 @@ export async function setBackfill(store, on) {
   await store.set(SETTINGS_KEY, { ...s, backfill: Boolean(on) });
 }
 
-const shareable = (s) => !s.abandoned && s.game_mode === 'standard' && (s.win || s.killed_by);
+const shareable = (s) => !s.abandoned && s.game_mode === 'standard' && (s.win || s.killed_by) && countsForStats(s);
 
 /** Ids to send, newest first: runs finished since opting in, plus the newest past runs when backfilling. */
 export function selectRuns(summaries, settings, sent) {

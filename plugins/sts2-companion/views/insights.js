@@ -103,7 +103,8 @@ export async function mountInsights(root, ctx) {
       const r = insights(state.digests ?? [], { character: state.character });
       el = h('div', {},
         h('p', { class: 'sub', dataset: { part: 'summary' } },
-          `${plural(r.runs, 'run', 'runs')} · ${plural(r.wins, 'win', 'wins')} · ${r.soloRuns} solo · ${r.coopRuns} co-op`),
+          `${plural(r.runs, 'run', 'runs')} · ${plural(r.wins, 'win', 'wins')} · ${r.soloRuns} solo · ${r.coopRuns} co-op`
+          + (r.hidden ? ` · ${plural(r.hidden, 'run', 'runs')} left out (never past floor 1, or custom)` : '')),
         h('section', { class: 'panel', dataset: { part: 'survival' } },
           h('h3', {}, 'Where runs end'),
           barChart(r.floorBuckets, { label: 'Floor reached' }),
