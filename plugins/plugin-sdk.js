@@ -279,6 +279,18 @@ export async function netFetch(url, { method = 'GET', body, headers } = {}) {
   return request('net.fetch', { url, method, body, headers }, 20000);
 }
 
+/** friends:link — this same plugin on your Dissent friends' accounts. Personal installs only.
+ *  An invite's payload (a JSON object, at most 4 KB) reaches the friend only after they accept. */
+export async function friendsList() { return request('friends.list', {}); }
+export async function friendLinks() { return request('links.list', {}); }
+export async function inviteFriend(friend, payload = {}) { return request('links.invite', { friend, payload }); }
+export async function respondToInvite(id, accept) { return request('links.respond', { id, accept: accept === true }); }
+export async function removeFriendLink(id) { return request('links.remove', { id }); }
+/** Friends in the same game as you (run in progress, or a finished run by id), matched by the desktop app from
+ *  this computer's save and their verified Steam accounts; linked automatically. Needs game:saves. No Steam ids. */
+export async function matchFriends(game, run) { return request('friends.match', { game, ...(run ? { run } : {}) }); }
+export async function setAutoFriendLinks(enabled) { return request('friends.setAuto', { enabled: enabled === true }); }
+
 export async function storageGetCompanion(registryId, key, scope = 'server') {
   try { const r = await request('storage:get-companion', { registryId, key, scope }); return r?.value ?? null; } catch { return null; }
 }
