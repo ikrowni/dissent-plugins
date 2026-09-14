@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish STS2 community stats nightly
+
+[Timer]
+OnCalendar=*-*-* 04:17:00 UTC
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

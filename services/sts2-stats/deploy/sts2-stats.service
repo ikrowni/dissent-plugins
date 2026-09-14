@@ -1,0 +1,33 @@
+[Unit]
+Description=STS2 Companion community stats (a plugin's own service, not part of Dissent)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/dissent-plugins/services/sts2-stats
+ExecStart=/usr/bin/node server.mjs
+Environment=STS2_STATS_DB=/home/ubuntu/sts2-stats/stats.db
+Environment=PORT=8095
+Environment=NODE_NO_WARNINGS=1
+Restart=on-failure
+RestartSec=5
+
+# The owner's condition: it must not eat resources or cause problems. These are the ceiling.
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=32
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/sts2-stats
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

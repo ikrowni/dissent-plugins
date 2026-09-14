@@ -1,0 +1,18 @@
+[Unit]
+Description=Publish STS2 community stats (nightly)
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/dissent-plugins/services/sts2-stats
+ExecStart=/usr/bin/node publish.mjs
+Environment=STS2_STATS_DB=/home/ubuntu/sts2-stats/stats.db
+Environment=STS2_STATS_OUT=/var/www/sts2-stats/v1/stats
+Environment=NODE_NO_WARNINGS=1
+MemoryMax=512M
+CPUQuota=50%
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/sts2-stats /var/www/sts2-stats
