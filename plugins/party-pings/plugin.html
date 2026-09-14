@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Party Pings</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0a0a12;
+    color: rgba(255,255,255,0.88);
+    min-height: 100vh;
+    padding: 12px;
+    font-size: 13px;
+  }
+  .wrap { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+  h1 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: rgba(255,255,255,.45); font-weight: 700; }
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  button {
+    font: inherit; cursor: pointer; color: inherit;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 9px; padding: 9px 6px; font-weight: 600;
+  }
+  button:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+  button:disabled { opacity: .45; cursor: default; }
+  .feed { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+  .ping { background: rgba(255,255,255,.05); border-radius: 8px; padding: 6px 9px; }
+  .ping .who { color: rgba(255,255,255,.5); font-size: 11px; }
+  .ping .what { font-weight: 600; }
+  .note { color: rgba(255,255,255,.4); font-size: 11px; line-height: 1.45; }
+  .err { color: #ff9c9c; font-size: 11px; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Party Pings</h1>
+  <div class="keys" id="keys" hidden></div>
+  <div class="feed" id="feed"></div>
+  <p class="note" id="note">Connecting…</p>
+</div>
+
+<script type="module">
+// Party Pings — a panel over the game where everyone in the channel can send a quick ping.
+//
+// Deliberately small. It exists to be the first plugin that uses the 2026-09-14 platform
+// work end to end: a SERVER install drawing panels over a game, each member opting in for
+// themselves, `realtime` in the channel the member chose, and `sender_id` for attribution.
+import { handleSDKMessage, request, realtimePublish } from '../plugin-sdk.js';
+
+const PINGS = ['Help', 'Here', 'Go', 'Careful', 'Nice', 'Back'];
+const MAX_FEED = 24;
+
+const el = (id) => document.getElementById(id);
+const feed = el('feed');
+let ctx = null;
+let me = null;          // our own sender id, when the host tells us (page only)
+const names = new Map(); // sender id → display name, when we can resolve one
+
+function line(who, what, mine) {
+  const row = document.createElement('div');
+  row.className = 'ping';
+  const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  row.innerHTML = `<div class="what"></div><div class="who"></div>`;
+  row.querySelector('.what').textContent = what;
+  row.querySelector('.who').textContent = `${mine ? 'you' : who} · ${t}`;
+  feed.prepend(row);
+  while (feed.childElementCount > MAX_FEED) feed.lastElementChild.remove();
+}
+
+// 🔴 Attribution comes from the event's `sender_id`, which the NODE stamps from the
+// authenticated caller. A name inside `data` would be this plugin's own claim, and any
+// member could publish a crafted event carrying someone else's — worse than no name.
+// In a panel we are told `user: null`, so we cannot even self-assert one.
+function who(senderId) {
+  if (me && senderId === me) return 'you';
+  return names.get(senderId) || 'someone';
+}
+
+function onEvent(msg) {
+  if (msg.event !== 'ping') return;
+  // 🔴 msg.sender_id, NOT msg.data.sender_id — the host puts the node's attribution beside
+  // the payload precisely so a crafted event cannot overwrite its own.
+  const senderId = msg.sender_id;
+  const what = (msg.data && typeof msg.data.ping === 'string') ? msg.data.ping : 'Ping';
+  if (!PINGS.includes(what)) return;      // only the fixed set: never render arbitrary text
+  line(who(senderId), what, Boolean(me && senderId === me));
+}
+
+async function send(what) {
+  const buttons = [...el('keys').querySelectorAll('button')];
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    await realtimePublish('ping', { ping: what });
+    // Our own publish does not come back to us, so show it locally.
+    line('you', what, true);
+  } catch {
+    el('note').className = 'err';
+    el('note').textContent = 'That ping did not send. Still connected?';
+  } finally {
+    setTimeout(() => buttons.forEach((b) => { b.disabled = false; }), 400);
+  }
+}
+
+function ready(init) {
+  ctx = init.context || {};
+  me = init.user && init.user.id ? init.user.id : null;
+
+  const keys = el('keys');
+  for (const p of PINGS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = p;
+    b.addEventListener('click', () => send(p));
+    keys.appendChild(b);
+  }
+  keys.hidden = false;
+
+  const canPing = (ctx.capabilities || []).includes('realtime:publish');
+  if (!canPing) {
+    // Honest about which half is missing rather than letting every click fail silently.
+    keys.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+    el('note').textContent = ctx.placement === 'overlay'
+      ? 'This panel can show pings but not send them — the plugin needs the realtime permission on this server.'
+      : 'Pings need the realtime permission on this server.';
+    return;
+  }
+
+  el('note').textContent = ctx.placement === 'overlay'
+    ? 'Everyone in this channel with the panel open sees your ping.'
+    : 'Open this over a game from the overlay to ping without alt-tabbing.';
+}
+
+window.addEventListener('message', (e) => handleSDKMessage(e, ready, onEvent));
+request('overlay.context').catch(() => {});   // harmless off-overlay; keeps the panel warm
+</script>
+</body>
+</html>

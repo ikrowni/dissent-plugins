@@ -1,0 +1,48 @@
+{
+  "id": "party-pings",
+  "name": "Party Pings",
+  "version": "1.0.0",
+  "description": "Quick pings between everyone playing together. Install it on a server channel, and each member chooses whether its panel appears over their game (My plugins → Over your game). A ping goes to everyone in that channel who has the panel open — no typing, no alt-tab.",
+  "author": "Dissent Project",
+  "tier": 2,
+  "context": [
+    "channel"
+  ],
+  "url": "https://plugins.dissent.chat/plugins/party-pings/plugin.html",
+  "declared_permissions": [
+    "realtime"
+  ],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": [
+    "gaming",
+    "community"
+  ],
+  "sdk_version": "1",
+  "resources": [],
+  "overlay": {
+    "api": 1,
+    "games": [
+      "rocket-league",
+      "project-zomboid",
+      "barony",
+      "brotato",
+      "vampire-survivors",
+      "no-rest-for-the-wicked",
+      "elden-ring",
+      "slay-the-spire-2"
+    ],
+    "surfaces": [
+      {
+        "id": "pings",
+        "title": "Pings",
+        "layer": "panel",
+        "anchor": "top-right",
+        "size": [
+          300,
+          360
+        ]
+      }
+    ]
+  }
+}
