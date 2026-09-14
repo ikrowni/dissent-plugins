@@ -882,6 +882,7 @@
       "max_hp": 80,
       "player": 1,
       "potion_slots": 3,
+      "potions": [],
       "relics": [
         "RELIC.BURNING_BLOOD",
         "RELIC.ARCANE_SCROLL"
@@ -889,5 +890,6 @@
     }
   ],
   "saved_at": 1789244273,
-  "status": "ok"
+  "status": "ok",
+  "you": 1
 }

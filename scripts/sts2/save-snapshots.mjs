@@ -27,6 +27,7 @@ export const SOURCES = [
   `${FIX}/current_run_after_first_combat.save`,
   `${FIX}/finished_coop_loss.run`,
   `${FIX}/progress.save`,
+  `${FIX}/current_run_coop.save`,
 ];
 export const sha256 = (rel) => createHash('sha256').update(readFileSync(join(MONOREPO, rel))).digest('hex');
 
@@ -39,7 +40,7 @@ function main() {
     stdio: 'inherit',
   });
   const files = readdirSync(tmp).filter((f) => f.endsWith('.json'));
-  if (files.length !== 5) throw new Error(`expected 5 snapshots, got ${files.join(', ')}`);
+  if (files.length !== 6) throw new Error(`expected 6 snapshots, got ${files.join(', ')}`);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   for (const f of files) copyFileSync(join(tmp, f), join(out, f));

@@ -41,6 +41,43 @@ describe('the Deck section over the REAL current-run projection', () => {
     expect(root.querySelector('.relics').textContent).toContain('Burning Blood');
   });
 
+  // Co-op in progress (real sample, 2026-09-14): the app says which player is you, as a position.
+  it('co-op: opens on YOUR deck, and switches to the other player', async () => {
+    const run = snapshot('current-run-coop');
+    saves.mockResolvedValue(run);
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    await mountDeck(root, makeCtx());
+    await flush(); await flush();
+    expect(root.querySelector('.run-head h2').textContent).toMatch(/^Defect · Act 2 · /);
+    expect(root.querySelector('.run-head').textContent).toContain('46/75 HP');
+    const you = root.querySelector('[data-player="2"]');
+    expect(you.textContent).toBe('Defect (you)');
+    expect(you.getAttribute('aria-pressed')).toBe('true');
+    root.querySelector('[data-player="1"]').click();
+    await flush(); await flush();
+    expect(root.querySelector('.run-head h2').textContent).toMatch(/^Silent · Act 2/);
+    expect(root.querySelector('.run-head').textContent).toContain('61/81 HP');
+    expect(root.querySelector('[data-player="1"]').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('co-op with no known local player: opens on player 1 and marks no one as you', async () => {
+    saves.mockResolvedValue({ ...snapshot('current-run-coop'), you: null });
+    const root = document.createElement('div');
+    await mountDeck(root, makeCtx());
+    await flush(); await flush();
+    expect(root.querySelector('.run-head h2').textContent).toMatch(/^Silent/);
+    expect(root.textContent).not.toContain('(you)');
+  });
+
+  it('solo: no player switcher', async () => {
+    saves.mockResolvedValue(snapshot('current-run-after'));
+    const root = document.createElement('div');
+    await mountDeck(root, makeCtx());
+    await flush();
+    expect(root.querySelector('[data-player]')).toBeNull();
+  });
+
   // Save data is as of the last room change (platform spec §5.4); never imply it is live.
   it('says the data is as of entering this room', async () => {
     saves.mockResolvedValue(snapshot('current-run-after'));

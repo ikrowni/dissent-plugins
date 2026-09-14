@@ -3,30 +3,41 @@
 import { h, clear } from '../core/dom.js';
 import { saves } from '../core/host.js';
 import { humanizeId } from '../core/data.js';
-import { resolveCards, groupDeck, keywordCoverage } from '../core/deck.js';
+import { resolveCards, groupDeck, keywordCoverage, defaultPlayer } from '../core/deck.js';
 import { deckGrid, curvePanel, coveragePanel, relicRow, loadArt } from './deck-parts.js';
 import { statusBlock } from './status.js';
 import { mountBuilder } from './builder.js';
 
 const TABS = [['current', 'Current run'], ['builder', 'Builder']];
 
-export async function renderCurrentRun(run, ctx, { openBuilder, compact = false } = {}) {
+function playerSwitch(run, shown, onPlayer) {
+  if (!onPlayer || (run.players?.length ?? 0) < 2) return null;
+  return h('div', { class: 'wiki-tabs players', role: 'group', 'aria-label': 'Player' },
+    run.players.map((p) => h('button', {
+      type: 'button', class: 'tab', dataset: { player: String(p.player) }, 'aria-pressed': String(p.player === shown),
+      onclick: () => onPlayer(p.player),
+    }, `${humanizeId(p.character)}${p.player === run.you ? ' (you)' : ''}`)));
+}
+
+export async function renderCurrentRun(run, ctx, { openBuilder, compact = false, player = null, onPlayer = null } = {}) {
   if (run?.status !== 'ok') {
     const extra = run?.status === 'desktop_only' && openBuilder
       ? h('button', { type: 'button', class: 'chip', dataset: { act: 'open-builder' }, onclick: openBuilder }, 'Plan a deck in the Builder')
       : null;
     return statusBlock(run, extra);
   }
-  const p = run.players[0];
+  const shown = run.players.some((x) => x.player === player) ? player : defaultPlayer(run);
+  const p = run.players.find((x) => x.player === shown) ?? run.players[0];
   const entries = await resolveCards(ctx.data, p.deck);
   const saved = Number.isFinite(run.saved_at)
     ? new Date(run.saved_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
   return h('div', { class: 'run-now' },
+    playerSwitch(run, shown, onPlayer),
     h('header', { class: 'run-head' },
       h('h2', {}, `${humanizeId(p.character)} · Act ${run.act.index + 1} · ${humanizeId(run.act.id)}`),
       h('p', { class: 'sub' }, [`${p.hp}/${p.max_hp} HP`, `${p.gold} gold`, `${p.max_energy} energy`, `${entries.length} cards`,
-        run.ascension ? `Ascension ${run.ascension}` : null].filter(Boolean).join(' · ')),
+        run.ascension ? `Ascension ${run.ascension}` : null, run.players.length > 1 ? `Co-op · ${run.players.length} players` : null].filter(Boolean).join(' · ')),
       // ⚠️ The game writes its save on entering and leaving a room — never mid-fight.
       h('p', { class: 'sub asof' }, `As of entering this room${saved ? ` (saved ${saved})` : ''}. The game saves when you change rooms, not during a fight.`)),
     h('section', { class: 'panel' }, h('h3', {}, 'Relics'), await relicRow(ctx, p.relics)),
@@ -38,6 +49,7 @@ export async function mountDeck(root, ctx) {
   let tab = 'current';
   let child = null;
   let pull = 0;
+  let player = null; // co-op: the player being looked at; null until the user picks one
   // Overlay (spec §5): the run in progress and its curve. The Builder stays in the app.
   const compact = ctx.placement === 'overlay';
 
@@ -51,7 +63,10 @@ export async function mountDeck(root, ctx) {
     const mine = ++pull;
     const run = await saves('currentRun');
     if (mine !== pull || tab !== 'current') return; // a newer pull, or the Builder, won
-    const el = await renderCurrentRun(run, ctx, { openBuilder: () => show('builder'), compact });
+    const el = await renderCurrentRun(run, ctx, {
+      openBuilder: () => show('builder'), compact, player,
+      onPlayer: (n) => { player = n; paintCurrent(); },
+    });
     if (mine !== pull || tab !== 'current') return;
     clear(body).append(el);
     loadArt(body, ctx);

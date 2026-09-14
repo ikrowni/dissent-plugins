@@ -89,3 +89,6 @@ export function compareCoverage(a, b) {
   for (const { term, n } of b) rows.set(term, { term, a: rows.get(term)?.a ?? 0, b: n });
   return [...rows.values()].sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b) || x.term.localeCompare(y.term));
 }
+
+/** The player a current run opens on: you in co-op when the app knows which player that is, else player 1. */
+export const defaultPlayer = (run) => (run?.players?.some((p) => p.player === run.you) ? run.you : 1);

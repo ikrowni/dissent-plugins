@@ -8,7 +8,7 @@ export const STATUS_TEXT = {
   no_current_run: 'No run in progress.',
   no_game_data: 'No Slay the Spire 2 saves were found on this computer.',
   unsupported_version: 'The game changed its save format. Dissent desktop needs an update to read it.',
-  unsupported_coop: 'Co-op runs in progress are not supported yet. Finished co-op runs are in Run History.',
+  unsupported_coop: 'Co-op runs in progress need a newer Dissent desktop. Update Dissent to see this run; finished co-op runs are in Run History.',
   unreadable: 'The save could not be read — the game was probably writing it. It will try again on the next room.',
   not_found: 'That run is no longer in your history.',
   unsupported_game: 'This game is not supported.',

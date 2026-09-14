@@ -6,7 +6,7 @@ import { h, clear, append } from '../core/dom.js';
 import { store, saves } from '../core/host.js';
 import { filterItems } from '../core/search.js';
 import { createArchetypes, newArchetypeId } from '../core/archetypes.js';
-import { resolveCards, groupDeck, keywordCoverage, compareCoverage, characterColor } from '../core/deck.js';
+import { resolveCards, groupDeck, keywordCoverage, compareCoverage, characterColor, defaultPlayer } from '../core/deck.js';
 import { humanizeId } from '../core/data.js';
 import { deckGrid, curvePanel, coveragePanel, loadArt } from './deck-parts.js';
 import { statusBlock } from './status.js';
@@ -54,7 +54,7 @@ export async function mountBuilder(root, ctx) {
     if (state.compare.status !== 'ok') {
       return h('div', {}, statusBlock(state.compare), h('div', { class: 'panels' }, curvePanel(entries), coveragePanel(keywordCoverage(entries))));
     }
-    const player = state.compare.players[0];
+    const player = state.compare.players.find((p) => p.player === defaultPlayer(state.compare)) ?? state.compare.players[0];
     const run = await resolveCards(ctx.data, player.deck);
     const other = characterColor(player.character) !== state.current.character
       ? h('p', { class: 'sub' }, `Your current run is ${humanizeId(player.character)}.`) : null;

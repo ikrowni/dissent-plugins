@@ -1,7 +1,7 @@
 {
   "id": "sts2-companion",
   "name": "STS2 Companion",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A Slay the Spire 2 companion — a wiki of every card, relic, potion, power and enemy with real art; your current run's deck with its energy curve and keyword coverage; a deck builder; and your run history. Save data is read on this computer by Dissent desktop and never uploaded unless you turn on sharing in Community, which sends finished runs without your name, account or play times to the community stats service at sts2-stats.plugins.dissent.chat. Data: Spire Codex. Slay the Spire 2 © Mega Crit Games. In Slay the Spire 2's overlay: a Wiki panel and a Deck panel.",
   "author": "Dissent Project",
   "tier": 2,
@@ -92,7 +92,7 @@
     },
     {
       "url": "core/deck.js",
-      "sha256": "2f94b9af9bec5f6ff3e28621789d081a252253c4ee418f1bf231a2f611e8a46c"
+      "sha256": "cb9c4db3101de7cc8587834f47105fd624d6e5e48cd35e22b6edee4fbb906707"
     },
     {
       "url": "core/digest.js",
@@ -216,7 +216,7 @@
     },
     {
       "url": "views/builder.js",
-      "sha256": "c73229506feb1afaf2eb7c80a4b3a661f02f94135368e44bcd5d45868ab2d491"
+      "sha256": "06c07d5bd965795ec32a5cf2c7cae51c9273c1177cca36fbefcf2d30d99d886a"
     },
     {
       "url": "views/card-stats.js",
@@ -232,7 +232,7 @@
     },
     {
       "url": "views/deck.js",
-      "sha256": "db766ba1f2af79fb5d810f3f42e5341fa0c8c4b9328d29fe85b0c4b97cc5aa57"
+      "sha256": "d1a84cbc3b499b4fca986afb81a755eb77f77b89fcda87f2312848a9cd89fc4e"
     },
     {
       "url": "views/history.js",
@@ -248,7 +248,7 @@
     },
     {
       "url": "views/status.js",
-      "sha256": "1dec2e00df169c2d1390055211cbc6d5d8d1c9c97aebd4c58a0481d9615e1a65"
+      "sha256": "e39768726bbc3f3a55965ed853a4556dfb25012b361b14a94c192d2c92686166"
     },
     {
       "url": "views/wiki-detail.js",
