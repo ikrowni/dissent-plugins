@@ -14,10 +14,11 @@ const store = kv(userMem);
 const local = kv(localMem);
 const saves = vi.fn();
 const net = vi.fn();
-vi.mock('../core/host.js', () => ({ store, local, saves, net }));
+vi.mock('../core/host.js', () => ({ store, local, saves, rawSaves: saves, net }));
 const { mountCommunity } = await import('./community.js');
 const { buildContribution } = await import('../core/contribution.js');
 const { SETTINGS_KEY } = await import('../core/sharing.js');
+const { PARTY_KEY } = await import('../core/party.js');
 const { aggregate } = await import('../../../services/sts2-stats/src/aggregate.mjs');
 
 const ROOT = process.cwd();
@@ -122,5 +123,44 @@ describe('Community — stats', () => {
     globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => statsBody }));
     const root = await mount();
     expect(root.querySelector('[data-part="source"]').dataset.source).toBe('snapshot');
+  });
+});
+
+describe('Community — co-op party', () => {
+  it('out of a party: explains what is sent, and starting one shows a code to give friends', async () => {
+    const root = await mount();
+    const panel = root.querySelector('[data-part="party"]');
+    expect(panel.textContent).toContain('only on the host');
+    expect(panel.textContent).toContain('Solo runs are never sent');
+    root.querySelector('[data-act="start-party"]').click();
+    await flush();
+    const code = root.querySelector('[data-part="code"]').value;
+    expect(code).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    expect(userMem.get(PARTY_KEY).code).toBe(code);
+  });
+
+  it('joining refuses something that is not a code, and accepts one however it was typed', async () => {
+    const root = await mount();
+    root.querySelector('[data-part="code-input"]').value = 'hello';
+    root.querySelector('[data-act="join-party"]').click();
+    await flush();
+    expect(root.querySelector('[data-part="party-error"]').textContent).toContain('not a party code');
+    root.querySelector('[data-part="code-input"]').value = 'k7q4 m2xp 9d0l';
+    root.querySelector('[data-act="join-party"]').click();
+    await flush();
+    expect(root.querySelector('[data-part="code"]').value).toBe('K7Q4-M2XP-9D01');
+  });
+
+  it('leaves only after a confirming second click', async () => {
+    const root = await mount();
+    root.querySelector('[data-act="start-party"]').click();
+    await flush();
+    root.querySelector('[data-act="leave-party"]').click();
+    await flush();
+    expect(userMem.get(PARTY_KEY)).toBeTruthy();
+    root.querySelector('[data-act="leave-party"]').click();
+    await flush();
+    expect(userMem.get(PARTY_KEY)).toBeNull();
+    expect(root.querySelector('[data-act="start-party"]')).not.toBeNull();
   });
 });

@@ -4,7 +4,8 @@
 // no sharing: anyone can read them.
 
 import { h, clear } from '../core/dom.js';
-import { saves, store, local, net } from '../core/host.js';
+import { saves, rawSaves, store, local, net } from '../core/host.js';
+import { readParty, startParty, joinParty, leaveParty, pushParty, pullParty, sharedCurrent, importedRuns } from '../core/party.js';
 import { humanizeId } from '../core/data.js';
 import { readSettings, optIn, optOut, setBackfill, syncRuns, deleteSharedData, previewContribution, sharingState, BACKFILL_CAP } from '../core/sharing.js';
 import { loadStats, pickCell, communityRates } from '../core/stats.js';
@@ -51,8 +52,66 @@ export async function mountCommunity(root, ctx) {
     });
   }
 
+  state.party = await readParty(store);
+  state.partyInfo = null;
+  state.partyError = null;
+  state.confirmLeave = false;
+
+  async function partyInfo() {
+    if (!state.party) return null;
+    const shared = await sharedCurrent(local);
+    return { received: shared?.sentAt ?? null, imported: (await importedRuns(local)).length };
+  }
+
+  const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  function partyPanel() {
+    const explain = h('p', {}, 'Playing co-op? Slay the Spire 2 keeps a co-op run only on the host\'s computer, so guests\' Companions have nothing to read. '
+      + 'In a party, whoever hosts sends the run to everyone with the party code: both decks, relics, potions, HP, gold and the map while you play, and the finished run afterwards. '
+      + 'It is sealed with the code, so the stats service passing it along cannot read it, and it is forgotten there within hours (finished runs within 7 days). Solo runs are never sent.');
+    if (!state.party) {
+      const input = h('input', { type: 'text', placeholder: 'XXXX-XXXX-XXXX', 'aria-label': 'Party code', dataset: { part: 'code-input' }, autocomplete: 'off', spellcheck: 'false' });
+      return h('section', { class: 'panel', dataset: { part: 'party' } },
+        h('h3', {}, 'Co-op party'), explain,
+        h('div', { class: 'wiki-bar party-actions' },
+          h('button', { type: 'button', class: 'chip', dataset: { act: 'start-party' }, onclick: async () => {
+            state.party = await startParty(store); state.partyError = null; await paint();
+          } }, 'Start a party'),
+          input,
+          h('button', { type: 'button', class: 'chip', dataset: { act: 'join-party' }, onclick: async () => {
+            const r = await joinParty(store, input.value);
+            if (!r.ok) { state.partyError = 'That is not a party code — it looks like XXXX-XXXX-XXXX.'; await paint(); return; }
+            state.party = r; state.partyError = null; await paint(); refreshParty();
+          } }, 'Join')),
+        state.partyError ? h('p', { class: 'sub', dataset: { part: 'party-error' } }, state.partyError) : null);
+    }
+    const info = state.partyInfo;
+    return h('section', { class: 'panel', dataset: { part: 'party' } },
+      h('h3', {}, 'Co-op party'),
+      h('p', {}, 'Party code: ', h('input', { type: 'text', readonly: true, value: state.party.code, class: 'party-code', 'aria-label': 'Your party code', dataset: { part: 'code' }, onfocus: (e) => e.target.select() })),
+      h('p', { class: 'sub' }, 'Give this code to the people you play co-op with. Anyone with it receives the co-op runs you host until you leave; you receive the runs they host.'),
+      h('p', { class: 'sub', dataset: { part: 'party-status' } }, [
+        info?.received ? `Last run update from your party: ${clock(info.received)}` : 'Nothing received from your party yet.',
+        info?.imported ? `${info.imported} finished co-op run${info.imported === 1 ? '' : 's'} received` : null,
+      ].filter(Boolean).join(' · ')),
+      h('button', { type: 'button', class: 'chip', dataset: { act: 'leave-party' }, onclick: async () => {
+        if (!state.confirmLeave) { state.confirmLeave = true; await paint(); return; }
+        await leaveParty(store);
+        Object.assign(state, { party: null, partyInfo: null, confirmLeave: false });
+        await paint();
+      } }, state.confirmLeave ? 'Really leave? Nothing more is sent or received' : 'Leave party'));
+  }
+
+  async function refreshParty() {
+    if (!state.party) return;
+    await pushParty({ saves: rawSaves, store, local, net }).catch(() => {});
+    await pullParty({ store, local, net }).catch(() => {});
+    state.partyInfo = await partyInfo();
+    await paint();
+  }
+
   async function sync() {
-    state.sync = await syncRuns({ saves, store, local, net });
+    state.sync = await syncRuns({ saves: rawSaves, store, local, net });
     state.sent = await sharingState(local);
     await paint();
   }
@@ -101,7 +160,7 @@ export async function mountCommunity(root, ctx) {
     const previewBox = h('details', { dataset: { part: 'preview' },
       ontoggle: async (e) => {
         if (!e.target.open || state.preview !== undefined) return;
-        state.preview = await previewContribution(saves);
+        state.preview = await previewContribution(rawSaves);
         await paint();
         root.querySelector('[data-part="preview"]')?.setAttribute('open', '');
       } },
@@ -183,7 +242,7 @@ export async function mountCommunity(root, ctx) {
 
   async function paint() {
     const mine = ++paints;
-    const el = h('div', {}, sharingPanel(), await statsPanel());
+    const el = h('div', {}, partyPanel(), sharingPanel(), await statsPanel());
     if (!alive || mine !== paints) return;
     clear(body).append(el);
   }
@@ -193,6 +252,12 @@ export async function mountCommunity(root, ctx) {
   await paint();
   if (state.settings.enabled) sync();
 
-  const off = ctx.onSavesChanged(() => { if (state.settings.enabled) sync(); });
+  state.partyInfo = await partyInfo();
+  await paint();
+
+  const off = ctx.onSavesChanged(async (ev) => {
+    if (ev?.party) { state.partyInfo = await partyInfo(); await paint(); return; }
+    if (state.settings.enabled) sync();
+  });
   return { destroy() { alive = false; off(); } };
 }

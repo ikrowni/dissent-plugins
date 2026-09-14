@@ -1,7 +1,8 @@
 // core/app.js — bootstrap: data, art, the section router, the saves-changed bus, the credits footer.
 
-import { connect, overlayContext, saves, store, local, net } from './host.js';
+import { connect, overlayContext, rawSaves, store, local, net } from './host.js';
 import { syncRuns } from './sharing.js';
+import { readParty, pushParty, pullParty } from './party.js';
 import { layoutFor, onPanelShown } from './placement.js';
 import { createData } from './data.js';
 import { createPackReader } from './pack.js';
@@ -37,7 +38,7 @@ const SECTIONS = {
 let syncTimer = null;
 function syncSoon(ms) {
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => { syncRuns({ saves, store, local, net }).catch(() => {}); }, ms);
+  syncTimer = setTimeout(() => { syncRuns({ saves: rawSaves, store, local, net }).catch(() => {}); }, ms);
 }
 
 let current = null;
@@ -86,6 +87,32 @@ async function boot() {
   });
   await show(layout.section);
   syncSoon(5_000);
+  partyLoop();
+}
+
+// Co-op party (core/party.js). Polled, not cued: overlay panels get no save cue, and a guest's game
+// writes nothing to be cued by. Every PARTY_POLL_MS: send the run in progress if this computer has one
+// and it changed (a small file read and a hash when not), receive the party's, and when something
+// arrived tell the views to pull again through the same bus as a save change. Finished runs are listed
+// less often — that reads the history folder.
+const PARTY_POLL_MS = 10_000;
+const PARTY_FINISHED_EVERY = 6;
+let partyTick = 0;
+async function partyLoop() {
+  try {
+    if (await readParty(store)) {
+      const withFinished = partyTick % PARTY_FINISHED_EVERY === 0;
+      const saves = withFinished ? rawSaves : async (action, params) => (action === 'runs'
+        ? { status: 'skipped' } : rawSaves(action, params));
+      await pushParty({ saves, store, local, net });
+      const got = await pullParty({ store, local, net });
+      if (got.current || got.imported) for (const fn of [...savesListeners]) fn({ game: 'slay-the-spire-2', party: true });
+      partyTick += 1;
+    }
+  } catch (e) {
+    console.warn('[sts2-companion] party sync failed', e);
+  }
+  setTimeout(partyLoop, PARTY_POLL_MS);
 }
 
 connect({

@@ -70,6 +70,18 @@ describe('the Deck section over the REAL current-run projection', () => {
     expect(root.textContent).not.toContain('(you)');
   });
 
+  // A guest's Deck: the run arrives from the party host (core/party.js makePartySaves), marked as such.
+  it('a run sent by the party host says so, and opens on the guest', async () => {
+    const run = snapshot('current-run-coop');
+    saves.mockResolvedValue({ ...run, you: 1, character: 'CHARACTER.SILENT', shared: { by: 'party', sentAt: Date.UTC(2026, 8, 14, 20, 5) } });
+    const root = document.createElement('div');
+    await mountDeck(root, makeCtx());
+    await flush(); await flush();
+    expect(root.querySelector('.run-head h2').textContent).toMatch(/^Silent · Act 2/);
+    expect(root.querySelector('[data-player="1"]').textContent).toBe('Silent (you)');
+    expect(root.querySelector('[data-part="shared"]').textContent).toMatch(/^Sent by your party's host at /);
+  });
+
   it('solo: no player switcher', async () => {
     saves.mockResolvedValue(snapshot('current-run-after'));
     const root = document.createElement('div');

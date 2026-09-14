@@ -39,7 +39,10 @@ export async function renderCurrentRun(run, ctx, { openBuilder, compact = false,
       h('p', { class: 'sub' }, [`${p.hp}/${p.max_hp} HP`, `${p.gold} gold`, `${p.max_energy} energy`, `${entries.length} cards`,
         run.ascension ? `Ascension ${run.ascension}` : null, run.players.length > 1 ? `Co-op · ${run.players.length} players` : null].filter(Boolean).join(' · ')),
       // ⚠️ The game writes its save on entering and leaving a room — never mid-fight.
-      h('p', { class: 'sub asof' }, `As of entering this room${saved ? ` (saved ${saved})` : ''}. The game saves when you change rooms, not during a fight.`)),
+      h('p', { class: 'sub asof' }, `As of entering this room${saved ? ` (saved ${saved})` : ''}. The game saves when you change rooms, not during a fight.`),
+      run.shared ? h('p', { class: 'sub', dataset: { part: 'shared' } },
+        `Sent by your party's host at ${new Date(run.shared.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+        + (run.you ? '' : ' Pick which player you are above.')) : null),
     h('section', { class: 'panel' }, h('h3', {}, 'Relics'), await relicRow(ctx, p.relics)),
     h('div', { class: 'panels' }, curvePanel(entries), compact ? null : coveragePanel(keywordCoverage(entries))),
     deckGrid(groupDeck(entries)));

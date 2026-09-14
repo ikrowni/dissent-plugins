@@ -1,5 +1,6 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
+import { makePartySaves } from './party.js';
 import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
@@ -41,11 +42,16 @@ export async function overlayContext() {
   }
 }
 
-/** Every answer is data with a `status` (spec §5.3 of the platform spec). Never throws. */
-export async function saves(action, params = {}) {
+/** THIS computer's saves. Every answer is data with a `status` (spec §5.3 of the platform spec). Never throws.
+ *  Use for anything sent on the user's behalf (community sharing, the party push). */
+export async function rawSaves(action, params = {}) {
   try {
     return await request(`game.saves.${action}`, { game: 'slay-the-spire-2', ...params });
   } catch (e) {
     return { status: 'error', error: String(e?.message ?? e) };
   }
 }
+
+/** What the views read: this computer's saves, with a co-op party's runs filled in where it has none
+ *  (core/party.js). Outside a party it is exactly rawSaves. */
+export const saves = makePartySaves({ saves: rawSaves, store, local, net });

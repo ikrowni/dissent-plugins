@@ -54,7 +54,7 @@ export async function mountHistory(root, ctx) {
       onclick: () => { state.open = s.id; state.player = s.you ?? 1; paint(); } },
     h('strong', {}, outcome(s)), ' ',
     h('span', {}, [s.characters.map(humanizeId).join(' + '), `${s.floors} floors`, s.ascension ? `A${s.ascension}` : null,
-      formatDuration(s.run_time), killer ? `killed by ${killer}` : null, date].filter(Boolean).join(' · ')));
+      formatDuration(s.run_time), killer ? `killed by ${killer}` : null, date, s.shared ? 'shared by your party' : null].filter(Boolean).join(' · ')));
   }
 
   async function paint() {

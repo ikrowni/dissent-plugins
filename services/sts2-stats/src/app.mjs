@@ -1,9 +1,10 @@
-// services/sts2-stats/src/app.mjs — the service's only two dynamic routes. Everything else is a static
-// file Caddy serves.
+// services/sts2-stats/src/app.mjs — the service's dynamic routes: shared runs, deletion, and the party
+// relay (party.mjs). Everything else is a static file Caddy serves.
 
 import { createHash } from 'node:crypto';
 import { canonicalJSON } from '../../../plugins/sts2-companion/core/contribution.js';
 import { checkContribution } from '../../../plugins/sts2-companion/core/plausible.js';
+import { CHANNEL_RE, KEY_RE, MAX_BLOB, validBlob } from './party.mjs';
 
 export const MAX_BODY = 1024 * 1024;
 export const MAX_RUNS = 20;
@@ -36,7 +37,7 @@ function readJson(req) {
 /** Caddy puts the client first in X-Forwarded-For; the service listens on 127.0.0.1 only, so only Caddy reaches it. */
 const clientAddress = (req) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || '';
 
-export function createHandler({ db, data, limits, now = () => Date.now() }) {
+export function createHandler({ db, data, limits, party = null, now = () => Date.now() }) {
   const getContributor = db.prepare('SELECT token_hash FROM contributors WHERE id = ?');
   const addContributor = db.prepare('INSERT INTO contributors (id, token_hash, created_day) VALUES (?, ?, ?)');
   const hasRun = db.prepare('SELECT 1 AS x FROM runs WHERE key = ?');
@@ -49,9 +50,36 @@ export function createHandler({ db, data, limits, now = () => Date.now() }) {
     res.end(JSON.stringify(body));
   };
 
+  // Party relay: opaque sealed blobs, memory only. The channel is a hash of the party code.
+  async function handleParty(req, res, channel, kind) {
+    if (!CHANNEL_RE.test(channel)) return send(res, 400, { ok: false, error: 'channel' });
+    if (!party.allow(clientAddress(req))) return send(res, 429, { ok: false, error: 'rate_limited' });
+    if (req.method === 'GET') {
+      if (kind === 'current') {
+        const c = party.getCurrent(channel);
+        return c ? send(res, 200, { ok: true, ...c }) : send(res, 404, { ok: false, error: 'none' });
+      }
+      return send(res, 200, { ok: true, runs: party.getFinished(channel) });
+    }
+    if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'GET or POST' });
+    const body = await readJson(req);
+    const d = body?.data;
+    if (typeof d === 'string' && d.length > MAX_BLOB) return send(res, 413, { ok: false, error: 'data too large' });
+    if (!validBlob(d)) return send(res, 400, { ok: false, error: 'data must be sealed base64' });
+    if (kind === 'current') {
+      party.putCurrent(channel, d);
+    } else {
+      if (typeof body.key !== 'string' || !KEY_RE.test(body.key)) return send(res, 400, { ok: false, error: 'key' });
+      party.putFinished(channel, body.key, d);
+    }
+    return send(res, 200, { ok: true });
+  }
+
   return async (req, res) => {
     try {
       const path = new URL(req.url, 'http://service').pathname;
+      const partyRoute = party && path.match(/^\/v1\/party\/([^/]+)\/(current|finished)$/);
+      if (partyRoute) return await handleParty(req, res, partyRoute[1], partyRoute[2]);
       if (path !== '/v1/runs' && path !== '/v1/contributors/delete') return send(res, 404, { ok: false, error: 'not found' });
       if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'POST only' });
 
