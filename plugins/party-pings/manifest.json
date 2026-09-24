@@ -3,7 +3,7 @@
   "name": "Party Pings",
   "version": "1.0.0",
   "description": "Quick pings between everyone playing together. Install it on a server channel, and each member chooses whether its panel appears over their game (My plugins → Over your game). A ping goes to everyone in that channel who has the panel open — no typing, no alt-tab.",
-  "author": "Dissent Project",
+  "author": "KROWN",
   "tier": 2,
   "context": [
     "channel"
