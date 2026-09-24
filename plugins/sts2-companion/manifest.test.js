@@ -2,12 +2,16 @@
 // Mirrors dissent-core/internal/api/handlers/plugin_overlay.go parseOverlay. A block the node
 // refuses fails the re-add, and the plugin keeps its old manifest silently.
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { SURFACE_SECTIONS } from './core/placement.js';
 
 const ROOT = process.cwd();
 const manifest = JSON.parse(readFileSync(`${ROOT}/plugins/sts2-companion/manifest.json`, 'utf8'));
-const catalog = JSON.parse(readFileSync('/home/ubuntu/projects/dissent-core/internal/gamecatalog/catalog.json', 'utf8'));
+// The node's game catalog lives in the Dissent repo, absent on a GitHub-hosted CI machine —
+// read at module load, it failed the WHOLE file there and blocked plugin deploys. Only the
+// one test that needs it skips; it still runs wherever the Dissent source is present.
+const CATALOG = `${process.env.DISSENT_MONOREPO ?? '/home/ubuntu/projects'}/dissent-core/internal/gamecatalog/catalog.json`;
+const catalog = existsSync(CATALOG) ? JSON.parse(readFileSync(CATALOG, 'utf8')) : null;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const ANCHORS = ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'];
 
@@ -26,8 +30,11 @@ describe('manifest overlay block', () => {
     expect(new URL(STATS_HOST).host).toBe(manifest.allowed_fetch_domains[0]);
   });
 
-  it('targets Slay the Spire 2 by its catalog id', () => {
+  it('targets Slay the Spire 2', () => {
     expect(o.games).toEqual(['slay-the-spire-2']);
+  });
+
+  it.skipIf(!catalog)('…by an id the node\'s game catalog knows', () => {
     const ids = catalog.games.map((g) => g.id);
     for (const g of o.games) expect(ids).toContain(g);
   });
