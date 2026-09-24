@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createData, saveIdToDataId, humanizeId } from './data.js';
 
 const DATA = new URL('../data/', import.meta.url);
 const load = async (name) => JSON.parse(readFileSync(new URL(`${name}.json`, DATA)));
-const FIXTURES = '/home/ubuntu/projects/dissent-client/src-tauri/tests/fixtures/sts2/';
+const FIXTURES = `${process.env.DISSENT_MONOREPO ?? '/home/ubuntu/projects'}/dissent-client/src-tauri/tests/fixtures/sts2/`;
+// The scrubbed save fixtures live in the Dissent repo. CI runs on a GitHub-hosted machine
+// without it, and failing there blocked every plugin deploy from 2026-09-14 to 09-24. The
+// check still runs wherever the Dissent source is present (the VPS, any dev checkout).
+const HAVE_FIXTURES = existsSync(FIXTURES);
+const itWithFixtures = it.skipIf(!HAVE_FIXTURES);
 
 describe('saveIdToDataId', () => {
   it('strips the save prefix', () => {
@@ -45,7 +50,7 @@ describe('the data module over the REAL bundled data', () => {
     'CARD.GRAPPLE': 'absent from 1.3.0',
   };
 
-  it('🔴 maps every card, relic, potion, encounter, event and monster id in the scrubbed save fixtures', async () => {
+  itWithFixtures('🔴 maps every card, relic, potion, encounter, event and monster id in the scrubbed save fixtures', async () => {
     const text = ['current_run_after_first_combat.save', 'finished_coop_loss.run']
       .map((f) => readFileSync(FIXTURES + f, 'utf8')).join('\n');
     const ids = [...new Set(text.match(/"(CARD|RELIC|POTION|ENCOUNTER|EVENT|MONSTER)\.[A-Z0-9_]+"/g).map((s) => s.slice(1, -1)))];
