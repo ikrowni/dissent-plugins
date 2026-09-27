@@ -263,7 +263,7 @@
     },
     {
       "url": "core/league-api.js",
-      "sha256": "19f45090e91a90dd5698c25a06dce296ce654ef10a680159b63de7226d5d3126"
+      "sha256": "4874c594346614bb51c26019e37856229b5a1534ef4184cab2f1c65e67a97be1"
     },
     {
       "url": "core/league/autosubs.js",
@@ -539,7 +539,7 @@
     },
     {
       "url": "views/league-coowners.js",
-      "sha256": "0bade67a9e15537a3d71e2640c2e3b03557c797eb8696c9dda18d9c14e60fda8"
+      "sha256": "7e3df9f9b0e4a125f9aae719e40de5dc35ee74b46bafbaec218b66a667cc7178"
     },
     {
       "url": "views/league-draft.js",
@@ -571,7 +571,7 @@
     },
     {
       "url": "views/league-section.js",
-      "sha256": "ff1e5d0df2df6f65db15b0caaa22761d3a41d1e2a0f4dd88970fae72a9628b12"
+      "sha256": "76075cc199e267aa1ef16501628033e7cd7be1f77cd7992fb202568f946cf8b8"
     },
     {
       "url": "views/league.js",
