@@ -1,20 +1,18 @@
 // server/ops-coowners.js — sharing a team with somebody else.
 //
-// ⚠️ IT IS A HANDSHAKE, NOT AN INVITE. The obvious design — the owner names a
-// user id and that user becomes a co-owner — cannot work here, for two separate
-// reasons that both point the same way:
+// ⚠️ BOTH DIRECTIONS ARE A HANDSHAKE — never a grant. A user id arriving in a
+// payload is the caller's browser talking: the module cannot check it against
+// anything, and identity that matters must come from `caller()`.
 //
-//   1. The module has NO USER DIRECTORY. It has `caller()` and storage, and
-//      nothing else. A user id arriving in a payload cannot be checked against
-//      anything, so an owner could attach a typo, a stranger, or a person who
-//      never agreed, and the module would store it as fact.
-//   2. Identity that matters must come from `caller()`. A pasted id is the
-//      caller's browser talking; a verified session is the node talking.
+//   member-initiated:  request  → owner approves   (the asker's id is verified)
+//   owner-initiated:   invite   → member accepts   (the invitee's id is verified)
 //
-// So the prospective co-owner asks first — which records THEIR verified id — and
-// the owner approves from that list. Both halves are consented and both ids are
-// real. It also means the UI needs no member picker, which is just as well,
-// because the plugin SDK cannot enumerate a server's members either.
+// An owner may pick somebody from the server's member list (`members:list`, which
+// nfl-hub declares — an earlier version of this comment said the SDK could not
+// enumerate members; it can). That id still reaches the module through a
+// browser, so an invite is only an OFFER: a bogus id makes an invite nobody can
+// ever accept, rather than a co-owner who is not a member of the server. Nobody's
+// name goes on somebody else's team without their own verified say-so.
 
 import { KEY, read, mutate, loadLeague } from "./store.js";
 import { requireUser, requireTeamOwner, teamsOf, isCommissioner } from "./auth.js";
@@ -31,6 +29,7 @@ const MAX_LABEL = 40;
 const cleanLabel = (v) => String(v ?? "").trim().slice(0, MAX_LABEL);
 
 const pendingOf = (team) => (team?.coOwnerRequests ?? []).map(normalizeRequest);
+const invitesOf = (team) => team?.coOwnerInvites ?? [];
 
 /** Tolerate the bare-id shape a pre-0.9.0 record could hold. */
 function normalizeRequest(r) {
@@ -212,6 +211,117 @@ export function removeCoOwner({ p, payload }) {
   }, {});
 
   return { leagueId: lg, teamId, userId, outcome };
+}
+
+/**
+ * Owner: offer co-ownership to a member, or withdraw an offer.
+ *
+ * ⚠️ `requireTeamOwner`, the same guard as `respond`: a co-owner must not be able
+ * to invite an accomplice.
+ * ⚠️ The same refusals as a request, checked INSIDE the swap: nobody who already
+ * manages a team, no duplicate, the pending and co-owner caps.
+ */
+export function inviteCoOwner({ p, payload }) {
+  const lg = requireLeagueId(payload);
+  const { meta, teams: snapshot } = loadLeague(lg);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const teamId = String(payload?.teamId ?? "");
+  const err = requireTeamOwner(p, snapshot, meta, teamId);
+  if (err) refuse(err);
+
+  const userId = String(payload?.userId ?? "");
+  if (!userId) refuse("userId required");
+  const withdraw = payload?.withdraw === true;
+  let outcome = null;
+
+  mutate(KEY.teams(lg), (t) => {
+    const teams = t ?? {};
+    const team = teams[teamId];
+    if (!team) refuse(`no such team: ${teamId}`);
+    const invites = invitesOf(team);
+
+    if (withdraw) {
+      if (!invites.some((i) => i.userId === userId)) { outcome = "not-invited"; return teams; }
+      outcome = "withdrawn";
+      return { ...teams, [teamId]: { ...team, coOwnerInvites: invites.filter((i) => i.userId !== userId) } };
+    }
+
+    if (team.ownerId === userId) refuse("you already own this team");
+    if ((team.coOwners ?? []).includes(userId)) { outcome = "already-co-owner"; return teams; }
+    const theirs = teamsOf(teams, userId);
+    if (theirs.length > 0) refuse(`${userId} already manages team ${theirs[0]} in this league`);
+    if (invites.some((i) => i.userId === userId)) { outcome = "already-invited"; return teams; }
+    if (invites.length >= MAX_PENDING) refuse("this team has too many pending invites");
+    if ((team.coOwners ?? []).length >= MAX_CO_OWNERS) refuse(`a team may have at most ${MAX_CO_OWNERS} co-owners`);
+
+    outcome = "invited";
+    return {
+      ...teams,
+      [teamId]: {
+        ...team,
+        coOwnerInvites: [...invites, { userId, label: cleanLabel(payload?.label), at: Date.now(), by: p.userId }],
+      },
+    };
+  }, {});
+
+  return { leagueId: lg, teamId, userId, outcome };
+}
+
+/**
+ * The invitee: accept or decline an offer.
+ *
+ * ⚠️ `requireUser`, NOT `requireTeamOwner` — the acting principal is the INVITEE,
+ * and the subject is `p.userId`, never a payload id. An owner accepting on
+ * somebody's behalf is the one thing this handshake exists to prevent.
+ * ⚠️ Eligibility is re-checked here, as `respond` does: the invitee may have
+ * joined with a team of their own since the offer was made.
+ */
+export function acceptCoOwnerInvite({ p, payload }) {
+  const err = requireUser(p);
+  if (err) refuse(err);
+  const lg = requireLeagueId(payload);
+  const meta = read(KEY.meta(lg), null);
+  if (!meta) refuse(`no such league: ${lg}`);
+
+  const teamId = String(payload?.teamId ?? "");
+  const accept = payload?.accept !== false;
+  let outcome = null;
+
+  mutate(KEY.teams(lg), (t) => {
+    const teams = t ?? {};
+    const team = teams[teamId];
+    if (!team) refuse(`no such team: ${teamId}`);
+    const invites = invitesOf(team);
+    const offer = invites.find((i) => i.userId === p.userId);
+    if (!offer) refuse(`you have no invite to team ${teamId}`);
+    const remaining = invites.filter((i) => i.userId !== p.userId);
+
+    if (!accept) {
+      outcome = "declined";
+      return { ...teams, [teamId]: { ...team, coOwnerInvites: remaining } };
+    }
+
+    const mine = teamsOf(teams, p.userId);
+    if (mine.length > 0) refuse(`you already manage team ${mine[0]} in this league`);
+    const coOwners = team.coOwners ?? [];
+    if (coOwners.length >= MAX_CO_OWNERS) refuse(`a team may have at most ${MAX_CO_OWNERS} co-owners`);
+
+    outcome = "accepted";
+    return {
+      ...teams,
+      [teamId]: {
+        ...team,
+        coOwners: [...coOwners, p.userId],
+        coOwnerInvites: remaining,
+        // A standing request from the same person is answered by this.
+        coOwnerRequests: pendingOf(team).filter((r) => r.userId !== p.userId),
+        coOwnerLabels: { ...(team.coOwnerLabels ?? {}), [p.userId]: offer.label },
+      },
+    };
+  }, {});
+
+  return { leagueId: lg, teamId, outcome };
 }
 
 function requireLeagueId(payload) {

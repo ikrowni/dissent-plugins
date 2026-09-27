@@ -103,7 +103,7 @@ export function getLeague({ p, payload }) {
     // That is the `fromSleeperSettings` shape of bug: a capability with no caller.
     bannerFileId: meta.bannerFileId ?? null,
     commissioners: meta.commissioners,
-    teams: redactRequests(teams, meta, p.userId),
+    teams: redactTeamPrivacy(teams, meta, p.userId),
     assets,
     myTeams: teamsOf(teams, p.userId),
     isCommissioner: isCommissioner(meta, p.userId),
@@ -115,15 +115,15 @@ export function getLeague({ p, payload }) {
 }
 
 /**
- * Hide each team's pending co-ownership requests from everyone but the person
- * who has to act on them.
+ * Hide each team's pending co-ownership requests AND invites from everyone but the people
+ * who have to act on them.
  *
  * ⚠️ A REQUEST IS NOT PUBLIC. Who asked to co-own whose team is between those
  * two and the commissioner; leaving it in the league payload would broadcast
  * every declined approach to the whole server. The caller's OWN request stays
  * visible to them so the UI can show "pending" instead of offering to ask again.
  */
-function redactRequests(teams, meta, userId) {
+function redactTeamPrivacy(teams, meta, userId) {
   const commish = isCommissioner(meta, userId);
   const out = {};
   for (const [id, team] of Object.entries(teams ?? {})) {
@@ -132,6 +132,9 @@ function redactRequests(teams, meta, userId) {
     out[id] = {
       ...team,
       coOwnerRequests: maySee ? pending : pending.filter((r) => r.userId === userId),
+      // ⚠️ Named explicitly, like requests: an unnamed new field goes to EVERYBODY.
+      // An invite says an owner approached somebody, which is between those two.
+      coOwnerInvites: maySee ? (team.coOwnerInvites ?? []) : (team.coOwnerInvites ?? []).filter((i) => i.userId === userId),
     };
   }
   return out;

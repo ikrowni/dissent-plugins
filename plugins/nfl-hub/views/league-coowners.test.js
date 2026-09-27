@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  render, reset, roleOf, ownedTeam, coOwnedTeam, pendingTeam, pickTeam, _state,
+  render, reset, roleOf, ownedTeam, coOwnedTeam, pendingTeam, pickTeam, pickMember,
+  invitedTeams, inviteCandidates, _state,
 } from './league-coowners.js';
 
 const team = (id, over = {}) => ({
@@ -15,7 +16,7 @@ const league = (teams, me, over = {}) => ({
   ...over,
 });
 
-beforeEach(reset);
+beforeEach(() => { reset(); _state.members = null; });
 
 describe('roleOf', () => {
   const lg = (me) => league([team('t1', { coOwners: ['u_helper'] })], me);
@@ -77,12 +78,12 @@ describe('render', () => {
     // and NOT ONE BUTTON, and the word "add" appeared nowhere on it. The owner
     // reasonably concluded the feature did not exist. There cannot BE an Add
     // button (see server/ops-coowners.js), so the panel has to say so.
-    it('says how to ADD one, even though there is no Add button', () => {
+    it('says how to ADD one: invite, or they ask', () => {
       const html = render(lg());
       expect(html).toMatch(/add a co-manager/i);
-      // The mechanism, in the owner's terms: somebody else starts it.
-      expect(html).toMatch(/they ask, you approve/i);
-      // …and where they have to go to do it.
+      // Both mechanisms, in the owner's terms — and that an invite is only an offer.
+      expect(html).toMatch(/invite someone from this server/i);
+      expect(html).toMatch(/they accept before anything changes/i);
       expect(html).toMatch(/Fantasy → League/);
       // ⚠️ It must NOT list the server's members. That was tried and the owner
       // asked for it gone — a wall of names is not an instruction.
@@ -108,12 +109,87 @@ describe('render', () => {
       expect(html).toContain('co-decline');
     });
 
-    // ⚠️ THE POINT OF THE HANDSHAKE. An owner naming a user id is exactly what
-    // the module cannot verify, so no control may offer it.
+    // ⚠️ THE POINT OF THE HANDSHAKE. An owner TYPING a user id is exactly what
+    // the module cannot verify; the only way to name someone is the member picker,
+    // and even that only makes an offer.
     it('never offers a way to add somebody by id', () => {
       const html = render(lg());
       expect(html).not.toContain('co-ask');
       expect(html).not.toMatch(/<input[^>]+name="userId"/);
+    });
+  });
+
+  describe('the owner\'s invite picker', () => {
+    const members = [
+      { id: 'u_t1', username: 'owner' },           // the owner
+      { id: 'u_t2', username: 'rival' },           // owns another team
+      { id: 'u_free', display_name: 'Free Agent' },
+      { id: 'u_sent', username: 'sent' },          // already invited
+    ];
+    const lg = () => league([
+      team('t1', { coOwnerInvites: [{ userId: 'u_sent', label: 'sent', by: 'u_t1' }] }),
+      team('t2'),
+    ], 'u_t1');
+
+    it('says it is loading until the member list arrives', () => {
+      expect(render(lg())).toMatch(/Loading this server/);
+      expect(render(lg())).not.toContain('co-pick-member');
+    });
+
+    it('offers only members who could accept', () => {
+      _state.members = members;
+      expect(inviteCandidates(lg(), lg().teams.t1).map((m) => m.id)).toEqual(['u_free']);
+      const html = render(lg());
+      expect(html).toContain('co-pick-member');
+      expect(html).toContain('Free Agent');
+      expect(html).not.toMatch(/<option value="u_t2"/);
+    });
+
+    it('keeps Invite disabled until someone is chosen', () => {
+      _state.members = members;
+      expect(render(lg())).toMatch(/data-act="co-invite"[^>]*disabled/);
+      pickMember(null, 'u_free');
+      expect(render(lg())).not.toMatch(/data-act="co-invite"[^>]*disabled/);
+    });
+
+    it('lists invites sent, with a way to withdraw each', () => {
+      const html = render(lg());
+      expect(html).toContain('Invites waiting for an answer');
+      expect(html).toContain('co-uninvite');
+      expect(html).toContain('data-user="u_sent"');
+    });
+
+    // A dropdown, not a list: the owner asked for the wall of names to go.
+    it('never renders the members as a list', () => {
+      _state.members = members;
+      expect(render(lg())).not.toMatch(/<li[^>]*>\s*Free Agent/);
+    });
+  });
+
+  describe('holding an invite', () => {
+    const lg = league([
+      team('t1', { coOwnerInvites: [{ userId: 'u_new', label: 'New', by: 'u_t1' }] }),
+      team('t2'),
+    ], 'u_new');
+
+    it('finds the team that invited me', () => {
+      expect(invitedTeams(lg).map((t) => t.id)).toEqual(['t1']);
+    });
+
+    // ⚠️ Without this face an invite would be unreachable: a member with no team
+    // falls into the ask face, which knows nothing about invites.
+    it('offers Accept and Decline, naming the team and who asked', () => {
+      _state.members = [{ id: 'u_t1', display_name: 'Owner Olly' }];
+      const html = render(lg);
+      expect(html).toContain('invited to co-manage <strong>Team T1</strong>');
+      expect(html).toContain('Owner Olly');
+      expect(html).toContain('u_t1');
+      expect(html).toContain('data-act="co-accept"');
+      expect(html).toContain('data-act="co-refuse"');
+    });
+
+    it('shows nothing about invites to anyone else', () => {
+      expect(render(league(lg.teams ? Object.values(lg.teams) : [], 'u_other'))).not.toContain('co-accept');
     });
   });
 

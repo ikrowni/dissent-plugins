@@ -150,6 +150,7 @@ export async function enter() {
   // A stale notice or a half-finished ask from a previous visit must not greet
   // the next one.
   coowners.reset();
+  coowners.loadMembers(app);
   mock.reset();
   identity.reset();
   home.load(app);
@@ -415,6 +416,21 @@ export async function onAction(act, target) {
       return;
     case 'co-leave':
       coowners.leave(app, coCtx(), target.dataset.team);
+      return;
+    case 'co-pick-member':
+      coowners.pickMember(app, target.value);
+      return;
+    case 'co-invite':
+      coowners.invite(app, coCtx(), target.dataset.team);
+      return;
+    case 'co-uninvite':
+      coowners.uninvite(app, coCtx(), target.dataset.team, target.dataset.user);
+      return;
+    case 'co-accept':
+      coowners.acceptInvite(app, coCtx(), target.dataset.team);
+      return;
+    case 'co-refuse':
+      coowners.refuseInvite(app, coCtx(), target.dataset.team);
       return;
 
     case 'league-goto-draft':

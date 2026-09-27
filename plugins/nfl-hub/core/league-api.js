@@ -67,14 +67,12 @@ export const setLeagueBanner = (leagueId, bannerFileId) =>
 
 // ── Co-ownership ─────────────────────────────────────────────────────────────
 //
-// ⚠️ A HANDSHAKE, NOT AN INVITE, and the reason is worth knowing before reading
-// the UI: the module has no user directory, so an owner naming a user id could
-// attach a typo or a stranger who never agreed, and nothing could check it. The
-// prospective co-owner asks first — which records THEIR verified session — and
-// the owner approves from that list. Both ids are then real and both consented.
-// `label` is the requester's own display name, carried only so the owner sees
-// something more useful than a snowflake in the approval prompt. The module
-// never treats it as identity — see server/ops-coowners.js.
+// ⚠️ BOTH DIRECTIONS ARE A HANDSHAKE — see server/ops-coowners.js. A member asks and
+// the owner approves; or the owner invites and the member accepts. Either way the
+// person joining a team does so from their OWN verified session, never because an
+// id arrived in somebody else's payload.
+// `label` is a display name carried only so the other side sees something more
+// useful than a snowflake. The module never treats it as identity.
 export const requestCoOwnership = (leagueId, teamId, label = '') =>
   call('team:coowner:request', { leagueId, teamId, label });
 export const withdrawCoOwnershipRequest = (leagueId, teamId) =>
@@ -83,6 +81,12 @@ export const respondToCoOwnerRequest = (leagueId, teamId, userId, approve) =>
   call('team:coowner:respond', { leagueId, teamId, userId, approve });
 export const removeCoOwner = (leagueId, teamId, userId) =>
   call('team:coowner:remove', { leagueId, teamId, userId });
+export const inviteCoOwner = (leagueId, teamId, userId, label = '') =>
+  call('team:coowner:invite', { leagueId, teamId, userId, label });
+export const withdrawCoOwnerInvite = (leagueId, teamId, userId) =>
+  call('team:coowner:invite', { leagueId, teamId, userId, withdraw: true });
+export const answerCoOwnerInvite = (leagueId, teamId, accept) =>
+  call('team:coowner:accept', { leagueId, teamId, accept });
 
 // ── Schedule ─────────────────────────────────────────────────────────────────
 //
