@@ -304,6 +304,12 @@ export async function load(app, { leagueId, league, teamId, week }) {
     if (teamId && week) {
       const stored = await getLineup(leagueId, teamId, week).catch(() => null);
       const saved = stored?.lineup ?? [];
+      // The module carries a lineup forward from the last week this team set (module
+      // 2.45.0+). Say so, or a manager assumes they must re-enter it every week.
+      const from = Number(stored?.carriedFrom);
+      if (Number.isInteger(from) && from > 0) {
+        state.notice = `Same lineup as week ${from} — it carries over each week. Change any position and save to update it.`;
+      }
       // Normalise to exactly one entry per slot, preserving holes.
       state.lineup = starters.map((_, i) => (saved[i] ? String(saved[i]) : null));
 

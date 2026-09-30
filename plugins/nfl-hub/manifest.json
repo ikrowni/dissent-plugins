@@ -1,7 +1,7 @@
 {
   "id": "nfl-hub",
   "name": "NFL Hub",
-  "version": "2.44.0",
+  "version": "2.45.0",
   "description": "A full NFL broadcast center — live game center with drive charts and win probability, around-the-league scoreboard, standings and playoff picture, league leaders, team and player pages, and a Sleeper fantasy command center.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -298,6 +298,10 @@
       "sha256": "79ef1c5da7b89dfdc2e6714a1b70ff9ceb73ad72538e70cbeaf37e7b79528ace"
     },
     {
+      "url": "core/league/lineup-carry.js",
+      "sha256": "2f40ff0e1186bc33392decacb6a4f14d9d314fdececbcfa8093bfaa63022e57f"
+    },
+    {
       "url": "core/league/lineup.js",
       "sha256": "bb5a6e43969279d142b9755e6e211ef23d4f6325060fa7707067ad295fd8fca9"
     },
@@ -567,7 +571,7 @@
     },
     {
       "url": "views/league-roster.js",
-      "sha256": "bdcddbf3657056882822ffd33f60fdc48165241e7316622d13685e203eaa3bdb"
+      "sha256": "24d7d02c6e77246e5b4e42a2661dfe8e5d49a507738aa6b76ce43d7cf0fac2b1"
     },
     {
       "url": "views/league-section.js",

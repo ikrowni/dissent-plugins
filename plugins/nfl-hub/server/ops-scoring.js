@@ -23,6 +23,7 @@ import { shouldAdvance } from "../core/league/season-clock.js";
 // has no unit tests, and this decides whether scores update at all.
 import { fingerprintOf, isDue, nextBackoff } from "../core/league/score-backoff.js";
 
+import { lineupFor } from "./lineup-read.js";
 const refuse = (msg) => { throw new Error(msg); };
 
 const POSITIONS_KEY = "fl:positions";
@@ -165,7 +166,9 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
   const results = {};
   for (const teamId of Object.keys(teams)) {
     const roster = assets.rosters?.[teamId] ?? { players: [], ir: [], taxi: [] };
-    const stored = read(KEY.lineup(lg, season, week, teamId), { lineup: [] });
+    // Carried forward from the last week this team set, when it has not set this one —
+    // before 2026-09-30 an unset week scored an EMPTY lineup, i.e. zero.
+    const stored = lineupFor(lg, season, week, teamId, assets);
 
     // ⚠️ AUTOSUBS ARE APPLIED BEFORE SCORING, NEVER AFTER. They change WHICH
     // players count, so resolving them after the fact would score the lineup as

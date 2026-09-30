@@ -22,6 +22,7 @@ import { positionMap, injuryMap } from "./ops-scoring.js";
 import { validateAutoSubs } from "../core/league/autosubs.js";
 import { rosterCapacity, mayAddAtPosition } from "../core/league/rosters.js";
 import { setBlock, setInterest, interestCounts } from "../core/league/trade-block.js";
+import { lineupFor } from "./lineup-read.js";
 import {
   DROP_DESTINATION, dropDestination, wireClearsAt, placeOnWire, onWaivers,
   recordAcquisition, forgetAcquisition,
@@ -295,16 +296,20 @@ export function setLineup({ p, payload }) {
   return { leagueId: lg, teamId, season, week, lineup };
 }
 
-/** Read a lineup back. */
+/**
+ * Read the lineup a team plays in a week — its own, or carried forward from the last week
+ * it set (core/league/lineup-carry.js). `carriedFrom` says which, so the UI can show it.
+ */
 export function getLineup({ payload }) {
   const lg = requireLeagueId(payload);
-  const meta = read(KEY.meta(lg), null);
+  const { meta, assets } = loadLeague(lg);
   if (!meta) refuse(`no such league: ${lg}`);
   const season = Number(payload?.season ?? meta.season);
   const week = Number(payload?.week);
   const teamId = String(payload?.teamId ?? "");
-  return read(KEY.lineup(lg, season, week, teamId), { lineup: [], setAt: null, setBy: null });
+  return lineupFor(lg, season, week, teamId, assets);
 }
+
 
 /**
  * Designate AutoSubs for one team and week.
@@ -354,7 +359,9 @@ export function setAutoSubs({ p, payload }) {
     }
   }
 
-  const stored = read(KEY.lineup(lg, season, week, teamId), { lineup: [] });
+  // The lineup these subs back up — carried forward if the week was never set, since that
+  // is the lineup that will actually be scored.
+  const stored = lineupFor(lg, season, week, teamId, assets);
   const { starters } = splitRosterPositions(meta.settings?.rosterPositions);
 
   // ⚠️ POSITIONS COME FROM THE CACHED INDEX, NEVER FROM THE PAYLOAD — the same
