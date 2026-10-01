@@ -76,10 +76,16 @@ function commissionerWeek(p, payload) {
   return { lg, season, week };
 }
 
+/** As commissionerWeek, refused for a week with no score record — there is nothing to lock or unlock. */
+function scoredWeek(p, payload) {
+  const w = commissionerWeek(p, payload);
+  if (!read(KEY.scores(w.lg, w.season, w.week), null)) refuse(`week ${w.week} has not been scored yet`);
+  return w;
+}
+
 /** Commissioner: lock a week now. */
 export function finalizeWeek({ p, payload }) {
-  const { lg, season, week } = commissionerWeek(p, payload);
-  if (!read(KEY.scores(lg, season, week), null)) refuse(`week ${week} has not been scored yet`);
+  const { lg, season, week } = scoredWeek(p, payload);
   runScoring(lg, season, week, { force: true });
   stamp(lg, season, week, { finalReason: "commissioner", finalBy: p.userId });
   return { week, final: true };
@@ -87,7 +93,7 @@ export function finalizeWeek({ p, payload }) {
 
 /** Commissioner: unlock a week so it re-scores; it locks again under the normal rules. */
 export function reopenWeek({ p, payload }) {
-  const { lg, season, week } = commissionerWeek(p, payload);
+  const { lg, season, week } = scoredWeek(p, payload);
   mutate(KEY.scores(lg, season, week), (cur) => {
     if (!cur) return cur;
     const { final: _f, finalAt: _a, finalReason: _r, finalBy: _b, ...rest } = cur;

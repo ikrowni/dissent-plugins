@@ -130,7 +130,9 @@ describe("commissioner finalize / reopen", () => {
     expect(r.note).toMatch(/playoff/);
   });
 
-  it("refuses to finalize a week that was never scored", () => {
+  it("refuses to finalize or reopen a week that was never scored, and writes no row", () => {
     expect(() => finalizeWeek({ p: as("commish"), payload: { leagueId: LG, week: 9 } })).toThrow(/not been scored/);
+    expect(() => reopenWeek({ p: as("commish"), payload: { leagueId: LG, week: 9 } })).toThrow(/not been scored/);
+    expect(store.has(SC(9))).toBe(false);
   });
 });
