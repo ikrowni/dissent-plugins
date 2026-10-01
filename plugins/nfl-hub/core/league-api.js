@@ -47,6 +47,9 @@ export const updateSettings = (leagueId, settings) =>
   call('league:settings', { leagueId, settings });
 export const setCurrentWeek = (leagueId, week) =>
   call('league:week', { leagueId, week });
+// Week finality (2.47.0). Older modules answer "unknown op" — callers show that, nothing more.
+export const finalizeWeek = (leagueId, week) => call('week:finalize', { leagueId, week });
+export const reopenWeek = (leagueId, week) => call('week:reopen', { leagueId, week });
 
 // ── Identity ─────────────────────────────────────────────────────────────────
 //

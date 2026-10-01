@@ -263,7 +263,7 @@
     },
     {
       "url": "core/league-api.js",
-      "sha256": "4874c594346614bb51c26019e37856229b5a1534ef4184cab2f1c65e67a97be1"
+      "sha256": "0714b6ef0d76f9e199e69a2b9e26ba0d19f7bfd6c1c9610981d2448c08491810"
     },
     {
       "url": "core/league/autosubs.js",
@@ -563,7 +563,7 @@
     },
     {
       "url": "views/league-home.js",
-      "sha256": "e804170da264b9553e75395556887295ddc611a60ac0237d62216cfd26e8bad4"
+      "sha256": "5943eb95008ad5a9fac64721cd262fa4bce4b020f8e00e2729d00c96f46a0f93"
     },
     {
       "url": "views/league-identity.js",
@@ -571,7 +571,7 @@
     },
     {
       "url": "views/league-matchup.js",
-      "sha256": "f950880768d0b3798567537c1fb116962b48c011a2e73464897fc38e87ebcda9"
+      "sha256": "696bec165d142cf6ce3edd0b3c834f3fc5f09007816660de30da2b67c7ac1c11"
     },
     {
       "url": "views/league-mock.js",
@@ -587,7 +587,7 @@
     },
     {
       "url": "views/league-section.js",
-      "sha256": "76075cc199e267aa1ef16501628033e7cd7be1f77cd7992fb202568f946cf8b8"
+      "sha256": "63818bfdc87f42b3b2c70fd294f717fd7e2cea484f58c2752a6b24eff01716ed"
     },
     {
       "url": "views/league.js",

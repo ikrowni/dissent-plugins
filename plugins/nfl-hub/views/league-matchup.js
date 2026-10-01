@@ -86,6 +86,23 @@ function scheduledWeeks() {
  * week the stored record has no pairings for — which renders as "week N is not
  * in the schedule" and reads as a broken button.
  */
+/**
+ * Where the shown week stands (spec 2026-10-01): Final, waiting to lock, or Live.
+ *
+ * ⚠️ An older module sends neither `final` nor `lockAt`, and that must read as before — Live on
+ * the current week, "not live" on any other. Never both: "not live · Live" contradicts itself.
+ * The browser has Intl timezone data (the module does not), so the weekday is computed here.
+ */
+function lockLabel(live) {
+  const s = state.scores ?? {};
+  if (s.final) return `Final${s.finalReason === 'commissioner' ? ' · finalized by commissioner' : ''}`;
+  if (Number.isFinite(s.lockAt)) {
+    const day = new Date(s.lockAt).toLocaleString('en-US', { weekday: 'short', timeZone: 'America/New_York' });
+    return `Locks ${day} 9:00 ET`;
+  }
+  return live ? 'Live' : 'not live';
+}
+
 function weekNav(shown) {
   const weeks = scheduledWeeks();
   if (weeks.length === 0) return `<span class="muted">Week ${esc(String(shown))}</span>`;
@@ -97,7 +114,7 @@ function weekNav(shown) {
   return `<span class="wk-nav">
     <button class="btn tiny" data-act="matchup-week" data-week="${esc(String(prev ?? ''))}"
             ${prev === null || state.busy ? 'disabled' : ''} title="Previous week">‹</button>
-    <span class="wk-label">Week ${esc(String(shown))}${live ? '' : ' <span class="muted">· not live</span>'}</span>
+    <span class="wk-label">Week ${esc(String(shown))} <span class="muted">· ${esc(lockLabel(live))}</span></span>
     <button class="btn tiny" data-act="matchup-week" data-week="${esc(String(next ?? ''))}"
             ${next === null || state.busy ? 'disabled' : ''} title="Next week">›</button>
     ${live ? '' : `<button class="btn tiny" data-act="matchup-week" data-week="${esc(String(state.week))}">Today</button>`}

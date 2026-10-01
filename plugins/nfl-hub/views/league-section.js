@@ -308,6 +308,12 @@ export async function onAction(act, target) {
     case 'league-start-season':
       home.setWeek(app, target.dataset.week);
       return;
+    case 'league-finalize-week':
+      home.finalizeCurrentWeek(app, target.dataset.week);
+      return;
+    case 'league-reopen-week':
+      home.reopenCurrentWeek(app, target.dataset.week);
+      return;
     case 'league-set-week': {
       // ⚠️ Read the field at click time. The hub re-renders on every refresh, so
       // a controlled input would lose focus between keystrokes.

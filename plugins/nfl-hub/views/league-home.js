@@ -13,7 +13,7 @@ import { teamMark, banner, imageIdsOf } from '../core/team-visuals.js';
 import { resolve as resolveImages } from '../core/team-images.js';
 import {
   listLeagues, getLeague, createLeague, joinLeague, getScores, getStandings,
-  myTeam, canManage, setCurrentWeek, updateSettings,
+  myTeam, canManage, setCurrentWeek, updateSettings, finalizeWeek, reopenWeek,
 } from '../core/league-api.js';
 // ⚠️ The SAME scoring presets the module uses. Imported rather than duplicated:
 // core/league/* is pure and shared by both halves of the plugin precisely so the
@@ -51,12 +51,14 @@ const state = {
   // ⚠️ Kept apart from `error`, which blanks the whole tab. A refused settings
   // save must leave the form you are standing in on screen.
   setErr: null,
+  // Finalize/reopen outcome, shown in the commissioner strip — for the same reason.
+  weekMsg: null,
 };
 
 export function reset() {
   Object.assign(state, {
     leagues: null, leagueId: null, league: null, scores: null, standings: null,
-    error: null, busy: false,
+    error: null, busy: false, weekMsg: null,
   });
 }
 
@@ -508,7 +510,12 @@ function commissionerStrip(league, week) {
     : `<label class="inline">Week
          <input type="number" min="1" max="22" value="${week}" data-act="league-week-input">
        </label>
-       <button class="btn" data-act="league-set-week" ${state.busy ? 'disabled' : ''}>Set week</button>`}
+       <button class="btn" data-act="league-set-week" ${state.busy ? 'disabled' : ''}>Set week</button>
+       <button class="btn" data-act="league-finalize-week" data-week="${week}" ${state.busy ? 'disabled' : ''}
+               title="Lock this week's result now">Finalize week ${week}</button>
+       <button class="btn" data-act="league-reopen-week" data-week="${week}" ${state.busy ? 'disabled' : ''}
+               title="Unlock it to re-score. A playoff round already decided from it is not undone.">Reopen week ${week}</button>
+       ${state.weekMsg ? `<p class="muted small">${esc(state.weekMsg)}</p>` : ''}`}
   </div>`;
 }
 
@@ -579,7 +586,10 @@ function standingsTable(league, standings, scores) {
       </tr>`;
   }).join('')}</tbody>
   </table>
-  <p class="muted">After ${standings.weeks} scored week${standings.weeks === 1 ? '' : 's'}${cut ? ` · top ${cut} make the playoffs` : ''}.</p>`;
+  <p class="muted">${Number.isInteger(standings.throughWeek)
+    // 2.47.0+: only final weeks count, so say which one the table runs to.
+    ? `Through week ${esc(String(standings.throughWeek))}`
+    : `After ${standings.weeks} scored week${standings.weeks === 1 ? '' : 's'}`}${cut ? ` · top ${cut} make the playoffs` : ''}.</p>`;
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -744,6 +754,36 @@ export async function setWeek(app, week) {
     app?.router?.refresh();
   }
 }
+
+/**
+ * Commissioner: lock or unlock a week (spec 2026-10-01).
+ *
+ * ⚠️ The outcome goes to `weekMsg`, never `error` — `error` blanks the whole tab, and until the
+ * module is promoted the old one answers "unknown op". Reopen's note (a decided playoff round
+ * is not undone) is the thing the commissioner most needs to read, so it is shown too.
+ */
+async function weekAction(app, week, call, done) {
+  const n = Number(week);
+  if (!Number.isInteger(n) || n < 1) return;
+  state.busy = true;
+  state.weekMsg = null;
+  app?.router?.refresh();
+  try {
+    const res = await call(state.leagueId, n);
+    await open(app, state.leagueId);
+    state.weekMsg = res?.note ?? done(n);
+  } catch (err) {
+    state.weekMsg = describe(err);
+  } finally {
+    state.busy = false;
+    app?.router?.refresh();
+  }
+}
+
+export const finalizeCurrentWeek = (app, week) =>
+  weekAction(app, week, finalizeWeek, (n) => `Week ${n} is final.`);
+export const reopenCurrentWeek = (app, week) =>
+  weekAction(app, week, reopenWeek, (n) => `Week ${n} reopened.`);
 
 export async function join(app, teamName) {
   state.busy = true;

@@ -59,6 +59,17 @@ describe('standings table', () => {
     expect(html).toContain('After 3 scored weeks');
   });
 
+  it('captions the standings with the last final week when the module reports it', () => {
+    setup({
+      standings: { ...standings(2, [
+        { teamId: 't1', seed: 1, wins: 2, losses: 0, ties: 0, pointsFor: 200, pointsAgainst: 150 },
+      ]), throughWeek: 3 },
+    });
+    const html = render();
+    expect(html).toContain('Through week 3');
+    expect(html).not.toContain('scored week');
+  });
+
   it('shows ties only when there are any', () => {
     setup({
       standings: standings(1, [
@@ -186,6 +197,37 @@ describe('the season control', () => {
     const html = render();
     expect(html).not.toContain('league-start-season');
     expect(html).not.toContain('league-set-week');
+  });
+});
+
+// Week finality (spec 2026-10-01): a commissioner can lock a stuck week now, or reopen one to
+// correct it. The browser half ships before the module, so a refusal must stay on screen
+// without blanking the tab.
+describe('finalize and reopen', () => {
+  it('offers Finalize and Reopen for the current week to a commissioner', () => {
+    setup({ league: league({ currentWeek: 3 }) });
+    const d = parse(render());
+    expect(d.querySelector('[data-act="league-finalize-week"]').dataset.week).toBe('3');
+    expect(d.querySelector('[data-act="league-reopen-week"]').dataset.week).toBe('3');
+  });
+
+  it('offers neither to an ordinary manager', () => {
+    setup({ league: league({ currentWeek: 3, isCommissioner: false }) });
+    const html = render();
+    expect(html).not.toContain('league-finalize-week');
+    expect(html).not.toContain('league-reopen-week');
+  });
+
+  it('offers neither before the season has started', () => {
+    setup({ league: league({ currentWeek: null }) });
+    expect(render()).not.toContain('league-finalize-week');
+  });
+
+  it('shows the outcome inside the strip, not as a tab-wide error', () => {
+    setup({ league: league({ currentWeek: 3 }), weekMsg: 'unknown op: week:finalize' });
+    const html = render();
+    expect(html).toContain('unknown op: week:finalize');
+    expect(html).toContain('league-set-week'); // the tab is still there
   });
 });
 

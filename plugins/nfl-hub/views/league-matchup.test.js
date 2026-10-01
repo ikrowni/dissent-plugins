@@ -717,6 +717,39 @@ describe('browsing the season', () => {
     expect(render()).not.toMatch(/not live/i);
   });
 
+  // Week finality (spec 2026-10-01). An old module sends no final/lockAt, which must read as
+  // today's behaviour: Live on the current week, "not live" elsewhere.
+  describe('the lock label', () => {
+    const label = () => parse(render()).querySelector('.wk-label').textContent.replace(/\s+/g, ' ');
+
+    it('says Live on the current week before anything is known', () => {
+      at(2);
+      expect(label()).toMatch(/Week 2 · Live/);
+    });
+
+    it('says when a waiting week locks, in Eastern time', () => {
+      at(2);
+      _state.scores = { teams: {}, lockAt: Date.UTC(2026, 8, 29, 13) }; // Tue 09:00 EDT
+      expect(label()).toMatch(/Locks Tue 9:00 ET/);
+    });
+
+    it('says Final once locked, and who locked it when a commissioner did', () => {
+      at(2);
+      _state.scores = { teams: {}, final: true, finalReason: 'all-games-complete' };
+      expect(label()).toMatch(/Final/);
+      expect(label()).not.toMatch(/commissioner/);
+      _state.scores = { teams: {}, final: true, finalReason: 'commissioner' };
+      expect(label()).toMatch(/Final · finalized by commissioner/);
+    });
+
+    it('a past week that is final says Final, not "not live"', () => {
+      at(1);
+      _state.scores = { teams: {}, final: true, finalReason: 'backstop' };
+      expect(label()).toMatch(/Final/);
+      expect(label()).not.toMatch(/not live/i);
+    });
+  });
+
   it('defaults to the league week when nothing is chosen', () => {
     at(null);
     expect(render()).toContain('Week 2');
