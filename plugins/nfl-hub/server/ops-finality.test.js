@@ -68,6 +68,22 @@ describe("the tick locks the oldest non-final week", () => {
     expect(store.get(SC(4)).final).toBeUndefined();
   });
 
+  // ⚠️ Re-scoring reads TODAY's rosters, and a lineup drops players no longer held — so a past
+  // week re-scored now can lose points it really earned. The league already gave it a final
+  // pass when it advanced past it (advanceWeekIfDue); the lock takes the record as it stands.
+  it("locking a PAST week does not re-score it", () => {
+    fetched.payload = espnAllDone;
+    finalizeOldestIfDue(LG, state, TUE_9_ET_WK4 + 7 * 86_400_000);
+    expect(store.get(SC(3)).teams.t1.total).toBe(80); // the stub's stats would score it 0
+  });
+
+  it("locking the CURRENT week gives it one last pass first", () => {
+    store.delete(SC(3));
+    fetched.payload = espnAllDone;
+    expect(finalizeOldestIfDue(LG, state, TUE_9_ET_WK4 + 1)).toMatchObject({ week: 4, locked: true });
+    expect(store.get(SC(4)).teams.t1.total).toBe(0); // re-scored from the stub's stats
+  });
+
   it("does nothing, and writes nothing, when ESPN does not answer", () => {
     fetched.payload = null;
     const before = JSON.stringify(store.get(SC(3)));
@@ -128,6 +144,12 @@ describe("commissioner finalize / reopen", () => {
     expect(store.get(SC(4)).final).toBeUndefined();
     expect(store.get(SC(4))).toMatchObject({ reopenedBy: "commish" });
     expect(r.note).toMatch(/playoff/);
+  });
+
+  it("a commissioner finalizing a past week does not re-score it", () => {
+    store.set(SC(2), { season: 2026, week: 2, teams: { t1: { total: 55 } } });
+    finalizeWeek({ p: as("commish"), payload: { leagueId: LG, week: 2 } });
+    expect(store.get(SC(2))).toMatchObject({ final: true, teams: { t1: { total: 55 } } });
   });
 
   it("refuses to finalize or reopen a week that was never scored, and writes no row", () => {

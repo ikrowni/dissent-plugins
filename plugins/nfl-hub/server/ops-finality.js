@@ -18,6 +18,20 @@ function oldestOpenWeek(lg, season, upTo) {
   return null;
 }
 
+/**
+ * One last scoring pass before a lock — ONLY for the league's current week.
+ *
+ * ⚠️ A PAST WEEK IS LOCKED AS IT STANDS. Scoring reads TODAY's rosters and a lineup drops players
+ * no longer held, so re-scoring an old week can take away points it really earned (every week of
+ * a live league would be re-scored this way on the first runs after this ships). A past week
+ * already had its final pass when the league advanced past it — advanceWeekIfDue.
+ */
+function lastPassIfCurrent(lg, meta, season, week) {
+  if (Number(meta?.season) === season && Number(meta?.currentWeek) === week) {
+    runScoring(lg, season, week, { force: true });
+  }
+}
+
 function stamp(lg, season, week, fields) {
   return mutate(KEY.scores(lg, season, week), (cur) => {
     if (!cur) return cur;
@@ -57,7 +71,7 @@ export function finalizeOldestIfDue(lg, nflState, now = Date.now()) {
     return { week, locked: false, reason: v.reason, lockAt: v.lockAt ?? null };
   }
 
-  runScoring(lg, season, week, { force: true }); // the last pass before the lock
+  lastPassIfCurrent(lg, meta, season, week);
   stamp(lg, season, week, { finalReason: v.reason });
   return { week, locked: true, reason: v.reason };
 }
@@ -73,7 +87,7 @@ function commissionerWeek(p, payload) {
   const season = Number(payload?.season ?? meta.season);
   const week = Number(payload?.week);
   if (!Number.isInteger(week) || week < 1) refuse("week must be a positive integer");
-  return { lg, season, week };
+  return { lg, meta, season, week };
 }
 
 /** As commissionerWeek, refused for a week with no score record — there is nothing to lock or unlock. */
@@ -85,8 +99,8 @@ function scoredWeek(p, payload) {
 
 /** Commissioner: lock a week now. */
 export function finalizeWeek({ p, payload }) {
-  const { lg, season, week } = scoredWeek(p, payload);
-  runScoring(lg, season, week, { force: true });
+  const { lg, meta, season, week } = scoredWeek(p, payload);
+  lastPassIfCurrent(lg, meta, season, week);
   stamp(lg, season, week, { finalReason: "commissioner", finalBy: p.userId });
   return { week, final: true };
 }
