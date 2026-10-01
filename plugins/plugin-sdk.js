@@ -42,6 +42,15 @@ export function requestWithTransfer(action, params, transfers, timeoutMs = 60000
 
 // Call once in the bootstrap. onInit receives the full dissent:init message;
 // onEvent receives dissent:event messages.
+// Change listeners (caching spec 2026-10-01, piece 1): the host says this plugin's stored data or
+// friends:link links changed, so a plugin re-reads instead of polling.
+const _changeListeners = { 'storage:changed': [], 'links:changed': [] };
+/** Called with { scope, key } when this plugin's stored data changes (any writer, a scope you hold).
+ *  Never the value — re-read what you need. Keep a slow safety poll: a server module's writes are not announced. */
+export function onStorageChange(fn) { _changeListeners['storage:changed'].push(fn); }
+/** Called when this install's friends:link links change (invite, accept, decline, stop, auto-match). Re-list them. */
+export function onLinksChange(fn) { _changeListeners['links:changed'].push(fn); }
+
 export function handleSDKMessage(e, onInit, onEvent) {
   if (e.data?.type === 'dissent:init') {
     if (e.data.user?.id) _identity = e.data.user; // pre-cache identity
@@ -53,6 +62,11 @@ export function handleSDKMessage(e, onInit, onEvent) {
     const p = _pending[e.data.id];
     if (p) { delete _pending[e.data.id]; e.data.ok ? p.resolve(e.data.data) : p.reject(new Error(e.data.error)); }
     return;
+  }
+  if (e.data?.type === 'dissent:event' && _changeListeners[e.data.event]) {
+    for (const fn of _changeListeners[e.data.event]) {
+      try { fn(e.data.data); } catch { /* one listener must not break dispatch */ }
+    }
   }
   if (e.data?.type === 'dissent:event' && onEvent) onEvent(e.data);
 }

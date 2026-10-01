@@ -6,7 +6,7 @@
 // a byte copy of it; `scripts/audit/embedded-sdk.mjs` is what keeps the pair in
 // step. Fixing one without the other ships nothing.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { invokeModule, handleSDKMessage } from './plugin-sdk.js';
+import { invokeModule, handleSDKMessage, onStorageChange, onLinksChange } from './plugin-sdk.js';
 
 // Drive the REAL postMessage transport rather than stubbing `request`, so these
 // assertions cover the same code path a plugin frame runs.
@@ -124,5 +124,35 @@ describe('invokeModule envelope unwrapping', () => {
   it('MIS-throws when data carries its own ok:false (documented limitation)', async () => {
     const data = { ok: false, reason: 'the SYNC failed, the CALL did not' };
     await expect(invokeReturning({ ok: true, data })).rejects.toThrow(/refused|SYNC/);
+  });
+});
+
+// Caching spec 2026-10-01, piece 1: the host says this plugin's data or links changed.
+describe('change listeners', () => {
+  const event = (name, data = null) => ({ data: { type: 'dissent:event', event: name, data } });
+
+  it('onStorageChange hears storage:changed even when no onEvent is passed', () => {
+    const got = [];
+    onStorageChange((c) => got.push(c));
+    handleSDKMessage(event('storage:changed', { scope: 'server', key: 'k' }), null, null);
+    expect(got).toEqual([{ scope: 'server', key: 'k' }]);
+  });
+
+  it('onLinksChange hears links:changed, and onEvent still sees it', () => {
+    let links = 0;
+    const seen = [];
+    onLinksChange(() => { links += 1; });
+    handleSDKMessage(event('links:changed'), null, (ev) => seen.push(ev.event));
+    expect(links).toBe(1);
+    expect(seen).toEqual(['links:changed']);
+  });
+
+  it('a throwing listener does not stop the others or onEvent', () => {
+    const seen = [];
+    onStorageChange(() => { throw new Error('boom'); });
+    onStorageChange(() => seen.push('second'));
+    handleSDKMessage(event('storage:changed', { scope: 'user', key: 'x' }), null, (ev) => seen.push(ev.event));
+    expect(seen).toContain('second');
+    expect(seen).toContain('storage:changed');
   });
 });
