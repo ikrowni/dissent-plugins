@@ -41,13 +41,28 @@ const sha = async (s) => hex(await crypto.subtle.digest('SHA-256', new TextEncod
 const isCoop = (run) => (run?.players?.length ?? 0) > 1;
 const finished = (s) => !s.abandoned && (s.win || s.killed_by);
 
+// ⚠️ READ ONCE PER STORE. The id never changes once made, yet it was read from the node on every
+// sync and every currentRun — 43% of ALL node traffic on 2026-09-30 (caching spec 2026-10-01).
+const _partyMemo = new WeakMap();
+
 /** This user's member id, made once: lets a Companion ignore what it sent itself. */
 export async function myParty(store) {
+  if (_partyMemo.has(store)) return _partyMemo.get(store);
   const p = await safe(() => store.get(PARTY_KEY));
-  if (p?.memberId) return p;
-  const fresh = { memberId: (await sha(crypto.getRandomValues(new Uint32Array(4)).join('.'))).slice(0, 16) };
-  await store.set(PARTY_KEY, fresh);
-  return fresh;
+  let party = p;
+  if (!p?.memberId) {
+    party = { memberId: (await sha(crypto.getRandomValues(new Uint32Array(4)).join('.'))).slice(0, 16) };
+    await store.set(PARTY_KEY, party);
+  }
+  _partyMemo.set(store, party);
+  return party;
+}
+
+/** The node announces link changes (links:changed), so links are re-read on that — or after
+ *  LINKS_SAFETY_MS, in case an announcement was missed — instead of on every sync. */
+export const LINKS_SAFETY_MS = 60_000;
+export function shouldRefreshLinks({ dirty, lastAt, now }) {
+  return dirty || !lastAt || now - lastAt >= LINKS_SAFETY_MS;
 }
 
 /** Channels from friends:link links: every accepted link with a secret. */

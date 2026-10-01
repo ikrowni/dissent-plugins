@@ -1,7 +1,7 @@
 // core/host.js — everything that talks to Dissent. Views never call the SDK directly.
 
 import { makePartySaves } from './party.js';
-import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch, friendsList, friendLinks, inviteFriend, respondToInvite, removeFriendLink, matchFriends, setAutoFriendLinks } from '../../plugin-sdk.js';
+import { handleSDKMessage, request, storageGetUser, storageSetUser, storageDelete, storageLocalGet, storageLocalSet, storageLocalDelete, netFetch, friendsList, friendLinks, inviteFriend, respondToInvite, removeFriendLink, matchFriends, setAutoFriendLinks, onLinksChange } from '../../plugin-sdk.js';
 
 const THEME = { '--background': '--bg', '--foreground': '--text', '--primary': '--accent' };
 
@@ -39,6 +39,8 @@ export const friends = {
   /** Friends in the same game (run in progress, or a finished run by id) — matched by the desktop app. */
   match: (run) => matchFriends('slay-the-spire-2', run),
   setAuto: (enabled) => setAutoFriendLinks(enabled),
+  /** The node says links changed (invite, accept, stop, auto-match) — caching spec 2026-10-01. */
+  onChange: (fn) => onLinksChange(fn),
 };
 
 /** net:direct — HTTPS from this computer to the stats service only (the one domain the manifest declares).

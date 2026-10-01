@@ -2,7 +2,7 @@
 
 import { connect, overlayContext, rawSaves, store, local, net, friends } from './host.js';
 import { syncRuns } from './sharing.js';
-import { refreshLinks, channelsFrom, pushParty, pullParty } from './party.js';
+import { refreshLinks, cachedLinks, shouldRefreshLinks, channelsFrom, pushParty, pullParty } from './party.js';
 import { layoutFor, onPanelShown } from './placement.js';
 import { createData } from './data.js';
 import { createPackReader } from './pack.js';
@@ -99,10 +99,22 @@ const PARTY_POLL_MS = 10_000;
 const PARTY_FINISHED_EVERY = 6;
 let partyTick = 0;
 let lastLinks = '';
+// Links are re-read when the node announces a change, or every LINKS_SAFETY_MS — not every sync.
+// They were polled every 10 s, 21% of ALL node traffic on 2026-09-30 (caching spec 2026-10-01).
+let linksDirty = true;
+let linksReadAt = 0;
+friends.onChange(() => { linksDirty = true; }); // picked up by the next party sync (≤ PARTY_POLL_MS)
 const tell = (extra) => { for (const fn of [...savesListeners]) fn({ game: 'slay-the-spire-2', ...extra }); };
 async function partyLoop() {
   try {
-    const links = await refreshLinks({ friends, local });
+    let links;
+    if (shouldRefreshLinks({ dirty: linksDirty, lastAt: linksReadAt, now: Date.now() })) {
+      linksDirty = false;
+      linksReadAt = Date.now();
+      links = await refreshLinks({ friends, local });
+    } else {
+      links = await cachedLinks(local);
+    }
     const seen = JSON.stringify(links);
     if (seen !== lastLinks) { lastLinks = seen; tell({ coop: true }); }
     const channels = channelsFrom(links);

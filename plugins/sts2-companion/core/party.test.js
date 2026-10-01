@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { openDb } from '../../../services/sts2-stats/src/db.mjs';
@@ -6,7 +6,7 @@ import { createLimits } from '../../../services/sts2-stats/src/limits.mjs';
 import { createHandler } from '../../../services/sts2-stats/src/app.mjs';
 import { pluginData } from '../../../services/sts2-stats/src/data.mjs';
 import { createParty } from '../../../services/sts2-stats/src/party.mjs';
-import { channelsFrom, refreshLinks, inviteToParty, pushParty, pullParty, sharedCurrent, sharingNow, importedRuns, makePartySaves, guessYou } from './party.js';
+import { channelsFrom, refreshLinks, inviteToParty, pushParty, pullParty, sharedCurrent, sharingNow, importedRuns, makePartySaves, guessYou, myParty, shouldRefreshLinks } from './party.js';
 
 const ROOT = process.cwd();
 const snap = (n) => JSON.parse(readFileSync(`${ROOT}/scripts/sts2/fixtures/saves/${n}.json`));
@@ -245,5 +245,31 @@ describe('guessYou', () => {
     expect(guessYou(1, 2)).toBe(2);
     expect(guessYou(null, 2)).toBeNull();
     expect(guessYou(1, 3)).toBeNull();
+  });
+});
+
+// Caching spec 2026-10-01: the member id never changes, yet it was read from the node on every
+// sync and every currentRun — 43% of ALL node traffic. And links were re-read every 10 s.
+describe('reads it does not need to repeat', () => {
+  it('myParty reads the stored member id once per store', async () => {
+    const store = { get: vi.fn(async () => ({ memberId: 'm1' })), set: vi.fn() };
+    for (let i = 0; i < 3; i++) expect((await myParty(store)).memberId).toBe('m1');
+    expect(store.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('myParty makes and saves an id once when there is none', async () => {
+    const store = { get: vi.fn(async () => null), set: vi.fn(async () => {}) };
+    const a = await myParty(store);
+    const b = await myParty(store);
+    expect(a.memberId).toMatch(/^[0-9a-f]{16}$/);
+    expect(b).toEqual(a);
+    expect(store.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('links are re-read when the node says they changed, or after 60 s, not every sync', () => {
+    expect(shouldRefreshLinks({ dirty: true, lastAt: 1_000, now: 2_000 })).toBe(true);
+    expect(shouldRefreshLinks({ dirty: false, lastAt: 1_000, now: 30_000 })).toBe(false);
+    expect(shouldRefreshLinks({ dirty: false, lastAt: 1_000, now: 61_000 })).toBe(true);
+    expect(shouldRefreshLinks({ dirty: false, lastAt: 0, now: 5 })).toBe(true); // never read yet
   });
 });

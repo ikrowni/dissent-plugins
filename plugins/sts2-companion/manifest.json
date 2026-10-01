@@ -65,7 +65,7 @@
     },
     {
       "url": "core/app.js",
-      "sha256": "80a423739e4a873086e44fd80a4dbc2146762c544a10fceb190e890904401f4e"
+      "sha256": "d123cf01bfce5a8e0e3c5012441f6b425e4d0909c75f95a54919353ed5ab6eba"
     },
     {
       "url": "core/archetypes.js",
@@ -109,7 +109,7 @@
     },
     {
       "url": "core/host.js",
-      "sha256": "63ddcc9f1360d8cbbcdf498b1f3b7881fb94a6485a07f5a90b5fd8cf5cd63996"
+      "sha256": "cc06bf5278f12e4f0ff2e20bce3027a8968d94c28f07d12fe431c86eba68c8f3"
     },
     {
       "url": "core/insights.js",
@@ -125,7 +125,7 @@
     },
     {
       "url": "core/party.js",
-      "sha256": "2d5bf4147272284b8dee9ff8ece0023f9b342d6b0d26c3d3975a9a14cf7db21e"
+      "sha256": "78558641ea71528a2c0d4fc7706470cc2a7055a1965eaee480f2f71ac2f1262b"
     },
     {
       "url": "core/partyCrypto.js",
