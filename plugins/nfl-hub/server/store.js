@@ -49,7 +49,9 @@ export const KEY = {
  * question someone answers wrongly at 1am, and `set` on a contended key loses
  * updates silently — no error, no trace, just a claim that vanishes.
  */
-export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex", "bracket", "tradeBlock"];
+// "scores" since 2026-10-01: a week's record has two writers — the tick and a commissioner
+// finalizing or reopening it — so a plain `set` would silently lose one of them.
+export const CONTENDED = ["assets", "draft", "waivers", "trade", "meta", "teams", "tradeIndex", "bracket", "tradeBlock", "scores"];
 
 /** Read a value, or a fallback when unset. */
 export function read(key, fallback = null) {

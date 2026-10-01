@@ -146,6 +146,9 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
 
   // Not due yet, and nothing has been changing — leave the stored score alone.
   const prev = read(KEY.scores(lg, season, week), null);
+  // ⚠️ A FINAL WEEK IS NEVER REWRITTEN — not by the tick, a backfill, or a forced pass. Its
+  // result is what standings and the bracket counted. A commissioner reopens it to correct it.
+  if (prev?.final) return { season, week, skipped: "final" };
   if (!force && !isDue(prev)) {
     return { season, week, skipped: "not due", dueIn: prev.nextScoreAt - Date.now() };
   }
@@ -216,10 +219,14 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
   const fingerprint = fingerprintOf(results);
   const { quietRuns, nextScoreAt } = nextBackoff(prev, fingerprint);
 
-  writeUncontended(KEY.scores(lg, season, week), {
-    season, week, scoredAt: Date.now(), teams: results,
-    fingerprint, quietRuns, nextScoreAt,
-  });
+  mutate(KEY.scores(lg, season, week), (cur) => {
+    if (cur?.final) return cur; // finalized while we scored — keep the locked result
+    return {
+      ...(cur?.reopenedAt ? { reopenedAt: cur.reopenedAt, reopenedBy: cur.reopenedBy } : {}),
+      season, week, scoredAt: Date.now(), teams: results,
+      fingerprint, quietRuns, nextScoreAt,
+    };
+  }, null);
 
   return {
     season, week,
