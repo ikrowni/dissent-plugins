@@ -24,6 +24,7 @@ import { shouldAdvance } from "../core/league/season-clock.js";
 import { fingerprintOf, isDue, nextBackoff } from "../core/league/score-backoff.js";
 
 import { lineupFor } from "./lineup-read.js";
+import { weekHasStarted } from "../core/league/week-started.js";
 const refuse = (msg) => { throw new Error(msg); };
 
 const POSITIONS_KEY = "fl:positions";
@@ -307,7 +308,9 @@ export function getStandings({ payload }) {
   let scoredWeeks = 0;
   for (const week of schedule.weeks ?? []) {
     const scores = read(KEY.scores(lg, season, week.week), null);
-    if (!scores) continue; // not played yet
+    // Not played yet: no record, OR the all-zero record scoring writes for the current
+    // week before kickoff — counted, that was a 0–0 tie in every matchup.
+    if (!scores || !weekHasStarted(scores)) continue;
     scoredWeeks++;
     for (const m of week.matchups ?? []) {
       const home = scores.teams?.[m.home];

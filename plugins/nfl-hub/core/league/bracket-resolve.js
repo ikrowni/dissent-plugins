@@ -10,6 +10,7 @@
 
 import { advanceBracket, bracketChampion } from './schedule.js';
 
+import { weekHasStarted } from './week-started.js';
 /**
  * Advance both sides of a postseason as far as the scores allow.
  *
@@ -115,7 +116,9 @@ function aggregateWeeks(weeks, scoresFor) {
   const totals = {};
   for (const w of weeks) {
     const s = scoresFor(w);
-    if (!s) return null;
+    // An all-zero record is an UNPLAYED week (scoring writes one before kickoff), not a
+    // round of 0–0 ties — which `decide` would hand to every higher seed, permanently.
+    if (!s || !weekHasStarted(s)) return null;
     for (const [teamId, rec] of Object.entries(s.teams ?? {})) {
       const t = Number(rec?.total);
       if (!Number.isFinite(t)) continue;
