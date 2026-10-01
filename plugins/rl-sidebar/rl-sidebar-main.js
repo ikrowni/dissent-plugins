@@ -146,9 +146,14 @@ async function loadMembers() {
     _displayNameMap = {};
   }
   _memberStatsMap = {};
+  // ONE read for everyone's rank: the hub keeps a summary of each member's current season
+  // (rl-hub/rl-stats-summary.js). Reading every member's full stats here on every open was ~8
+  // reads per mount and tripped the node's 120/min limit (2026-10-01). A member the summary
+  // does not have yet still gets the full read.
+  const summary = (await storageGetCompanion('rl-hub', 'rl:stats-summary')) ?? {};
   await Promise.all(_members.map(async m => {
     const cacheKey = `rl:stats:${m.platform}:${String(m.rlUsername).toLowerCase().replace(/\s+/g, '_')}`;
-    const cached = await storageGetCompanion('rl-hub', cacheKey);
+    const cached = summary[cacheKey]?.data ? summary[cacheKey] : await storageGetCompanion('rl-hub', cacheKey);
     _memberStatsMap[m.dissentUserId] = cached?.data ?? null;
   }));
 }

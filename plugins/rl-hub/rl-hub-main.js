@@ -1,6 +1,7 @@
 // rl-hub-main.js — init, storage, cache orchestration, fetch queue
 import { handleSDKMessage, storageGet, storageSet, storageGetUser, storageSetUser, realtimePublishCompanion } from '../plugin-sdk.js';
 import { scrapeRLStats } from './rl-scraper.js';
+import { SUMMARY_KEY, withSummaries } from './rl-stats-summary.js';
 import { showRegisterScreen, initRegisterForm } from './rl-hub-register.js';
 import {
   initVersus, showVersus, refreshVersus, addFeedEvent,
@@ -96,16 +97,30 @@ function setCached(platform, rlUsername, data) {
 // ── rlstats.net fetch queue ───────────────────────────────────────────────────
 
 async function drainFetchQueue(staleMembers) {
+  const fetched = [];
   for (const member of staleMembers) {
     try {
       const profile    = await scrapeRLStats(member.platform, member.rlUsername);
       const cacheEntry = { fetchedAt: new Date().toISOString(), data: profile };
       setCached(member.platform, member.rlUsername, profile);
       await storageSet(SK.stats(member.platform, member.rlUsername), cacheEntry);
+      fetched.push([SK.stats(member.platform, member.rlUsername), cacheEntry]);
     } catch (err) {
       console.warn('[rl-hub] fetch failed for', member.rlUsername, err.message);
     }
     await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
+  }
+  // Once per queue, not per member: re-read so another viewer's additions are kept.
+  if (fetched.length > 0) await saveSummaries(fetched);
+}
+
+/** Fold full stats entries into the shared summary (rl-stats-summary.js says why it exists). */
+async function saveSummaries(entries) {
+  try {
+    const next = withSummaries(await storageGet(SUMMARY_KEY), entries);
+    if (next) await storageSet(SUMMARY_KEY, next);
+  } catch (err) {
+    console.warn('[rl-hub] summary not saved', err.message);
   }
 }
 
@@ -143,23 +158,31 @@ async function onInit(data) {
     showScreen('register');
     return;
   }
-  await loadHubScreen();
+  await loadHubScreen(myAccount);
 }
 
-async function loadHubScreen() {
+async function loadHubScreen(knownAccount) {
   showScreen('hub');
 
-  const myAccount = await storageGetUser(SK.MY_ACCOUNT);
+  const myAccount = knownAccount ?? await storageGetUser(SK.MY_ACCOUNT);
   _myTwitchUsername = myAccount?.twitchUsername ?? '';
   setTwitchStreamer(_myTwitchUsername);
 
   const members = (await storageGet(SK.MEMBERS)) ?? [];
   _members = members;
 
+  // ONE read for everyone's rank (the summary), then a full read only for a member it lacks —
+  // which also back-fills the summary, so the next open needs none.
+  const summary = (await storageGet(SUMMARY_KEY)) ?? {};
   const stale = [];
+  const backfill = [];
   for (const m of members) {
     const key    = SK.stats(m.platform, m.rlUsername);
-    const cached = await storageGet(key);
+    let cached   = summary[key]?.data ? summary[key] : null;
+    if (!cached) {
+      cached = await storageGet(key);
+      if (cached?.data) backfill.push([key, cached]);
+    }
     if (cached) {
       _statsCache[key] = cached;
       if (!isFresh(cached)) stale.push(m);
@@ -167,6 +190,7 @@ async function loadHubScreen() {
       stale.push(m);
     }
   }
+  if (backfill.length > 0) saveSummaries(backfill);
 
   // Update season label from any cached profile
   const anyData = Object.values(_statsCache)[0]?.data;

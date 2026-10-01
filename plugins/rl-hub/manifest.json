@@ -46,7 +46,7 @@
     },
     {
       "url": "rl-hub-main.js",
-      "sha256": "e248005cbf6c1935248b6f3a7cfc161cdf7ff65c2c7a96bceed4d2da7f328a65"
+      "sha256": "2334e876352993a3231cb6c747230f3116d4770ea44ada6d8935c3f1a97bc370"
     },
     {
       "url": "rl-hub-register.js",
@@ -67,6 +67,10 @@
     {
       "url": "rl-scraper.js",
       "sha256": "22849157a1f0f42fdeadc840fe15f7bc11f2b09ae95278f3d372d78dc19b1282"
+    },
+    {
+      "url": "rl-stats-summary.js",
+      "sha256": "6fa5fd3d39ca71800f59436b5d5b013d4e392076e6187443d6e18181defe0607"
     },
     {
       "url": "vendor/fonts/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2",
