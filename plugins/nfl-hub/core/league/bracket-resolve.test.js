@@ -12,7 +12,8 @@ const table = (n) => Array.from({ length: n }, (_, i) => ({
 const scorer = (byWeek) => (week) => {
   const w = byWeek[week];
   if (!w) return null;
-  return { teams: Object.fromEntries(Object.entries(w).map(([id, total]) => [id, { total }])) };
+  // `final`: these model played, locked weeks — the bracket reads nothing else (spec 2026-10-01).
+  return { final: true, teams: Object.fromEntries(Object.entries(w).map(([id, total]) => [id, { total }])) };
 };
 
 /** A postseason record as `startPlayoffs` writes it. */
@@ -263,7 +264,7 @@ describe('multi-week rounds in advanceSide', () => {
     byes: [],
     champion: null,
   });
-  const wk = (a, b) => ({ teams: { a: { total: a }, b: { total: b } } });
+  const wk = (a, b) => ({ final: true, teams: { a: { total: a }, b: { total: b } } });
 
   // ⚠️ A two-week round is decided on the SUM. Deciding on week one alone would
   // hand the title to whoever led at half-time.
@@ -289,6 +290,17 @@ describe('multi-week rounds in advanceSide', () => {
     });
     expect(out.rounds[0][0].winner).toBe(null);
   });
+
+  it('waits when the second week is scored but not yet final', () => {
+    const scores = { 15: wk(100, 120), 16: { ...wk(90, 50), final: undefined } };
+    const out = advanceSide(side(), {
+      playoffWeekStart: 15,
+      scoresFor: (w) => scores[w] ?? null,
+      format: PLAYOFF_ROUND_FORMAT.TWO,
+      totalRounds: 1,
+    });
+    expect(out.rounds[0][0].winner).toBe(null);
+  });
 });
 
 describe('roundFormat is read from the bracket', () => {
@@ -301,7 +313,7 @@ describe('roundFormat is read from the bracket', () => {
     champion: null,
     ...over,
   });
-  const wk = (a, b) => ({ teams: { a: { total: a }, b: { total: b } } });
+  const wk = (a, b) => ({ final: true, teams: { a: { total: a }, b: { total: b } } });
 
   it('honours a two-week round recorded on the bracket', () => {
     const scores = { 15: wk(100, 120), 16: wk(90, 50) };
@@ -315,5 +327,35 @@ describe('roundFormat is read from the bracket', () => {
     const scores = { 15: wk(100, 120) };
     const out = resolveBracket(bracket(), (w) => scores[w] ?? null);
     expect(out.rounds[0][0].winner).toBe(null);
+  });
+});
+
+// The bracket breaks a tie by seed and stores the winner for good, so it must only read a
+// FINAL week: an unplayed week read as 0–0 would advance every higher seed at kickoff, and a
+// half-played one would let a Thursday lead win a playoff game.
+describe('the playoff bracket waits for a final week', () => {
+  const bracketOf4 = () => ({
+    season: 2026, playoffWeekStart: 15, reseed: true, seeds: table(4),
+    rounds: [[
+      { home: { teamId: 't1', seed: 1 }, away: { teamId: 't4', seed: 4 } },
+      { home: { teamId: 't2', seed: 2 }, away: { teamId: 't3', seed: 3 } },
+    ]],
+    byes: [], champion: null, consolation: null,
+  });
+  const totals = (t1, t2, t3, t4) => ({ teams: { t1: { total: t1 }, t2: { total: t2 }, t3: { total: t3 }, t4: { total: t4 } } });
+
+  it('decides nothing while the round week is all zeros', () => {
+    const out = resolveBracket(bracketOf4(), (w) => (w === 15 ? totals(0, 0, 0, 0) : null));
+    expect(out.rounds[0].every((g) => !g.winner)).toBe(true);
+  });
+
+  it('does not decide on a played but non-final week — a Thursday lead does not win a playoff game', () => {
+    const out = resolveBracket(bracketOf4(), (w) => (w === 15 ? totals(20, 0, 0, 6) : null));
+    expect(out.rounds[0].every((g) => !g.winner)).toBe(true);
+  });
+
+  it('decides once the week is final', () => {
+    const out = resolveBracket(bracketOf4(), (w) => (w === 15 ? { ...totals(90, 80, 110, 70), final: true } : null));
+    expect(out.rounds[0].map((g) => g.winner?.teamId)).toEqual(['t1', 't3']);
   });
 });

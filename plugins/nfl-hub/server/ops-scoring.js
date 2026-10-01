@@ -24,7 +24,6 @@ import { shouldAdvance } from "../core/league/season-clock.js";
 import { fingerprintOf, isDue, nextBackoff } from "../core/league/score-backoff.js";
 
 import { lineupFor } from "./lineup-read.js";
-import { weekHasStarted } from "../core/league/week-started.js";
 const refuse = (msg) => { throw new Error(msg); };
 
 const POSITIONS_KEY = "fl:positions";
@@ -293,7 +292,7 @@ export function allLeagues() {
  * to fetch every week separately to work it out, which is a dozen invocations
  * against the install's daily allowance for a number the node already holds.
  *
- * ⚠️ ONLY WEEKS THAT HAVE ACTUALLY BEEN SCORED COUNT. A future week has no
+ * ⚠️ ONLY WEEKS THAT ARE FINAL COUNT. A future week has no
  * result, and treating its absent scores as 0–0 would hand everybody a loss for
  * games nobody has played.
  */
@@ -315,12 +314,14 @@ export function getStandings({ payload }) {
 
   const results = [];
   let scoredWeeks = 0;
+  let throughWeek = null; // the last final week counted, for the "Through week N" caption
   for (const week of schedule.weeks ?? []) {
     const scores = read(KEY.scores(lg, season, week.week), null);
-    // Not played yet: no record, OR the all-zero record scoring writes for the current
-    // week before kickoff — counted, that was a 0–0 tie in every matchup.
-    if (!scores || !weekHasStarted(scores)) continue;
+    // ⚠️ ONLY FINAL WEEKS COUNT (spec 2026-10-01). A week's record exists from the first tick
+    // — all zeros before kickoff, partial after Thursday — and neither is a result.
+    if (!scores?.final) continue;
     scoredWeeks++;
+    throughWeek = Math.max(throughWeek ?? 0, week.week);
     for (const m of week.matchups ?? []) {
       const home = scores.teams?.[m.home];
       // A bye still records points for, but no opponent and no result.
@@ -346,6 +347,7 @@ export function getStandings({ payload }) {
   return {
     season,
     weeks: scoredWeeks,
+    throughWeek,
     scheduled: true,
     // Seeded here too, so a client rendering a playoff line does not re-rank and
     // risk disagreeing about the cut.

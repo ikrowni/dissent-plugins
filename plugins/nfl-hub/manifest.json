@@ -275,7 +275,7 @@
     },
     {
       "url": "core/league/bracket-resolve.js",
-      "sha256": "e6981361680b7f33a88df34b472173765628c570911db6747ddfec6e3549d07d"
+      "sha256": "4fc2f3f7f2630fda57a177797781a9408c56279279d9e2b8f0a933e4d331a94b"
     },
     {
       "url": "core/league/commish.js",
@@ -292,6 +292,14 @@
     {
       "url": "core/league/draft.js",
       "sha256": "f98323c2646d598396086df242671d798a564e2277e6a53416fd73730e2f6bca"
+    },
+    {
+      "url": "core/league/eastern-time.js",
+      "sha256": "a2ed43674d7d49d48f7c43cac8c5e3d44d9ee14f87ab172c84fdda667cc08f31"
+    },
+    {
+      "url": "core/league/espn-week.js",
+      "sha256": "98e73a9c297c23d89ca48f9a1ef4a92d1d5e574a525d2c9f0a8385d19a27ce83"
     },
     {
       "url": "core/league/keepers.js",
@@ -362,8 +370,8 @@
       "sha256": "02f2931f7b53ab01fb3cac555b7903264d6b898c76e5f11fac0f84ae5d3ebcc7"
     },
     {
-      "url": "core/league/week-started.js",
-      "sha256": "20e6e6e93136827a429474e1330d51b1453dc708877532aa2342e9340d70b53f"
+      "url": "core/league/week-finality.js",
+      "sha256": "1531a3c866a66fe7f7d36dc1c4d7a78f705977e563b687eaa3899a73c3273272"
     },
     {
       "url": "core/lineup-cells.js",

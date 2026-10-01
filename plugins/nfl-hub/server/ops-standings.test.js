@@ -1,6 +1,6 @@
-// Standings must not count the current week before anyone has played. Scoring writes an
-// all-zero record for it on the first tick, and counted as a result that was a 0–0 tie
-// in every matchup — every team in Happy Hour showed a tie for week 4 on 2026-09-30.
+// Standings count a week only once it is FINAL (spec 2026-10-01). Before 2.46.0 the all-zero
+// record scoring writes before kickoff counted as a 0–0 tie in every matchup; before 2.47.0 a
+// half-played week counted, so a Thursday lead showed as a win.
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const store = vi.hoisted(() => new Map());
@@ -20,8 +20,9 @@ vi.mock("./sdk/server-sdk.js", () => ({
 const { getStandings } = await import("./ops-scoring.js");
 
 const LG = "lg1";
-const scores = (week, totals) => store.set(`fl:${LG}:scores:2026:w${week}`, {
+const scores = (week, totals, final = true) => store.set(`fl:${LG}:scores:2026:w${week}`, {
   season: 2026, week, teams: Object.fromEntries(Object.entries(totals).map(([t, total]) => [t, { total }])),
+  ...(final ? { final: true } : {}),
 });
 
 beforeEach(() => {
@@ -39,14 +40,20 @@ const row = (id) => getStandings({ payload: { leagueId: LG } }).standings.find((
 
 describe("standings and an unplayed week", () => {
   it("the all-zero record of a week nobody has played is not a tie", () => {
-    scores(2, { t1: 0, t2: 0 });
+    scores(2, { t1: 0, t2: 0 }, false);
     expect(row("t1")).toMatchObject({ wins: 1, losses: 0, ties: 0 });
     expect(row("t2")).toMatchObject({ wins: 0, losses: 1, ties: 0 });
     expect(getStandings({ payload: { leagueId: LG } }).weeks).toBe(1);
   });
 
-  it("counts the week as soon as anyone has scored", () => {
-    scores(2, { t1: 0, t2: 7.5 });
+  it("a played but NOT final week does not count — a Thursday lead is not a win", () => {
+    scores(2, { t1: 0, t2: 7.5 }, false);
+    expect(row("t2")).toMatchObject({ wins: 0, losses: 1, ties: 0 });
+  });
+
+  it("counts the week once it is final, and reports throughWeek", () => {
+    scores(2, { t1: 0, t2: 7.5 }, true);
     expect(row("t2")).toMatchObject({ wins: 1, losses: 1, ties: 0 });
+    expect(getStandings({ payload: { leagueId: LG } }).throughWeek).toBe(2);
   });
 });
