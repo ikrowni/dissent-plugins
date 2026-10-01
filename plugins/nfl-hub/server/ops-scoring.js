@@ -223,6 +223,8 @@ export function runScoring(lg, seasonIn, weekIn, { force = false } = {}) {
     if (cur?.final) return cur; // finalized while we scored — keep the locked result
     return {
       ...(cur?.reopenedAt ? { reopenedAt: cur.reopenedAt, reopenedBy: cur.reopenedBy } : {}),
+      // Kept so the finality step need not re-fetch the scoreboard every tick (ops-finality.js).
+      ...(Number.isFinite(cur?.lockAt) ? { lockAt: cur.lockAt } : {}),
       season, week, scoredAt: Date.now(), teams: results,
       fingerprint, quietRuns, nextScoreAt,
     };

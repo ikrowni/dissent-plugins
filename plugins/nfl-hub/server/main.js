@@ -32,6 +32,7 @@ import {
   backfillOneWeek,
 } from "./ops-scoring.js";
 import { startPlayoffs, getPlayoffs, resolveBracketsFor } from "./ops-playoffs.js";
+import { finalizeOldestIfDue, finalizeWeek, reopenWeek } from "./ops-finality.js";
 import {
   requestCoOwnership, respondToCoOwnerRequest, removeCoOwner,
   inviteCoOwner, acceptCoOwnerInvite,
@@ -122,6 +123,8 @@ const OPS = {
   "playoffs:start": startPlayoffs,
   "playoffs:get": getPlayoffs,
   "league:week": setCurrentWeek,
+  "week:finalize": finalizeWeek,
+  "week:reopen": reopenWeek,
   "positions:refresh": refreshPositions,
 
   // Scheduled only — these refuse a user-triggered run themselves, in auth.js.
@@ -198,6 +201,9 @@ function runScheduledTick(p) {
       // After scoring, not before: a round is decided by the week that was just
       // scored, so advancing first would always be one tick behind.
       ["playoffs", () => resolveBracketsFor(leagueId, season), null],
+      // After scoring, so the lock follows the freshest pass. The bracket reads the new `final`
+      // on the NEXT tick — five minutes late, which is fine for a result that waited all week.
+      ["finality", () => finalizeOldestIfDue(leagueId, state), null],
     ]) {
       if ((name === "waivers" || name === "scores") && !week) continue;
       try {

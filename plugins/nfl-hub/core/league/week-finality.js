@@ -20,14 +20,20 @@ export function finalityVerdict({ games, now, lastKickoffEstimate }) {
   if (!Number.isFinite(last)) return { lock: false, reason: 'no games known for this week' };
 
   const backstopAt = last + BACKSTOP_MS;
-  if (now >= backstopAt) return { lock: true, reason: 'backstop', backstopAt };
-  if (known.length === 0) return { lock: false, reason: 'no games known yet', backstopAt };
+  if (known.length === 0) {
+    if (now >= backstopAt) return { lock: true, reason: 'backstop', backstopAt };
+    return { lock: false, reason: 'no games known yet', backstopAt };
+  }
 
+  // ⚠️ COMPLETION IS CHECKED BEFORE THE BACKSTOP. A week first checked long after it finished
+  // (the first run after this shipped; an outage) is complete, and saying "backstop" would
+  // misreport why it locked.
   const lockAt = etWallTimeToUtc(nextEtDate(etDateOf(last)), LOCK_HOUR_ET);
   const pending = known.filter((g) => !g.completed).length;
+  if (pending === 0 && now >= lockAt) return { lock: true, reason: 'all-games-complete', lockAt, backstopAt };
+  if (now >= backstopAt) return { lock: true, reason: 'backstop', lockAt, backstopAt };
   if (pending > 0) return { lock: false, reason: `${pending} game(s) not complete`, lockAt, backstopAt };
-  if (now < lockAt) return { lock: false, reason: 'waiting for 09:00 ET', lockAt, backstopAt };
-  return { lock: true, reason: 'all-games-complete', lockAt, backstopAt };
+  return { lock: false, reason: 'waiting for 09:00 ET', lockAt, backstopAt };
 }
 
 /**

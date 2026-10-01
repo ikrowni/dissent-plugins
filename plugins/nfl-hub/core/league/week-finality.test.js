@@ -32,6 +32,11 @@ describe('finalityVerdict', () => {
       .toMatchObject({ lock: true, reason: 'backstop' });
   });
 
+  it('a week checked long after it finished is "all-games-complete", not "backstop"', () => {
+    expect(finalityVerdict({ games: games(true), now: LAST + 10 * BACKSTOP_MS }))
+      .toMatchObject({ lock: true, reason: 'all-games-complete' });
+  });
+
   it('with no games known, only a supplied backstop estimate can lock', () => {
     expect(finalityVerdict({ games: [], now: LAST + BACKSTOP_MS }).lock).toBe(false);
     expect(finalityVerdict({ games: [], now: LAST + BACKSTOP_MS, lastKickoffEstimate: LAST }))
