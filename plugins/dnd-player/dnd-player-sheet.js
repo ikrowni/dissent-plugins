@@ -1,6 +1,6 @@
 // dnd-player-sheet.js — character sheet rendering + HP/action functions
 import { esc, realtimePublish } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 
 const ABILITIES = ['str','dex','con','int','wis','cha'];
 const ABILITY_NAMES = { str:'STR', dex:'DEX', con:'CON', int:'INT', wis:'WIS', cha:'CHA' };

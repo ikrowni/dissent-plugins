@@ -1,6 +1,6 @@
 // dnd-master-monsters.js — SRD monster viewer, stat blocks, combat instances
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 
 let SRD_MONSTERS = [];
 let expandedMonster = null;
@@ -13,8 +13,8 @@ export function setMonstersState({ userId }) {
 
 export async function loadSRDMonsters() {
   try {
-    // The SRD lives in dnd-hub, which owns it — resolves while dnd-hub is mirrored here too.
-    const base = new URL('../dnd-hub/dnd-srd/', document.baseURI).href;
+    // A vendored copy of dnd-hub's SRD (scripts/vendor-shared.mjs): plugins may not read each other's files.
+    const base = new URL('./dnd-srd/', document.baseURI).href;
     const r = await fetch(base + 'monsters.json');
     SRD_MONSTERS = await r.json();
   } catch (err) { SRD_MONSTERS = []; }

@@ -1,6 +1,6 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let currentInitiative = null;

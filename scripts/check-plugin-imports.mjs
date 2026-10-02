@@ -20,11 +20,11 @@
  *   error     reaches a file at the plugins ROOT (other than the SDK), or escapes the
  *             plugins root altogether. Neither can ever be mirrored. Vendor it with
  *             `scripts/vendor-shared.mjs`.
- *   warn      reaches into ANOTHER plugin's directory. This resolves correctly, but only
- *             while that other plugin is also mirrored on the same node — a real
- *             dependency that is invisible in both manifests. Reported so it is a known
- *             coupling rather than a surprise, not failed, because the alternative
- *             (duplicating a shared event-type vocabulary) is worse.
+ *   error     reaches into ANOTHER plugin's directory. 🔴 Was only a warning until
+ *             2026-10-02, when every mirrored plugin got its OWN origin
+ *             (<label>.<PLUGIN_HOST_DOMAIN>): the node refuses to serve one plugin's files
+ *             from another's origin, so a cross-plugin import or fetch is a CORS failure.
+ *             dnd-player and dnd-master broke exactly this way. Vendor what you read.
  *
  * Usage:
  *   node scripts/check-plugin-imports.mjs           # exit 1 on any error
@@ -60,6 +60,10 @@ function specifiers(src) {
     /\bimport\s*\(\s*['"](\.[^'"]*)['"]\s*\)/g,
     /<script[^>]+src\s*=\s*['"](\.[^'"]*)['"]/gi,
     /<link[^>]+href\s*=\s*['"](\.[^'"]*)['"]/gi,
+    // Data a plugin fetches, not just code it imports: `new URL('../x/', document.baseURI)`
+    // and `fetch('../x.json')`. dnd-player's SRD reads went unseen by the patterns above.
+    /\bnew\s+URL\(\s*['"](\.[^'"]*)['"]/g,
+    /\bfetch\(\s*['"](\.[^'"]*)['"]/g,
   ];
   for (const re of patterns) {
     let m;
@@ -109,6 +113,7 @@ for (const id of pluginIds) {
       }
 
       const segments = fromPluginsRoot.split(sep);
+      if (segments.length === 1 && segments[0] === id) continue; // `new URL('.')`: its own directory
       if (segments.length === 1) {
         if (segments[0] === NODE_SERVED_ROOT_MODULE) continue; // node serves it
         errors.push(
@@ -120,9 +125,9 @@ for (const id of pluginIds) {
 
       const owner = segments[0];
       if (owner !== id) {
-        warnings.push(
-          `${where}\n      reaches into '${owner}' — resolves only while '${owner}' is ` +
-            `ALSO mirrored on the same node.`,
+        errors.push(
+          `${where}\n      reaches into '${owner}' — each mirrored plugin has its own origin, ` +
+            `so this is refused. Vendor it with scripts/vendor-shared.mjs.`,
         );
       }
     }

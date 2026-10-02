@@ -1,6 +1,6 @@
 // dnd-player-main.js — bootstrap: init, tab switching, event dispatch + dice roller
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, request } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 import { setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeathSaves,
   changeHP, updateTempHP, toggleCondition, toggleDeathSave, changeExhaustion,
   toggleInspiration, doShortRest, doLongRest, toggleEquipped,
@@ -1071,7 +1071,7 @@ async function startLevelUp() {
   // Load SRD data first, then start wizard (so spell/feat pickers are populated)
   let srdData = { classes: [], feats: [], spells: [] };
   try {
-    const base = new URL('../dnd-hub/dnd-srd/', document.baseURI).href;
+    const base = new URL('./dnd-srd/', document.baseURI).href;
     const [classes, feats, spells] = await Promise.all([
       fetch(base + 'classes.json').then(r => r.json()),
       fetch(base + 'feats.json').then(r => r.json()),

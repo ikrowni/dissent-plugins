@@ -1,6 +1,6 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js?v=20260502p4';
+import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { loadSRDMonsters, getSRDMonsters, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter,

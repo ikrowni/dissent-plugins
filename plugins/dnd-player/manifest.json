@@ -24,6 +24,10 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "dnd-hub-event-types.js",
+      "sha256": "84f37f34b1b33d5def71f8430408af5be0575817f778e3bdd61841a0286d13fa"
+    },
+    {
       "url": "dnd-hub-shared-storage.js",
       "sha256": "749066d5126837c1f3d84cb5256be88c565c473f561cea72988b05ada9f262d4"
     },
@@ -33,11 +37,11 @@
     },
     {
       "url": "dnd-player-levelup.js",
-      "sha256": "76021a081041415dc72bc4b3bd50f84d97a731d79c1086caa06899612be1df3f"
+      "sha256": "fca22a1b3610848bbb7992914169152a821c22a84f9fa3a95ccb9c86b3835f60"
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "4e151db5b9f56664f51a1b2253f8681b55ec20d3c81a7d6db56f7f35446f3510"
+      "sha256": "17eff1d3c621497a20780e05dcd205f3448523b94981d2f1bd09cee43ffd1588"
     },
     {
       "url": "dnd-player-resources.js",
@@ -45,15 +49,27 @@
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "072382c5f9e660d90b938e9a6d696d7ba745d670d96d1616c4119345d38482d3"
+      "sha256": "b7b372f6b4b5556f1267e34021605d1ba75d296332b5e15cc1b5e81d3e923155"
     },
     {
       "url": "dnd-player-spells.js",
-      "sha256": "2539c56e26f5435dd9f83b4c26282ccc15ea6d9c29d7e6e80ecb37b754369223"
+      "sha256": "9ee58eabb8ef345fefd129862608d8616f1e325c0e1e2583d0b3bcd1bee614b5"
     },
     {
       "url": "dnd-player-styles.css",
       "sha256": "f786a696b31b1c224ed2628cf5f3841ba0191386f0ba895c9ba2299852c86434"
+    },
+    {
+      "url": "dnd-srd/classes.json",
+      "sha256": "3b9ea8aac5cd800fd49a4afbb6766d4e60d010135d65783d29ab60688cede408"
+    },
+    {
+      "url": "dnd-srd/feats.json",
+      "sha256": "2138c36e199fa69c9dca6fc70468ddc292c3d831883dba955fe03a74c95e3a33"
+    },
+    {
+      "url": "dnd-srd/spells.json",
+      "sha256": "12890c8c7749a115bcfb9f3c4cad0e4a983139d6bd849dbc43f312e046fb12a1"
     }
   ]
 }

@@ -31,7 +31,7 @@
  *   node scripts/vendor-shared.mjs --check    # write nothing; exit 1 if any copy is stale
  */
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 
 const PLUGINS_DIR = new URL("../plugins/", import.meta.url).pathname;
@@ -62,6 +62,27 @@ const VENDORED = [
     source: "polymarket.js",
     targets: ["ufc-hub/core/polymarket-trade.js"],
   },
+  // The realtime event vocabulary all three D&D plugins speak. dnd-hub included: it is a
+  // copy there too, so no plugin owns the vocabulary the others depend on.
+  {
+    source: "dnd-hub-event-types.js",
+    targets: [
+      "dnd-hub/dnd-hub-event-types.js",
+      "dnd-master/dnd-hub-event-types.js",
+      "dnd-player/dnd-hub-event-types.js",
+    ],
+  },
+  // 🔴 SRD data, copied byte-for-byte (`raw`: no banner, JSON has no comments).
+  // dnd-master and dnd-player used to fetch it from '../dnd-hub/dnd-srd/'. Since
+  // 2026-10-02 every mirrored plugin has its OWN origin (<label>.<PLUGIN_HOST_DOMAIN>),
+  // and the node refuses to serve one plugin's files from another's origin — so that
+  // fetch is a CORS failure and the sidebar never loads. Each plugin carries what it reads.
+  ...["monsters.json"].map((f) => ({
+    source: `dnd-hub/dnd-srd/${f}`, raw: true, targets: [`dnd-master/dnd-srd/${f}`],
+  })),
+  ...["classes.json", "feats.json", "spells.json"].map((f) => ({
+    source: `dnd-hub/dnd-srd/${f}`, raw: true, targets: [`dnd-player/dnd-srd/${f}`],
+  })),
 ];
 
 /** How many directories below plugins/ a target sits — i.e. how many `../` reach the root. */
@@ -117,13 +138,13 @@ const check = process.argv.includes("--check");
 let stale = 0;
 let wrote = 0;
 
-for (const { source, targets } of VENDORED) {
+for (const { source, targets, raw } of VENDORED) {
   if (!existsSync(join(PLUGINS_DIR, source))) {
     console.error(`✗ missing source: plugins/${source}`);
     process.exit(1);
   }
   for (const target of targets) {
-    const want = render(source, target);
+    const want = raw ? readFileSync(join(PLUGINS_DIR, source), "utf8") : render(source, target);
     const path = join(PLUGINS_DIR, target);
     const have = existsSync(path) ? readFileSync(path, "utf8") : null;
 
@@ -138,6 +159,7 @@ for (const { source, targets } of VENDORED) {
       );
       continue;
     }
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, want);
     wrote++;
     console.log(`  write ${target}  ← plugins/${source}  (${sha(want)})`);

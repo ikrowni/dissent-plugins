@@ -1,6 +1,6 @@
 // dnd-master-settings.js — DM automation toggles (Phase 2)
 import { storageSetCompanion, realtimePublish } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };

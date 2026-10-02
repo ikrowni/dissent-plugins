@@ -1,11 +1,3 @@
-// ⚠️ GENERATED FILE — DO NOT EDIT.
-//
-// Vendored from plugins/dnd-hub-event-types.js by scripts/vendor-shared.mjs.
-// Edit that file and re-run the script; `--check` fails the deploy if this copy drifts.
-//
-// It is a copy because a mirror may only serve files from under this plugin's own
-// directory, so importing '../dnd-hub-event-types.js' directly would make the plugin unmirrorable.
-
 // dnd-hub-event-types.js — all realtime event name constants
 // Import EV everywhere. Never use bare strings for event types.
 

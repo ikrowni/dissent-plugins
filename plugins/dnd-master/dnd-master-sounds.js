@@ -1,6 +1,6 @@
 // dnd-master-sounds.js — Sounds tab: upload, local test, broadcast
 import { request, requestWithTransfer, storageGet, storageSet, realtimePublishCompanion, localPublish, genId, esc } from '../plugin-sdk.js';
-import { EV } from '../dnd-hub/dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _localAudio = null; // currently playing local <audio> element
