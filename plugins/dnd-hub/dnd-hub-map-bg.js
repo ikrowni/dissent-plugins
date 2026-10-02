@@ -8,23 +8,29 @@ import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
+import { setZoom } from './dnd-hub-canvas.js?v=20260502p4';
 
 export function fitSprite(sprite, w, h, imgW, imgH) {
-  // Math.min = letterbox: full map visible, image anchored at _bgOffset.
-  // Grid, fog, and token snapping all align with this offset.
-  // imgW/imgH are optional explicit image dimensions — use them instead of
-  // sprite.texture.width/height when the texture hasn't decoded its first
-  // frame yet (common for video textures at oncanplay time).
+  // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is
+  // fitted with zoom/pan instead, once per map file, so a resize or re-render never
+  // moves anything. imgW/imgH are explicit dims for video textures that have not
+  // decoded a frame yet.
   const iw = imgW || sprite.texture.width;
   const ih = imgH || sprite.texture.height;
-  const scale = Math.min(w / iw, h / ih);
-  sprite.scale.set(scale);
-  sprite.x = (w - iw * scale) / 2;
-  sprite.y = (h - ih * scale) / 2;
-  MAP._bgOffset = { x: sprite.x, y: sprite.y };
-  MAP._bgScale  = scale;
+  sprite.scale.set(1);
+  sprite.x = 0;
+  sprite.y = 0;
+  MAP._bgOffset = { x: 0, y: 0 };
+  MAP._bgScale  = 1;
   MAP._bgImgW   = iw;
   MAP._bgImgH   = ih;
+  const fileId = MAP.mapData?.fileId ?? null;
+  if (MAP._fittedFileId !== fileId) {
+    const v = fitView(w, h, iw, ih);
+    MAP.panX = v.panX; MAP.panY = v.panY; MAP._fittedFileId = fileId;
+    setZoom(v.zoom);
+  }
 }
 
 export async function renderMapBackground() {
@@ -142,6 +148,11 @@ export async function renderMapBackground() {
   const statusEl = document.getElementById('map-status');
   if (statusEl) statusEl.style.display = 'none';
 
+  // A fresh upload has no grid size until the image size is known (dnd-hub-frame.js).
+  if (MAP.mapData && MAP.mapData.gridSize == null && !MAP.mapData.mapCellW && MAP._bgImgW) {
+    MAP.mapData.gridSize = defaultGridSize(MAP._bgImgW, MAP._bgImgH);
+  }
+
   // Persist layout so the DM sidebar can compute off-map spawn coordinates
   // without needing hub runtime state (MAP._bgOffset is only in hub memory).
   if (MAP.mapData && MAP._bgOffset != null && MAP._bgScale != null) {
@@ -156,6 +167,22 @@ export async function renderMapBackground() {
   }
 }
 
+/**
+ * Legacy maps saved positions in the viewer's letterboxed canvas frame. Convert the open
+ * map once, using the frame the OLD code would have used on this screen. Call right after
+ * renderMapBackground(), which learns the image size. Only the DM persists the
+ * conversion; a player converts in memory for display.
+ */
+export async function ensureImageFrame() {
+  const md = MAP.mapData;
+  if (!md || md.coordFrame === 'image' || !md.fileId || !MAP._bgImgW) return;
+  const frame = legacyFrame(MAP.app.screen.width, MAP.app.screen.height, MAP._bgImgW, MAP._bgImgH);
+  MAP.mapData = migrateMapToImageFrame(md, frame);
+  const camp = serverData?.campaigns?.[MAP.campaignId];
+  if (camp?.maps) camp.maps[MAP.mapId] = MAP.mapData;
+  if (MAP.isDM) await saveHubDm(serverData);
+}
+
 export async function loadMapData(campaignId) {
   const c = serverData?.campaigns?.[campaignId];
   if (!c) return;
@@ -165,7 +192,9 @@ export async function loadMapData(campaignId) {
   MAP.mapId = activeMapId;
   MAP.mapData = c.maps[activeMapId];
   MAP.templates = [];
+  MAP._bgImgW = null; MAP._bgImgH = null;
   await renderMapBackground();
+  await ensureImageFrame();
   renderGrid();
   renderTokens();
   if (!MAP.isDM) computeLocalPlayerLOS();
@@ -297,7 +326,7 @@ export async function handleMapUpload(input) {
       id: mapId, fileId,
       name: file.name.replace(/\.[^.]+$/, ''),
       mime: file.type || 'image/png',
-      gridSize: 40, gridType: 'square', gridEnabled: true,
+      gridSize: null, coordFrame: 'image', gridType: 'square', gridEnabled: true,
       gridOffsetX: 0, gridOffsetY: 0,
       gridColor: '#ffffff', gridAlpha: 0.08,
       walls: [], doors: {}, lights: [], audioZones: [], triggers: [], tokens: {}, fogState: {},
@@ -421,11 +450,8 @@ export async function runVTTImport() {
 
     // 3. Compute scale/offset matching fitSprite() exactly.
     //    Use actual video dimensions so wall coords align with the rendered background.
-    const canvasW = MAP.app.screen.width;
-    const canvasH = MAP.app.screen.height;
-    const scale   = Math.min(canvasW / actualW, canvasH / actualH);
-    const bgX     = (canvasW - actualW * scale) / 2;
-    const bgY     = (canvasH - actualH * scale) / 2;
+    // World frame: the map is drawn at native size at the origin (dnd-hub-frame.js).
+    const scale = 1, bgX = 0, bgY = 0;
 
     // Exact pixels-per-cell on screen — NOT rounded.  Rounding here causes walls
     // to drift from grid lines (e.g. 0.33px/cell → 6.7px off at the far edge of
@@ -478,7 +504,7 @@ export async function runVTTImport() {
       // fitSprite() uses correct dims even if the Pixi texture reports 0×0.
       mapW: actualW, mapH: actualH,
       mapCellW, mapCellH,
-      wallFmt: 'cell',
+      wallFmt: 'cell', coordFrame: 'image',
       gridSize, gridType: 'square', gridEnabled: true,
       gridOffsetX: 0, gridOffsetY: 0,
       gridColor: '#ffffff', gridAlpha: 0.08,

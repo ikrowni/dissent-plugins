@@ -30,7 +30,7 @@ export const MAP = {
   _fogCanvas: null,     // reused Canvas2D element for fog rendering (avoids per-frame allocation)
   _fogTexture: null,    // PixiJS texture wrapping _fogCanvas — updated each render
   _fogSprite: null,     // PixiJS Sprite showing the fog canvas — repositioned on pan/zoom
-  zoom: 1,              // stage scale factor (0.25–4)
+  zoom: 1,              // stage scale factor (0.05–4; the map is drawn at native size)
   panX: 0,              // stage X translation in screen pixels
   panY: 0,              // stage Y translation in screen pixels
   selectedWall: null,   // id of selected wall (select tool + Delete key)
@@ -114,7 +114,9 @@ export function hubFogKey(campaignId, mapId) { return `hub-fog-${campaignId}-${m
 export function effectiveGs(mapData) {
   return (mapData?.mapCellW && MAP._bgImgW && MAP._bgScale != null)
     ? MAP._bgImgW * MAP._bgScale / mapData.mapCellW
-    : (mapData?.gridSize || 40);
+    // No grid size yet (fresh upload): ~25 cells across the long edge of the image.
+    // Inlined rather than imported from dnd-hub-frame.js — state is imported by everything.
+    : (mapData?.gridSize || (MAP._bgImgW ? Math.max(20, Math.round(Math.max(MAP._bgImgW, MAP._bgImgH || 0) / 25)) : 40));
 }
 
 export function segmentsIntersect(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) {

@@ -820,7 +820,7 @@ window._placeTemplateAt = async (type, wx, wy) => {
 };
 
 export function setZoom(z, focalX, focalY) {
-  const newZ = Math.max(0.25, Math.min(4.0, parseFloat(z) || 1));
+  const newZ = Math.max(0.05, Math.min(4.0, parseFloat(z) || 1));
   if (focalX !== undefined && MAP.app) {
     // Keep the world point under the cursor stationary during zoom
     // Invariant: MAP.panX === app.stage.position.x, MAP.panY === app.stage.position.y

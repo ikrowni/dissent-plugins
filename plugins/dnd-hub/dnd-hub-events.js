@@ -2,7 +2,7 @@
 import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
 import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderMapBackground } from './dnd-hub-map-bg.js?v=20260502p4';
+import { renderMapBackground, ensureImageFrame } from './dnd-hub-map-bg.js?v=20260502p4';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
@@ -172,6 +172,7 @@ export async function handleMapEvent(p) {
         const fogFromKey = await storageGet(hubFogKey(p.campaignId, p.mapId));
         MAP.mapData.fogState = fogFromKey ?? MAP.mapData.fogState ?? {};
         await renderMapBackground();
+        await ensureImageFrame();
         renderGrid();
         clearTokenCache();
         renderTokens();
