@@ -1,6 +1,6 @@
-# D&D Character
+# LanternKeep Character
 
-Display your active D&D character on your profile.
+Show your active LanternKeep (5e) character on your profile.
 
 ## Configuration
 

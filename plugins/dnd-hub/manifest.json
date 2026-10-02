@@ -1,8 +1,8 @@
 {
   "id": "dnd-hub",
-  "name": "D&D Hub",
+  "name": "LanternKeep",
   "version": "1.0.0",
-  "description": "Full D&D 5e virtual tabletop with character sheets, combat tracker, and shared maps.",
+  "description": "A fifth-edition (5e compatible) virtual tabletop: shared maps with walls, doors, fog and lighting, character sheets, and combat.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -117,7 +117,7 @@
     },
     {
       "url": "dnd-hub-screens.js",
-      "sha256": "090d3a728665c5ccfc9826683f6e2468ab554125ac7f3bcea2093dc1bea2876f"
+      "sha256": "5fb518bfbe5866a9421b6567b46ee8765c96fbb148e1c9dc5ea1344d608d7a75"
     },
     {
       "url": "dnd-hub-spatial.js",

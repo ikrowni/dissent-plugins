@@ -1,6 +1,6 @@
-# D&D Player
+# LanternKeep Player
 
-Player-facing D&D sidebar for character sheets, combat actions, and leveling.
+Your LanternKeep character sheet: stats, spells, combat actions and levelling, beside the table.
 
 ## Configuration
 

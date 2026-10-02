@@ -212,7 +212,7 @@ export async function spawnTokensOnMap() {
 
   // Always read fresh data from hub storage to avoid overwriting recent hub changes.
   const freshData = await loadHubDmCompanion();
-  if (!freshData) { alert('Could not read campaign data. Make sure the D&D Hub is open.'); return; }
+  if (!freshData) { alert('Could not read campaign data. Make sure the LanternKeep table is open.'); return; }
 
   const campaign = freshData.campaigns?.[dmCampaignId];
   if (!campaign) return;

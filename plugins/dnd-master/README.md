@@ -1,6 +1,6 @@
-# D&D Master
+# LanternKeep DM
 
-Dungeon Master control panel for managing encounters, actors, and journals.
+The LanternKeep Dungeon Master panel: encounters, monsters, NPCs, items, shops, scenes and journals.
 
 ## Configuration
 

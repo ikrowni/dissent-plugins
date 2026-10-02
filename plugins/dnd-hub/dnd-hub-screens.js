@@ -11,8 +11,8 @@ import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=2026050
 export function renderLobbyScreen() {
   document.getElementById('screen-lobby').innerHTML = `
     <div class="lobby-logo">⚔️</div>
-    <div class="lobby-title">D&amp;D Hub</div>
-    <div class="lobby-sub">Your Dungeons &amp; Dragons virtual tabletop</div>
+    <div class="lobby-title">LanternKeep</div>
+    <div class="lobby-sub">A fifth-edition tabletop for your table</div>
     <div class="lobby-cards">
       <div class="lobby-card" onclick="showDMPortal()">
         <div class="lobby-card-icon">🏰</div>

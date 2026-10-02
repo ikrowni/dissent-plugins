@@ -1,6 +1,6 @@
-# D&D Hub
+# LanternKeep
 
-Full D&D 5e virtual tabletop with character sheets, combat tracker, and shared maps.
+A fifth-edition (5e compatible) virtual tabletop: shared maps with walls, doors, fog and lighting, character sheets, and combat.
 
 ## Configuration
 

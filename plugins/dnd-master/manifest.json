@@ -1,8 +1,8 @@
 {
   "id": "dnd-master",
-  "name": "D&D Master",
+  "name": "LanternKeep DM",
   "version": "1.0.0",
-  "description": "Dungeon Master control panel for managing encounters, actors, and journals.",
+  "description": "The LanternKeep Dungeon Master panel: encounters, monsters, NPCs, items, shops, scenes and journals.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -51,7 +51,7 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "c6c0115b7c9f257f6b2e0564c4740b7d569d202da39a9e111b1c77d0b40c071b"
+      "sha256": "6970b18eff766f97f2c1d2f9dcb851e03eb542cff3089d75e066292464973e43"
     },
     {
       "url": "dnd-master-items.js",
@@ -67,7 +67,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "e8fe79948df68c685cec19898006ff17e2aa5f5f4629f9029724bab824cfda07"
+      "sha256": "d157a9779eb3f09bc2d914bf4249d9f743caa2c6036d0ddda88b358a0c22cb70"
     },
     {
       "url": "dnd-master-maps.js",

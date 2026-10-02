@@ -86,7 +86,7 @@ async function onInit(data) {
     // later starts running a campaign would never get this panel back.
     const el = document.getElementById('loading');
     el.classList.remove('hidden');
-    el.innerHTML = '<span>This panel is for the campaign\'s DM. Your character is in the D&D Player tab.</span>';
+    el.innerHTML = '<span>This panel is for the campaign\'s DM. Your character is in the LanternKeep Player panel.</span>';
     document.getElementById('dm-app').classList.add('hidden');
     return;
   }

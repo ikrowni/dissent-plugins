@@ -1,8 +1,8 @@
 {
   "id": "dnd-player",
-  "name": "D&D Player",
+  "name": "LanternKeep Player",
   "version": "1.0.0",
-  "description": "Player-facing D&D sidebar for character sheets, combat actions, and leveling.",
+  "description": "Your LanternKeep character sheet: stats, spells, combat actions and levelling, beside the table.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 3,
@@ -49,7 +49,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "e99fee14fe3f9d7414f39e9db71ff96d28fce252b1409b2e9206879dd3ff54be"
+      "sha256": "9b67487e69080896850ef1db7cc9e819ad80582da754e83ba05d7375cbb32778"
     },
     {
       "url": "dnd-player-resources.js",

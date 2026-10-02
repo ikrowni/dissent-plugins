@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>D&D Character</title>
+<title>LanternKeep Character</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--dnd-gold:#d4af37;--bg:#07070d;--surface:rgba(255,255,255,.06);--border:rgba(212,175,55,.2);--text:rgba(255,255,255,.92);--muted:rgba(255,255,255,.5)}
@@ -70,7 +70,7 @@ async function onInit(data) {
   const isRestricted = channelData.data?.restricted;
 
   if (!char) {
-    root.innerHTML = `<div class="empty-msg">No D&D character in this campaign.</div>`;
+    root.innerHTML = `<div class="empty-msg">No LanternKeep character in this campaign.</div>`;
     return;
   }
 

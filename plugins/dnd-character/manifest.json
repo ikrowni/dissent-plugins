@@ -1,8 +1,8 @@
 {
   "id": "dnd-character",
-  "name": "D&D Character",
+  "name": "LanternKeep Character",
   "version": "1.0.0",
-  "description": "Display your active D&D character on your profile.",
+  "description": "Show your active LanternKeep (5e) character on your profile.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
   "tier": 1,
