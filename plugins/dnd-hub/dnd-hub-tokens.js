@@ -297,6 +297,7 @@ function setupTokenDrag(container, token) {
   container.eventMode = 'static';
   container.cursor = 'grab';
   let dragging = false, lastPublish = 0;
+  let lastValid = null; // last position on the token's side of every wall
 
   container.on('pointerdown', e => {
     if (MAP.activeTool !== 'select') return;
@@ -310,6 +311,7 @@ function setupTokenDrag(container, token) {
     }
     MAP.selectedToken = token.id;
     dragging = true; container.cursor = 'grabbing'; e.stopPropagation();
+    lastValid = { x: container.x, y: container.y };
     // Auto-ruler for active-turn token
     if (MAP.activeTurnTokenId === token.id) {
       startRuler(token.x, token.y);
@@ -319,18 +321,26 @@ function setupTokenDrag(container, token) {
   container.on('globalpointermove', e => {
     if (!dragging) return;
     const pos = e.getLocalPosition(MAP.layers.tokens);
-    container.x = pos.x; container.y = pos.y;
+    const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;
+    // Stop at walls WHILE dragging. Everyone else watches this token move, so a token
+    // that slid through a wall and only snapped back on drop looked like it went through.
+    const step = dragStep(lastValid || pos, pos,
+      (x1, y1, x2, y2) => _crossesWallForSize(token, x1, y1, x2, y2, gs));
+    lastValid = { x: step.x, y: step.y };
+    container.x = step.x; container.y = step.y;
     const now = Date.now();
     if (now - lastPublish > 30) {
       lastPublish = now;
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: pos.x, y: pos.y, fromUserId: userId });
+      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId });
     }
     if (MAP.activeTurnTokenId === token.id) {
-      updateRuler(pos.x, pos.y);
+      updateRuler(step.x, step.y);
     }
   });
 
-  container.on('pointerup', async () => {
+  // pointerupoutside fires instead of pointerup when the button is released off the
+  // token; it used to end the drag without saving or reverting. Both finish the move.
+  const finishDrag = async () => {
     if (!dragging) return;
     dragging = false; container.cursor = 'grab';
 
@@ -351,9 +361,15 @@ function setupTokenDrag(container, token) {
     // Wall collision — revert to last saved position if move would cross a wall or locked door
     const savedX = MAP.mapData?.tokens?.[token.id]?.x ?? snappedX;
     const savedY = MAP.mapData?.tokens?.[token.id]?.y ?? snappedY;
-    if (_crossesWallForSize(token, savedX, savedY, snappedX, snappedY, gs)) {
+    // The live drag validated every step, so only the final snap needs checking: from
+    // where it was released to the cell centre. Checking the straight line from the
+    // start refused legal moves around a wall corner.
+    const from = lastValid || { x: savedX, y: savedY };
+    if (_crossesWallForSize(token, from.x, from.y, snappedX, snappedY, gs)) {
       container.x = savedX; container.y = savedY;
       clearRuler();
+      // Tell everyone: they watched the live drag and must see it go back.
+      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, fromUserId: userId });
       return;
     }
 
@@ -405,9 +421,10 @@ function setupTokenDrag(container, token) {
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
     realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId });
-  });
+  };
 
-  container.on('pointerupoutside', () => { if (dragging) { dragging = false; container.cursor = 'grab'; } });
+  container.on('pointerup', finishDrag);
+  container.on('pointerupoutside', finishDrag);
 }
 
 function _crossesWallForSize(token, fromX, fromY, toX, toY, gs) {
