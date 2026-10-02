@@ -41,7 +41,8 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .save-pip.success.filled{background:#22c55e;border-color:#22c55e}
 .save-pip.failure.filled{background:#ef4444;border-color:#ef4444}
 .dice-bar{flex-shrink:0;border-top:1px solid var(--border);padding:10px 12px;background:rgba(0,0,0,.3);display:flex;flex-direction:column;gap:8px}
-.dice-row{display:flex;align-items:center;gap:6px}
+.dice-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;row-gap:6px}
+.dice-row input{min-width:0}
 .die-btn{padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--text)}
 .die-btn.active{border-color:var(--dnd-gold);color:var(--dnd-gold);background:rgba(212,175,55,.1)}
 .roll-result{font-size:18px;font-weight:900;color:var(--dnd-gold);margin-left:auto}

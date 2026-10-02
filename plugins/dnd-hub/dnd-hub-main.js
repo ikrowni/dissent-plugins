@@ -148,8 +148,8 @@ setTimeout(() => {
   if (_audioUnlocked) return;
   const banner = document.createElement('div');
   banner.id = 'audio-gate-banner';
-  banner.style.cssText = 'position:fixed;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid var(--dnd-border);border-radius:6px;padding:6px 14px;font-size:11px;color:var(--dnd-muted);pointer-events:none;z-index:9999';
-  banner.textContent = '🔊 Audio paused — click anywhere to enable';
+  banner.style.cssText = 'position:fixed;bottom:10px;left:10px;background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--lk-muted);pointer-events:none;z-index:9999';
+  banner.textContent = 'Sound is off · click anywhere to turn it on';
   document.body.appendChild(banner);
 }, 2000);
 

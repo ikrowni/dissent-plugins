@@ -363,9 +363,9 @@ function initTabHTML() {
       <div class="hp-bar-wrap"><div class="hp-bar" id="hp-bar" style="width:100%;background:#22c55e"></div></div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <input type="number" id="hp-delta" placeholder="Amount" min="1"
-          style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px;outline:none">
-        <button class="btn btn-ghost btn-sm" onclick="changeHP(-1)">– Damage</button>
-        <button class="btn btn-primary btn-sm" onclick="changeHP(1)">+ Heal</button>
+          style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px;outline:none">
+        <button class="btn btn-ghost btn-sm" style="padding:6px 9px;white-space:nowrap" onclick="changeHP(-1)">– Damage</button>
+        <button class="btn btn-primary btn-sm" style="padding:6px 9px;white-space:nowrap" onclick="changeHP(1)">+ Heal</button>
       </div>
       <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
         <span style="font-size:10px;color:var(--muted)">Temp HP:</span>
@@ -1276,8 +1276,9 @@ setTimeout(() => {
   if (_audioUnlocked) return;
   const banner = document.createElement('div');
   banner.id = 'audio-gate-banner';
-  banner.style.cssText = 'position:fixed;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:11px;color:var(--muted);pointer-events:none;z-index:9999';
-  banner.textContent = '🔊 Audio paused — click anywhere to enable';
+  // A small chip at the top, clear of the dice bar it used to cover.
+  banner.style.cssText = 'position:fixed;top:6px;right:6px;background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:999px;padding:3px 10px;font-size:10px;color:var(--lk-muted);pointer-events:none;z-index:9999';
+  banner.textContent = 'Sound off · click to enable';
   document.body.appendChild(banner);
 }, 2000);
 

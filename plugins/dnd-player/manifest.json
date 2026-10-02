@@ -49,7 +49,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "669416ba86c41eabb186e67dc2d88907b82ca79df6579b34232d7e223a61d951"
+      "sha256": "da91b0e0c8dd41b39725b1926960327a1f2a082b2ec67a0b5d034938abe9f7e6"
     },
     {
       "url": "dnd-player-resources.js",
@@ -65,7 +65,7 @@
     },
     {
       "url": "dnd-player-styles.css",
-      "sha256": "bb17ebbcdd253b1b9d558a16575b3bc948f0cb705822d3c520a2e0383ee30672"
+      "sha256": "24518b1ee3b204739290bf88157f70165232072a9a8ca0d9115bc9f2499fb0a9"
     },
     {
       "url": "dnd-srd/classes.json",
