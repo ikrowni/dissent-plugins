@@ -69,7 +69,7 @@ export function renderInitiativeTracker() {
     el.innerHTML = '<div style="text-align:center;padding:24px 12px;color:var(--muted)">' +
       '<div style="font-size:28px;margin-bottom:8px">&#x1F3AF;</div>' +
       '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">No active encounter</div>' +
-      '<div style="font-size:11px;line-height:1.5">Use the Encounter tab to build and launch a combat encounter.</div>' +
+      '<div style="font-size:11px;line-height:1.5">Build one in <b>Foes → Encounter</b>, then launch it.</div>' +
       '</div>';
     return;
   }
