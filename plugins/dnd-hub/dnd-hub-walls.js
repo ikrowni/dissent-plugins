@@ -53,11 +53,12 @@ export function renderWalls() {
   if (!layers?.walls || !MAP.mapData) return;
   layers.walls.removeChildren();
 
-  if (!MAP.isDM && !MAP.editMode) return;
+  // Players see doors (they need to find and open them) but never walls or windows.
+  const showWalls = MAP.isDM || MAP.editMode;
 
   const g = new PIXI.Graphics();
 
-  (MAP.mapData.walls || []).forEach(w => {
+  if (showWalls) (MAP.mapData.walls || []).forEach(w => {
     const isSelected = w.id === MAP.selectedWall;
     const isHover    = w.id === MAP.eraseHover;
     const color = isHover ? 0xef4444 : isSelected ? 0xd4af37 : 0xff6b35;
@@ -68,6 +69,7 @@ export function renderWalls() {
   });
 
   Object.values(MAP.mapData.doors || {}).forEach(d => {
+    if (!showWalls && d.isWindow) return;
     const isSelected = d.id === MAP.selectedDoor;
     const isHover    = d.id === MAP.eraseHover;
     let baseCol;

@@ -15,6 +15,7 @@ import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContex
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20260502p4';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { findDoorAt, nextDoorState, playerMayToggleDoor } from './dnd-hub-rules.js';
 
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
@@ -545,7 +546,38 @@ export async function initPixiApp() {
     updateRuler(worldX, worldY);
   });
 
-  // ── Unified contextmenu: token right-click → context menu; door right-click → cycle state ──
+  // ── Doors (click) and the unified contextmenu (token right-click → token menu) ──
+  // Doors: click anywhere along a door with the select tool, DM or player. Was right-click
+  // only, within 12 px of the midpoint of a door players could not even see.
+  let _downAt = null;
+  app.canvas.addEventListener('pointerdown', e => { _downAt = { x: e.clientX, y: e.clientY }; });
+  app.canvas.addEventListener('click', async e => {
+    if (MAP.activeTool !== 'select' || !MAP.mapData || MAP.editMode) return;
+    // The click that ends a pan drag is not a door click.
+    if (_downAt && Math.hypot(e.clientX - _downAt.x, e.clientY - _downAt.y) > 5) return;
+    const rect = app.canvas.getBoundingClientRect();
+    const wx = (e.clientX - rect.left - MAP.panX) / MAP.zoom;
+    const wy = (e.clientY - rect.top  - MAP.panY) / MAP.zoom;
+    const gs = effectiveGs(MAP.mapData);
+    // A token standing in the doorway takes the click.
+    for (const spr of Object.values(MAP.tokenSprites || {})) {
+      if (Math.hypot(wx - spr.x, wy - spr.y) < gs * 0.45) return;
+    }
+    const door = findDoorAt(MAP.mapData.doors, wx, wy, Math.max(gs * 0.35, 10 / MAP.zoom), wallPx);
+    if (!door) return;
+    if (!MAP.isDM) {
+      const mine = MAP.mapData.tokens?.['player_' + userId];
+      if (!playerMayToggleDoor(door, mine, gs, wallPx)) return;
+    }
+    door.state = nextDoorState(door.state, MAP.isDM);
+    serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
+    renderWalls();
+    if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
+    await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
+    // Whoever opens it saves it: merge-on-save makes that safe without the DM online.
+    await saveHubDm(serverData);
+  });
+
   app.canvas.addEventListener('contextmenu', async e => {
     e.preventDefault();
     if (MAP.activeTool !== 'select' && MAP.activeTool !== 'door') return;
@@ -562,41 +594,6 @@ export async function initPixiApp() {
       if (Math.sqrt(dx * dx + dy * dy) < gs * 0.45) {
         const token = MAP.mapData.tokens[tokenId];
         if (token) { showContextMenu(token, e.clientX, e.clientY); return; }
-      }
-    }
-
-    // Door toggle — DM cycles closed→open→locked; players toggle closed↔open if adjacent
-    {
-      const DM_STATES = ['closed', 'open', 'locked'];
-      const gs = effectiveGs(MAP.mapData);
-      let changed = false;
-      Object.values(MAP.mapData.doors || {}).forEach(d => {
-        if (d.isWindow) return;
-        const p = wallPx(d);
-        if (Math.hypot(wx - (p.x1 + p.x2) / 2, wy - (p.y1 + p.y2) / 2) < 12) {
-          if (MAP.isDM) {
-            d.state = DM_STATES[(DM_STATES.indexOf(d.state) + 1) % DM_STATES.length];
-            changed = true;
-          } else if (d.state !== 'locked') {
-            // Players must be within 1.5 cells of the door
-            const playerToken = MAP.mapData.tokens?.['player_' + userId];
-            if (!playerToken) return;
-            const mid = { x: (p.x1 + p.x2) / 2, y: (p.y1 + p.y2) / 2 };
-            if (Math.hypot(playerToken.x - mid.x, playerToken.y - mid.y) > gs * 1.5) return;
-            d.state = d.state === 'open' ? 'closed' : 'open';
-            changed = true;
-          }
-        }
-      });
-      if (changed) {
-        // Only DM writes to storage — player hubs receive the event and apply locally
-        if (MAP.isDM) {
-          serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-          await saveHubDm( serverData);
-        }
-        renderWalls();
-        await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
-        return;
       }
     }
 

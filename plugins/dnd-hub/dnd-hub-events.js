@@ -339,11 +339,10 @@ export async function handleMapEvent(p) {
     case 'door:state': {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       MAP.mapData.doors = p.doors;
-      if (MAP.isDM) {
-        serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-        saveHubDm( serverData);
-      }
+      // Persisted by whoever toggled it (the canvas click handler). Receivers only redraw,
+      // and players re-run line of sight: an opened door changes what they can see.
       renderWalls();
+      if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
       break;
     }
     case 'hp:change': {
