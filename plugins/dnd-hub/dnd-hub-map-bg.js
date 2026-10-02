@@ -9,6 +9,7 @@ import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { icon } from './lk-icons.js';
+import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { setZoom } from './dnd-hub-canvas.js?v=20260502p4';
 
@@ -203,6 +204,7 @@ export async function loadMapData(campaignId) {
   renderWalls();
   renderInitiativeHUD(serverData?.campaigns?.[campaignId]?.initiative);
   syncGridPanel();
+  refreshGuide();
 }
 
 export async function setGridSettings(patch) {
@@ -283,17 +285,16 @@ export async function removeAllDoors() {
 }
 
 export function renderNoMapPlaceholder() {
-  if (!MAP.app) return;
-  const txt = new PIXI.Text({
-    text: MAP.isDM ? 'No map loaded\nClick 📁 Map in the toolbar to upload one' : 'Waiting for DM to load a map…',
-    style: new PIXI.TextStyle({ fill: 0x888888, fontSize: 14, align: 'center', wordWrap: true, wordWrapWidth: 300 }),
-  });
-  txt.anchor.set(0.5);
-  txt.x = MAP.app.screen.width / 2;
-  txt.y = MAP.app.screen.height / 2;
-  MAP.layers.ui.addChild(txt);
   const statusEl = document.getElementById('map-status');
   if (statusEl) statusEl.style.display = 'none';
+  refreshGuide();
+}
+
+/** Redraw the "Set the scene" guide for the open campaign (dnd-hub-guide.js). */
+export function refreshGuide() {
+  const campaign = serverData?.campaigns?.[MAP.campaignId];
+  if (!campaign) return;
+  renderGuide({ campaignId: MAP.campaignId, campaign, mapData: MAP.mapData, isDM: MAP.isDM });
 }
 
 export function triggerMapUpload() {
@@ -348,6 +349,7 @@ export async function handleMapUpload(input) {
     renderGrid();
     renderTokens();
     renderFog();
+    refreshGuide();
   } catch (err) {
     alert('Upload failed: ' + err.message);
   } finally {
@@ -536,6 +538,7 @@ export async function runVTTImport() {
     renderFog();
     renderWalls();
     syncGridPanel();
+    refreshGuide();
 
     // 8. Broadcast
     await realtimePublish('map:set', {

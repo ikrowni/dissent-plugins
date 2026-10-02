@@ -148,3 +148,18 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .map-tool-btn{display:inline-flex;align-items:center;gap:5px;background:var(--lk-raise);border-color:var(--lk-line)}
 .map-tool-btn:hover{background:var(--lk-raise2);border-color:var(--lk-gold-dim)}
 .map-tool-btn.active{background:rgba(224,181,82,.14);border-color:var(--lk-gold);color:var(--lk-gold)}
+
+/* "Set the scene" guide (dnd-hub-guide.js) */
+.lk-guide{position:absolute;z-index:40;pointer-events:none}
+.lk-guide-center,.lk-guide-waiting{inset:0;display:flex;align-items:center;justify-content:center}
+.lk-guide-corner{top:12px;left:12px}
+.lk-guide-card{pointer-events:auto;position:relative;padding:16px 18px;max-width:320px;text-align:left}
+.lk-guide-waiting .lk-guide-card{text-align:center}
+.lk-guide-corner .lk-guide-card{padding:12px 14px;max-width:250px}
+.lk-guide-list{list-style:none;margin:0 0 12px;padding:0;font-size:12.5px;line-height:1.9}
+.lk-guide-list li{display:flex;align-items:center;gap:8px;color:var(--lk-muted)}
+.lk-guide-list li.done{color:var(--lk-text)}.lk-guide-list li.done svg{color:var(--lk-gold)}
+.lk-guide-list li.next{color:var(--lk-text);font-weight:600}
+.lk-guide-sub{font-size:11px;color:var(--lk-muted);margin-top:8px;line-height:1.5}
+.lk-guide-x{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--lk-muted);cursor:pointer;padding:3px;line-height:0;border-radius:4px}
+.lk-guide-x:hover{color:var(--lk-text);background:var(--lk-raise)}

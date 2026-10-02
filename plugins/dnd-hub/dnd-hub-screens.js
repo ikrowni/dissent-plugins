@@ -479,7 +479,7 @@ export async function renderCampaignView(campaignId, isDM) {
         <span style="font-size:9px;color:var(--dnd-muted)">Grid auto-snaps · Walls &amp; doors imported from .dd2vtt</span>
       </div>` : ''}
       <div id="map-canvas-wrap">
-        <div id="map-status">No map loaded${isDM ? ' — click 📁 Map to upload' : ''}</div>
+        <div id="map-status" style="display:none"></div>
         <div id="initiative-hud"></div>
         <div id="dice-overlay"></div>
         <div id="roll-toast"></div>

@@ -2,7 +2,7 @@
 import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
 import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderMapBackground, ensureImageFrame } from './dnd-hub-map-bg.js?v=20260502p4';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
@@ -154,6 +154,18 @@ export async function handleMapEvent(p) {
   }
 
   switch (p.type) {
+    // A player joined or finished a character: the DM's copy of the campaign is stale until it is
+    // re-read. Without this the DM saw no new player — and placed no token — until a reload.
+    case EV.JOIN_APPROVED:
+    case EV.CHARACTER_CREATED: {
+      if (p.campaignId !== MAP.campaignId) return;
+      setServerData(await loadHubDm());
+      const fresh = serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId];
+      if (fresh) MAP.mapData = fresh;
+      renderTokens();
+      refreshGuide();
+      break;
+    }
     case 'map:set': {
       if (p.campaignId !== MAP.campaignId) return;
       // Patch in-memory immediately from the payload to avoid storage read race,
@@ -173,6 +185,7 @@ export async function handleMapEvent(p) {
         MAP.mapData.fogState = fogFromKey ?? MAP.mapData.fogState ?? {};
         await renderMapBackground();
         await ensureImageFrame();
+        refreshGuide();
         renderGrid();
         clearTokenCache();
         renderTokens();

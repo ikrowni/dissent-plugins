@@ -15,6 +15,7 @@ import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContex
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20260502p4';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, snapToGrid, placeOwnTokenVerdict, newPlayerToken } from './dnd-hub-rules.js';
 
 export async function initPixiApp() {
@@ -245,6 +246,7 @@ export async function initPixiApp() {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
         await saveHubDm( serverData);
         renderWalls();
+        refreshGuide();
         await realtimePublish(EV.WALLS_UPDATE, { type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
       } else if (tool === 'door') {
         const doorId = genId();
@@ -258,6 +260,7 @@ export async function initPixiApp() {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
         await saveHubDm( serverData);
         renderWalls();
+        refreshGuide();
         await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
       }
       drawStart = null;
