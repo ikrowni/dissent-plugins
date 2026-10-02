@@ -5,22 +5,23 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20260502p4';
+import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20261002a';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
-import { loadSRD } from './dnd-hub-char.js?v=20260502p4';
+import { loadSRD } from './dnd-hub-char.js?v=20261002a';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20260502p4';
-import { checkAutoHit } from './dnd-hub-combat.js?v=20260502p4';
+import { checkAutoHit } from './dnd-hub-combat.js?v=20261002a';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20260502p4';
 import { renderLights } from './dnd-hub-lights.js?v=20260502p4';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers, checkTriggers, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
+import { renderTriggers, checkTriggers, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { isRepeat, publishTo } from './lk-bus.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
 // used to skip re-animating our own broadcast when it bounces back via realtime.
@@ -139,8 +140,12 @@ function isDMEvent(p) {
   return p.fromUserId === serverData?.campaigns?.[p.campaignId]?.dmUserId;
 }
 
+let _hpSaveTimer = null;
+
 export async function handleMapEvent(p) {
   if (!p.type) return;
+  // The same event can arrive twice (its own channel and a sibling's); handle it once.
+  if (isRepeat(p)) return;
 
   // Lazy-reload serverData when the campaign isn't cached yet.
   // This prevents isDMEvent from failing on player hubs that haven't fully loaded.
@@ -149,7 +154,9 @@ export async function handleMapEvent(p) {
   }
 
   // Block privileged events from non-DM senders (requires fromUserId to be stamped)
-  if (PRIVILEGED_EVENTS.has(p.type) && !isDMEvent(p)) {
+  // A player may change their OWN token's HP (their sheet is where their HP lives); nothing else of theirs.
+  const ownHp = p.type === EV.HP_CHANGE && p.fromUserId && p.tokenId === `player_${p.fromUserId}`;
+  if (PRIVILEGED_EVENTS.has(p.type) && !isDMEvent(p) && !ownHp) {
     console.warn('[dnd-hub] blocked privileged event from non-DM:', p.type, p.fromUserId);
     return;
   }
@@ -214,6 +221,7 @@ export async function handleMapEvent(p) {
       break;
     }
     case 'token:move': {
+      if (p.tokenId === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, p); // zone audio in my sidebar
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       // Players can only move their own token — but allow moves originating from the DM
       if (p.fromUserId && !MAP.isDM && p.tokenId !== 'player_' + p.fromUserId) {
@@ -367,6 +375,12 @@ export async function handleMapEvent(p) {
       if (tokenObj) {
         tokenObj.hp = p.hp;
         tokenObj.hpMax = p.hpMax;
+        // The DM's Hub keeps the map's copy, so the token's HP survives a reload (audit N3).
+        if (MAP.isDM && serverData?.campaigns?.[MAP.campaignId]?.maps && MAP.mapId) {
+          serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
+          clearTimeout(_hpSaveTimer);
+          _hpSaveTimer = setTimeout(() => saveHubDm(serverData).catch(() => {}), 1500);
+        }
         const existing = MAP.tokenSprites[tokenObj.id];
         if (existing) {
           MAP.layers.tokens.removeChild(existing);
@@ -412,7 +426,7 @@ export async function handleMapEvent(p) {
         _ownPhysicsRollTs.delete(p.ts);
         if (p.rollType === 'attack' && MAP.campaignId && MAP.selectedTokens.size > 0) {
           const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-          if (settings?.autoHit) checkAutoHit(p.result);
+          if (settings?.autoHit) checkAutoHit(p.result, p.rolls?.[0]);
         }
         break;
       }
@@ -423,7 +437,7 @@ export async function handleMapEvent(p) {
       }
       if (p.rollType === 'attack' && MAP.campaignId && MAP.selectedTokens.size > 0) {
         const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-        if (settings?.autoHit) checkAutoHit(p.result);
+        if (settings?.autoHit) checkAutoHit(p.result, p.rolls?.[0]);
       }
       break;
     }
@@ -606,6 +620,7 @@ export async function handleMapEvent(p) {
       break;
     }
     case 'audio:zone-update': {
+      localPublish('dnd-player', EV.AUDIO_ZONE_UPDATE, p); // my sidebar plays the zones
       if (p.campaignId !== MAP.campaignId || p.mapId !== MAP.mapId || !MAP.mapData) return;
       MAP.mapData.audioZones = p.audioZones || [];
       renderAudioZones();
@@ -628,16 +643,16 @@ export async function handleMapEvent(p) {
       }
       // Apply trap damage — all hub instances apply it locally;
       // the DM hub additionally persists and re-broadcasts hp:change.
-      if (p.action === 'trap' && p.damage != null && p.tokenId && MAP.mapData?.tokens) {
+      // A player's token: their sheet applies the damage (temporary HP, the saving throw) and reports back.
+      if (p.action === 'trap' && p.damage != null && p.tokenId && MAP.mapData?.tokens && !String(p.tokenId).startsWith('player_')) {
         const tok = MAP.mapData.tokens[p.tokenId];
         if (tok) {
           tok.hp = Math.max(0, (tok.hp || 0) - p.damage);
           if (MAP.isDM) {
             serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
             saveHubDm( serverData);
-            realtimePublish(EV.HP_CHANGE, {
-              type: EV.HP_CHANGE, campaignId: MAP.campaignId,
-              tokenId: p.tokenId, hp: tok.hp, hpMax: tok.hpMax, fromUserId: userId,
+            publishTo(['master'], EV.HP_CHANGE, {
+              campaignId: MAP.campaignId, tokenId: p.tokenId, hp: tok.hp, hpMax: tok.hpMax, fromUserId: userId,
             });
           }
           renderTokens();

@@ -1,15 +1,17 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
 import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20260502p4';
-import { storageSet, realtimePublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
+import { storageSet, realtimePublish, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20260502p4';
-import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20260502p4';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
+import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20261002a';
+import { showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken } from './dnd-hub-rules.js';
+import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
+import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 
 // Portrait texture cache — keyed by portraitFileId
@@ -419,7 +421,10 @@ function setupTokenDrag(container, token) {
     // Recompute local LOS after player moves their own token
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
-    realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId });
+    const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId };
+    realtimePublish(EV.TOKEN_MOVE, movePayload);
+    // My own sidebar sets zone-audio volume from where my token stands; it never heard this before.
+    if (token.id === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, movePayload);
   };
 
   container.on('pointerup', finishDrag);
@@ -450,14 +455,15 @@ function _rollExpr(expr) {
   return t;
 }
 
-function _showAttackToast(attackerName, attackName, d20, total, toHit, damage, isCrit) {
+function _showAttackToast(attackerName, attackName, d20, total, toHit, damage, isCrit, vs = null) {
   const el = document.createElement('div');
   const hitColor = isCrit ? '#f59e0b' : '#22c55e';
   el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid rgba(255,255,255,.2);color:var(--lk-text);padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5);min-width:220px;text-align:center';
   el.innerHTML =
     `<div style="font-weight:700;margin-bottom:4px">⚔️ ${esc(attackerName)} — ${esc(attackName)}</div>` +
     `<div>Attack: <span style="color:${hitColor};font-weight:700">${d20}</span>${isCrit ? ' 🎯 CRIT!' : ''} (${d20} + ${toHit} = <b>${total}</b>)</div>` +
-    `<div>Damage: <b>${damage}</b></div>`;
+    (vs ? `<div>vs ${esc(vs.name)} (AC ${vs.ac}): <b style="color:${vs.hit ? '#22c55e' : '#ef4444'}">${vs.hit ? 'HIT' : 'MISS'}</b></div>` : '') +
+    (vs && !vs.hit ? '' : `<div>Damage: <b>${damage}</b>${isCrit ? ' (dice doubled)' : ''}</div>`);
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 5000);
 }
@@ -492,7 +498,7 @@ function _showMonsterAttackPanel(token, panelX, panelY) {
       const target = MAP.mapData.tokens[MAP.selectedToken];
       if (target) {
         const gs     = effectiveGs(MAP.mapData);
-        const distFt = Math.round(Math.hypot(target.x - token.x, target.y - token.y) / gs * 5);
+        const distFt = gridFeet(target.x - token.x, target.y - token.y, gs);
         if (distFt > a.rangeFt) {
           showTriggerToast(`⚠ ${esc(a.name)}: target is out of range (${distFt}ft — max ${a.rangeFt}ft)`);
         }
@@ -500,9 +506,12 @@ function _showMonsterAttackPanel(token, panelX, panelY) {
     }
     const d20   = Math.floor(Math.random() * 20) + 1;
     const total = d20 + a.toHit;
-    const dmg   = _rollExpr(a.damageDice);
+    const target = MAP.selectedToken && MAP.selectedToken !== token.id ? MAP.mapData?.tokens?.[MAP.selectedToken] : null;
+    const out = attackOutcome(d20, total, target?.ac ?? -Infinity);
+    // A crit doubles the damage dice; a miss deals none (audit G1, G3).
+    const dmg   = out.hit ? _rollExpr(out.crit ? critDamageExpr(a.damageDice) : a.damageDice) : 0;
     panel.remove();
-    _showAttackToast(token.name, a.name, d20, total, a.toHit, dmg, d20 === 20);
+    _showAttackToast(token.name, a.name, d20, total, a.toHit, dmg, out.crit, target ? { name: target.name, ac: target.ac ?? 10, hit: out.hit } : null);
   };
 
   setTimeout(() => {
@@ -571,9 +580,8 @@ export function showContextMenu(token, cx, cy) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
         await saveHubDm( serverData);
       }
-      await realtimePublish(EV.HP_CHANGE, {
-        type: EV.HP_CHANGE, campaignId: MAP.campaignId,
-        tokenId: token.id, hp: token.hp, hpMax: token.hpMax, fromUserId: userId,
+      await publishTo(['master', 'player'], EV.HP_CHANGE, {
+        campaignId: MAP.campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, fromUserId: userId,
       });
       renderTokens();
     });
@@ -646,9 +654,8 @@ export function showContextMenu(token, cx, cy) {
           await saveHubDm( serverData);
         }
         if (token.dead) {
-          await realtimePublish(EV.HP_CHANGE, {
-            type: EV.HP_CHANGE, campaignId: MAP.campaignId,
-            tokenId: token.id, hp: 0, hpMax: token.hpMax, fromUserId: userId,
+          await publishTo(['master', 'player'], EV.HP_CHANGE, {
+            campaignId: MAP.campaignId, tokenId: token.id, hp: 0, hpMax: token.hpMax, fromUserId: userId,
           });
         }
         await realtimePublish(EV.TOKENS_SPAWN, {

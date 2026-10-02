@@ -2,6 +2,7 @@
 import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20260502p4';
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
+import { armorClass } from './lk-rules5e.js';
 
 // ── Race ──────────────────────────────────────────────────────────────────────
 export function renderCCRace(el) {
@@ -47,7 +48,6 @@ export function renderRaceDetails(raceId) {
     subEl.innerHTML = `
       <div style="font-size:12px;font-weight:600;color:var(--dnd-gold);margin-bottom:8px">Subrace</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="btn btn-sm ${!CC.draft.subrace?'btn-gold':'btn-ghost'}" onclick="selectSubrace(null)">None</div>
         ${race.subraces.map(s => `
           <div class="btn btn-sm ${CC.draft.subrace===s.id?'btn-gold':'btn-ghost'}" onclick="selectSubrace('${s.id}')">${esc(s.name)}</div>
         `).join('')}
@@ -103,8 +103,50 @@ export function renderCCClass(el) {
       `).join('')}
     </div>
     <div id="cc-subclass-section" style="margin-top:14px"></div>
+    <div id="cc-skill-section" style="margin-top:14px"></div>
   `;
-  if (CC.draft.class) renderSubclassOptions(CC.draft.class);
+  if (CC.draft.class) { renderSubclassOptions(CC.draft.class); renderSkillChoices(); }
+}
+
+/** The class's "choose N skills" (and Half-Elf's two of any). Every hero used to have no skills at all. */
+export function classSkillChoice(classId) {
+  const cls = (SRD.classes || []).find(c => c.id === classId);
+  const pc = (cls?.proficiency_choices || []).find(p => (p.from || []).some(f => String(f).startsWith('Skill: ')));
+  return pc ? { choose: pc.choose, from: pc.from.filter(f => f.startsWith('Skill: ')).map(f => f.slice(7)) } : { choose: 0, from: [] };
+}
+const ALL_SKILLS = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History','Insight','Intimidation',
+  'Investigation','Medicine','Nature','Perception','Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
+
+export function renderSkillChoices() {
+  const el = document.getElementById('cc-skill-section');
+  if (!el || !CC.draft.class) return;
+  const { choose, from } = classSkillChoice(CC.draft.class);
+  const picked = CC.draft.proficiencyChoices || [];
+  const extra = CC.draft.extraSkills || [];
+  const chip = (name, on, fn) => `<div class="btn btn-sm ${on ? 'btn-gold' : 'btn-ghost'}" onclick="${fn}('${esc(name)}')">${esc(name)}</div>`;
+  el.innerHTML = choose ? `
+    <div style="font-size:12px;font-weight:600;color:var(--dnd-gold);margin-bottom:8px">Skills — choose ${choose} (${picked.length}/${choose})</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${from.map(n => chip(n, picked.includes(n), 'toggleClassSkill')).join('')}</div>
+    ${CC.draft.race === 'half-elf' ? `
+      <div style="font-size:12px;font-weight:600;color:var(--dnd-gold);margin:12px 0 8px">Half-elf: two more skills of any kind (${extra.length}/2)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${ALL_SKILLS.filter(n => !picked.includes(n)).map(n => chip(n, extra.includes(n), 'toggleExtraSkill')).join('')}</div>` : ''}
+  ` : '';
+}
+
+function _toggleIn(list, name, max) {
+  const i = list.indexOf(name);
+  if (i >= 0) list.splice(i, 1); else if (list.length < max) list.push(name);
+}
+export function toggleClassSkill(name) {
+  CC.draft.proficiencyChoices = CC.draft.proficiencyChoices || [];
+  _toggleIn(CC.draft.proficiencyChoices, name, classSkillChoice(CC.draft.class).choose);
+  CC.draft.extraSkills = (CC.draft.extraSkills || []).filter(n => !CC.draft.proficiencyChoices.includes(n));
+  renderSkillChoices();
+}
+export function toggleExtraSkill(name) {
+  CC.draft.extraSkills = CC.draft.extraSkills || [];
+  _toggleIn(CC.draft.extraSkills, name, 2);
+  renderSkillChoices();
 }
 
 export function classIcon(classId) {
@@ -115,12 +157,15 @@ export function classIcon(classId) {
 export function selectClass(classId) {
   CC.draft.class = classId;
   CC.draft.subclass = null;
+  CC.draft.proficiencyChoices = [];
+  CC.draft.spells = []; CC.draft.cantrips = [];
   document.querySelectorAll('[data-class]').forEach(card => {
     const sel = card.dataset.class === classId;
     card.style.borderColor = sel ? 'var(--dnd-gold)' : 'var(--dnd-border)';
     card.style.background = sel ? 'rgba(212,175,55,0.08)' : 'var(--dnd-surface)';
   });
   renderSubclassOptions(classId);
+  renderSkillChoices();
 }
 
 export function renderSubclassOptions(classId) {
@@ -148,6 +193,7 @@ export function renderCCAbilityScores(el) {
       <div class="btn btn-sm ${CC.draft.abilityMethod==='manual-roll'?'btn-gold':'btn-ghost'}" onclick="selectAbilityMethod('manual-roll')">Roll Dice</div>
     </div>
     <div id="cc-ability-method-ui"></div>
+    <div id="cc-half-elf"></div>
   `;
   renderAbilityMethodUI();
 }
@@ -170,9 +216,23 @@ function _raceNote(a, base) {
   return `<span style="font-size:11px;color:var(--dnd-muted);white-space:nowrap">+${bonus} ${esc(race.name)} → <strong style="color:var(--dnd-gold)">${total} (${fmtMod(modifier(total))})</strong></span>`;
 }
 
+function _halfElfPicker() {
+  if (CC.draft.race !== 'half-elf') return '';
+  const pick = CC.draft.halfElfBonus || ['', ''];
+  const sel = i => `<select onchange="setHalfElfBonus(${i}, this.value)"
+      style="background:var(--dnd-surface);border:1px solid var(--dnd-border);border-radius:6px;padding:6px 10px;color:var(--dnd-text);font-size:12px">
+      <option value="">— choose —</option>
+      ${ABILITIES.filter(a => a !== 'cha').map(a => `<option value="${a}" ${pick[i] === a ? 'selected' : ''} ${pick[1 - i] === a ? 'disabled' : ''}>${ABILITY_NAMES[a]}</option>`).join('')}
+    </select>`;
+  return `<div style="margin-top:14px;font-size:12px;color:var(--dnd-gold);font-weight:600">Half-elf: +1 to two other abilities</div>
+    <div style="display:flex;gap:8px;margin-top:6px">${sel(0)}${sel(1)}</div>`;
+}
+
 export function renderAbilityMethodUI() {
   const el = document.getElementById('cc-ability-method-ui');
   if (!el) return;
+  const he = document.getElementById('cc-half-elf');
+  if (he) he.innerHTML = _halfElfPicker();
   const m = CC.draft.abilityMethod;
   if (m === 'standard-array') {
     el.innerHTML = `
@@ -361,7 +421,40 @@ export function getStartingGold() {
 // ── Spells ────────────────────────────────────────────────────────────────────
 // Cantrips/spells known at level 1 per class (SRD classes.json has no spellcasting table)
 const CANTRIPS_KNOWN = { bard:2, cleric:3, druid:2, sorcerer:4, warlock:2, wizard:3 };
-const SPELLS_KNOWN_L1 = { bard:4, sorcerer:2, warlock:2 }; // prepared casters (cleric/druid/paladin/ranger) can pick freely
+const SPELLS_KNOWN_L1 = { bard:4, sorcerer:2, warlock:2, wizard:6 }; // wizard: six in the spellbook
+
+/**
+ * Final ability scores of the draft: base + race + subrace bonuses + a half-elf's two +1s. One function for
+ * the review step and the saved character (the save used to drop subrace bonuses — audit A6).
+ */
+export function draftScores() {
+  const out = { ...CC.draft.baseScores };
+  const race = (SRD.races || []).find(r => r.id === CC.draft.race);
+  const sub = race?.subraces?.find(x => x.id === CC.draft.subrace) || null;
+  for (const a of ABILITIES) out[a] = finalScore(out[a], racialBonus(race, sub, a.toUpperCase()));
+  if (CC.draft.race === 'half-elf') {
+    for (const a of new Set(CC.draft.halfElfBonus || [])) if (a !== 'cha' && out[a] !== undefined) out[a] += 1;
+  }
+  return out;
+}
+
+/** A half-elf picks two abilities other than Charisma for +1 each. */
+export function setHalfElfBonus(i, ability) {
+  const pick = [...(CC.draft.halfElfBonus || ['', ''])];
+  pick[i] = ability;
+  CC.draft.halfElfBonus = pick;
+  renderAbilityMethodUI();
+}
+
+/**
+ * How many 1st-level spells a new (level 1) character takes. Clerics and druids prepare ability
+ * modifier + level (min 1); paladins and rangers have no spells until level 2 (audit J2).
+ */
+export function spellLimitL1(classId) {
+  if (SPELLS_KNOWN_L1[classId] != null) return SPELLS_KNOWN_L1[classId];
+  if (classId === 'cleric' || classId === 'druid') return Math.max(1, abilityMod(draftScores().wis) + 1);
+  return 0;
+}
 const SPELLCASTING_CLASSES = new Set(['bard','cleric','druid','paladin','ranger','sorcerer','warlock','wizard','artificer']);
 
 export function renderCCSpells(el) {
@@ -385,15 +478,16 @@ export function renderCCSpells(el) {
   const level1Spells = clsSpells.filter(s => s.level === 1);
 
   const cantripLimit = CANTRIPS_KNOWN[cls.id] ?? 0;
-  const spellLimit = SPELLS_KNOWN_L1[cls.id] ?? (level1Spells.length > 0 ? 999 : 0); // prepared casters: no fixed limit
-  const isPrepared = !SPELLS_KNOWN_L1[cls.id] && SPELLCASTING_CLASSES.has(cls.id);
+  const spellLimit = spellLimitL1(cls.id);
+  const isPrepared = cls.id === 'cleric' || cls.id === 'druid';
 
   el.innerHTML = `
     <div style="font-size:12px;color:var(--dnd-muted);margin-bottom:14px;line-height:1.5">
       Choose your starting spells for <strong style="color:var(--dnd-gold)">${esc(clsName)}</strong>.
       ${cantripLimit > 0 ? `Select <strong>${cantripLimit}</strong> cantrip${cantripLimit>1?'s':''}.` : ''}
-      ${isPrepared ? 'You prepare spells each long rest — choose your starting prepared spells.' :
-        spellLimit > 0 ? `Select up to <strong>${spellLimit}</strong> 1st-level spell${spellLimit>1?'s':''}.` : ''}
+      ${isPrepared ? `You prepare <strong>${spellLimit}</strong> spell${spellLimit>1?'s':''} (and can change them after a long rest).` :
+        spellLimit > 0 ? `Select up to <strong>${spellLimit}</strong> 1st-level spell${spellLimit>1?'s':''}.` :
+        `${esc(clsName)}s learn their first spells at level 2.`}
     </div>
     ${cantrips.length > 0 ? `
       <div style="font-size:12px;font-weight:700;color:var(--dnd-gold);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">
@@ -403,9 +497,9 @@ export function renderCCSpells(el) {
         ${cantrips.map(s => renderSpellRow(s, 'cantrip')).join('')}
       </div>
     ` : ''}
-    ${level1Spells.length > 0 ? `
+    ${level1Spells.length > 0 && spellLimit > 0 ? `
       <div style="font-size:12px;font-weight:700;color:var(--dnd-gold);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">
-        1st-Level Spells (${(CC.draft.spells||[]).length}${spellLimit < 999 ? '/'+spellLimit : ''})
+        1st-Level Spells (${(CC.draft.spells||[]).length}/${spellLimit})
       </div>
       <div style="display:flex;flex-direction:column;gap:4px" id="cc-spell-list">
         ${level1Spells.map(s => renderSpellRow(s, 'spell')).join('')}
@@ -447,7 +541,7 @@ export function toggleSpell(spellId, type) {
     if (idx >= 0) { CC.draft.cantrips.splice(idx, 1); }
     else if (cantripLimit <= 0 || CC.draft.cantrips.length < cantripLimit) { CC.draft.cantrips.push(spellId); }
   } else {
-    const spellLimit = SPELLS_KNOWN_L1[cls?.id] ?? 999;
+    const spellLimit = spellLimitL1(cls?.id);
     const idx = CC.draft.spells.indexOf(spellId);
     if (idx >= 0) { CC.draft.spells.splice(idx, 1); }
     else if (CC.draft.spells.length < spellLimit) { CC.draft.spells.push(spellId); }
@@ -532,19 +626,14 @@ export function renderCCReview(el) {
   const cls = (SRD.classes || []).find(c => c.id === CC.draft.class);
   const bg = (SRD.backgrounds || []).find(b => b.id === CC.draft.background);
 
-  const finalScores = { ...CC.draft.baseScores };
-  if (race) {
-    race.ability_bonuses.forEach(b => {
-      const key = b.ability?.toLowerCase().slice(0, 3);
-      if (key && finalScores[key] !== undefined) finalScores[key] += b.bonus;
-    });
-  }
+  const finalScores = draftScores();
 
-  const profBonus = Math.ceil(1 + CC.draft.level / 4);
+  const profBonus = 2;
   const conMod = abilityMod(finalScores.con || 10);
   const hitDie = cls?.hit_die || 8;
-  const maxHP = hitDie + conMod;
-  const ac = 10 + abilityMod(finalScores.dex || 10);
+  const maxHP = Math.max(1, hitDie + conMod) + (CC.draft.subrace === 'hill-dwarf' ? 1 : 0);
+  const equipped = (CC.draft.equipment || []).filter(id => (SRD.equipment || []).find(e => e.id === id)?.category === 'Armor');
+  const ac = armorClass({ class: CC.draft.class, ...finalScores }, equipped.filter((id, i, arr) => id === 'shield' || arr.findIndex(x => x !== 'shield') === i));
   const initiative = abilityMod(finalScores.dex || 10);
 
   el.innerHTML = `

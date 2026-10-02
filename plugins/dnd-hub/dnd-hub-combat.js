@@ -3,6 +3,8 @@ import { MAP, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { attackOutcome } from './lk-rules5e.js';
+import { publishTo, isRepeat } from './lk-bus.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
 
@@ -101,7 +103,11 @@ export async function setTokenAC(token, campaignId) {
 
 // ── Auto Hit / Miss ───────────────────────────────────────────────────────────
 
-export function checkAutoHit(rollResult) {
+/**
+ * Hit or miss against the selected targets. `natural` is the d20 as rolled: a natural 20 always hits and
+ * is a critical, a natural 1 always misses. The crit used to be read off the TOTAL (audit G1).
+ */
+export function checkAutoHit(rollResult, natural) {
   if (!MAP.mapData || !MAP.selectedTokens.size) return;
   const targets = [...MAP.selectedTokens]
     .map(id => MAP.mapData.tokens?.[id])
@@ -110,12 +116,13 @@ export function checkAutoHit(rollResult) {
 
   const results = targets.map(t => {
     const ac = t.ac ?? 10;
-    const hit = rollResult >= ac;
+    const { hit } = attackOutcome(natural, rollResult, ac);
     return `${t.name}: ${hit ? '✅ HIT' : '❌ MISS'} (AC ${ac})`;
   });
 
   showCombatToast(`Roll ${rollResult} — ${results.join(' | ')}`);
-  if (rollResult === 20) showCombatToast('⚔️ CRITICAL HIT!');
+  if (natural === 20) showCombatToast('⚔️ CRITICAL HIT! Roll the damage dice twice.');
+  else if (natural === 1) showCombatToast('A natural 1 — a miss whatever the total.');
 }
 
 // ── Auto Damage ───────────────────────────────────────────────────────────────
@@ -167,9 +174,9 @@ async function _damageToken(token, damage, campaignId) {
     serverData.campaigns[campaignId].maps[MAP.mapId] = MAP.mapData;
     await saveHubDm( serverData);
   }
-  await realtimePublish(EV.HP_CHANGE, {
-    type: EV.HP_CHANGE, campaignId, tokenId: token.id,
-    hp: token.hp, hpMax: token.hpMax, fromUserId: userId,
+  // The DM sidebar and the player's sheet hear it too; a player's sheet applies the damage itself.
+  await publishTo(['master', 'player'], EV.HP_CHANGE, {
+    campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, damage, fromUserId: userId,
   });
   if (prev > 0 && token.hp === 0) await triggerDeathSave(token.id, campaignId);
 }

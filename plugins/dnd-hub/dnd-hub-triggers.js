@@ -147,14 +147,31 @@ export async function fireTrigger(trigger, tokenId) {
   }
 
   if (type === 'trap') {
+    // 5e traps can be spotted (passive Perception against a DC) and usually allow a saving throw for
+    // half damage. They used to deal full damage, always (audit H1).
+    const camp = serverData?.campaigns?.[MAP.campaignId];
+    const tok = MAP.mapData?.tokens?.[tokenId];
+    const summary = tok?.userId ? camp?.characterSummaries?.[tok.userId] : null;
+    const name = tok?.name || 'Someone';
+    if (trigger.spotDC && summary && (summary.passivePerception || 0) >= trigger.spotDC) {
+      await realtimePublish(EV.TRIGGER_FIRED, {
+        campaignId: MAP.campaignId, triggerId: trigger.id, tokenId, action: 'trap-spotted',
+        message: `${name} spots a trap here (passive Perception ${summary.passivePerception}).`,
+      });
+      return 'spotted';
+    }
     const dmg = rollDiceExpr(trigger.damageExpr || '1d6');
+    const save = trigger.saveAbility && trigger.saveDC
+      ? ` ${trigger.saveAbility.toUpperCase()} save DC ${trigger.saveDC} for half.` : '';
     await realtimePublish(EV.TRIGGER_FIRED, {
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
       tokenId,
       action: 'trap',
       damage: dmg,
-      message: (trigger.label || 'Trap') + ' deals ' + dmg + ' damage!',
+      saveAbility: trigger.saveAbility || null,
+      saveDC: trigger.saveDC || null,
+      message: `${trigger.label || 'Trap'}: ${dmg} damage to ${name}.${save}`,
     });
   }
 
@@ -235,6 +252,16 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     <div id="td-fields-trap" style="${trigger.type!=='trap'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Damage expression (e.g. 2d6+2)</label>
       <input id="td-damage" value="${esc(trigger.damageExpr)}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <label style="font-size:12px;flex:1">Saving throw
+          <select id="td-save-ability" style="width:100%;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px">
+            ${['', 'dex', 'con', 'str', 'wis'].map(a => `<option value="${a}" ${(trigger.saveAbility || '') === a ? 'selected' : ''}>${a ? a.toUpperCase() : 'None'}</option>`).join('')}
+          </select></label>
+        <label style="font-size:12px;width:70px">DC
+          <input id="td-save-dc" type="number" min="5" max="30" value="${trigger.saveDC ?? 13}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px"></label>
+        <label style="font-size:12px;width:80px" title="Heroes whose passive Perception reaches this notice the trap and it does not spring">Spot DC
+          <input id="td-spot-dc" type="number" min="0" max="30" value="${trigger.spotDC ?? ''}" placeholder="—" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px"></label>
+      </div>
     </div>
     <div id="td-fields-teleport" style="${trigger.type!=='teleport'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Destination cell X</label>
@@ -273,6 +300,9 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     const oneShot  = document.getElementById('td-oneshot').checked;
     const message  = document.getElementById('td-message')?.value || '';
     const dmgExpr  = document.getElementById('td-damage')?.value || '1d6';
+    const saveAbility = document.getElementById('td-save-ability')?.value || '';
+    const saveDC   = parseInt(document.getElementById('td-save-dc')?.value) || null;
+    const spotDC   = parseInt(document.getElementById('td-spot-dc')?.value) || null;
     const destCx   = parseInt(document.getElementById('td-destcx')?.value) || null;
     const destCy   = parseInt(document.getElementById('td-destcy')?.value) || null;
 
@@ -290,7 +320,7 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     const updated = {
       ...trigger,
       type, label, requireConfirm: confirm, oneShot,
-      message, damageExpr: dmgExpr, destCx, destCy, fileId,
+      message, damageExpr: dmgExpr, destCx, destCy, fileId, saveAbility, saveDC, spotDC,
     };
 
     if (!MAP.mapData.triggers) MAP.mapData.triggers = [];

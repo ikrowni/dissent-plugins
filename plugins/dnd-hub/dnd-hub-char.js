@@ -2,8 +2,26 @@
 import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { storageGetUser, storageSetUser, storageSet, storageGet, realtimePublish, getIdentity, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20260502p4';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261002a';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
+  characterSummary, isWeaponId } from './lk-rules5e.js';
+import { classSkillChoice, draftScores } from './dnd-hub-char-steps.js?v=20261002a';
+
+// Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
+// proficiencies ("All armor", "Shields", …) instead (audit A9).
+const L1_FEATURES = {
+  barbarian: ['Rage', 'Unarmored Defense'], bard: ['Spellcasting', 'Bardic Inspiration'],
+  cleric: ['Spellcasting', 'Divine Domain'], druid: ['Druidic', 'Spellcasting'],
+  fighter: ['Fighting Style', 'Second Wind'], monk: ['Unarmored Defense', 'Martial Arts'],
+  paladin: ['Divine Sense', 'Lay on Hands'], ranger: ['Favored Enemy', 'Natural Explorer'],
+  rogue: ['Expertise', 'Sneak Attack', "Thieves' Cant"], sorcerer: ['Spellcasting', 'Sorcerous Origin'],
+  warlock: ['Otherworldly Patron', 'Pact Magic'], wizard: ['Spellcasting', 'Arcane Recovery'],
+};
+// XP to reach each level: a campaign that starts above level 1 hands the new hero this much XP, and the
+// level-up wizard (one tested path) walks them through every level's choices (audit A4).
+const XP_FOR_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000,
+  140000, 165000, 195000, 225000, 265000, 305000, 355000];
 
 // Callback injected by bootstrap to avoid screens.js ↔ char.js circular import.
 // Set via onFinishRegister(enterCampaignAsPlayer) before any user interaction.
@@ -109,8 +127,31 @@ export async function ccNext() {
 
 export function ccValidateStep() {
   switch (CC.step) {
-    case 0: if (!CC.draft.race) { alert('Please select a race.'); return false; } break;
-    case 1: if (!CC.draft.class) { alert('Please select a class.'); return false; } break;
+    case 0: {
+      if (!CC.draft.race) { alert('Please select a race.'); return false; }
+      const race = (SRD.races || []).find(r => r.id === CC.draft.race);
+      if (race?.subraces?.length && !CC.draft.subrace) { alert(`Please choose your ${race.name} subrace.`); return false; }
+      break;
+    }
+    case 2: {
+      const b = CC.draft.baseScores || {};
+      if (CC.draft.abilityMethod === 'standard-array') {
+        const vals = ['str','dex','con','int','wis','cha'].map(a => b[a]);
+        if (vals.some(v => !v) || [...vals].sort((x, y) => x - y).join() !== '8,10,12,13,14,15') {
+          alert('Assign each of 15, 14, 13, 12, 10 and 8 to one ability.'); return false;
+        }
+      }
+      const he = CC.draft.halfElfBonus || [];
+      if (CC.draft.race === 'half-elf' && (!he[0] || !he[1] || he[0] === he[1])) { alert('Half-elves choose two different abilities for +1.'); return false; }
+      break;
+    }
+    case 1: {
+      if (!CC.draft.class) { alert('Please select a class.'); return false; }
+      const { choose } = classSkillChoice(CC.draft.class);
+      if ((CC.draft.proficiencyChoices || []).length !== choose) { alert(`Please choose ${choose} skills.`); return false; }
+      if (CC.draft.race === 'half-elf' && (CC.draft.extraSkills || []).length !== 2) { alert('Half-elves choose two more skills.'); return false; }
+      break;
+    }
     case 6: if (!CC.draft.name.trim()) { alert('Please enter a character name.'); return false; } break;
   }
   return true;
@@ -123,17 +164,23 @@ export async function finishCharacterCreation() {
   const race = (SRD.races || []).find(r => r.id === CC.draft.race);
   const cls = (SRD.classes || []).find(c => c.id === CC.draft.class);
 
-  const finalScores = { ...CC.draft.baseScores };
-  if (race) {
-    race.ability_bonuses.forEach(b => {
-      const key = b.ability?.toLowerCase().slice(0, 3);
-      if (key && finalScores[key] !== undefined) finalScores[key] += b.bonus;
-    });
-  }
+  const finalScores = draftScores();
 
-  const hitDie = cls?.hit_die || 8;
-  const conMod = Math.floor((( finalScores.con || 10) - 10) / 2);
-  const maxHP = hitDie + conMod;
+  const hitDie = cls?.hit_die || hitDieFor(CC.draft.class);
+  // Hill dwarves: +1 HP per level (Dwarven Toughness).
+  const maxHP = Math.max(1, hitDie + abilityMod(finalScores.con)) + (CC.draft.subrace === 'hill-dwarf' ? 1 : 0);
+  const campaign = (await loadHubDm())?.campaigns?.[CC.campaignId];
+  const startLevel = Math.min(20, Math.max(1, campaign?.startingLevel || 1));
+  const background = (SRD.backgrounds || []).find(b => b.id === CC.draft.background);
+  // Starting kit: armour and shield worn, weapons in hand; named, so the inventory can show them.
+  const equipment = (CC.draft.equipment || []).map(id => {
+    const it = (SRD.equipment || []).find(e => e.id === id);
+    const kind = it?.category === 'Armor' ? 'armor' : it?.category === 'Weapon' || isWeaponId(id) ? 'weapon' : 'gear';
+    return { id, name: it?.name || id, type: kind, description: it?.desc || '', qty: 1, attuned: false,
+      equipped: kind !== 'gear' };
+  });
+  let armorWorn = false;
+  equipment.forEach(e => { if (e.type === 'armor' && e.id !== 'shield') { e.equipped = !armorWorn; armorWorn = true; } });
 
   const character = {
     id: genId(),
@@ -144,31 +191,35 @@ export async function finishCharacterCreation() {
     subrace: CC.draft.subrace,
     class: CC.draft.class,
     subclass: CC.draft.subclass,
-    level: CC.draft.level || 1,
+    level: 1,
+    xp: XP_FOR_LEVEL[startLevel],
     background: CC.draft.background,
     alignment: CC.draft.alignment,
     deity: CC.draft.deity,
     ...finalScores,
-    hp: maxHP, hpMax: maxHP, hpTemp: 0,
-    ac: 10 + Math.floor(((finalScores.dex || 10) - 10) / 2),
-    initiative: Math.floor(((finalScores.dex || 10) - 10) / 2),
+    hp: maxHP, hpMax: maxHP, hpTemp: 0, hitDiceRemaining: 1,
+    ac: armorClass({ class: CC.draft.class, ...finalScores }, equipment.filter(e => e.equipped)),
+    initiative: abilityMod(finalScores.dex),
     speed: race?.speed || 30,
-    proficiencyBonus: Math.ceil(1 + (CC.draft.level || 1) / 4),
+    proficiencyBonus: profBonus(1),
     spellcastingAbility: cls?.spellcasting_ability?.toLowerCase().slice(0, 3) || null,
-    spellSlots: [[0,0],[2,2],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],
+    // One shape everywhere: index = slot level, [current, max]; only casters get slots (audit A2, A3).
+    spellSlots: withSlotsForLevel(null, CC.draft.class, 1),
     spells: [...(CC.draft.spells || []), ...(CC.draft.cantrips || [])],
     savingThrows: cls?.saving_throws?.map(s => s.toLowerCase().slice(0, 3)) || [],
-    skills: {},
+    skills: skillProficiencies({ race: CC.draft.race, classSkills: CC.draft.proficiencyChoices || [],
+      extraSkills: CC.draft.extraSkills || [] }, background),
     deathSaves: { successes: 0, failures: 0 },
     conditions: [],
     exhaustion: 0,
     inspiration: false,
-    equipment: CC.draft.equipment.map(id => ({ id, qty: 1, equipped: false, attuned: false })),
+    equipment,
     gold: CC.draft.useStartingGold ? getStartingGold() : 0,
     silver: 0, copper: 0, platinum: 0, electrum: 0,
     features: [
       ...(race?.traits?.map(t => t.name) || []),
-      ...(cls?.proficiencies?.slice(0, 3) || []),
+      ...(L1_FEATURES[CC.draft.class] || []),
+      ...(background?.feature?.name ? [background.feature.name] : []),
     ],
     personalityTraits: CC.draft.personalityTraits,
     ideals: CC.draft.ideals,
@@ -185,6 +236,8 @@ export async function finishCharacterCreation() {
   const userData = await storageGetUser('characters') || {};
   userData[CC.campaignId] = character;
   await storageSetUser('characters', userData);
+  // The server mirror the DM reads — so the DM sees the sheet at once, not after the player's first save (audit E3).
+  await storageSet(`player_sheet_${CC.campaignId}_${identity.id}`, character, 'server');
   await storageSetUser(`char-draft-${CC.campaignId}`, null);
 
   // Update campaign character summary in server storage
@@ -193,12 +246,8 @@ export async function finishCharacterCreation() {
     if (!serverData.campaigns[CC.campaignId].characterSummaries) {
       serverData.campaigns[CC.campaignId].characterSummaries = {};
     }
-    serverData.campaigns[CC.campaignId].characterSummaries[identity.id] = {
-      name: character.name, race: character.race, class: character.class,
-      level: character.level, hp: character.hp, hpMax: character.hpMax,
-      portraitUrl: CC.draft.portraitUrl || '',
-      portraitFileId: CC.draft.portraitFileId || '',
-    };
+    // AC, DEX, passive Perception and live HP: what initiative, auto hit/miss and the party view need (audit F2).
+    serverData.campaigns[CC.campaignId].characterSummaries[identity.id] = characterSummary(character);
     serverData.campaigns[CC.campaignId].updatedAt = new Date().toISOString();
     await saveHubDm( serverData);
     setServerData(serverData); // sync module-level state so renderTokens sees the new summary
