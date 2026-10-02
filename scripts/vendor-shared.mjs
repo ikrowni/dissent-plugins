@@ -71,6 +71,16 @@ const VENDORED = [
       "dnd-player/dnd-campaign-merge.js",
     ],
   },
+  // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
+  {
+    source: "lk-bus.js",
+    targets: ["dnd-hub/lk-bus.js", "dnd-master/lk-bus.js", "dnd-player/lk-bus.js"],
+  },
+  // LanternKeep's 5e rules — one tested module, so every D&D plugin computes the same numbers.
+  {
+    source: "lk-rules5e.js",
+    targets: ["dnd-hub/lk-rules5e.js", "dnd-master/lk-rules5e.js", "dnd-player/lk-rules5e.js"],
+  },
   // Which campaign a D&D sidebar shows — one answer for dnd-player and dnd-master.
   {
     source: "dnd-campaign-pick.js",
