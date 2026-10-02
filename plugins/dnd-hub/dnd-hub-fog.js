@@ -3,6 +3,7 @@ import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=202605
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { computeLitCells } from './dnd-hub-lights.js?v=20260502p4';
+import { fogAlpha } from './dnd-hub-rules.js';
 
 export function renderFog() {
   const layers = MAP.layers;
@@ -66,10 +67,8 @@ export function renderFog() {
       // Lit cells are always clear — treat as visible regardless of fogState
       if (litCells.has(`${cx},${cy}`)) continue;
       const state = fogState[`${cx},${cy}`] ?? 'unexplored';
-      let alpha = 0;
-      if (state === 'unexplored') alpha = 1.0;
-      else if (state === 'explored') alpha = 0.55;
-      else continue; // 'visible' state — no fog
+      const alpha = fogAlpha(state, MAP.isDM);
+      if (!alpha) continue; // 'visible' — no fog
       ctx.fillStyle = `rgba(0,0,0,${alpha})`;
       // +0.5px overlap prevents hairline gaps between adjacent cells at non-integer zoom
       ctx.fillRect(wx2sx(ox + cx * gs), wy2sy(oy + cy * gs), cellPx + 0.5, cellPx + 0.5);

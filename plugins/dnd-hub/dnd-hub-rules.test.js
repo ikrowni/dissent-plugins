@@ -89,3 +89,17 @@ describe('placing your own token', () => {
     expect(placeOwnTokenVerdict({ tokens: {}, seededPlayers: { u1: true } }, 'u1')).toBe('removed-by-dm');
   });
 });
+
+import { fogAlpha } from './dnd-hub-rules.js';
+describe('fogAlpha', () => {
+  it('players: unexplored is solid, explored is dimmed, visible is clear', () => {
+    expect(fogAlpha('unexplored', false)).toBe(1);
+    expect(fogAlpha('explored', false)).toBe(0.55);
+    expect(fogAlpha('visible', false)).toBe(0);
+  });
+  it('the DM always sees the map through fog, as a tint', () => {
+    expect(fogAlpha('unexplored', true)).toBeLessThan(0.6);
+    expect(fogAlpha('unexplored', true)).toBeGreaterThan(0);
+    expect(fogAlpha('explored', true)).toBeLessThan(fogAlpha('unexplored', true));
+  });
+});

@@ -73,7 +73,7 @@
     },
     {
       "url": "dnd-hub-fog.js",
-      "sha256": "5b548113364325925e9ad3b1044f2bec9bac74d43dad0b57e50484d452fb6f17"
+      "sha256": "228b19f7c2c9bd999fc56fe9d7c58be19e3cd12c3578486713847b98b7e80e0b"
     },
     {
       "url": "dnd-hub-frame.js",
@@ -113,7 +113,7 @@
     },
     {
       "url": "dnd-hub-rules.js",
-      "sha256": "dd8306d1046e6bf14889bbe67e637cb7bb64f40ed46e5b2774c8cbfc8492db02"
+      "sha256": "cb80a01c75dc4bd36a788b37233785ac91d4629927c89c07782817c0078b7308"
     },
     {
       "url": "dnd-hub-screens.js",

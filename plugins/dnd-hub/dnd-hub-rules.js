@@ -88,3 +88,14 @@ export function placeOwnTokenVerdict(mapData, uid) {
   if (mapData.tokens?.[`player_${uid}`]) return 'move';
   return mapData.seededPlayers?.[uid] ? 'removed-by-dm' : 'create';
 }
+
+/**
+ * Fog opacity for a cell. 🔴 The DM used to get the players' solid black fog, so a new
+ * DM's own map was black until they revealed it or found the Fog button. The DM now sees
+ * the whole map with fog as a tint, which also shows them what the players cannot see.
+ */
+export function fogAlpha(state, isDM) {
+  if (state === 'visible') return 0;
+  if (isDM) return state === 'explored' ? 0.2 : 0.45;
+  return state === 'explored' ? 0.55 : 1;
+}
