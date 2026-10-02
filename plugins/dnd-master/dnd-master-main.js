@@ -130,6 +130,8 @@ function onEvent(ev) {
   // The Hub opened a campaign: follow it if this user runs it and it isn't shown yet.
   if (p.type === EV.CAMPAIGN_ACTIVE) {
     _announcedCampaignId = p.campaignId || null;
+    // The DM opened a campaign: ask the host to show this panel (see dnd-player's twin).
+    if (p.role === 'dm') parent.postMessage({ type: 'dissent:slot-action', action: 'focus' }, '*');
     if (p.role === 'dm' && p.campaignId !== dmCampaignId) onInit({});
     return;
   }

@@ -819,6 +819,9 @@ async function onEvent(ev) {
   if (p.type === EV.CAMPAIGN_ACTIVE) {
     const changed = p.campaignId !== CAMPAIGN_ID;
     _announcedCampaignId = p.campaignId || null;
+    // A player opened a campaign: ask the host to show this panel (sidebar focus). The
+    // host ignores it once the user has picked a panel themselves; older hosts ignore it.
+    if (p.role === 'player') parent.postMessage({ type: 'dissent:slot-action', action: 'focus' }, '*');
     if (changed || !CHAR) onInit({});
     return;
   }
