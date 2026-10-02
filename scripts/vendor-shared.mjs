@@ -71,6 +71,11 @@ const VENDORED = [
       "dnd-player/dnd-campaign-merge.js",
     ],
   },
+  // Which campaign a D&D sidebar shows — one answer for dnd-player and dnd-master.
+  {
+    source: "dnd-campaign-pick.js",
+    targets: ["dnd-master/dnd-campaign-pick.js", "dnd-player/dnd-campaign-pick.js"],
+  },
   // The realtime event vocabulary all three D&D plugins speak. dnd-hub included: it is a
   // copy there too, so no plugin owns the vocabulary the others depend on.
   {

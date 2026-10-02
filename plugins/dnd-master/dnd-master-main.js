@@ -27,6 +27,7 @@ import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
   dmEditExhaustion, dmEditNotes } from './dnd-master-players.js';
+import { pickCampaign } from './dnd-campaign-pick.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
@@ -54,6 +55,9 @@ function switchDMTab(name) {
   if (name === 'players')    renderPlayersTab();
 }
 
+// Set by the Hub's CAMPAIGN_ACTIVE announcement; see onEvent.
+let _announcedCampaignId = null;
+
 async function onInit(data) {
   const id = await getIdentity();
   userId = id?.id ?? null;
@@ -71,14 +75,22 @@ async function onInit(data) {
     }
   }
 
-  const campaigns = Object.values(serverData.campaigns || {});
-  const myCampaign = campaigns.find(c => c.dmUserId === userId);
+  // Only campaigns this user runs; among those, the one the Hub announced (CAMPAIGN_ACTIVE)
+  // wins. It used to take the FIRST campaign the user DMs, whatever the Hub showed.
+  const runs = Object.fromEntries(Object.entries(serverData.campaigns || {})
+    .filter(([, c]) => c.dmUserId === userId));
+  const myCampaign = pickCampaign(runs, _announcedCampaignId, userId);
 
-  document.getElementById('loading').classList.add('hidden');
   if (!myCampaign) {
-    parent.postMessage({ type: 'dissent:slot-action', action: 'hide' }, '*');
+    // Not 'hide': PluginRuntime treats a hide as permanent until remount, so someone who
+    // later starts running a campaign would never get this panel back.
+    const el = document.getElementById('loading');
+    el.classList.remove('hidden');
+    el.innerHTML = '<span>This panel is for the campaign\'s DM. Your character is in the D&D Player tab.</span>';
+    document.getElementById('dm-app').classList.add('hidden');
     return;
   }
+  document.getElementById('loading').classList.add('hidden');
 
   dmCampaignId = myCampaign.id;
   dmCampaign = myCampaign;
@@ -114,6 +126,13 @@ async function onInit(data) {
 function onEvent(ev) {
   const p = ev.data;
   if (!p) return;
+
+  // The Hub opened a campaign: follow it if this user runs it and it isn't shown yet.
+  if (p.type === EV.CAMPAIGN_ACTIVE) {
+    _announcedCampaignId = p.campaignId || null;
+    if (p.role === 'dm' && p.campaignId !== dmCampaignId) onInit({});
+    return;
+  }
   if (p.type === 'initiative:update' && p.campaignId === dmCampaignId) {
     setInitiativeState(p.initiative);
     const el = document.getElementById('tab-initiative');

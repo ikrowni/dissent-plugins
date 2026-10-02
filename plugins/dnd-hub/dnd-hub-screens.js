@@ -1,6 +1,6 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
 import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
-import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext } from '../plugin-sdk.js';
+import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
@@ -308,9 +308,18 @@ export async function createCampaign() {
 }
 
 // ── Campaign View ─────────────────────────────────────────────────────────────
+// Tell this client's sidebars which campaign the Hub is showing. They used to pick once
+// at load, so joining a campaign left them on "Join a campaign" until a reload.
+function announceCampaign(campaignId, role) {
+  const payload = { type: EV.CAMPAIGN_ACTIVE, campaignId, role };
+  localPublish('dnd-player', EV.CAMPAIGN_ACTIVE, payload);
+  localPublish('dnd-master', EV.CAMPAIGN_ACTIVE, payload);
+}
+
 export async function enterCampaignAsDM(campaignId) {
   await renderCampaignView(campaignId, true);
   showScreen('campaign');
+  announceCampaign(campaignId, 'dm');
 }
 
 export async function enterCampaignAsPlayer(campaignId) {
@@ -323,6 +332,7 @@ export async function enterCampaignAsPlayer(campaignId) {
   await storageSetUser('activePlayerCampaignId', campaignId);
   await renderCampaignView(campaignId, false);
   showScreen('campaign');
+  announceCampaign(campaignId, 'player');
 }
 
 export async function renderCampaignView(campaignId, isDM) {

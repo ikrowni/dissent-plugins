@@ -10,6 +10,9 @@
 // Import EV everywhere. Never use bare strings for event types.
 
 export const EV = {
+  // Hub → its own sidebars (localPublish): the campaign the Hub is now showing.
+  CAMPAIGN_ACTIVE:    'campaign:active',
+
   // Map
   MAP_SET:            'map:set',
   MAP_GRID:           'map:grid',

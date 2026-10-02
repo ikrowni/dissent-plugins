@@ -16,6 +16,7 @@ import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpRollHP, levelUpTakeAverage, levelUpToggleSpell,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { pickCampaign } from './dnd-campaign-pick.js';
 
 let CHAR = null;
 let CAMPAIGN_ID = null;
@@ -443,16 +444,17 @@ function initTabHTML() {
       color:var(--text);font-size:12px;line-height:1.6;outline:none;resize:none;font-family:inherit"></textarea>`;
 }
 
+// Set by the Hub's CAMPAIGN_ACTIVE announcement; see onEvent.
+let _announcedCampaignId = null;
+
 async function onInit(data) {
   const identity = await getIdentity();
   USER_ID = identity?.id ?? null;
   SERVER_DATA = await loadHubDmCompanion() || { campaigns: {} };
   const storedCampaignId = await storageGetCompanion('dnd-hub', 'activePlayerCampaignId', 'user');
-  const campaigns = Object.values(SERVER_DATA.campaigns || {});
-  let myCampaign = storedCampaignId
-    ? campaigns.find(c => c.id === storedCampaignId && ((c.members||[]).includes(USER_ID) || c.dmUserId === USER_ID))
-    : null;
-  if (!myCampaign) myCampaign = campaigns.find(c => (c.members||[]).includes(USER_ID) || c.dmUserId === USER_ID);
+  // The Hub's announcement (CAMPAIGN_ACTIVE) wins over the stored id: it is what the
+  // user is looking at right now.
+  const myCampaign = pickCampaign(SERVER_DATA.campaigns, _announcedCampaignId || storedCampaignId, USER_ID);
   CAMPAIGN_ID = myCampaign?.id ?? null;
   if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<span>Join a campaign via the D&D Hub to use this sidebar.</span>'; return; }
   // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
@@ -487,7 +489,13 @@ async function onInit(data) {
   const isDMOnly = myCampaign.dmUserId === USER_ID
     && !(myCampaign.members || []).includes(USER_ID)
     && !CHAR;
-  if (isDMOnly) { parent.postMessage({ type: 'dissent:slot-action', action: 'hide' }, '*'); return; }
+  // Not 'hide': PluginRuntime treats a hide as permanent until remount, so a DM who
+  // later builds a character would never get the sheet back. Point at the right panel.
+  if (isDMOnly) {
+    document.getElementById('loading').innerHTML =
+      '<span>You\'re running this campaign. Your tools are in the D&D Master tab.</span>';
+    return;
+  }
 
   if (!CHAR) {
     document.getElementById('loading').innerHTML =
@@ -805,6 +813,15 @@ function useConsumable(idx) {
 async function onEvent(ev) {
   const p = ev.data;
   if (!p) return;
+
+  // The Hub switched campaign, or the player just joined or finished a character:
+  // re-pick instead of waiting for a reload.
+  if (p.type === EV.CAMPAIGN_ACTIVE) {
+    const changed = p.campaignId !== CAMPAIGN_ID;
+    _announcedCampaignId = p.campaignId || null;
+    if (changed || !CHAR) onInit({});
+    return;
+  }
 
   // DM edited this player's sheet — reload from server storage and re-render
   if (p.type === 'sheet:dm-update' && p.userId === USER_ID) {
