@@ -1,6 +1,7 @@
 // dnd-hub-char-steps.js — character creator step renderers (Race → Review)
 import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20260502p4';
 import { esc } from '../plugin-sdk.js';
+import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 
 // ── Race ──────────────────────────────────────────────────────────────────────
 export function renderCCRace(el) {
@@ -158,6 +159,17 @@ export function selectAbilityMethod(method) {
   renderCCAbilityScores(document.getElementById('cc-content'));
 }
 
+// "+2 Dwarf → 15 (+2)" beside an ability, so the racial bonus is visible while choosing.
+// It used to appear only on the review step, which made the modifiers here look wrong.
+function _raceNote(a, base) {
+  const race = (SRD.races || []).find(r => r.id === CC.draft.race);
+  const sub = race?.subraces?.find(s => s.id === CC.draft.subrace) || null;
+  const bonus = racialBonus(race, sub, a.toUpperCase());
+  if (!bonus || !base) return '';
+  const total = finalScore(base, bonus);
+  return `<span style="font-size:11px;color:var(--dnd-muted);white-space:nowrap">+${bonus} ${esc(race.name)} → <strong style="color:var(--dnd-gold)">${total} (${fmtMod(modifier(total))})</strong></span>`;
+}
+
 export function renderAbilityMethodUI() {
   const el = document.getElementById('cc-ability-method-ui');
   if (!el) return;
@@ -179,6 +191,7 @@ export function renderAbilityMethodUI() {
             <div style="font-size:13px;color:var(--dnd-gold);width:30px;text-align:right">
               ${CC.draft.baseScores[a] ? fmtMod(abilityMod(CC.draft.baseScores[a])) : ''}
             </div>
+            ${_raceNote(a, CC.draft.baseScores[a])}
           </div>
         `).join('')}
       </div>
@@ -200,6 +213,7 @@ export function renderAbilityMethodUI() {
               <span style="font-size:14px;font-weight:700;width:24px;text-align:center">${score}</span>
               <button class="btn btn-ghost btn-sm" ${score>=15||remaining<=0?'disabled':''} onclick="adjustPB('${a}',1)">+</button>
               <span style="font-size:11px;color:var(--dnd-muted)">(${pointBuyCost(score)} pts)</span>
+              ${_raceNote(a, score)}
               <div style="font-size:13px;color:var(--dnd-gold);margin-left:auto">${fmtMod(abilityMod(score))}</div>
             </div>
           `;
@@ -215,6 +229,7 @@ export function renderAbilityMethodUI() {
             <div style="width:80px;font-size:12px;font-weight:600">${ABILITY_NAMES[a]}</div>
             <span style="font-size:18px;font-weight:800;color:var(--dnd-gold);width:28px">${CC.draft.baseScores[a] || '—'}</span>
             <span style="font-size:11px;color:var(--dnd-muted)" id="cc-roll-dice-${a}"></span>
+            ${_raceNote(a, CC.draft.baseScores[a])}
           </div>
         `).join('')}
       </div>
@@ -264,7 +279,7 @@ export function renderCCBackground(el) {
             ${CC.draft.background===b.id ? '<span style="color:var(--dnd-gold)">✓</span>' : ''}
           </div>
           <div style="font-size:10px;color:var(--dnd-muted)">
-            Skills: ${b.starting_proficiencies.slice(0, 3).join(', ') || 'None'}
+            Skills: ${b.starting_proficiencies.slice(0, 3).map(proficiencyLabel).join(', ') || 'None'}
           </div>
           ${CC.draft.background===b.id && b.feature ? `
             <div style="margin-top:8px;padding:8px;background:rgba(212,175,55,.06);border-radius:6px;border-left:2px solid var(--dnd-gold)">
