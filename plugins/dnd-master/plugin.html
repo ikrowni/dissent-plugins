@@ -10,34 +10,19 @@
 <body>
   <div class="center" id="loading"><div class="spinner"></div></div>
   <div class="center hidden" id="not-dm">
-    <div style="font-size:32px">&#x1F6E1;&#xFE0F;</div>
     <div style="font-size:14px;font-weight:700">Dungeon Master Only</div>
     <div style="font-size:12px;color:var(--muted);max-width:220px;line-height:1.5">
       This sidebar is only available to the Dungeon Master of an active campaign.
     </div>
   </div>
   <div id="dm-app" class="hidden" style="display:flex;flex-direction:column;height:100%">
-    <div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
-      <span>&#x1F3F0; DM Dashboard</span>
-      <span id="dm-campaign-name" style="font-size:10px;color:var(--muted);font-weight:400"></span>
+    <div class="dm-head">
+      <span class="lk-title dm-head-title">Dungeon Master</span>
+      <span id="dm-campaign-name" class="dm-head-camp"></span>
+      <button id="dm-settings-btn" class="dm-gear" onclick="switchDMTab('settings')" title="Campaign setup" aria-label="Campaign setup"></button>
     </div>
-    <div id="tab-bar">
-      <button class="tab-btn active" onclick="switchDMTab('encounter')">&#x2694;&#xFE0F;<br>Enc</button>
-      <button class="tab-btn"        onclick="switchDMTab('initiative')">&#x1F3AF;<br>Init</button>
-      <button class="tab-btn"        onclick="switchDMTab('monsters')">&#x1F409;<br>Mon</button>
-      <button class="tab-btn"        onclick="switchDMTab('maps')">&#x1F5FA;&#xFE0F;<br>Maps</button>
-      <button class="tab-btn"        onclick="switchDMTab('actors')">&#x1F464;<br>NPCs</button>
-      <button class="tab-btn"        onclick="switchDMTab('items')">&#x2697;&#xFE0F;<br>Items</button>
-      <button class="tab-btn"        onclick="switchDMTab('shops')">&#x1F3EA;<br>Shop</button>
-      <button class="tab-btn"        onclick="switchDMTab('scenes')">&#x1F3AC;<br>Scn</button>
-      <button class="tab-btn"        onclick="switchDMTab('journals')">&#x1F4D6;<br>Jrnl</button>
-      <button class="tab-btn"        onclick="switchDMTab('sounds')">&#x1F3B5;<br>Snd</button>
-      <button class="tab-btn"        onclick="switchDMTab('triggers')">&#x1FAA4;<br>Traps</button>
-      <button class="tab-btn"        onclick="switchDMTab('notes')">&#x1F4DD;<br>Notes</button>
-      <button class="tab-btn"        onclick="switchDMTab('logs')">&#x1F4DC;<br>Logs</button>
-      <button class="tab-btn"        onclick="switchDMTab('settings')">&#x2699;&#xFE0F;<br>Setup</button>
-      <button class="tab-btn"        onclick="switchDMTab('players')">&#x1F465;<br>Players</button>
-    </div>
+    <nav id="section-bar" aria-label="DM sections"></nav>
+    <nav id="subtab-bar" aria-label="Tools"></nav>
     <div id="tab-content">
       <div id="tab-encounter"></div>
       <div id="tab-initiative" class="hidden"></div>

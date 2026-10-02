@@ -28,17 +28,39 @@ import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
   dmEditExhaustion, dmEditNotes } from './dnd-master-players.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
+import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
+import { icon } from './lk-icons.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 
-const ALL_TABS = ['encounter','initiative','monsters','maps','actors','items','shops','scenes','journals','sounds','triggers','notes','logs','settings','players'];
+// The panel's navigation: five sections (dnd-master-sections.js) and the tools inside the open one.
+const _lastTabOf = {}; // section id → last tool opened in it
+let _activeTab = 'encounter';
+
+function renderNav() {
+  const sec = sectionOf(_activeTab);
+  document.getElementById('section-bar').innerHTML = SECTIONS.map(s => `
+    <button class="dm-section${s.id === sec ? ' active' : ''}" onclick="switchSection('${s.id}')">
+      ${icon(s.icon, { size: 16 })}<span>${s.label}</span></button>`).join('');
+  const tabs = sec ? SECTIONS.find(s => s.id === sec).tabs : [];
+  document.getElementById('subtab-bar').innerHTML = tabs.map(t => `
+    <button class="dm-subtab${t === _activeTab ? ' active' : ''}" onclick="switchDMTab('${t}')">${TAB_LABELS[t]}</button>`).join('');
+  document.getElementById('subtab-bar').classList.toggle('hidden', tabs.length < 2);
+  document.getElementById('dm-settings-btn')?.classList.toggle('active', _activeTab === 'settings');
+}
+
+function switchSection(id) {
+  const s = SECTIONS.find(x => x.id === id);
+  if (s) switchDMTab(_lastTabOf[id] || s.tabs[0]);
+}
 
 function switchDMTab(name) {
-  ALL_TABS.forEach((t, i) => {
-    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
-    document.querySelectorAll('.tab-btn')[i]?.classList.toggle('active', t === name);
-  });
+  _activeTab = name;
+  const sec = sectionOf(name);
+  if (sec) _lastTabOf[sec] = name;
+  ALL_TABS.forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== name));
+  renderNav();
   if (name === 'monsters')   renderMonsterSearch();
   if (name === 'initiative') renderInitiativeTracker();
   if (name === 'settings')   renderSettings();
@@ -97,6 +119,8 @@ async function onInit(data) {
 
   document.getElementById('dm-app').classList.remove('hidden');
   document.getElementById('dm-campaign-name').textContent = myCampaign.name;
+  document.getElementById('dm-settings-btn').innerHTML = icon('settings', { size: 16 });
+  renderNav();
 
   await loadSRDMonsters();
   const srdMonsters = getSRDMonsters();
@@ -179,6 +203,7 @@ function onEvent(ev) {
 }
 
 window.switchDMTab         = switchDMTab;
+window.switchSection       = switchSection;
 window.filterMonsters               = filterMonsters;
 window.addMonsterToEncounter        = addMonsterToEncounter;
 window.changeCount                  = changeCount;
