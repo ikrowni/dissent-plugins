@@ -13,6 +13,7 @@
 // module. It stays exactly as it was as a rollback point; loadHubDm() only reads
 // it when no sharded index exists yet.
 import { storageGet, storageSet } from '../plugin-sdk.js';
+import { mergeCampaign } from './dnd-campaign-merge.js';
 
 export const HUB_LEGACY_KEY = 'hub-dm';
 export const HUB_INDEX_KEY = 'hub-index';
@@ -27,6 +28,11 @@ const _lastWritten = new Map();
 // Campaign ids the index advertised at last successful read. `null` means we
 // have not seen a valid index this session, which is NOT "there are none".
 let _indexIds = null;
+
+// Called with a campaign id when a save pulled in somebody else's edits, so the open
+// map can re-render them. Wired in dnd-hub-main.js.
+let _onRemoteMerged = null;
+export function setOnRemoteMerged(fn) { _onRemoteMerged = fn; }
 
 /** Reassemble the DM blob from its shards, falling back to the legacy value. */
 export async function loadHubDm() {
@@ -89,8 +95,21 @@ export async function saveHubDm(data, { allowRemovals = false } = {}) {
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
     if (_lastWritten.get(id) === json) continue;
-    await storageSet(hubCampKey(id), camp);
-    _lastWritten.set(id, json);
+    // Re-read and three-way merge, so edits made elsewhere since we loaded survive.
+    // See dnd-campaign-merge.js for why this replaces a plain overwrite.
+    const baseJson = _lastWritten.get(id);
+    const remote = await storageGet(hubCampKey(id));
+    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, camp, remote);
+    await storageSet(hubCampKey(id), merged);
+    const mergedJson = JSON.stringify(merged);
+    _lastWritten.set(id, mergedJson);
+    if (mergedJson !== json) {
+      // Adopt in place: callers hold references into this object (MAP.mapData is
+      // campaigns[id].maps[mapId]), so replace contents rather than the object.
+      for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
+      Object.assign(camp, merged);
+      _onRemoteMerged?.(id);
+    }
   }
 
   for (const id of [..._lastWritten.keys()]) {

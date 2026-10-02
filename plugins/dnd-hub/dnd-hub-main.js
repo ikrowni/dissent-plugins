@@ -1,6 +1,7 @@
 // dnd-hub-main.js — entry point, wiring only. Zero logic.
 import { handleSDKMessage } from '../plugin-sdk.js';
-import { CC, MAP, showScreen } from './dnd-hub-state.js?v=20260502p4';
+import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
+import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20260502p4';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20260502p4';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20260502p4';
@@ -10,7 +11,7 @@ import {
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
 } from './dnd-hub-screens.js?v=20260502p4';
-import { setTool, toggleEditMode, toggleDMFog } from './dnd-hub-walls.js?v=20260502p4';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
@@ -25,7 +26,7 @@ import {
   triggerPortraitUpload, handlePortraitUpload,
 } from './dnd-hub-char-steps.js?v=20260502p4';
 import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20260502p4';
-import { destroyContextMenu } from './dnd-hub-tokens.js?v=20260502p4';
+import { destroyContextMenu, renderTokens } from './dnd-hub-tokens.js?v=20260502p4';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20260502p4';
 import { renderTriggers } from './dnd-hub-triggers.js?v=20260502p4';
@@ -38,6 +39,15 @@ renderLobbyScreen();
 
 // Wire finish callback
 onFinishRegister(enterCampaignAsPlayer);
+
+// A save merged in someone else's edits: re-point the open map at the merged object
+// and redraw what it shows.
+setOnRemoteMerged(campaignId => {
+  if (campaignId !== MAP.campaignId || !MAP.mapId) return;
+  const fresh = serverData?.campaigns?.[campaignId]?.maps?.[MAP.mapId];
+  if (fresh) MAP.mapData = fresh;
+  renderTokens(); renderWalls(); renderLights(); renderPins(); renderFog();
+});
 
 // ── Window globals for inline onclick= handlers ──────────────────────────────
 window.showScreen          = showScreen;
