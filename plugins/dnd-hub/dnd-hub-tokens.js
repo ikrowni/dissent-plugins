@@ -9,6 +9,7 @@ import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurn
 import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20260502p4';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { playerTokensToSeed, dragStep } from './dnd-hub-rules.js';
 
 // Portrait texture cache — keyed by portraitFileId
 const _portraitCache = new Map();  // fileId → PIXI.Texture
@@ -29,38 +30,36 @@ export function renderTokens() {
   const campaign = serverData?.campaigns?.[MAP.campaignId];
   if (!campaign) return;
 
-  // Ensure player tokens exist for all campaign members
-  const summaries = campaign.characterSummaries || {};
-  let changed = false;
-  (campaign.members || []).forEach((uid, idx) => {
-    const summary = summaries[uid];
-    if (!summary) return;
-    const tokenId = `player_${uid}`;
-    if (!mapData.tokens[tokenId]) {
-      const ox = (MAP._bgOffset?.x ?? 0) + (mapData.gridOffsetX ?? 0);
-      const oy = (MAP._bgOffset?.y ?? 0) + (mapData.gridOffsetY ?? 0);
-      mapData.tokens[tokenId] = {
-        id: tokenId, type: 'player', userId: uid,
-        name: summary.name || 'Unknown',
-        x: ox + (2 + idx * 2) * gs, y: oy + 3 * gs,
-        visionRadius: 60,
-        hp: summary.hp || 10, hpMax: summary.hpMax || 10,
-        conditions: [], visible: true, colorIdx: idx % TOKEN_COLORS.length,
-        portraitUrl:    summary.portraitUrl    || '',
-        portraitFileId: summary.portraitFileId || '',
-      };
-      changed = true;
+  // Player tokens: placed by the DM's client only, once per member per map
+  // (dnd-hub-rules.js playerTokensToSeed says why: deleted tokens used to come back).
+  if (MAP.isDM) {
+    const toSeed = playerTokensToSeed(campaign, mapData);
+    if (toSeed.length) {
+      const summaries = campaign.characterSummaries || {};
+      const ox = mapData.gridOffsetX ?? 0, oy = mapData.gridOffsetY ?? 0;
+      mapData.seededPlayers = mapData.seededPlayers || {};
+      toSeed.forEach((uid, i) => {
+        const summary = summaries[uid];
+        const idx = (campaign.members || []).indexOf(uid);
+        const tokenId = `player_${uid}`;
+        mapData.tokens[tokenId] = {
+          id: tokenId, type: 'player', userId: uid,
+          name: summary.name || 'Unknown',
+          x: ox + (2 + i * 2) * gs + gs / 2, y: oy + 3 * gs + gs / 2,
+          visionRadius: 60,
+          hp: summary.hp || 10, hpMax: summary.hpMax || 10,
+          conditions: [], visible: true, colorIdx: idx % TOKEN_COLORS.length,
+          portraitUrl:    summary.portraitUrl    || '',
+          portraitFileId: summary.portraitFileId || '',
+        };
+        mapData.seededPlayers[uid] = true;
+      });
+      saveHubDm(serverData); // fire-and-forget
+      realtimePublish(EV.TOKENS_SPAWN, {
+        type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId,
+        mapId: MAP.mapId, tokens: toSeed.map(uid => mapData.tokens[`player_${uid}`]), fromUserId: userId,
+      });
     }
-  });
-  if (changed) {
-    saveHubDm( serverData); // fire-and-forget
-    // Tell all clients to add the newly created tokens
-    const spawnedTokens = (campaign.members || [])
-      .map(uid => mapData.tokens[`player_${uid}`]).filter(Boolean);
-    realtimePublish(EV.TOKENS_SPAWN, {
-      type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId,
-      mapId: MAP.mapId, tokens: spawnedTokens, fromUserId: userId,
-    });
   }
 
   // Remove sprites for tokens that no longer exist
@@ -840,4 +839,14 @@ function _addSep(menu) {
   const sep = document.createElement('div');
   sep.className = 'ctx-menu-sep';
   menu.appendChild(sep);
+}
+
+/** DM: re-place every party member who has no token on this map (the 👥 Party button). */
+export function placePartyTokens() {
+  if (!MAP.isDM || !MAP.mapData) return;
+  const seeded = MAP.mapData.seededPlayers || {};
+  for (const uid of Object.keys(seeded)) {
+    if (!MAP.mapData.tokens?.[`player_${uid}`]) delete seeded[uid];
+  }
+  renderTokens();
 }

@@ -369,6 +369,7 @@ export async function renderCampaignView(campaignId, isDM) {
         <div class="map-tool-sep"></div>
         ${isDM ? `
           <button class="map-tool-btn" id="btn-upload-map" onclick="triggerMapUpload()" title="Upload a map image">📁 Map</button>
+          <button class="map-tool-btn" id="btn-party" onclick="placePartyTokens()" title="Place any missing party tokens">👥 Party</button>
           <button class="map-tool-btn" id="btn-vtt-import" onclick="toggleVTTPanel()" title="Import Dungeon Alchemist / UniversalVTT map">📥 VTT</button>
           <button class="map-tool-btn" id="btn-edit-mode" onclick="toggleEditMode()" title="Toggle edit mode (walls, doors, fog tools)">✏️ Edit</button>
           <button class="map-tool-btn" id="btn-fog-toggle" onclick="toggleDMFog()" title="Toggle DM fog visibility">🌫️ Fog</button>
