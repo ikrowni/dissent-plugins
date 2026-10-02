@@ -11,7 +11,7 @@ function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 10139
 
 function drawShelves(ctx, w, h) {
   const r = rng(7);
-  const shelfY = [0.24, 0.40, 0.56].map(f => f * h);
+  const shelfY = [0.31, 0.46, 0.61].map(f => f * h);
   ctx.save();
   for (const y of shelfY) {
     ctx.fillStyle = '#2a1c10'; ctx.fillRect(w * 0.08, y, w * 0.84, h * 0.018);
@@ -42,15 +42,18 @@ export function startShopScene(wrap, name = '') {
   stopShopScene();
   const canvas = document.createElement('canvas');
   canvas.id = 'lk-shop-scene';
-  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:30;pointer-events:none';
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:45;pointer-events:none';
   wrap.appendChild(canvas);
   _canvas = canvas;
   const ctx = canvas.getContext('2d');
 
+  // Drawn at 60 % resolution and up-scaled by CSS: it is all soft light, and full-canvas
+  // gradients every frame are the cost on a machine without much GPU.
+  const SCALE = 0.6;
   let w = 0, h = 0, shelves = null;
   const resize = () => {
-    w = canvas.width = wrap.clientWidth || 800;
-    h = canvas.height = wrap.clientHeight || 500;
+    w = canvas.width = Math.round((wrap.clientWidth || 800) * SCALE);
+    h = canvas.height = Math.round((wrap.clientHeight || 500) * SCALE);
     shelves = document.createElement('canvas');
     shelves.width = w; shelves.height = h;
     drawShelves(shelves.getContext('2d'), w, h);
@@ -63,11 +66,15 @@ export function startShopScene(wrap, name = '') {
     return { x: r(), y: r(), s: 0.5 + r() * 1.6, v: 0.004 + r() * 0.01, p: r() * Math.PI * 2 };
   });
 
+  let last = 0;
   const frame = (t) => {
+    _raf = requestAnimationFrame(frame);
+    if (t - last < 33) return; // ~30 fps is plenty for a flicker
+    last = t;
     const time = t / 1000;
     // flicker: two slow waves plus a little jitter, kept between ~0.75 and 1
     const flick = 0.86 + 0.07 * Math.sin(time * 2.1) + 0.04 * Math.sin(time * 5.3 + 1.7) + 0.03 * Math.sin(time * 11.9);
-    const lx = w * 0.5, ly = h * 0.2;
+    const lx = w * 0.5, ly = h * 0.17;
 
     // back wall
     const wall = ctx.createLinearGradient(0, 0, 0, h);
@@ -122,7 +129,6 @@ export function startShopScene(wrap, name = '') {
       ctx.fillStyle = `rgba(224,181,82,${0.85 + 0.1 * flick})`;
       ctx.fillText(name, w / 2, cy + h * 0.13);
     }
-    _raf = requestAnimationFrame(frame);
   };
   _raf = requestAnimationFrame(frame);
 }
