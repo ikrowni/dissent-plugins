@@ -2,11 +2,11 @@
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, request } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
 import { setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeathSaves,
-  changeHP, updateTempHP, toggleCondition, toggleDeathSave, changeExhaustion,
+  changeHP, updateTempHP, toggleCondition, toggleDeathSave, rollDeathSaveNow, changeExhaustion, effectLabel,
   toggleInspiration, doShortRest, doLongRest, toggleEquipped,
   rollAbilityCheck, rollSkillCheck, debounceSaveNotes,
   toggleFeatureExpand, saveFeatureDesc,
-  computeEffectiveStats, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem } from './dnd-player-sheet.js';
+  computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem } from './dnd-player-sheet.js';
 import { setSpellState, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
          castSpell, setConcentration, clearConcentration } from './dnd-player-spells.js';
 import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData } from './dnd-player-combat.js';
@@ -17,6 +17,8 @@ import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
+import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod, profBonus } from './lk-rules5e.js';
+import { isRepeat } from './lk-bus.js';
 
 let CHAR = null;
 let CAMPAIGN_ID = null;
@@ -37,7 +39,12 @@ function _resolveItemFromLibrary(itemId) {
   return camp?.items?.[itemId] || null;
 }
 
+/** Adds an item; with a cost, only if the hero can pay it. Returns false when they cannot. */
 function _addItemToChar(item, qty, goldCost) {
+  if (goldCost > 0 && (CHAR.gold || 0) < goldCost) {
+    _showPlayerToast(`Not enough gold for ${item.name} (${goldCost} gp, you have ${CHAR.gold || 0}).`);
+    return false;
+  }
   const entry = {
     id: item.id, name: item.name, type: item.type,
     description: item.description || '',
@@ -45,22 +52,19 @@ function _addItemToChar(item, qty, goldCost) {
     imageFileId: item.imageFileId || null,
     qty: qty || 1, equipped: false, attuned: false,
   };
-  if (item.type === 'consumable') {
-    if (!CHAR.consumables) CHAR.consumables = [];
-    const existing = CHAR.consumables.find(c => c.id === item.id);
-    if (existing) existing.qty = (existing.qty || 1) + (qty || 1);
-    else CHAR.consumables.push(entry);
-  } else {
-    if (!CHAR.equipment) CHAR.equipment = [];
-    CHAR.equipment.push(entry);
-  }
-  if (goldCost > 0) CHAR.gold = Math.max(0, (CHAR.gold || 0) - goldCost);
+  // Consumables live in `equipment` like everything else: the inventory shows only that list, and
+  // useConsumable reads it. They used to go to a separate `consumables` list nobody displayed.
+  if (!CHAR.equipment) CHAR.equipment = [];
+  const existing = item.type === 'consumable' && CHAR.equipment.find(c => c.id === item.id && c.type === 'consumable');
+  if (existing) existing.qty = (existing.qty || 1) + (qty || 1);
+  else CHAR.equipment.push(entry);
+  if (goldCost > 0) CHAR.gold = (CHAR.gold || 0) - goldCost;
+  return true;
 }
 
 async function _resolveInventoryImages() {
   const allItems = [
     ...(CHAR?.equipment || []),
-    ...((CHAR?.consumables || [])),
   ];
   const urls = { ..._shopImageUrls };
   await Promise.all(allItems.map(async item => {
@@ -95,6 +99,53 @@ let _activeShopItems = null;
 let _shopImageUrls   = {};
 const _expandedShopSlots = new Set();
 
+/**
+ * Bring a saved sheet up to today's shape (audit 2026-10-02). Old saves carry one of three spell-slot
+ * shapes (creator, old level-up, DM editor) and may keep shop/loot consumables in a separate list the
+ * inventory never showed. Idempotent: safe on every load.
+ */
+function migrateChar(c) {
+  if (!c) return c;
+  c.spellSlots = normalizeSlots(c.spellSlots, c.spellSlotsMax);
+  delete c.spellSlotsMax;
+  if (Array.isArray(c.consumables) && c.consumables.length) {
+    c.equipment = [...(c.equipment || []), ...c.consumables.map(x => ({ ...x, type: 'consumable' }))];
+  }
+  delete c.consumables;
+  if (c.hitDiceRemaining == null) c.hitDiceRemaining = c.level || 1;
+  // Old creator saves kept bare ids ({ id: 'chain-mail' }); give them a readable name.
+  (c.equipment || []).forEach(e => {
+    if (!e.name && e.id) e.name = e.id.replace(/-/g, ' ').replace(/^./, ch => ch.toUpperCase());
+  });
+  return c;
+}
+
+/** The newer of two copies of a sheet: the player's own and the server mirror the DM edits. */
+function newerSheet(a, b) {
+  if (!a) return b; if (!b) return a;
+  return Date.parse(b.updatedAt || 0) > Date.parse(a.updatedAt || 0) ? b : a;
+}
+
+// The campaign's summary of this hero (party view, initiative AC/DEX, encounter levels). Written only
+// when it changes, at most every 2 s: companion writes share the 60/min plugin-data limit.
+let _summaryTimer = null;
+function scheduleSummarySync() {
+  clearTimeout(_summaryTimer);
+  _summaryTimer = setTimeout(async () => {
+    if (!CHAR || !CAMPAIGN_ID || !USER_ID) return;
+    const eff = computeEffectiveStats(CHAR);
+    const next = characterSummary(CHAR, { ac: eff.ac, hpMax: eff.hpMax, dex: eff.abilities.dex, wis: eff.abilities.wis });
+    const sd = await loadHubDmCompanion().catch(() => null);
+    const camp = sd?.campaigns?.[CAMPAIGN_ID];
+    if (!camp) return;
+    const prev = camp.characterSummaries?.[USER_ID];
+    if (prev && JSON.stringify({ ...prev, ...next }) === JSON.stringify(prev)) return;
+    camp.characterSummaries = { ...(camp.characterSummaries || {}), [USER_ID]: { ...(prev || {}), ...next } };
+    await saveHubDmCompanion(sd).catch(() => {});
+    SERVER_DATA = sd;
+  }, 2000);
+}
+
 async function saveChar() {
   CHAR.updatedAt = new Date().toISOString();
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
@@ -104,6 +155,7 @@ async function saveChar() {
   if (USER_ID && CAMPAIGN_ID) {
     await storageSetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server', CHAR);
   }
+  scheduleSummarySync();
 }
 
 function renderConcentration() {
@@ -397,7 +449,9 @@ function initTabHTML() {
       <div style="display:flex;gap:20px">
         <div><div style="font-size:9px;color:#4ade80;margin-bottom:4px">SUCCESSES</div><div class="save-pips" id="death-success-pips"></div></div>
         <div><div style="font-size:9px;color:#f87171;margin-bottom:4px">FAILURES</div><div class="save-pips" id="death-failure-pips"></div></div>
+        <button id="death-save-roll" class="btn btn-gold btn-sm" style="margin-left:auto;align-self:center" onclick="rollDeathSaveNow()">Roll death save</button>
       </div>
+      <div id="death-save-state" style="font-size:10px;margin-top:6px"></div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost" style="flex:1" onclick="doShortRest()">🌙 Short Rest</button>
@@ -459,19 +513,14 @@ async function onInit(data) {
   if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<div class="lk-note"><b class="lk-title">No character yet</b><span>Join a game at the LanternKeep table to see your sheet here.</span></div>'; return; }
   // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
   // character in the campaign is what proves you are playing it; membership does not.
+  // Two copies exist: the player's own (user scope) and the server mirror the DM reads and edits.
+  // 🔴 The newer one wins. The own copy used to win always, and the save below then overwrote the
+  // mirror — so anything the DM changed while the player was away was silently undone.
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
-  CHAR = userData[CAMPAIGN_ID] ?? null;
-  if (!CHAR && USER_ID && CAMPAIGN_ID) {
-    // Fallback: saveChar always mirrors to server-scoped player_sheet_* — try that if user-scoped
-    // characters entry is missing (e.g. after device-storage migration overwrote server data).
-    const mirror = await storageGetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server') ?? null;
-    if (mirror) {
-      CHAR = mirror;
-      // Heal the missing entry so future loads work without hitting this path.
-      userData[CAMPAIGN_ID] = CHAR;
-      storageSetCompanion('dnd-hub', 'characters', 'user', userData).catch(() => {});
-    }
-  }
+  const mirror = (USER_ID && CAMPAIGN_ID)
+    ? await storageGetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server').catch(() => null) ?? null
+    : null;
+  CHAR = migrateChar(newerSheet(userData[CAMPAIGN_ID] ?? null, mirror));
 
   // Hide the player sheet from a DM who is only running the game — they use the
   // D&D Master sidebar instead.
@@ -638,16 +687,19 @@ function _renderShopTab(shopItems) {
             (it.description
               ? '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.4">' + esc(it.description) + '</div>'
               : '') +
-            (it.effects
-              ? '<div style="font-size:10px;color:var(--dnd-gold);margin-bottom:8px">✦ ' + esc(it.effects) + '</div>'
+            ((it.effects || []).length
+              ? '<div style="font-size:10px;color:var(--dnd-gold);margin-bottom:8px">✦ ' + it.effects.map(e => esc(effectLabel(e))).join(' · ') + '</div>'
               : '') +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
               '<span style="font-size:12px;font-weight:700;color:var(--dnd-gold)">' + it.price + ' gp</span>' +
               (!canAfford
                 ? '<span style="font-size:9px;color:#f97316">⚠ only ' + gold + ' gp</span>'
                 : '') +
-              '<button data-itemid="' + esc(it.id) + '" data-itemname="' + esc(it.name) + '" data-price="' + it.price + '" data-slotid="' + esc(slotKey) + '" class="shop-interest-btn" ' +
-                'style="padding:4px 12px;border-radius:6px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--dnd-gold);cursor:pointer;font-size:10px;font-weight:700">Declare Interest</button>' +
+              // No gold, no purchase: the cost used to be taken with a floor of 0, so 0 gp bought anything.
+              (canAfford
+                ? '<button data-itemid="' + esc(it.id) + '" data-itemname="' + esc(it.name) + '" data-price="' + it.price + '" data-slotid="' + esc(slotKey) + '" class="shop-interest-btn" ' +
+                  'style="padding:4px 12px;border-radius:6px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--dnd-gold);cursor:pointer;font-size:10px;font-weight:700">Declare Interest</button>'
+                : '<button disabled style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;font-weight:700;cursor:not-allowed">Not enough gold</button>') +
             '</div>' +
           '</div>'
         ) : '';
@@ -747,8 +799,10 @@ function parseToHitMod(toHit) {
 function weaponAttack(equipIdx) {
   const item = (CHAR?.equipment || [])[equipIdx];
   if (!item) return;
-  const weaponEffect = (item.effects || []).find(e => e.type === 'weapon');
-  if (!weaponEffect) return;
+  // The weapon in the hero's hands: forged effect, or the SRD weapon with their own modifiers.
+  const prof = weaponProfile(item, effectiveChar() || CHAR);
+  if (!prof) return;
+  const weaponEffect = { type: 'weapon', toHit: (prof.toHit >= 0 ? '+' : '') + prof.toHit, damage: prof.damage, damageType: prof.damageType };
 
   const toHitMod = parseToHitMod(weaponEffect.toHit);
   _pendingWeaponAttack = { item, weaponEffect, equipIdx };
@@ -759,15 +813,17 @@ function weaponAttack(equipIdx) {
 
 function weaponRollDamage() {
   if (!_pendingWeaponDamage) return;
-  const { item, weaponEffect } = _pendingWeaponDamage;
-  const parsed = parseDiceExpr(weaponEffect.damage);
+  const { item, weaponEffect, toHitRoll } = _pendingWeaponDamage;
+  // A natural 20 doubles the damage dice (not the modifier) — audit G3.
+  const crit = toHitRoll === 20;
+  const parsed = parseDiceExpr(crit ? critDamageExpr(weaponEffect.damage) : weaponEffect.damage);
   if (!parsed) return;
 
   selectedDie = 'd' + parsed.sides;
   selectDie('d' + parsed.sides);
   document.getElementById('dice-count').value = parsed.count;
   document.getElementById('dice-mod').value = parsed.mod;
-  document.getElementById('roll-label').textContent = `${item.name} — Damage (${weaponEffect.damageType})`;
+  document.getElementById('roll-label').textContent = `${item.name} — ${crit ? 'CRITICAL ' : ''}Damage (${weaponEffect.damageType})`;
   rollDice();
 }
 
@@ -830,7 +886,7 @@ async function onEvent(ev) {
   if (p.type === 'sheet:dm-update' && p.userId === USER_ID) {
     storageGetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server').then(updated => {
       if (!updated) return;
-      CHAR = updated;
+      CHAR = migrateChar(updated);
       window.CHAR = CHAR;
       setCombatCharData(CHAR);
       setSheetState(CHAR, saveChar, USER_ID, setDiceRollLabel, rollDice, CAMPAIGN_ID);
@@ -919,25 +975,14 @@ async function onEvent(ev) {
 
       const healAmount = p.result;
       const effectiveStats = computeEffectiveStats(CHAR);
-      const newHp = Math.min((CHAR.hp || 0) + healAmount, effectiveStats.hpMax);
-      CHAR.hp = newHp;
+      // Healing from 0 wakes the hero and clears death saves (lk-rules5e).
+      Object.assign(CHAR, applyHealing({ ...CHAR, hpMax: effectiveStats.hpMax }, healAmount), { hpMax: CHAR.hpMax });
       window.CHAR = CHAR;
       saveChar();
       renderAll();
 
       _showPlayerToast(`🧪 ${item.name}: healed ${healAmount} HP`);
-
-      const hpPayload = {
-        type: EV.HP_CHANGE,
-        userId: USER_ID,
-        campaignId: CAMPAIGN_ID,
-        hp: newHp,
-        hpMax: CHAR.hpMax,
-        source: `${item.name} (healing)`,
-        name: CHAR.name || 'Player',
-      };
-      realtimePublish(EV.HP_CHANGE, hpPayload);
-      realtimePublishCompanion('dnd-master', EV.HP_CHANGE, hpPayload);
+      announceHp(`${item.name} (healing)`);
       return;
     }
 
@@ -1048,7 +1093,43 @@ async function onEvent(ev) {
   }
 
   if (p.type === EV.TRIGGER_FIRED && p.campaignId === CAMPAIGN_ID) {
+    if (isRepeat(p)) return;
+    if (p.action === 'trap' && p.tokenId === 'player_' + USER_ID && CHAR) {
+      // The trap hit me: roll the save (d20 + ability + proficiency if trained), half damage on a success,
+      // then temporary HP, 0 HP and death saves as usual (audit H1, N1).
+      let dmg = p.damage || 0, note = '';
+      if (p.saveAbility && p.saveDC) {
+        const ab = p.saveAbility;
+        const eff = effectiveChar() || CHAR;
+        const bonus = abilityMod(eff[ab]) + ((CHAR.savingThrows || []).includes(ab) ? profBonus(CHAR.level) : 0);
+        const d20 = Math.floor(Math.random() * 20) + 1;
+        const ok = d20 + bonus >= p.saveDC;
+        if (ok) dmg = Math.floor(dmg / 2);
+        note = ` ${ab.toUpperCase()} save ${d20}${bonus >= 0 ? '+' : ''}${bonus} = ${d20 + bonus} vs DC ${p.saveDC}: ${ok ? 'half damage' : 'failed'}.`;
+      }
+      const eff = computeEffectiveStats(CHAR);
+      Object.assign(CHAR, applyDamage({ ...CHAR, hpMax: eff.hpMax }, dmg), { hpMax: CHAR.hpMax });
+      await saveChar();
+      renderAll();
+      _showPlayerToast(`🪤 Trap! ${dmg} damage.${note}`);
+      announceHp('Trap');
+      return;
+    }
     if (p.message) _showPlayerToast(p.message);
+    return;
+  }
+
+  // HP changed by the DM (initiative tracker, map) for MY token: apply it to the sheet, which is where a
+  // hero's HP lives. Damage and healing amounts go through the rules; a plain value is the DM's word.
+  if (p.type === EV.HP_CHANGE && p.tokenId === 'player_' + USER_ID && p.fromUserId !== USER_ID && CHAR) {
+    if (isRepeat(p)) return;
+    const eff = computeEffectiveStats(CHAR);
+    const base = { ...CHAR, hpMax: eff.hpMax };
+    const next = p.damage ? applyDamage(base, p.damage) : p.heal ? applyHealing(base, p.heal)
+      : { ...base, hp: Math.max(0, Math.min(eff.hpMax, p.hp ?? CHAR.hp)) };
+    Object.assign(CHAR, next, { hpMax: CHAR.hpMax });
+    await saveChar();
+    renderAll();
     return;
   }
 
@@ -1219,7 +1300,7 @@ function openCharEdit() {
 window.switchTab = switchTab; window.selectDie = selectDie; window.toggleAdv = toggleAdv;
 window.rollDice = rollDice; window.changeHP = changeHP; window.updateTempHP = updateTempHP;
 window.toggleCondition = toggleCondition; window.toggleInspiration = toggleInspiration;
-window.toggleDeathSave = toggleDeathSave; window.changeExhaustion = changeExhaustion;
+window.toggleDeathSave = toggleDeathSave; window.rollDeathSaveNow = rollDeathSaveNow; window.changeExhaustion = changeExhaustion;
 window.rollAbilityCheck = rollAbilityCheck; window.rollSkillCheck = rollSkillCheck;
 window.debounceSaveNotes = debounceSaveNotes; window.toggleEquipped = toggleEquipped;
 window.toggleSpellExpand = toggleSpellExpand; window.expendSpellSlot = expendSpellSlot;
@@ -1247,12 +1328,14 @@ window.openCharEdit        = openCharEdit;
 window.weaponAttack        = weaponAttack;
 window.weaponRollDamage    = weaponRollDamage;
 window.useConsumable       = useConsumable;
+window.__announceHp        = announceHp;
 
 // Wrap doShortRest / doLongRest to also restore class resources
 const _origShortRest = doShortRest;
 const _origLongRest  = doLongRest;
-window.doShortRest = async () => { await _origShortRest(); restoreResourcesOnShortRest(CHAR); await saveChar(); renderResources(); };
-window.doLongRest  = async () => { await _origLongRest();  restoreResourcesOnLongRest(CHAR);  await saveChar(); renderResources(); };
+// Only when the rest was actually taken — cancelling the dialog used to restore resources anyway.
+window.doShortRest = async () => { if (await _origShortRest()) { restoreResourcesOnShortRest(CHAR); await saveChar(); renderResources(); renderSpells(); announceHp('Short rest'); } };
+window.doLongRest  = async () => { if (await _origLongRest())  { restoreResourcesOnLongRest(CHAR);  await saveChar(); renderResources(); renderSpells(); renderConcentration(); announceHp('Long rest'); } };
 
 // ── Audio context unlock gate (browser autoplay policy) ──────────────────────
 let _audioUnlocked = false;

@@ -1,5 +1,6 @@
 // dnd-player-spells.js — spell list, slots, SRD data
 import { esc } from '../plugin-sdk.js';
+import { spellSaveDC, spellAttackBonus } from './lk-rules5e.js';
 
 let _srdSpells = null;
 let _char = null;
@@ -26,7 +27,13 @@ export function renderSpells() {
 
   const slotsEl = document.getElementById('spell-slots-grid');
   const slots = _char.spellSlots || [];
-  slotsEl.innerHTML = slots.map((pair, i) => {
+  // The two numbers every caster is asked for at the table (audit J1).
+  const dc = spellSaveDC(_char), atk = spellAttackBonus(_char);
+  const castLine = dc === null ? '' :
+    `<div style="flex-basis:100%;display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:6px">` +
+      `<span>Spell save DC <b style="color:var(--dnd-gold)">${dc}</b></span>` +
+      `<span>Spell attack <b style="color:var(--dnd-gold)">${atk >= 0 ? '+' : ''}${atk}</b></span></div>`;
+  slotsEl.innerHTML = castLine + slots.map((pair, i) => {
     if (i === 0) return '';
     const [cur, max] = pair;
     if (max === 0) return '';

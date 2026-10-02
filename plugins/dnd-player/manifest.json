@@ -45,23 +45,23 @@
     },
     {
       "url": "dnd-player-levelup.js",
-      "sha256": "bbebb89b47943bac6553a32d10c5ccd426bc700bfa5cf8e59ef47d56cf9ea743"
+      "sha256": "ae16cec7d5c80506bbec9ca266f909bb52b95492019f16773597dd7bd5ec61fc"
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "07d4a3eacbf59bf0219cb88313340f08cc43a26eefb4d1b0971383741079231a"
+      "sha256": "cb702efc8aa229f91be146c53b6e19ed4b755977609669eafec12837974ef395"
     },
     {
       "url": "dnd-player-resources.js",
-      "sha256": "d3d5c180ee08edc19a331b24f7301976d3e7091c949a324c5eb4bb195b0834ad"
+      "sha256": "75542cc77fae3ec5148ae22a9752cce770c382f2a553d32404425772cefe5984"
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "55bfb3fa02741db9ffd4c51dc98d18130c6ea581b19f3dab23a02f0b0037ad95"
+      "sha256": "dec2d8393d30b08c94c191611ae5d8ec81fd9d1ed9fe49365d85007250f9a117"
     },
     {
       "url": "dnd-player-spells.js",
-      "sha256": "9ee58eabb8ef345fefd129862608d8616f1e325c0e1e2583d0b3bcd1bee614b5"
+      "sha256": "606f4a94295db6de52d0866e75fee02be69295be1193b6450cab365dee6a2967"
     },
     {
       "url": "dnd-player-styles.css",
@@ -96,8 +96,16 @@
       "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
     },
     {
+      "url": "lk-bus.js",
+      "sha256": "ae12ec4dfa388039ec49ce1578bd86521fbff197a5a7d07980f17c41433751db"
+    },
+    {
       "url": "lk-icons.js",
       "sha256": "14927c281cc7860b3214e8d1ca1e2904cf00bddae590f3297c009804129253b2"
+    },
+    {
+      "url": "lk-rules5e.js",
+      "sha256": "8c498e79dfcd632fcf952e0efa501316a46bd0344cb2d3dcaede578c59c94cdb"
     }
   ]
 }

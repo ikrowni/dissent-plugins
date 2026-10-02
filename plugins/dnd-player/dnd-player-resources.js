@@ -8,26 +8,27 @@ export function setResourceState(char, saveCharFn) { _char = char; _saveChar = s
 // Class resource definitions: { id, label, recharge: 'short'|'long', maxFn(char) }
 const RESOURCES = {
   barbarian: [{ id: 'rage', label: 'Rage', recharge: 'long',
-    maxFn: c => 2 + (c.level >= 3 ? 1 : 0) + (c.level >= 6 ? 1 : 0) + (c.level >= 12 ? 1 : 0) + (c.level >= 17 ? 1 : 0) }],
-  monk: [{ id: 'ki', label: 'Ki Points', recharge: 'short', maxFn: c => c.level }],
+    maxFn: c => c.level >= 20 ? 99 : 2 + (c.level >= 3 ? 1 : 0) + (c.level >= 6 ? 1 : 0) + (c.level >= 12 ? 1 : 0) + (c.level >= 17 ? 1 : 0) }],
+  monk: [{ id: 'ki', label: 'Ki Points', recharge: 'short', minLevel: 2, maxFn: c => c.level }],
   bard: [{ id: 'bardic_inspiration', label: 'Bardic Inspiration', recharge: c => c.level >= 5 ? 'short' : 'long',
     maxFn: c => Math.max(1, Math.floor(((c.cha ?? 10) - 10) / 2)) }],
-  cleric: [{ id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short',
+  cleric: [{ id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short', minLevel: 2,
     maxFn: c => c.level >= 18 ? 3 : c.level >= 6 ? 2 : 1 }],
-  paladin: [{ id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short', maxFn: () => 1 }],
-  druid: [{ id: 'wild_shape', label: 'Wild Shape', recharge: 'short', maxFn: () => 2 }],
+  paladin: [{ id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short', minLevel: 3, maxFn: () => 1 }],
+  druid: [{ id: 'wild_shape', label: 'Wild Shape', recharge: 'short', minLevel: 2, maxFn: () => 2 }],
   fighter: [
-    { id: 'action_surge', label: 'Action Surge', recharge: 'short', maxFn: c => c.level >= 17 ? 2 : 1 },
+    { id: 'action_surge', label: 'Action Surge', recharge: 'short', minLevel: 2, maxFn: c => c.level >= 17 ? 2 : 1 },
     { id: 'second_wind', label: 'Second Wind', recharge: 'short', maxFn: () => 1 },
   ],
-  sorcerer: [{ id: 'sorcery_points', label: 'Sorcery Points', recharge: 'long', maxFn: c => c.level }],
-  warlock: [{ id: 'warlock_slots', label: 'Warlock Spell Slots', recharge: 'short',
-    maxFn: c => c.level >= 17 ? 4 : c.level >= 11 ? 3 : c.level >= 2 ? 2 : 1 }],
+  sorcerer: [{ id: 'sorcery_points', label: 'Sorcery Points', recharge: 'long', minLevel: 2, maxFn: c => c.level }],
+  // Warlock Pact Magic slots are real spell slots now (lk-rules5e maxSlotsFor), refilled on a short rest.
   wizard: [{ id: 'arcane_recovery', label: 'Arcane Recovery', recharge: 'long', maxFn: () => 1 }],
 };
 
+// minLevel: the class level that grants it (audit L1 — Ki, Channel Divinity, Wild Shape, Action Surge and
+// Sorcery Points all used to show at level 1).
 function getClassResources(char) {
-  return RESOURCES[char?.class?.toLowerCase()] || [];
+  return (RESOURCES[char?.class?.toLowerCase()] || []).filter(r => (char.level || 1) >= (r.minLevel || 1));
 }
 
 function getMax(def, char) {

@@ -1,23 +1,17 @@
 // dnd-player-levelup.js — level-up wizard overlay
 import { esc } from '../plugin-sdk.js';
+import { profBonus, isAsiLevel, maxSlotsFor, isCaster, withSlotsForLevel, conHpBonusOnIncrease, hitDieFor } from './lk-rules5e.js';
 
 // 5e XP thresholds — index = target level (1–20)
 const XP_THRESHOLDS = [0,0,300,900,2700,6500,14000,23000,34000,48000,
   64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
 
 export function xpThreshold(level) { return XP_THRESHOLDS[Math.min(level, 20)] ?? Infinity; }
-export function profBonusForLevel(level) { return Math.ceil(1 + level / 4); }
+export const profBonusForLevel = profBonus;
 
-// ASI levels per class
-const ASI_LEVELS = {
-  fighter:  [4,6,8,12,14,16,19],
-  rogue:    [4,8,10,12,16,18,19],
-  default:  [4,8,12,16,19],
-};
-function isASILevel(cls, level) {
-  const levels = ASI_LEVELS[cls?.toLowerCase()] || ASI_LEVELS.default;
-  return levels.includes(level);
-}
+// ASI levels, slot tables and Pact Magic live in lk-rules5e (audit C2–C4: half-casters a level late,
+// warlocks without slots, a rogue ASI at 18).
+const isASILevel = isAsiLevel;
 
 // Minimal class feature table (what you get at each level)
 const CLASS_FEATURES = {
@@ -25,7 +19,7 @@ const CLASS_FEATURES = {
   bard:      { 2:'Jack of All Trades, Song of Rest', 3:'Bard College, Expertise', 4:'ASI', 5:'Font of Inspiration', 6:'Countercharm', 10:'Magical Secrets', 20:'Superior Inspiration' },
   cleric:    { 2:'Channel Divinity (1/rest), Divine Domain feature', 4:'ASI', 5:'Destroy Undead', 6:'Channel Divinity (2/rest)', 8:'Divine Strike', 10:'Divine Intervention', 20:'Divine Intervention improvement' },
   druid:     { 2:'Wild Shape, Druid Circle', 4:'ASI, Wild Shape improvement', 5:'Wild Shape improvement', 6:'Druid Circle feature', 8:'ASI, Wild Shape improvement', 10:'Druid Circle feature', 20:'Beast Spells, Archdruid' },
-  fighter:   { 2:'Action Surge', 3:'Martial Archetype', 4:'ASI', 5:'Extra Attack', 6:'ASI', 7:'Martial Archetype feature', 8:'ASI', 9:'Indomitable', 10:'Martial Archetype feature', 11:'Extra Attack (2)', 12:'ASI', 14:'ASI', 15:'Martial Archetype feature', 16:'ASI', 17:'Action Surge (2), Indomitable (3)', 18:'Martial Archetype feature', 19:'ASI', 20:'Extra Attack (3)' },
+  fighter:   { 2:'Action Surge', 3:'Martial Archetype', 4:'ASI', 5:'Extra Attack', 6:'ASI', 7:'Martial Archetype feature', 8:'ASI', 9:'Indomitable', 10:'Martial Archetype feature', 11:'Extra Attack (2)', 12:'ASI', 13:'Indomitable (2)', 14:'ASI', 15:'Martial Archetype feature', 16:'ASI', 17:'Action Surge (2), Indomitable (3)', 18:'Martial Archetype feature', 19:'ASI', 20:'Extra Attack (3)' },
   monk:      { 2:'Ki, Unarmored Movement', 3:'Monastic Tradition, Deflect Missiles', 4:'ASI, Slow Fall', 5:'Extra Attack, Stunning Strike', 6:'Ki-Empowered Strikes, Monastic Tradition feature', 7:'Evasion, Stillness of Mind', 8:'ASI', 9:'Unarmored Movement improvement', 10:'Purity of Body', 11:'Monastic Tradition feature', 12:'ASI', 13:'Tongue of the Sun and Moon', 14:'Diamond Soul', 15:'Timeless Body', 16:'ASI', 17:'Monastic Tradition feature', 18:'Empty Body', 19:'ASI', 20:'Perfect Self' },
   paladin:   { 2:'Divine Smite, Fighting Style, Spellcasting', 3:'Divine Health, Sacred Oath', 4:'ASI', 5:'Extra Attack', 6:'Aura of Protection', 7:'Sacred Oath feature', 8:'ASI', 10:'Aura of Courage', 11:'Improved Divine Smite', 12:'ASI', 14:'Cleansing Touch', 15:'Sacred Oath feature', 16:'ASI', 18:'Aura improvements', 19:'ASI', 20:'Sacred Oath feature' },
   ranger:    { 2:'Fighting Style, Spellcasting, Favored Enemy, Natural Explorer', 3:'Ranger Archetype, Primeval Awareness', 4:'ASI', 5:'Extra Attack', 6:'Favored Enemy improvement', 7:'Ranger Archetype feature', 8:'ASI, Land\'s Stride', 10:'Natural Explorer improvement, Hide in Plain Sight', 11:'Ranger Archetype feature', 12:'ASI', 14:'Vanish, Favored Enemy improvement', 15:'Ranger Archetype feature', 16:'ASI', 18:'Feral Senses', 19:'ASI', 20:'Foe Slayer' },
@@ -35,45 +29,11 @@ const CLASS_FEATURES = {
   wizard:    { 2:'Arcane Tradition', 4:'ASI', 5:'Arcane Tradition feature', 6:'Arcane Tradition feature', 8:'ASI', 10:'Arcane Tradition feature', 12:'ASI', 14:'Arcane Tradition feature', 16:'ASI', 18:'Spell Mastery', 19:'ASI', 20:'Signature Spells' },
 };
 
-// Spell slot table [level_1_slots, level_2_slots, ...] per character level for full casters
-const SPELL_SLOTS_FULL = [
-  null,                                    // level 0 (unused)
-  [2,0,0,0,0,0,0,0,0],                   // level 1
-  [3,0,0,0,0,0,0,0,0],                   // level 2
-  [4,2,0,0,0,0,0,0,0],                   // level 3
-  [4,3,0,0,0,0,0,0,0],                   // level 4
-  [4,3,2,0,0,0,0,0,0],                   // level 5
-  [4,3,3,0,0,0,0,0,0],                   // level 6
-  [4,3,3,1,0,0,0,0,0],                   // level 7
-  [4,3,3,2,0,0,0,0,0],                   // level 8
-  [4,3,3,3,1,0,0,0,0],                   // level 9
-  [4,3,3,3,2,0,0,0,0],                   // level 10
-  [4,3,3,3,2,1,0,0,0],                   // level 11
-  [4,3,3,3,2,1,0,0,0],                   // level 12
-  [4,3,3,3,2,1,1,0,0],                   // level 13
-  [4,3,3,3,2,1,1,0,0],                   // level 14
-  [4,3,3,3,2,1,1,1,0],                   // level 15
-  [4,3,3,3,2,1,1,1,0],                   // level 16
-  [4,3,3,3,2,1,1,1,1],                   // level 17
-  [4,3,3,3,3,1,1,1,1],                   // level 18
-  [4,3,3,3,3,2,1,1,1],                   // level 19
-  [4,3,3,3,3,2,2,1,1],                   // level 20
-];
-
-const FULL_CASTERS = ['bard','cleric','druid','sorcerer','wizard'];
-const HALF_CASTERS = ['paladin','ranger'];
-
+/** [[n, n], …] for slot levels 1–9 at this class level, or null for a non-caster at this level. */
 function getSpellSlots(cls, level) {
-  if (FULL_CASTERS.includes(cls?.toLowerCase())) {
-    const row = SPELL_SLOTS_FULL[Math.min(level, 20)];
-    return row ? row.map((n, i) => [n, n]) : null;
-  }
-  if (HALF_CASTERS.includes(cls?.toLowerCase())) {
-    const hLevel = Math.floor(level / 2);
-    const row = SPELL_SLOTS_FULL[Math.min(hLevel, 20)];
-    return row ? row.map((n, i) => [n, n]) : null;
-  }
-  return null; // non-caster
+  if (!isCaster(cls)) return null;
+  const max = maxSlotsFor(cls, level).slice(1);
+  return max.some(n => n > 0) ? max.map(n => [n, n]) : null;
 }
 
 // ── Wizard state ──────────────────────────────────────────────────────────────
@@ -194,7 +154,7 @@ function _stepConfirm(el) {
 
 function _stepHP(el) {
   const cls = (_srdData.classes || []).find(c => c.id === _char.class?.toLowerCase());
-  const hd = cls?.hit_die || 8;
+  const hd = cls?.hit_die || hitDieFor(_char.class);
   const avg = Math.ceil(hd / 2) + 1;
   const conMod = Math.floor((((_char.con ?? 10) - 10) / 2));
   const modStr = conMod >= 0 ? `+${conMod}` : `${conMod}`;
@@ -432,9 +392,13 @@ export async function applyLevelUp() {
   if (!_char || !_saveChar) return;
 
   _char.level = _draft.newLevel;
-  _char.hpMax = (_char.hpMax || 0) + (_draft.hpGained || 0);
-  _char.hp    = Math.min(_char.hp ?? _char.hpMax, _char.hpMax);
+  // The HP gained raises current HP too (common table rule; RAW only raises the maximum — audit C7).
+  const toughness = _char.subrace === 'hill-dwarf' ? 1 : 0; // Dwarven Toughness: +1 HP every level
+  _char.hpMax = (_char.hpMax || 0) + (_draft.hpGained || 0) + toughness;
+  _char.hp    = Math.min((_char.hp ?? 0) + (_draft.hpGained || 0) + toughness, _char.hpMax);
   _char.proficiencyBonus = profBonusForLevel(_char.level);
+  _char.hitDiceRemaining = Math.min(_char.level, (_char.hitDiceRemaining ?? (_char.level - 1)) + 1);
+  const conBefore = _char.con ?? 10;
 
   // ASI
   if (_draft.asiChoice?.type === 'double' && _draft.asiChoice.ability1) {
@@ -445,6 +409,10 @@ export async function applyLevelUp() {
     if (a1) _char[a1] = Math.min(20, (_char[a1] ?? 10) + 1);
     if (a2 && a2 !== a1) _char[a2] = Math.min(20, (_char[a2] ?? 10) + 1);
   }
+
+  // A higher CON modifier raises max HP for every level, earlier ones included (audit C5).
+  const conGain = conHpBonusOnIncrease(conBefore, _char.con ?? 10, _char.level);
+  if (conGain) { _char.hpMax += conGain; _char.hp += conGain; }
 
   // Feat
   if (_draft.featChosen) {
@@ -458,26 +426,13 @@ export async function applyLevelUp() {
   }
 
   // Update spell slots to new level
-  const newSlots = getSpellSlots(_char.class, _char.level);
-  if (newSlots) {
-    const oldSlots = _char.spellSlots || [];
-    _char.spellSlots = newSlots.map(([, max], i) => {
-      const oldCur = oldSlots[i]?.[0] ?? max;
-      return [Math.min(oldCur, max), max];
-    });
-  }
+  // One shape everywhere (index = slot level); a slot gained is ready to use (audit C1, C6).
+  if (isCaster(_char.class)) _char.spellSlots = withSlotsForLevel(_char.spellSlots, _char.class, _char.level);
 
   await _saveChar();
 
-  // Broadcast HP change so the hub token updates
-  try {
-    const { realtimePublish } = await import('../plugin-sdk.js');
-    const { EV } = await import('./dnd-hub-event-types.js');
-    await realtimePublish(EV.HP_CHANGE, {
-      type: EV.HP_CHANGE, userId: _userId, campaignId: _campaignId,
-      hp: _char.hp, hpMax: _char.hpMax, source: `Level up to ${_char.level}`,
-    });
-  } catch { /* non-critical */ }
+  // Tell the Hub (token) and DM sidebar.
+  if (typeof window.__announceHp === 'function') await window.__announceHp(`Level up to ${_char.level}`);
 
   closeLevelUp();
   if (typeof window.renderAll === 'function') window.renderAll();

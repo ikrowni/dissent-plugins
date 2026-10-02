@@ -1,6 +1,9 @@
 // dnd-player-sheet.js — character sheet rendering + HP/action functions
 import { esc, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
+import { publishTo } from './lk-bus.js';
+import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
+  armorClass, weaponProfile } from './lk-rules5e.js';
 
 const ABILITIES = ['str','dex','con','int','wis','cha'];
 const ABILITY_NAMES = { str:'STR', dex:'DEX', con:'CON', int:'INT', wis:'WIS', cha:'CHA' };
@@ -82,10 +85,6 @@ function _lookupFeatureDesc(name) {
   return '';
 }
 function xpThresholdForLevel(level) { return XP_THRESHOLDS_SHEET[Math.min((level||1)+1, 20)] ?? Infinity; }
-function getHitDie(cls) {
-  const hd = { barbarian:12,fighter:10,paladin:10,ranger:10,cleric:8,druid:8,monk:8,rogue:8,warlock:8,bard:8,sorcerer:6,wizard:6 };
-  return hd[cls?.toLowerCase()] || 8;
-}
 
 let _char = null;
 let _saveChar = null;
@@ -97,6 +96,19 @@ let _pendingDamageIdx = null; // equipment index waiting for damage roll
 let _effectiveStats = { ac: 10, hpMax: 0, abilities: {}, extraConditions: [] };
 let _inventoryImageUrls = {};
 const _expandedInvItems = new Set();
+
+/**
+ * Tell the Hub (the token) and the DM sidebar the hero's HP. One place, with the token id the Hub matches on;
+ * the old broadcasts had no campaign or token id and reached only other copies of this sidebar (audit N1).
+ */
+export async function announceHp(source) {
+  if (!_char || !_userId) return;
+  await publishTo(['hub', 'master'], EV.HP_CHANGE, {
+    campaignId: _campaignId, tokenId: 'player_' + _userId, userId: _userId, fromUserId: _userId,
+    hp: _char.hp, hpMax: _effectiveStats.hpMax || _char.hpMax, hpTemp: _char.hpTemp || 0,
+    dead: !!_char.dead, source, name: _char.name || 'Player',
+  }).catch(() => {});
+}
 
 export function setSheetState(char, saveCharFn, userId, setDiceLabel, rollDice, campaignId) {
   _char = char; _saveChar = saveCharFn; _userId = userId;
@@ -127,10 +139,12 @@ export function computeEffectiveStats(char) {
       ? Math.min(dexMod, armorEffect.maxDex !== undefined ? armorEffect.maxDex : Infinity)
       : 0;
     baseAC = armorEffect.ac + dexBonus;
+    if (equipped.some(i => i.id === 'shield')) baseAC += 2;
   } else {
-    baseAC = char.ac || 10;
+    // SRD armour and shields by id, and Unarmored Defense (audit A5): worn chain mail used to count for nothing.
+    baseAC = armorClass(char, equipped);
   }
-  if (allEffects.some(e => e.type === 'shield')) baseAC += 2;
+  if (allEffects.some(e => e.type === 'shield') && !equipped.some(i => i.id === 'shield')) baseAC += 2;
   const acBonuses = allEffects
     .filter(e => e.type === 'ac_bonus')
     .reduce((sum, e) => sum + e.value, 0);
@@ -154,6 +168,11 @@ export function computeEffectiveStats(char) {
     .map(e => e.condition);
 
   return { ac, hpMax, abilities, extraConditions };
+}
+
+/** The character with item bonuses applied to the ability scores — what attacks are rolled with. */
+export function effectiveChar() {
+  return _char ? { ..._char, ...(_effectiveStats.abilities || {}) } : null;
 }
 
 export function renderAll() {
@@ -192,6 +211,13 @@ export function renderMain() {
   const dsSection = document.getElementById('death-saves-section');
   dsSection.style.display = (_char.hp <= 0) ? 'block' : 'none';
   if (_char.hp <= 0) renderDeathSaves();
+  const dsState = document.getElementById('death-save-state');
+  if (dsState) {
+    dsState.textContent = _char.dead ? '💀 Dead' : _char.stable ? 'Stable — unconscious at 0 HP' : 'Dying — roll at the start of your turn';
+    dsState.style.color = _char.dead ? '#ef4444' : _char.stable ? '#22c55e' : 'var(--muted)';
+  }
+  const dsRoll = document.getElementById('death-save-roll');
+  if (dsRoll) dsRoll.style.display = (_char.dead || _char.stable) ? 'none' : '';
 
   // Level-up banner
   const levelBanner = document.getElementById('levelup-banner');
@@ -243,7 +269,7 @@ export function renderAbilities() {
       <div class="ability-mod">${fmtMod(abilityMod(score))}</div>
     </div>`;
   }).join('');
-  const profBonus = _char.proficiencyBonus || 2;
+  const profBonus = profBonusFor(_char.level);
   const saves = _char.savingThrows || [];
   document.getElementById('saving-throws').innerHTML = ABILITIES.map(a => {
     const isProficient = saves.includes(a);
@@ -269,7 +295,7 @@ export function renderAbilities() {
   }).join('');
 }
 
-function _effectLabel(e) {
+export function effectLabel(e) {
   switch (e.type) {
     case 'weapon': return `⚔️ ${e.damageType || ''} weapon: ${e.toHit || 0} to hit, ${e.damage || '—'} damage`;
     case 'armor': {
@@ -295,12 +321,17 @@ function _effectLabel(e) {
 
 function _invItemCard(item, idx) {
   const effects = Array.isArray(item.effects) ? item.effects : [];
-  const hasWeapon = effects.some(e => e.type === 'weapon');
+  // Any weapon can attack: SRD weapons with the hero's own to-hit and damage, DM-forged ones as forged (audit G2).
+  const profile = weaponProfile(item, effectiveChar() || {});
+  const hasWeapon = !!profile;
   const effectsHtml = (() => {
     if (effects.length) {
       return effects.map(e =>
-        `<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc(_effectLabel(e))}</div>`
+        `<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc(effectLabel(e))}</div>`
       ).join('');
+    }
+    if (profile) {
+      return `<div style="font-size:9px;color:var(--muted);margin-top:2px">⚔️ ${profile.toHit >= 0 ? '+' : ''}${profile.toHit} to hit · ${esc(profile.damage)} ${esc(profile.damageType)}</div>`;
     }
     if (item.effectsText) {
       return `<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc(item.effectsText)}</div>`;
@@ -440,13 +471,19 @@ export async function changeHP(direction) {
   const delta = parseInt(document.getElementById('hp-delta').value, 10) || 0;
   if (delta <= 0) return;
   const prev = _char.hp;
-  _char.hp = Math.max(0, Math.min(_char.hpMax, _char.hp + direction * delta));
+  // Temporary HP soak damage first; 0 HP knocks you out, damage at 0 is a failed death save,
+  // massive damage kills, and healing from 0 wakes you (lk-rules5e). Used to be bare arithmetic.
+  const effMax = _effectiveStats.hpMax || _char.hpMax;
+  const next = direction < 0
+    ? applyDamage({ ..._char, hpMax: effMax }, delta)
+    : applyHealing({ ..._char, hpMax: effMax }, delta);
+  Object.assign(_char, next, { hpMax: _char.hpMax });
   document.getElementById('hp-delta').value = '';
+  document.getElementById('temp-hp').value = _char.hpTemp || 0;
   await _saveChar();
   renderMain();
   if (_char.hp !== prev) {
-    await realtimePublish(EV.HP_CHANGE, { type: EV.HP_CHANGE, userId: _userId, hp: _char.hp, hpMax: _char.hpMax,
-      source: direction < 0 ? `${delta} damage` : `${delta} healing` });
+    await announceHp(direction < 0 ? `${delta} damage` : `${delta} healing`);
   }
 }
 
@@ -464,15 +501,16 @@ export async function toggleCondition(name) {
 }
 
 export async function toggleDeathSave(type, index) {
-  if (!_char.deathSaves) _char.deathSaves = { successes: 0, failures: 0 };
   const key = type + 'es';
-  _char.deathSaves[key] = _char.deathSaves[key] === index + 1 ? index : index + 1;
+  const cur = (_char.deathSaves || {})[key] || 0;
+  // Three successes = stable at 0 HP (still unconscious); three failures = dead. These used to set
+  // HP to 1 and wake the hero, and "dying" only added Unconscious (audit D2, D3).
+  Object.assign(_char, markDeathSave(_char, type, cur === index + 1 ? index : index + 1));
   await _saveChar();
-  renderDeathSaves();
+  renderMain();
   // Broadcast updated death save counts to the hub (so DM and other clients see state)
   if (_campaignId && _userId) {
-    realtimePublish(EV.TOKEN_DEATH_SAVE, {
-      type: EV.TOKEN_DEATH_SAVE,
+    publishTo(['hub', 'master'], EV.TOKEN_DEATH_SAVE, {
       campaignId: _campaignId,
       tokenId: 'player_' + _userId,
       successes: _char.deathSaves.successes,
@@ -480,20 +518,22 @@ export async function toggleDeathSave(type, index) {
       fromUserId: _userId,
     }).catch(() => {});
   }
-  // Auto-stabilize at 3 successes; auto-die at 3 failures
-  const ds = _char.deathSaves;
-  if (ds.successes >= 3) {
-    _char.conditions = [...(_char.conditions || []).filter(c => c !== 'Unconscious'), 'Prone'];
-    _char.hp = 1;
-    _char.deathSaves = { successes: 0, failures: 0 };
-    await _saveChar();
-    renderMain();
-  } else if (ds.failures >= 3) {
-    _char.conditions = [...(_char.conditions || []).filter(c => c !== 'Unconscious'), 'Unconscious'];
-    _char.deathSaves = { successes: 0, failures: 0 };
-    await _saveChar();
-    renderMain();
-  }
+}
+
+/** Roll a death save: d20, 10+ succeeds, 1 counts twice, 20 brings you back with 1 HP. */
+export async function rollDeathSaveNow() {
+  if (!_char || (_char.hp || 0) > 0 || _char.dead || _char.stable) return;
+  const d20 = Math.floor(Math.random() * 20) + 1;
+  Object.assign(_char, rollDeathSave(_char, d20));
+  await _saveChar();
+  renderMain();
+  const msg = _char.dead ? 'died' : (_char.hp > 0 ? 'rolled a 20 and is back up!' : _char.stable ? 'is stable' : 'rolled ' + d20);
+  publishTo(['hub', 'master'], EV.TOKEN_DEATH_SAVE, {
+    campaignId: _campaignId, tokenId: 'player_' + _userId,
+    successes: _char.deathSaves?.successes || 0, failures: _char.deathSaves?.failures || 0,
+    stable: !!_char.stable, dead: !!_char.dead, d20, message: `${_char.name} ${msg}`, fromUserId: _userId,
+  }).catch(() => {});
+  if (d20 === 20 || _char.dead) announceHp(d20 === 20 ? 'Natural 20 on a death save' : 'Died');
 }
 
 export async function changeExhaustion(delta) {
@@ -509,26 +549,28 @@ export async function toggleInspiration() {
 }
 
 export async function doShortRest() {
-  if (!confirm('Take a short rest? You can spend Hit Dice to recover HP.')) return;
-  const hitDie = getHitDie(_char.class);
-  const roll = Math.ceil(Math.random() * hitDie) + abilityMod(_char.con ?? 10);
-  const gained = Math.max(1, roll);
-  _char.hp = Math.min(_char.hpMax, _char.hp + gained);
+  // Spend as many Hit Dice as you like (or none): each is d<class die> + CON. Used to roll exactly one,
+  // with no pool, every time (audit D6).
+  const left = _char.hitDiceRemaining ?? _char.level ?? 1;
+  const d = hitDieFor(_char.class);
+  const answer = prompt(`Short rest. You have ${left} Hit ${left === 1 ? 'Die' : 'Dice'} (d${d}) left.\nHow many do you spend? (0 to just rest)`, left ? '1' : '0');
+  if (answer === null) return false;
+  const before = _char.hp;
+  Object.assign(_char, shortRestSpend(_char, parseInt(answer, 10) || 0, sides => Math.ceil(Math.random() * sides)));
   await _saveChar();
   renderMain();
   await realtimePublish(EV.REST, { type: EV.REST, userId: _userId, restType: 'short' });
-  alert(`Short rest: recovered ${gained} HP (d${hitDie} + CON)`);
+  alert(`Short rest: recovered ${_char.hp - before} HP. Hit Dice left: ${_char.hitDiceRemaining}.`);
+  return true;
 }
 
 export async function doLongRest() {
-  if (!confirm('Take a long rest? This will fully restore HP and spell slots.')) return;
-  _char.hp = _char.hpMax;
-  _char.hpTemp = 0;
-  if (_char.spellSlots) _char.spellSlots = _char.spellSlots.map(([cur, max]) => [max, max]);
-  _char.deathSaves = { successes: 0, failures: 0 };
+  if (!confirm('Take a long rest? Full HP and spell slots, half your Hit Dice back, one less level of exhaustion.')) return false;
+  Object.assign(_char, longRest(_char));
   await _saveChar();
   renderMain();
   await realtimePublish(EV.REST, { type: EV.REST, userId: _userId, restType: 'long' });
+  return true;
 }
 
 export async function toggleEquipped(index, val) {
