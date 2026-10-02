@@ -8,6 +8,7 @@ import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { icon } from './lk-icons.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { setZoom } from './dnd-hub-canvas.js?v=20260502p4';
 
@@ -350,7 +351,7 @@ export async function handleMapUpload(input) {
   } catch (err) {
     alert('Upload failed: ' + err.message);
   } finally {
-    if (btn) { btn.textContent = '📁 Map'; btn.disabled = false; }
+    if (btn) { btn.innerHTML = icon('map') + 'Map'; btn.disabled = false; }
   }
 }
 

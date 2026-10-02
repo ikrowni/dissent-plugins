@@ -2,6 +2,7 @@
 import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { icon } from './lk-icons.js';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20260502p4';
@@ -10,19 +11,19 @@ import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=2026050
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
   document.getElementById('screen-lobby').innerHTML = `
-    <div class="lobby-logo">⚔️</div>
-    <div class="lobby-title">LanternKeep</div>
+    <div class="lobby-logo lk-glow">${icon('lantern', { size: 56 })}</div>
+    <div class="lobby-title lk-title">LanternKeep</div>
     <div class="lobby-sub">A fifth-edition tabletop for your table</div>
     <div class="lobby-cards">
       <div class="lobby-card" onclick="showDMPortal()">
-        <div class="lobby-card-icon">🏰</div>
-        <div class="lobby-card-label">Create</div>
-        <div class="lobby-card-desc">Start a new campaign or manage one you're running</div>
+        <div class="lobby-card-icon">${icon('crown', { size: 26 })}</div>
+        <div class="lobby-card-label lk-title">Run a game</div>
+        <div class="lobby-card-desc">As the Dungeon Master: start a campaign or open one you run</div>
       </div>
       <div class="lobby-card" onclick="showJoinScreen()">
-        <div class="lobby-card-icon">🗺️</div>
-        <div class="lobby-card-label">Join</div>
-        <div class="lobby-card-desc">Find a campaign to join or continue an existing one</div>
+        <div class="lobby-card-icon">${icon('swords', { size: 26 })}</div>
+        <div class="lobby-card-label lk-title">Join a game</div>
+        <div class="lobby-card-desc">As a player: join a campaign or pick up where you left off</div>
       </div>
     </div>
     <button class="credits-link" onclick="showCredits()" title="About and credits">ⓘ Credits</button>`;
@@ -31,8 +32,8 @@ export function renderLobbyScreen() {
 export function renderDMPortalFrame() {
   document.getElementById('screen-dm-portal').innerHTML = `
     <div class="screen-header">
-      <button class="screen-back" onclick="showScreen('lobby')">←</button>
-      <div class="screen-title">🏰 Dungeon Master Portal</div>
+      <button class="screen-back" onclick="showScreen('lobby')" aria-label="Back">${icon('arrow-left')}</button>
+      <div class="screen-title lk-title">${icon('crown', { size: 18 })} Your campaigns</div>
     </div>
     <div class="new-campaign-btn" onclick="showCampaignWizard()">
       <div class="new-campaign-icon">✨</div>
@@ -49,16 +50,16 @@ export function renderDMPortalFrame() {
 export function renderJoinFrame() {
   document.getElementById('screen-join').innerHTML = `
     <div class="screen-header">
-      <button class="screen-back" onclick="showScreen('lobby')">←</button>
-      <div class="screen-title">🗺️ Join a Campaign</div>
+      <button class="screen-back" onclick="showScreen('lobby')" aria-label="Back">${icon('arrow-left')}</button>
+      <div class="screen-title lk-title">${icon('swords', { size: 18 })} Join a game</div>
     </div>
     <div class="join-columns">
       <div>
-        <div class="join-section-title">🔓 Available Campaigns</div>
+        <div class="join-section-title lk-title">Open campaigns</div>
         <div id="available-list"></div>
       </div>
       <div>
-        <div class="join-section-title">⚔️ My Campaigns</div>
+        <div class="join-section-title lk-title">Your campaigns</div>
         <div id="my-campaigns-list"></div>
       </div>
     </div>`;
@@ -67,7 +68,7 @@ export function renderJoinFrame() {
 export function renderCampaignWizardFrame() {
   document.getElementById('screen-cam-wizard').innerHTML = `
     <div class="screen-header">
-      <button class="screen-back" onclick="showScreen('dm-portal')">←</button>
+      <button class="screen-back" onclick="showScreen('dm-portal')" aria-label="Back">${icon('arrow-left')}</button>
       <div class="screen-title">✨ New Campaign</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:16px;max-width:500px;margin:0 auto;width:100%">
@@ -104,7 +105,7 @@ export function renderCampaignWizardFrame() {
       </div>
       <div id="cw-error" style="display:none;padding:10px 12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:8px;font-size:12px;color:#ef4444"></div>
       <button id="btn-create-campaign" class="btn btn-primary" onclick="createCampaign()" style="width:100%;padding:14px">
-        🏰 Create Campaign
+        ${icon('castle')} Create campaign
       </button>
     </div>`;
 }
@@ -142,7 +143,7 @@ export function renderDMPortal() {
     </div>
   ` : `
     <div class="campaign-row" onclick="enterCampaignAsDM('${c.id}')">
-      <div class="campaign-row-icon">🏰</div>
+      <div class="campaign-row-icon">${icon('castle', { size: 20 })}</div>
       <div class="campaign-row-info">
         <div class="campaign-row-name">${esc(c.name)}</div>
         <div class="campaign-row-meta">${c.members?.length ?? 0} players · Last updated ${fmtDate(c.updatedAt)}</div>
@@ -219,7 +220,7 @@ export function renderJoinScreen() {
 
   myEl.innerHTML = mine.length ? mine.map(c => `
     <div class="campaign-row" onclick="enterCampaignAsPlayer('${c.id}')">
-      <div class="campaign-row-icon">${c.dmUserId === userId ? '🏰' : '⚔️'}</div>
+      <div class="campaign-row-icon">${icon(c.dmUserId === userId ? 'crown' : 'swords', { size: 20 })}</div>
       <div class="campaign-row-info">
         <div class="campaign-row-name">${esc(c.name)}</div>
         <div class="campaign-row-meta">${c.dmUserId === userId ? 'You are the DM' : 'Player'}</div>
@@ -375,42 +376,42 @@ export async function renderCampaignView(campaignId, isDM) {
   document.getElementById('screen-campaign').innerHTML = `
     <div id="map-root">
       <div id="map-toolbar">
-        <button class="map-tool-btn" onclick="showScreen('lobby')" style="padding:5px 8px" title="Back to lobby">←</button>
-        <span style="font-size:12px;font-weight:700;color:var(--dnd-gold);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span>
+        <button class="map-tool-btn" onclick="showScreen('lobby')" style="padding:5px 8px" title="Back to lobby" aria-label="Back to lobby">${icon('arrow-left')}</button>
+        <span class="lk-title" style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span>
         <div class="map-tool-sep"></div>
         ${isDM ? `
-          <button class="map-tool-btn" id="btn-upload-map" onclick="triggerMapUpload()" title="Upload a map image">📁 Map</button>
-          <button class="map-tool-btn" id="btn-party" onclick="placePartyTokens()" title="Place any missing party tokens">👥 Party</button>
-          <button class="map-tool-btn" id="btn-vtt-import" onclick="toggleVTTPanel()" title="Import Dungeon Alchemist / UniversalVTT map">📥 VTT</button>
-          <button class="map-tool-btn" id="btn-edit-mode" onclick="toggleEditMode()" title="Toggle edit mode (walls, doors, fog tools)">✏️ Edit</button>
-          <button class="map-tool-btn" id="btn-fog-toggle" onclick="toggleDMFog()" title="Toggle DM fog visibility">🌫️ Fog</button>
-          <button class="map-tool-btn" onclick="updateAndBroadcastFog()" title="Recalculate fog from player token positions">👁 LOS</button>
-          <button class="map-tool-btn" id="btn-grid-settings" onclick="toggleGridPanel()" title="Adjust grid size, offset, color and opacity">⚙ Grid</button>
+          <button class="map-tool-btn" id="btn-upload-map" onclick="triggerMapUpload()" title="Upload a map image">${icon('map')}Map</button>
+          <button class="map-tool-btn" id="btn-party" onclick="placePartyTokens()" title="Place any missing party tokens">${icon('users')}Party</button>
+          <button class="map-tool-btn" id="btn-vtt-import" onclick="toggleVTTPanel()" title="Import a Universal VTT map (Dungeondraft, Dungeon Alchemist…)">${icon('file-input')}Import</button>
+          <button class="map-tool-btn" id="btn-edit-mode" onclick="toggleEditMode()" title="Edit the map: walls, doors, fog, lights, pins">${icon('pencil')}Edit</button>
+          <button class="map-tool-btn" id="btn-fog-toggle" onclick="toggleDMFog()" title="Show or hide fog on your screen">${icon('cloud-fog')}Fog</button>
+          <button class="map-tool-btn" onclick="updateAndBroadcastFog()" title="Reveal what the players' tokens can see (line of sight)">${icon('eye')}Sight</button>
+          <button class="map-tool-btn" id="btn-grid-settings" onclick="toggleGridPanel()" title="Adjust grid size, offset, colour and opacity">${icon('grid-3x3')}Grid</button>
           <div id="edit-tools" style="display:none;align-items:center;gap:6px">
             <div class="map-tool-sep"></div>
-            <button class="map-tool-btn" id="btn-tool-select" onclick="setTool('select')" title="Select and drag tokens">↖ Select</button>
-            <button class="map-tool-btn" id="btn-tool-wall" onclick="setTool('wall')" title="Draw an impassable wall segment">🧱 Wall</button>
-            <button class="map-tool-btn" id="btn-tool-door" onclick="setTool('door')" title="Draw a door (right-click to cycle open/closed/locked)">🚪 Door</button>
-            <button class="map-tool-btn" id="btn-tool-reveal" onclick="setTool('brush-reveal')" title="Brush-reveal fog area">👁 Reveal</button>
-            <button class="map-tool-btn" id="btn-tool-hide" onclick="setTool('brush-hide')" title="Brush-hide fog area">🌑 Hide</button>
-            <button class="map-tool-btn" onclick="resetFog()" style="color:#f87171;border-color:rgba(248,113,113,.3)" title="Flood the entire map with fog">🗑 Reset Fog</button>
-            <button class="map-tool-btn" id="btn-tool-pin" onclick="setTool('pin')" title="Place map pin">&#x1F4CC; Pin</button>
-            <button class="map-tool-btn" id="btn-tool-light"   onclick="setTool('light')"   title="Place light source">&#x1F56F; Light</button>
-            <button class="map-tool-btn" id="btn-tool-speaker" onclick="setTool('speaker')" title="Place audio zone">&#x1F50A; Zone</button>
-            <button class="map-tool-btn" id="btn-tool-trap"    onclick="setTool('trap')"    title="Place trigger tile">&#x1FAA4; Trap</button>
-            <button class="map-tool-btn" id="btn-tool-template" onclick="showTemplatePicker()" title="Place AoE template">&#x1F3AF; Template</button>
+            <button class="map-tool-btn" id="btn-tool-select" onclick="setTool('select')" title="Select and drag tokens">${icon('hand')}Select</button>
+            <button class="map-tool-btn" id="btn-tool-wall" onclick="setTool('wall')" title="Draw a wall">${icon('brick-wall')}Wall</button>
+            <button class="map-tool-btn" id="btn-tool-door" onclick="setTool('door')" title="Draw a door (click a door to open, close or lock it)">${icon('door-open')}Door</button>
+            <button class="map-tool-btn" id="btn-tool-reveal" onclick="setTool('brush-reveal')" title="Brush to reveal fog">${icon('eye')}Reveal</button>
+            <button class="map-tool-btn" id="btn-tool-hide" onclick="setTool('brush-hide')" title="Brush to hide with fog">${icon('eye-off')}Hide</button>
+            <button class="map-tool-btn" onclick="resetFog()" style="color:#f87171;border-color:rgba(248,113,113,.3)" title="Cover the whole map with fog again">${icon('trash-2')}Reset fog</button>
+            <button class="map-tool-btn" id="btn-tool-pin" onclick="setTool('pin')" title="Place a map pin">${icon('map-pin')}Pin</button>
+            <button class="map-tool-btn" id="btn-tool-light"   onclick="setTool('light')"   title="Place a light">${icon('lightbulb')}Light</button>
+            <button class="map-tool-btn" id="btn-tool-speaker" onclick="setTool('speaker')" title="Place a sound zone">${icon('volume-2')}Sound</button>
+            <button class="map-tool-btn" id="btn-tool-trap"    onclick="setTool('trap')"    title="Place a trap or trigger">${icon('bomb')}Trap</button>
+            <button class="map-tool-btn" id="btn-tool-template" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
           </div>
           <input type="file" id="map-file-input" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" style="display:none" onchange="handleMapUpload(this)">
           <input type="file" id="vtt-dd2vtt-input" accept=".dd2vtt,.json" style="display:none" onchange="onVTTFileSelected()">
           <input type="file" id="vtt-video-input" accept="video/webm,video/mp4" style="display:none" onchange="onVTTVideoSelected()">
         ` : `
-          <button class="map-tool-btn" id="btn-place-token" onclick="window._togglePlaceTokenMode()" title="Click anywhere on the map to move your token there">📍 Place Token</button>
-          <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place AoE template">🎯 Template</button>
+          <button class="map-tool-btn" id="btn-place-token" onclick="window._togglePlaceTokenMode()" title="Click the map to place your token">${icon('map-pin')}Place token</button>
+          <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
-          <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out">−</button>
+          <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out" aria-label="Zoom out">${icon('zoom-out')}</button>
           <span id="zoom-display" title="Press ? for keyboard shortcuts" style="font-size:10px;color:var(--dnd-muted);min-width:32px;text-align:center">100%</span>
-          <button class="map-tool-btn" onclick="setZoom(MAP.zoom + 0.25)" title="Zoom in">+</button>
+          <button class="map-tool-btn" onclick="setZoom(MAP.zoom + 0.25)" title="Zoom in" aria-label="Zoom in">${icon('zoom-in')}</button>
           <div style="width:1px;height:14px;background:rgba(255,255,255,.12);margin:0 2px"></div>
           <span style="font-size:11px;color:var(--dnd-muted)" id="map-coord-display"></span>
         </div>

@@ -18,7 +18,7 @@ const NAMES = [
   "scroll-text", "book-open", "notebook-pen", "store", "gem", "flask-conical", "clapperboard", "user-round", "bomb",
   "dices", "heart", "shield", "zap", "sparkles", "circle-check", "circle", "door-open", "arrow-left", "plus", "x",
   "trash-2", "pencil", "info", "wand-sparkles", "backpack", "footprints", "sun", "moon", "check", "castle", "ruler",
-  "list-ordered", "user-plus", "spline",
+  "list-ordered", "user-plus", "spline", "hand", "lightbulb", "volume-2", "eye-off", "hourglass",
 ];
 
 // Hand-drawn: Lucide has no lantern. Same 24×24 grid, 2px stroke, round caps, so it sits with the rest.

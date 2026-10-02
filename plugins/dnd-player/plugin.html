@@ -12,12 +12,12 @@
     <div class="spinner"></div>Loading sheet…
   </div>
   <div id="app" style="display:none;flex-direction:column;height:100%">
-    <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px">
+    <div class="sheet-head">
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="char-name">—</div>
+        <div class="lk-title" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="char-name">—</div>
         <div style="font-size:10px;color:var(--muted)" id="char-subtitle">—</div>
       </div>
-      <button onclick="openCharEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px;border-radius:4px;flex-shrink:0;line-height:1" title="Edit Character">✏️</button>
+      <button onclick="openCharEdit()" class="sheet-edit" title="Edit character" aria-label="Edit character"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
     </div>
     <div class="tab-bar">
       <div class="tab active" onclick="switchTab('main')">Main</div>
