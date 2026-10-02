@@ -24,7 +24,8 @@ export function renderLobbyScreen() {
         <div class="lobby-card-label">Join</div>
         <div class="lobby-card-desc">Find a campaign to join or continue an existing one</div>
       </div>
-    </div>`;
+    </div>
+    <button class="credits-link" onclick="showCredits()" title="About and credits">ⓘ Credits</button>`;
 }
 
 export function renderDMPortalFrame() {

@@ -2,6 +2,7 @@
 import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
+import { showCredits } from './dnd-hub-credits.js';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20260502p4';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20260502p4';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20260502p4';
@@ -101,6 +102,7 @@ window.startRuler         = startRuler;
 window.clearRuler         = clearRuler;
 window.destroyContextMenu = destroyContextMenu;
 window.placePartyTokens   = placePartyTokens;
+window.showCredits        = showCredits;
 window.renderPins         = renderPins;
 window.showPinDialog      = showPinDialog;
 window.renderLights           = renderLights;
