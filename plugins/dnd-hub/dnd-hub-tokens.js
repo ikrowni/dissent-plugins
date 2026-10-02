@@ -10,6 +10,7 @@ import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken } from './dnd-hub-rules.js';
+import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 
 // Portrait texture cache — keyed by portraitFileId
 const _portraitCache = new Map();  // fileId → PIXI.Texture
@@ -116,12 +117,22 @@ export function buildTokenSprite(token, gs) {
     }
   }
 
-  const label = new PIXI.Text({
-    text: (token.name || '?').slice(0, 8),
-    style: new PIXI.TextStyle({ fill: 0xffffff, fontSize: 9, fontWeight: 'bold', stroke: { color: 0x000000, width: 3 } }),
+  // Name plate: the whole name on a dark rounded plate with a gold hairline, sized to the grid
+  // (dnd-hub-nameplate.js). Was the first 8 characters at a fixed 9 px.
+  const fs = plateFontSize(gs);
+  const nameText = new PIXI.Text({
+    text: plateText(token.name),
+    style: new PIXI.TextStyle({ fill: 0xefe4cc, fontSize: fs, fontWeight: '600', fontFamily: 'Cinzel, Georgia, serif', letterSpacing: fs * 0.04 }),
   });
-  label.anchor.set(0.5, 0);
-  label.y = r + 10;
+  nameText.anchor.set(0.5, 0);
+  const padX = fs * 0.5, padY = fs * 0.18;
+  const plate = new PIXI.Graphics()
+    .roundRect(-nameText.width / 2 - padX, -padY, nameText.width + padX * 2, nameText.height + padY * 2, fs * 0.45)
+    .fill({ color: 0x0d0a07, alpha: 0.82 })
+    .stroke({ color: 0xa8843a, width: Math.max(1, fs * 0.07), alpha: 0.75 });
+  const label = new PIXI.Container();
+  label.addChild(plate, nameText);
+  label.y = r + Math.max(10, gs * 0.16);
 
   const container = new PIXI.Container();
 
