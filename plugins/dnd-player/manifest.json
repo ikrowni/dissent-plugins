@@ -65,7 +65,7 @@
     },
     {
       "url": "dnd-player-styles.css",
-      "sha256": "c0cca4244a491792f1ff66f30abc548c2d7f24c8645c80e871c479106f3d7e76"
+      "sha256": "bb17ebbcdd253b1b9d558a16575b3bc948f0cb705822d3c520a2e0383ee30672"
     },
     {
       "url": "dnd-srd/classes.json",
@@ -94,6 +94,10 @@
     {
       "url": "lanternkeep-theme.css",
       "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
+    },
+    {
+      "url": "lk-icons.js",
+      "sha256": "e418721add041b8f51b191fd4851003b5cdd957f27f6f8a2e4ed11e58cfca554"
     }
   ]
 }
