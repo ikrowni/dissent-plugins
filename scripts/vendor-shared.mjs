@@ -62,6 +62,15 @@ const VENDORED = [
     source: "polymarket.js",
     targets: ["ufc-hub/core/polymarket-trade.js"],
   },
+  // Three-way campaign merge used by every D&D save path (hub and both companions).
+  {
+    source: "dnd-campaign-merge.js",
+    targets: [
+      "dnd-hub/dnd-campaign-merge.js",
+      "dnd-master/dnd-campaign-merge.js",
+      "dnd-player/dnd-campaign-merge.js",
+    ],
+  },
   // The realtime event vocabulary all three D&D plugins speak. dnd-hub included: it is a
   // copy there too, so no plugin owns the vocabulary the others depend on.
   {
