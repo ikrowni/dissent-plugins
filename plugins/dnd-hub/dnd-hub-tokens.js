@@ -9,7 +9,7 @@ import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurn
 import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20260502p4';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
-import { playerTokensToSeed, dragStep } from './dnd-hub-rules.js';
+import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken } from './dnd-hub-rules.js';
 
 // Portrait texture cache — keyed by portraitFileId
 const _portraitCache = new Map();  // fileId → PIXI.Texture
@@ -42,16 +42,8 @@ export function renderTokens() {
         const summary = summaries[uid];
         const idx = (campaign.members || []).indexOf(uid);
         const tokenId = `player_${uid}`;
-        mapData.tokens[tokenId] = {
-          id: tokenId, type: 'player', userId: uid,
-          name: summary.name || 'Unknown',
-          x: ox + (2 + i * 2) * gs + gs / 2, y: oy + 3 * gs + gs / 2,
-          visionRadius: 60,
-          hp: summary.hp || 10, hpMax: summary.hpMax || 10,
-          conditions: [], visible: true, colorIdx: idx % TOKEN_COLORS.length,
-          portraitUrl:    summary.portraitUrl    || '',
-          portraitFileId: summary.portraitFileId || '',
-        };
+        mapData.tokens[tokenId] = newPlayerToken(uid, summary, idx,
+          ox + (2 + i * 2) * gs + gs / 2, oy + 3 * gs + gs / 2, TOKEN_COLORS.length);
         mapData.seededPlayers[uid] = true;
       });
       saveHubDm(serverData); // fire-and-forget
@@ -351,12 +343,8 @@ function setupTokenDrag(container, token) {
     const sKey  = MAP.mapData?.tokens?.[token.id]?.size || 'medium';
     const cells = SIZE_CELLS[sKey] || 1;
     // Large+ snap to grid corner; small/medium snap to cell center
-    const snappedX = cells > 1
-      ? Math.round((container.x - ox) / gs) * gs + ox
-      : Math.round((container.x - ox) / gs) * gs + gs / 2 + ox;
-    const snappedY = cells > 1
-      ? Math.round((container.y - oy) / gs) * gs + oy
-      : Math.round((container.y - oy) / gs) * gs + gs / 2 + oy;
+    const snappedX = snapToGrid(container.x, ox, gs, cells);
+    const snappedY = snapToGrid(container.y, oy, gs, cells);
 
     // Wall collision — revert to last saved position if move would cross a wall or locked door
     const savedX = MAP.mapData?.tokens?.[token.id]?.x ?? snappedX;

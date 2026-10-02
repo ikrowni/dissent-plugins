@@ -1,5 +1,5 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
@@ -15,7 +15,7 @@ import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContex
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20260502p4';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
-import { findDoorAt, nextDoorState, playerMayToggleDoor } from './dnd-hub-rules.js';
+import { findDoorAt, nextDoorState, playerMayToggleDoor, snapToGrid, placeOwnTokenVerdict, newPlayerToken } from './dnd-hub-rules.js';
 
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
@@ -522,15 +522,32 @@ export async function initPixiApp() {
     const gs = effectiveGs(MAP.mapData);
     const ox = (MAP._bgOffset?.x ?? 0) + (MAP.mapData?.gridOffsetX ?? 0);
     const oy = (MAP._bgOffset?.y ?? 0) + (MAP.mapData?.gridOffsetY ?? 0);
-    const snappedX = Math.round((wx - ox) / gs) * gs + gs / 2 + ox;
-    const snappedY = Math.round((wy - oy) / gs) * gs + gs / 2 + oy;
+    const snappedX = snapToGrid(wx, ox, gs, 1);
+    const snappedY = snapToGrid(wy, oy, gs, 1);
     const tokenId = 'player_' + userId;
-    if (MAP.mapData.tokens?.[tokenId]) {
+    const verdict = placeOwnTokenVerdict(MAP.mapData, userId);
+    if (verdict === 'removed-by-dm') {
+      alert('The DM removed your token from this map. Ask them to place it again (👥 Party).');
+    } else if (verdict === 'move') {
       MAP.mapData.tokens[tokenId].x = snappedX;
       MAP.mapData.tokens[tokenId].y = snappedY;
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
       await saveHubDm( serverData);
       await realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x: snappedX, y: snappedY, fromUserId: userId });
+      renderTokens();
+    } else {
+      // Never placed on this map (the DM may not have opened it since this player
+      // joined): the player places their own. They own this token, so this is theirs to write.
+      const camp = serverData.campaigns[MAP.campaignId];
+      const summary = camp.characterSummaries?.[userId];
+      if (!summary) { alert('Create your character first.'); window._togglePlaceTokenMode(); return; }
+      const tok = newPlayerToken(userId, summary, (camp.members || []).indexOf(userId), snappedX, snappedY, TOKEN_COLORS.length);
+      MAP.mapData.tokens = MAP.mapData.tokens || {};
+      MAP.mapData.tokens[tokenId] = tok;
+      MAP.mapData.seededPlayers = { ...(MAP.mapData.seededPlayers || {}), [userId]: true };
+      camp.maps[MAP.mapId] = MAP.mapData;
+      await saveHubDm(serverData);
+      await realtimePublish(EV.TOKENS_SPAWN, { type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId, mapId: MAP.mapId, tokens: [tok], fromUserId: userId });
       renderTokens();
     }
     // Exit placement mode after placing

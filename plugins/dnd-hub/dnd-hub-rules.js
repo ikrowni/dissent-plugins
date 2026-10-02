@@ -50,3 +50,41 @@ export function playerMayToggleDoor(door, playerToken, gs, toPx) {
   const p = toPx(door);
   return distToSegment(playerToken.x, playerToken.y, p.x1, p.y1, p.x2, p.y2) <= gs * 1.5;
 }
+
+/**
+ * Where a dropped token's centre lands on one axis. Odd-sized tokens (1×1, 3×3) sit
+ * centred in the cell under the pointer; even-sized ones (2×2, 4×4) centre on the
+ * nearest grid corner.
+ * 🔴 Used to be round(...)*gs + gs/2 for medium tokens: that rounds to the nearest
+ * CORNER and then adds half a cell, so about half of all drops landed in the next cell.
+ */
+export function snapToGrid(v, offset, gs, cells) {
+  const n = Math.max(1, Math.round(cells)); // tiny (0.5) occupies a cell like medium
+  return n % 2 === 1
+    ? Math.floor((v - offset) / gs) * gs + gs / 2 + offset
+    : Math.round((v - offset) / gs) * gs + offset;
+}
+
+/** The shape of a player's token. One builder for DM seeding and self-placement. */
+export function newPlayerToken(uid, summary, idx, x, y, colorCount) {
+  return {
+    id: `player_${uid}`, type: 'player', userId: uid,
+    name: summary?.name || 'Unknown',
+    x, y,
+    visionRadius: 60,
+    hp: summary?.hp || 10, hpMax: summary?.hpMax || 10,
+    conditions: [], visible: true, colorIdx: Math.max(0, idx) % colorCount,
+    portraitUrl:    summary?.portraitUrl    || '',
+    portraitFileId: summary?.portraitFileId || '',
+  };
+}
+
+/**
+ * What "Place token" does for a player: move their token, create it if it was never
+ * placed on this map (the DM may not have opened the map since they joined), or refuse
+ * if the DM removed it. Before, it silently did nothing whenever the token was missing.
+ */
+export function placeOwnTokenVerdict(mapData, uid) {
+  if (mapData.tokens?.[`player_${uid}`]) return 'move';
+  return mapData.seededPlayers?.[uid] ? 'removed-by-dm' : 'create';
+}

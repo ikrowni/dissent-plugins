@@ -49,3 +49,43 @@ describe('doors', () => {
     expect(playerMayToggleDoor(d, null, 40, toPx)).toBe(false);
   });
 });
+
+import { snapToGrid } from './dnd-hub-rules.js';
+describe('snapToGrid', () => {
+  it('puts a medium token in the cell under the pointer, not the next one over', () => {
+    // cell 6 spans 300–350 (gs 50, no offset); its centre is 325
+    expect(snapToGrid(330, 0, 50, 1)).toBe(325);
+    expect(snapToGrid(349, 0, 50, 1)).toBe(325);
+    expect(snapToGrid(301, 0, 50, 1)).toBe(325);
+  });
+  it('respects the grid offset', () => {
+    expect(snapToGrid(37, 10, 50, 1)).toBe(35);
+  });
+  it('large (even-sized) tokens snap their centre to the nearest grid corner', () => {
+    expect(snapToGrid(330, 0, 50, 2)).toBe(350);
+    expect(snapToGrid(310, 0, 50, 2)).toBe(300);
+  });
+  it('tiny tokens centre in a cell too', () => {
+    expect(snapToGrid(330, 0, 50, 0.5)).toBe(325);
+  });
+  it('huge (3×3) tokens centre on a cell like medium ones', () => {
+    expect(snapToGrid(330, 0, 50, 3)).toBe(325);
+  });
+});
+
+import { newPlayerToken, placeOwnTokenVerdict } from './dnd-hub-rules.js';
+describe('placing your own token', () => {
+  it('builds a player token from the character summary', () => {
+    const t = newPlayerToken('u1', { name: 'Thorin', hp: 12, hpMax: 12 }, 2, 125, 175, 8);
+    expect(t).toMatchObject({ id: 'player_u1', type: 'player', userId: 'u1', name: 'Thorin', x: 125, y: 175, hp: 12, hpMax: 12, colorIdx: 2 });
+  });
+  it('moves an existing token', () => {
+    expect(placeOwnTokenVerdict({ tokens: { player_u1: {} } }, 'u1')).toBe('move');
+  });
+  it('creates one when none was ever placed', () => {
+    expect(placeOwnTokenVerdict({ tokens: {}, seededPlayers: {} }, 'u1')).toBe('create');
+  });
+  it('refuses when the DM removed it', () => {
+    expect(placeOwnTokenVerdict({ tokens: {}, seededPlayers: { u1: true } }, 'u1')).toBe('removed-by-dm');
+  });
+});
