@@ -1,6 +1,7 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
+import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let currentInitiative = null;
@@ -116,15 +117,18 @@ export async function moveInitiative(dir) {
   renderInitiativeTracker();
 }
 
+const tokenIdOf = c => (c.type === 'player' ? 'player_' + c.userId : c.id);
+
 export async function updateHP(idx, val) {
   if (!currentInitiative || !currentInitiative.order[idx]) return;
   currentInitiative.order[idx].hp = Math.max(0, parseInt(val) || 0);
   await saveAndBroadcastInit();
   renderInitiativeTracker();
   const combatant = currentInitiative.order[idx];
-  await realtimePublish(EV.HP_CHANGE, { type: EV.HP_CHANGE, campaignId: _state.dmCampaignId,
-    tokenId: 'player_' + (combatant.userId || combatant.id),
-    hp: combatant.hp, hpMax: combatant.hpMax, fromUserId: _state.userId });
+  // To the Hub (the token) and the player's sheet. Monsters' tokens are keyed by their own id; this
+  // used to send 'player_<monster id>' to the DM sidebar only, so no token ever changed (audit N2).
+  await publishTo(['hub', 'player'], EV.HP_CHANGE, { campaignId: _state.dmCampaignId,
+    tokenId: tokenIdOf(combatant), hp: combatant.hp, hpMax: combatant.hpMax, fromUserId: _state.userId });
 }
 
 export async function rerollInitiative() {
@@ -196,10 +200,11 @@ export async function applyMassHP(isDamage) {
     const c = currentInitiative.order[idx];
     if (!c) continue;
     c.hp = isDamage ? Math.max(0, c.hp - amount) : Math.min(c.hpMax, c.hp + amount);
-    await realtimePublish(EV.HP_CHANGE, {
-      type: EV.HP_CHANGE, campaignId: dmCampaignId,
-      tokenId: 'player_' + (c.userId || c.id),
+    // A player's sheet applies the amount itself (temporary HP, 0 HP and death saves).
+    await publishTo(['hub', 'player'], EV.HP_CHANGE, {
+      campaignId: dmCampaignId, tokenId: tokenIdOf(c),
       hp: c.hp, hpMax: c.hpMax, fromUserId: userId,
+      ...(isDamage ? { damage: amount } : { heal: amount }),
     });
   }
   await saveAndBroadcastInit();

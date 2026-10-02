@@ -1,6 +1,7 @@
 // dnd-master-scenes.js — Scenes tab: create, delete, load
 import { requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, genId, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { publishTo } from './lk-bus.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
@@ -128,16 +129,13 @@ export async function deleteScene(id) {
 export async function loadScene(id) {
   const scene = _state.dmCampaign.scenes?.[id];
   if (!scene) return;
-  await realtimePublish(EV.SCENE_LOAD, {
-    type: EV.SCENE_LOAD, campaignId: _state.dmCampaignId,
+  // The Hub switches the map and plays the video and soundtrack; the player sheet opens a shop.
+  // It used to reach the DM sidebar and the sheet only — the map never changed (audit N).
+  await publishTo(['hub', 'player'], EV.SCENE_LOAD, {
+    campaignId: _state.dmCampaignId,
     sceneId: id, mapId: scene.mapId,
     shopId: scene.shopId || null,
     videoFileId: scene.videoFileId, soundtrackFileId: scene.soundtrackFileId,
     ambientVolume: scene.ambientVolume, fromUserId: _state.userId,
-  });
-  await realtimePublishCompanion('dnd-player', EV.SCENE_LOAD, {
-    type: EV.SCENE_LOAD, campaignId: _state.dmCampaignId,
-    sceneId: id, shopId: scene.shopId || null,
-    fromUserId: _state.userId,
   });
 }

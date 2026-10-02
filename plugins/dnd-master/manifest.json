@@ -47,11 +47,11 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "af5462cfb1b3587af2b600da85cdce82f34a187defa336ed6bfb1e7a1d2b9abd"
+      "sha256": "9750e58d2b57925452591a715a800fb75681b841d50d4c3975a3f2d7257c7db4"
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "f3b949a18a1827716a036bc78840efd8c3e986aff4683a4b2a50b929a737d0f4"
+      "sha256": "268c013aaee1a2909e72d8b5605cbea41cbba4f51370c94295f52a8861ba2aaf"
     },
     {
       "url": "dnd-master-items.js",
@@ -59,7 +59,7 @@
     },
     {
       "url": "dnd-master-journals.js",
-      "sha256": "f19424f6e4f1385287e8e6866f6b39b897de1c4c20715787d72589afaf93fe9f"
+      "sha256": "04dea93173143f222c4f4cf5c6999e264967d0bdadab2eaf13334a23e64ddca3"
     },
     {
       "url": "dnd-master-logs.js",
@@ -83,11 +83,11 @@
     },
     {
       "url": "dnd-master-players.js",
-      "sha256": "30bd2b70fe17509b6f5a681e21325b00e8e8b9c3af5a353d1c3a0e38b6cc4f61"
+      "sha256": "365dd4dd8f5e126a066ee271e6719188aa74c7715308f1d85dbef3337cb0c8a8"
     },
     {
       "url": "dnd-master-scenes.js",
-      "sha256": "8f63ca8b45f94f9f042b0f9bc815a6590180c1c09bd947e97bd9e9bd36f49214"
+      "sha256": "3a5cdb31062dce60bc346e12a37880ae244053fa1dae3246cd87d0cd2b014af8"
     },
     {
       "url": "dnd-master-sections.js",
@@ -95,7 +95,7 @@
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "aa5f03b38e63ee434309a5984fcefec1f14c2759fb09c65b768c0b297b854de0"
+      "sha256": "844ed03ab07355961b21688da0fb1d966d980c32a07ed9d7fa1ad2df3d670e8f"
     },
     {
       "url": "dnd-master-shops.js",
@@ -134,8 +134,16 @@
       "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
     },
     {
+      "url": "lk-bus.js",
+      "sha256": "ae12ec4dfa388039ec49ce1578bd86521fbff197a5a7d07980f17c41433751db"
+    },
+    {
       "url": "lk-icons.js",
       "sha256": "14927c281cc7860b3214e8d1ca1e2904cf00bddae590f3297c009804129253b2"
+    },
+    {
+      "url": "lk-rules5e.js",
+      "sha256": "8c498e79dfcd632fcf952e0efa501316a46bd0344cb2d3dcaede578c59c94cdb"
     }
   ]
 }

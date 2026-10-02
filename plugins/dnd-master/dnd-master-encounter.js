@@ -3,6 +3,7 @@ import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realt
 import { EV } from './dnd-hub-event-types.js';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
+import { adjustedEncounterXp } from './lk-rules5e.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let encounterCreatures = [];
@@ -237,12 +238,15 @@ function renderXPBudget() {
   const thresholds = [0, 1, 2, 3].map(tier =>
     partyLevels.reduce((s, lv) => { const row = XP_THRESHOLDS[Math.min(lv, 20)]; return s + (row ? row[tier] || 0 : 0); }, 0)
   );
-  const totalXP = encounterCreatures.reduce((s, e) => s + (CR_XP[e.monster.cr] || 0) * e.count, 0);
+  // Difficulty is judged on XP adjusted for how many monsters there are: four goblins are a much harder
+  // fight than one creature worth 200 XP (audit G4). The XP the party earns stays the plain total.
+  const awardXP = encounterCreatures.reduce((s, e) => s + (CR_XP[e.monster.cr] || 0) * e.count, 0);
+  const totalXP = adjustedEncounterXp(encounterCreatures.map(e => ({ xp: CR_XP[e.monster.cr] || 0, count: e.count })), partyLevels.length);
   const tier = totalXP >= thresholds[3] ? 3 : totalXP >= thresholds[2] ? 2 : totalXP >= thresholds[1] ? 1 : 0;
   const labels = ['Easy','Medium','Hard','Deadly'];
   const colors = ['#22c55e','#f59e0b','#f97316','#ef4444'];
 
-  const zeroXPWarning = totalXP === 0
+  const zeroXPWarning = awardXP === 0
     ? '<div style="font-size:10px;color:var(--muted);margin-top:4px">⚠ No XP calculated — check that all monsters have a valid CR</div>'
     : '';
 
@@ -257,7 +261,8 @@ function renderXPBudget() {
 
   el.innerHTML =
     '<div style="font-size:10px;color:var(--muted);margin-bottom:4px">' +
-      'XP: <strong style="color:' + colors[tier] + '">' + totalXP.toLocaleString() + '</strong>' +
+      'XP: <strong style="color:' + colors[tier] + '">' + awardXP.toLocaleString() + '</strong>' +
+      (totalXP !== awardXP ? ' (counts as ' + totalXP.toLocaleString() + ' for ' + encounterCreatures.reduce((s, e) => s + e.count, 0) + ' foes)' : '') +
       ' \xb7 <strong style="color:' + colors[tier] + '">' + labels[tier] + '</strong>' +
       ' \xb7 ' + partyLevels.length + ' ' + (partyLevels.length === 1 ? 'player' : 'players') +
     '</div>' +

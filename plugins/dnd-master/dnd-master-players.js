@@ -1,5 +1,6 @@
 // dnd-master-players.js — DM player sheet viewer and editor
 import { storageGetCompanion, storageSetCompanion, realtimePublishCompanion, esc } from '../plugin-sdk.js';
+import { normalizeSlots } from './lk-rules5e.js';
 
 // Fix 1: escAttr escapes single quotes in addition to the chars esc() handles,
 // preventing attribute-context XSS when uid is embedded in onclick="...'${uid}'..."
@@ -104,10 +105,12 @@ function _detailView(uid, s) {
   ).join('');
 
   // Fix 4: add data-spell-level and class="spell-pip" so dmToggleSpellSlot can update in-place
+  // Slots in the one shape every plugin uses: [remaining, max] by slot level (audit E1). This editor used
+  // to read a separate max list no sheet ever had, so it drew nothing, and wrote "used" counts over the pairs.
+  const slots = normalizeSlots(s.spellSlots, s.spellSlotsMax);
   const slotRows = SPELL_LEVELS.map(lvl => {
-    const max  = s.spellSlotsMax?.[lvl] ?? 0;
+    const [used, max] = slots[lvl];
     if (max === 0) return '';
-    const used = s.spellSlots?.[lvl] ?? 0;
     // Fix 1: escAttr uid in onclick; Fix 4: add class="spell-pip"
     const pips = Array.from({ length: max }, (_, i) =>
       `<div class="spell-pip" onclick="dmToggleSpellSlot('${escAttr(uid)}',${lvl},${i})"
@@ -190,6 +193,8 @@ function _bindDetailInputs(uid) {
 async function _saveAndBroadcast(uid) {
   const sheet = _sheets[uid];
   if (!sheet) return;
+  // Stamped so the player's sheet takes this copy over its own older one on next load (audit E2).
+  sheet.updatedAt = new Date().toISOString();
   await storageSetCompanion('dnd-hub', `player_sheet_${_state.dmCampaignId}_${uid}`, 'server', sheet);
   await realtimePublishCompanion('dnd-player', 'sheet:dm-update', {
     type: 'sheet:dm-update',
@@ -237,13 +242,12 @@ export function dmEditAbility(uid, ability, value) {
 export function dmToggleSpellSlot(uid, level, pipIndex) {
   const sheet = _sheets[uid];
   if (!sheet) return;
-  if (!sheet.spellSlots) sheet.spellSlots = {};
-  const used = sheet.spellSlots[level] ?? 0;
-  const max  = sheet.spellSlotsMax?.[level] ?? 0;
-  sheet.spellSlots[level] = pipIndex < used
-    ? Math.max(0, used - 1)
-    : Math.min(max, used + 1);
-  const newUsed = sheet.spellSlots[level];
+  sheet.spellSlots = normalizeSlots(sheet.spellSlots, sheet.spellSlotsMax);
+  delete sheet.spellSlotsMax;
+  const [left, max] = sheet.spellSlots[level];
+  // A filled pip is a slot still available: click one to spend it, click an empty one to restore up to it.
+  sheet.spellSlots[level] = [pipIndex < left ? pipIndex : Math.min(max, pipIndex + 1), max];
+  const newUsed = sheet.spellSlots[level][0];
   // Update pip colors in-place instead of re-rendering the whole view
   const pips = document.querySelectorAll(`[data-spell-level="${level}"] .spell-pip`);
   pips.forEach((pip, i) => {

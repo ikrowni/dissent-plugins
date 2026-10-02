@@ -1,6 +1,7 @@
 // dnd-master-journals.js — Journals tab: create, edit, delete, push to players
 import { storageSetCompanion, realtimePublish, genId, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
+import { publishTo } from './lk-bus.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
@@ -104,8 +105,9 @@ export async function deleteJournal(id) {
 export async function pushHandout(id) {
   const j = _state.dmCampaign?.journals?.[id];
   if (!j || j.visibility !== 'player') return;
-  await realtimePublish(EV.HANDOUT_PUSH, {
-    type: EV.HANDOUT_PUSH, campaignId: _state.dmCampaignId,
+  // Shown over the players' map. Used to go to the DM sidebar only: no player ever saw one (audit N).
+  await publishTo(['hub'], EV.HANDOUT_PUSH, {
+    campaignId: _state.dmCampaignId,
     journalId: id, title: j.title, content: j.content,
     fromUserId: _state.userId,
   });

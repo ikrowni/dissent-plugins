@@ -2,6 +2,7 @@
 import { storageSetCompanion, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { publishTo } from './lk-bus.js';
 
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
 
@@ -68,10 +69,8 @@ export async function setSpatialRange(value) {
   dmCampaign.settings.spatialRange = range;
   serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
   await saveHubDmCompanion(serverData);
-  await realtimePublish(EV.COMBAT_SETTINGS, {
-    type: EV.COMBAT_SETTINGS, campaignId: dmCampaignId,
-    settings: dmCampaign.settings, fromUserId: userId,
-  });
+  // The Hub applies auto hit/miss and spatial audio from these; it used to hear only on reload.
+  await publishTo(['hub'], EV.COMBAT_SETTINGS, { campaignId: dmCampaignId, settings: dmCampaign.settings, fromUserId: userId });
 }
 
 export async function toggleSetting(key, value) {
@@ -81,10 +80,8 @@ export async function toggleSetting(key, value) {
   dmCampaign.settings[key] = value;
   serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
   await saveHubDmCompanion(serverData);
-  await realtimePublish(EV.COMBAT_SETTINGS, {
-    type: EV.COMBAT_SETTINGS, campaignId: dmCampaignId,
-    settings: dmCampaign.settings, fromUserId: userId,
-  });
+  // The Hub applies auto hit/miss and spatial audio from these; it used to hear only on reload.
+  await publishTo(['hub'], EV.COMBAT_SETTINGS, { campaignId: dmCampaignId, settings: dmCampaign.settings, fromUserId: userId });
 }
 
 export function exportCampaign() {
