@@ -3,6 +3,7 @@ import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiv
 import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
+import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
@@ -191,7 +192,7 @@ export async function handleMapEvent(p) {
         renderTokens();
         if (!MAP.isDM) computeLocalPlayerLOS();
         // Reset shop state so fog and audio restore normally on map load
-        MAP._shopFogHidden = false;
+        MAP._shopFogHidden = false; stopShopScene();
         MAP._activeShopId = null;
         if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
         renderFog();
@@ -479,7 +480,7 @@ export async function handleMapEvent(p) {
     case 'scene:load': {
       if (p.campaignId !== MAP.campaignId) return;
       // Reset shop state so fog and audio restore when a scene takes over
-      MAP._shopFogHidden = false;
+      MAP._shopFogHidden = false; stopShopScene();
       MAP._activeShopId = null;
       if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
       // Switch map if a mapId is specified and differs from current
@@ -514,11 +515,17 @@ export async function handleMapEvent(p) {
       // Stop any playing soundtrack or previous shop audio
       if (MAP._soundtrackAudio) { MAP._soundtrackAudio.pause(); MAP._soundtrackAudio.src = ''; MAP._soundtrackAudio = null; }
       if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
-      // Replace map background with shop video/image
+      // Replace map background with shop video/image — or, with none uploaded, the lantern-lit
+      // shop drawn in code (dnd-hub-shop-scene.js).
       if (p.videoFileId && MAP.mapData) {
+        stopShopScene();
         MAP.mapData.fileId = p.videoFileId;
         MAP.mapData.mime = p.videoMime || '';
         await renderMapBackground();
+      } else {
+        const wrap = document.getElementById('map-canvas-wrap');
+        const shopName = p.shopName || serverData?.campaigns?.[p.campaignId]?.shops?.[p.shopId]?.name || '';
+        if (wrap) startShopScene(wrap, shopName);
       }
       // Clear tokens and walls from display (visual only — mapData unchanged so they restore on map reload)
       if (MAP.layers?.tokens) MAP.layers.tokens.removeChildren();

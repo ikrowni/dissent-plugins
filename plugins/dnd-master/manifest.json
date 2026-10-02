@@ -67,7 +67,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "d157a9779eb3f09bc2d914bf4249d9f743caa2c6036d0ddda88b358a0c22cb70"
+      "sha256": "bd6a5a89d4c9c710a216b225f0ced9d1e6cbe92e6e66c0a26551800521253065"
     },
     {
       "url": "dnd-master-maps.js",
@@ -90,12 +90,16 @@
       "sha256": "8f63ca8b45f94f9f042b0f9bc815a6590180c1c09bd947e97bd9e9bd36f49214"
     },
     {
+      "url": "dnd-master-sections.js",
+      "sha256": "1b58e082516a3b3d158951d6c91f188aa51fb32e8e8a87594df3bd329a977002"
+    },
+    {
       "url": "dnd-master-settings.js",
       "sha256": "aa5f03b38e63ee434309a5984fcefec1f14c2759fb09c65b768c0b297b854de0"
     },
     {
       "url": "dnd-master-shops.js",
-      "sha256": "e789100f9907caeb2d9c6302cdcac77cd274b0779d5b2c3483db527b19d5f95c"
+      "sha256": "2ddc64e39d613dae1ed5cbf7f0ed719a58711134d15cb61b6d23b843042cbb9f"
     },
     {
       "url": "dnd-master-sounds.js",
@@ -103,7 +107,7 @@
     },
     {
       "url": "dnd-master-styles.css",
-      "sha256": "9d3586b9d8fe5d48a110ebd025239373fa74b8dda3efbc6507df233d3700da14"
+      "sha256": "517a4caab963c887c57386dea3708b4c57e6bf40f4d44bb58ae11ec43b97f4c8"
     },
     {
       "url": "dnd-master-triggers.js",
@@ -128,6 +132,10 @@
     {
       "url": "lanternkeep-theme.css",
       "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
+    },
+    {
+      "url": "lk-icons.js",
+      "sha256": "e418721add041b8f51b191fd4851003b5cdd957f27f6f8a2e4ed11e58cfca554"
     }
   ]
 }

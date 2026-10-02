@@ -187,7 +187,7 @@ export async function loadShop(shopId) {
   // hub-dm with stale data that lacks items/shops, leaving the player shop empty.
   await saveHubDmCompanion(_state.serverData);
   await realtimePublishCompanion('dnd-hub', EV.SHOP_OPEN, {
-    type: EV.SHOP_OPEN, shopId,
+    type: EV.SHOP_OPEN, shopId, shopName: shop.name || '',
     videoFileId: shop.videoFileId || null,
     ambientVolume: shop.ambientVolume ?? 0.5,
     campaignId: _state.dmCampaignId,
