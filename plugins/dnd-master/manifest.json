@@ -26,12 +26,20 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "dnd-campaign-merge.js",
+      "sha256": "59935074f5afe6d93fb2682c31174d05d3f74aebfd0404c8f4cdd94a5b6a166f"
+    },
+    {
+      "url": "dnd-campaign-pick.js",
+      "sha256": "7b0a3dbfc52c1002b4fae2aaf9ddb864010c76e00309e057c9898805309cdb1e"
+    },
+    {
       "url": "dnd-hub-event-types.js",
-      "sha256": "84f37f34b1b33d5def71f8430408af5be0575817f778e3bdd61841a0286d13fa"
+      "sha256": "b8e7761bbd513b5fa344451218e5c1f0d8e53af4deca333b32893a06efd85a13"
     },
     {
       "url": "dnd-hub-shared-storage.js",
-      "sha256": "749066d5126837c1f3d84cb5256be88c565c473f561cea72988b05ada9f262d4"
+      "sha256": "ebd5aef2b3d0d09bb03a6abcd9bdf014dd29fda2b1d374d4b3f608f7b5dc98c3"
     },
     {
       "url": "dnd-master-actors.js",
@@ -59,7 +67,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "6decfb6ca0ec22b457859eda962ec049150e19ee6761821feeef22656967f7f5"
+      "sha256": "e8fe79948df68c685cec19898006ff17e2aa5f5f4629f9029724bab824cfda07"
     },
     {
       "url": "dnd-master-maps.js",
