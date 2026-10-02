@@ -67,7 +67,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "bd6a5a89d4c9c710a216b225f0ced9d1e6cbe92e6e66c0a26551800521253065"
+      "sha256": "e77a4b05942c520752da52058eb5c7b971198073c0871b68c870162168590274"
     },
     {
       "url": "dnd-master-maps.js",
@@ -107,7 +107,7 @@
     },
     {
       "url": "dnd-master-styles.css",
-      "sha256": "517a4caab963c887c57386dea3708b4c57e6bf40f4d44bb58ae11ec43b97f4c8"
+      "sha256": "c511294e36fa4146c7cd9caf05b81b52635f476d1356625396198eb87a80f1af"
     },
     {
       "url": "dnd-master-triggers.js",
@@ -135,7 +135,7 @@
     },
     {
       "url": "lk-icons.js",
-      "sha256": "e418721add041b8f51b191fd4851003b5cdd957f27f6f8a2e4ed11e58cfca554"
+      "sha256": "14927c281cc7860b3214e8d1ca1e2904cf00bddae590f3297c009804129253b2"
     }
   ]
 }

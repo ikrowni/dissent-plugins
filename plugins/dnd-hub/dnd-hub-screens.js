@@ -26,7 +26,7 @@ export function renderLobbyScreen() {
         <div class="lobby-card-desc">As a player: join a campaign or pick up where you left off</div>
       </div>
     </div>
-    <button class="credits-link" onclick="showCredits()" title="About and credits">ⓘ Credits</button>`;
+    <button class="credits-link" onclick="showCredits()" title="About and credits">${icon('info', { size: 12 })} Credits</button>`;
 }
 
 export function renderDMPortalFrame() {

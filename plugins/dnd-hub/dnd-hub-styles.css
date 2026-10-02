@@ -19,7 +19,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   position:absolute;inset:0;display:flex;flex-direction:column;overflow-y:auto;}
 #screen-loading{align-items:center;justify-content:center;gap:12px}
 .spinner{width:32px;height:32px;border:3px solid var(--dnd-border);border-top-color:var(--dnd-gold);border-radius:50%;animation:spin .8s linear infinite}
-#screen-lobby{align-items:center;justify-content:center;gap:0;padding:32px 20px;position:relative}
+#screen-lobby{align-items:center;justify-content:center;gap:0;padding:32px 20px}
 .credits-link{position:absolute;bottom:10px;right:12px;background:none;border:none;color:var(--dnd-muted);font-size:11px;opacity:.55;cursor:pointer}
 .credits-link:hover{opacity:1}
 .lobby-logo{margin-bottom:10px;line-height:0}

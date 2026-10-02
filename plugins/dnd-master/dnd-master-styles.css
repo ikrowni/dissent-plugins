@@ -132,3 +132,6 @@ option{background:#1a1410;color:var(--text)}
 .dm-subtab{background:var(--lk-raise);border:1px solid var(--lk-line);color:var(--lk-text);border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer}
 .dm-subtab:hover{border-color:var(--lk-gold-dim)}
 .dm-subtab.active{border-color:var(--lk-gold-dim);color:var(--lk-gold);background:var(--lk-raise2)}
+
+.lk-note{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;margin:0 16px;padding:16px;background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:10px;font-size:12px;color:var(--lk-muted);line-height:1.5}
+.lk-note b{font-size:13px;font-weight:600}

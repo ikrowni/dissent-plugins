@@ -24,11 +24,13 @@ const NAMES = [
 // Hand-drawn: Lucide has no lantern. Same 24×24 grid, 2px stroke, round caps, so it sits with the rest.
 const CUSTOM = {
   lantern: [
-    ["path", { d: "M9 3h6" }], ["path", { d: "M12 3v2" }],
-    ["path", { d: "M8 7h8l-1 2H9z" }],
-    ["path", { d: "M9 9v8a3 3 0 0 0 6 0V9" }],
-    ["path", { d: "M12 12.5c-.9 1-1.2 1.8-.6 2.6.4.5 1 .6 1.4.1.5-.6.3-1.6-.8-2.7z" }],
-    ["path", { d: "M10 21h4" }],
+    ["path", { d: "M12 2v2" }],                                   // hanging ring stem
+    ["path", { d: "M8 7l1.5-3h5L16 7" }],                          // peaked cap
+    ["path", { d: "M7 7h10" }],
+    ["path", { d: "M8 7v11h8V7" }],                                 // glass body
+    ["path", { d: "M10.7 7v11M13.3 7v11" }],                        // bars
+    ["path", { d: "M12 10.5c-1 1.1-1.3 2-.7 2.8.4.5 1 .5 1.4 0 .5-.7.3-1.6-.7-2.8z" }],   // flame
+    ["path", { d: "M7 18h10l-1 2.5H8z" }],                          // base
   ],
 };
 

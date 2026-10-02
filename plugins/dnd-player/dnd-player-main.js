@@ -456,7 +456,7 @@ async function onInit(data) {
   // user is looking at right now.
   const myCampaign = pickCampaign(SERVER_DATA.campaigns, _announcedCampaignId || storedCampaignId, USER_ID);
   CAMPAIGN_ID = myCampaign?.id ?? null;
-  if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<span>Join a campaign at the LanternKeep table to use this sidebar.</span>'; return; }
+  if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<div class="lk-note"><b class="lk-title">No character yet</b><span>Join a game at the LanternKeep table to see your sheet here.</span></div>'; return; }
   // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
   // character in the campaign is what proves you are playing it; membership does not.
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
@@ -493,7 +493,7 @@ async function onInit(data) {
   // later builds a character would never get the sheet back. Point at the right panel.
   if (isDMOnly) {
     document.getElementById('loading').innerHTML =
-      '<span>You\'re running this campaign. Your tools are in the LanternKeep DM panel.</span>';
+      '<div class="lk-note"><b class="lk-title">You\'re the DM</b><span>Your tools are in the LanternKeep DM panel. Switch with ⇅ above.</span></div>';
     return;
   }
 
