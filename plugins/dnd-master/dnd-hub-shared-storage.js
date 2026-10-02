@@ -23,6 +23,7 @@
 //
 // The legacy 'hub-dm' key is still read as a fallback and is never written here.
 import { storageGetCompanion, storageSetCompanion } from '../plugin-sdk.js';
+import { mergeCampaign } from './dnd-campaign-merge.js';
 
 const HUB = 'dnd-hub';
 
@@ -99,8 +100,15 @@ export async function saveHubDmCompanion(data) {
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
     if (_lastSeen.get(id) === json) continue;
-    await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', camp);
-    _lastSeen.set(id, json);
+    // Re-read and three-way merge (dnd-campaign-merge.js), so a sidebar save keeps what
+    // the Hub or another player changed since this sidebar loaded.
+    const baseJson = _lastSeen.get(id);
+    const remote = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
+    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, camp, remote);
+    await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', merged);
+    _lastSeen.set(id, JSON.stringify(merged));
+    for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
+    Object.assign(camp, merged);
   }
   for (const id of [..._lastSeen.keys()]) {
     if (!(id in campaigns)) _lastSeen.delete(id);
