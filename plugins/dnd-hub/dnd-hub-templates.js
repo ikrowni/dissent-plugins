@@ -69,7 +69,7 @@ export function showTemplatePicker() {
     'padding:12px;z-index:9000;display:flex;flex-direction:column;gap:10px;min-width:220px;' +
     'box-shadow:0 8px 32px rgba(0,0,0,.6)';
   panel.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:#d4af37;letter-spacing:.05em">PLACE TEMPLATE</div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);letter-spacing:.05em">PLACE TEMPLATE</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="tmpl-shape-btns">' +
       ['circle','cone','line','cube'].map(t =>
         `<button id="tmpl-shape-${t}" onclick="selectTemplateShape('${t}')" ` +
@@ -89,7 +89,7 @@ export function showTemplatePicker() {
       ? '<button onclick="clearAllTemplates()" style="padding:5px;background:rgba(248,113,113,.12);' +
         'border:1px solid rgba(248,113,113,.3);border-radius:6px;color:#f87171;font-size:10px;cursor:pointer">Clear All</button>'
       : '<button onclick="clearMyTemplates()" style="padding:5px;background:rgba(255,255,255,.06);' +
-        'border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#94a3b8;font-size:10px;cursor:pointer">Clear Mine</button>') +
+        'border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--lk-muted);font-size:10px;cursor:pointer">Clear Mine</button>') +
     '<div style="font-size:10px;color:rgba(255,255,255,.4)" id="tmpl-hint">Click a shape, then click-drag on map</div>';
   document.body.appendChild(panel);
 }
@@ -107,7 +107,7 @@ function _shapeIcon(t) {
 export function selectTemplateShape(type) {
   _pendingType = type;
   document.querySelectorAll('[id^="tmpl-shape-"]').forEach(b => {
-    b.style.borderColor = b.id === `tmpl-shape-${type}` ? '#d4af37' : 'rgba(255,255,255,.15)';
+    b.style.borderColor = b.id === `tmpl-shape-${type}` ? 'var(--lk-gold)' : 'rgba(255,255,255,.15)';
     b.style.background  = b.id === `tmpl-shape-${type}` ? 'rgba(212,175,55,.15)' : 'rgba(255,255,255,.06)';
   });
   const hint = document.getElementById('tmpl-hint');

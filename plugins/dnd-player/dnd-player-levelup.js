@@ -140,11 +140,11 @@ function _renderOverlay() {
   overlay.innerHTML =
     `<div style="padding:14px 16px;border-bottom:1px solid rgba(212,175,55,.2);flex-shrink:0">` +
       `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">` +
-        `<div style="font-size:13px;font-weight:800;color:#d4af37">⬆ Level Up — ${_char.name}</div>` +
+        `<div style="font-size:13px;font-weight:800;color:var(--lk-gold)">⬆ Level Up — ${_char.name}</div>` +
         `<div onclick="closeLevelUp()" style="cursor:pointer;color:rgba(255,255,255,.4);font-size:16px;line-height:1">✕</div>` +
       `</div>` +
       `<div style="height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:6px">` +
-        `<div style="height:100%;width:${pct}%;background:#d4af37;border-radius:2px;transition:width .3s"></div>` +
+        `<div style="height:100%;width:${pct}%;background:var(--lk-gold);border-radius:2px;transition:width .3s"></div>` +
       `</div>` +
       `<div style="font-size:10px;color:rgba(255,255,255,.4)">Step ${_step+1} of ${total}</div>` +
     `</div>` +
@@ -155,7 +155,7 @@ function _renderOverlay() {
         `border-radius:6px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer">← Back</button>` +
       `<button onclick="levelUpNext()" ` +
         `style="flex:1;padding:8px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);` +
-        `border-radius:6px;color:#d4af37;font-size:12px;font-weight:700;cursor:pointer" id="levelup-next-btn">` +
+        `border-radius:6px;color:var(--lk-gold);font-size:12px;font-weight:700;cursor:pointer" id="levelup-next-btn">` +
         `${stepName === 'done' ? 'Apply Level Up ✨' : 'Next →'}</button>` +
     `</div>`;
 
@@ -182,12 +182,12 @@ function _stepConfirm(el) {
   el.innerHTML =
     `<div style="text-align:center;margin-bottom:20px">` +
       `<div style="font-size:48px;margin-bottom:8px">⬆</div>` +
-      `<div style="font-size:22px;font-weight:900;color:#d4af37">Level ${newLevel}!</div>` +
+      `<div style="font-size:22px;font-weight:900;color:var(--lk-gold)">Level ${newLevel}!</div>` +
       `<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">` +
         `${_char.name} — ${_char.race} ${_char.class}</div>` +
     `</div>` +
     `<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:14px">` +
-      `<div style="font-size:11px;font-weight:700;color:#d4af37;margin-bottom:8px">New Features at Level ${newLevel}</div>` +
+      `<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:8px">New Features at Level ${newLevel}</div>` +
       `<div style="font-size:12px;color:rgba(255,255,255,.8);line-height:1.6">${esc(featureText)}</div>` +
     `</div>`;
 }
@@ -202,7 +202,7 @@ function _stepHP(el) {
   el.innerHTML =
     `<div style="text-align:center;margin-bottom:20px">` +
       `<div style="font-size:36px;margin-bottom:8px">❤️</div>` +
-      `<div style="font-size:16px;font-weight:700;color:#d4af37">Hit Points</div>` +
+      `<div style="font-size:16px;font-weight:700;color:var(--lk-gold)">Hit Points</div>` +
       `<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">` +
         `Hit Die: d${hd} · CON modifier: ${modStr}</div>` +
     `</div>` +
@@ -215,7 +215,7 @@ function _stepHP(el) {
     `<div style="display:flex;flex-direction:column;gap:10px">` +
       `<button onclick="levelUpRollHP(${hd},${conMod})" ` +
         `style="padding:14px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.4);` +
-        `border-radius:8px;color:#d4af37;font-size:13px;font-weight:700;cursor:pointer;text-align:left">` +
+        `border-radius:8px;color:var(--lk-gold);font-size:13px;font-weight:700;cursor:pointer;text-align:left">` +
         `🎲 Roll d${hd} (random)<br><span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.4)">` +
         `1-${hd} ${modStr} CON</span></button>` +
       `<button onclick="levelUpTakeAverage(${avg},${conMod})" ` +
@@ -230,10 +230,10 @@ function _stepFeatures(el) {
   const newLevel = _draft.newLevel;
   const featureText = (CLASS_FEATURES[_char.class?.toLowerCase()] || {})[newLevel] || '';
   el.innerHTML =
-    `<div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:16px">✨ Level ${newLevel} Features</div>` +
+    `<div style="font-size:14px;font-weight:700;color:var(--lk-gold);margin-bottom:16px">✨ Level ${newLevel} Features</div>` +
     featureText.split(',').map(f => f.trim()).filter(Boolean).map(f =>
       `<div style="padding:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);` +
-        `border-left:3px solid #d4af37;border-radius:6px;margin-bottom:8px">` +
+        `border-left:3px solid var(--lk-gold);border-radius:6px;margin-bottom:8px">` +
         `<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9)">${esc(f)}</div>` +
       `</div>`
     ).join('') ||
@@ -253,7 +253,7 @@ function _stepSpells(el) {
   const castable = allSpells.filter(sp => sp.level <= maxSpellLevel && !(_char.spells||[]).includes(sp.id));
 
   el.innerHTML =
-    `<div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:10px">📖 Spells</div>` +
+    `<div style="font-size:14px;font-weight:700;color:var(--lk-gold);margin-bottom:10px">📖 Spells</div>` +
     `<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:14px">` +
       `New spell slots at level ${newLevel}. Select any new spells to add to your list (optional).</div>` +
     (castable.length
@@ -278,7 +278,7 @@ function _stepASI(el) {
   const feats = _srdData.feats || [];
 
   el.innerHTML =
-    `<div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:14px">⭐ Ability Score Improvement</div>` +
+    `<div style="font-size:14px;font-weight:700;color:var(--lk-gold);margin-bottom:14px">⭐ Ability Score Improvement</div>` +
     `<div style="display:flex;flex-direction:column;gap:10px">` +
       `<label style="display:flex;align-items:center;gap:8px;padding:12px;background:rgba(255,255,255,.04);` +
         `border:1px solid rgba(255,255,255,.15);border-radius:8px;cursor:pointer">` +
@@ -339,7 +339,7 @@ function _stepDone(el) {
   el.innerHTML =
     `<div style="text-align:center;margin-bottom:20px">` +
       `<div style="font-size:48px;margin-bottom:8px">🎉</div>` +
-      `<div style="font-size:18px;font-weight:800;color:#d4af37">Ready!</div>` +
+      `<div style="font-size:18px;font-weight:800;color:var(--lk-gold)">Ready!</div>` +
     `</div>` +
     `<div style="display:flex;flex-direction:column;gap:8px;font-size:12px">` +
       `<div style="padding:10px;background:rgba(255,255,255,.04);border-radius:6px">` +

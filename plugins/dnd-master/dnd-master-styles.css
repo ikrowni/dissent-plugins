@@ -1,11 +1,6 @@
 /* dnd-master-styles.css — all styles for dnd-master plugin */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#d4af37;--red:#c0392b;--bg:#0c0a08;
-  --surface:rgba(255,255,255,.05);--surface2:rgba(255,255,255,.08);
-  --border:rgba(212,175,55,.18);--text:rgba(255,255,255,.92);
-  --muted:rgba(255,255,255,.45);
-}
+/* Colour tokens come from lanternkeep-theme.css (linked first). */
 html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;display:flex;flex-direction:column}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 @keyframes spin{to{transform:rotate(360deg)}}

@@ -379,7 +379,7 @@ function setupTokenDrag(container, token) {
         const tokenSpeed = MAP.mapData?.tokens?.[token.id]?.speed || 30;
         if (soFar > tokenSpeed) {
           const toastEl = document.createElement('div');
-          toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+          toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
           toastEl.textContent = `Movement exceeds your speed for this turn (${soFar}ft of ${tokenSpeed}ft used).`;
           document.body.appendChild(toastEl);
           setTimeout(() => toastEl.remove(), 4000);
@@ -442,7 +442,7 @@ function _rollExpr(expr) {
 function _showAttackToast(attackerName, attackName, d20, total, toHit, damage, isCrit) {
   const el = document.createElement('div');
   const hitColor = isCrit ? '#f59e0b' : '#22c55e';
-  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid rgba(255,255,255,.2);color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5);min-width:220px;text-align:center';
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid rgba(255,255,255,.2);color:var(--lk-text);padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5);min-width:220px;text-align:center';
   el.innerHTML =
     `<div style="font-weight:700;margin-bottom:4px">⚔️ ${esc(attackerName)} — ${esc(attackName)}</div>` +
     `<div>Attack: <span style="color:${hitColor};font-weight:700">${d20}</span>${isCrit ? ' 🎯 CRIT!' : ''} (${d20} + ${toHit} = <b>${total}</b>)</div>` +
@@ -458,17 +458,17 @@ function _showMonsterAttackPanel(token, panelX, panelY) {
 
   const panel = document.createElement('div');
   panel.id = 'monster-atk-panel';
-  panel.style.cssText = `position:fixed;left:${panelX}px;top:${panelY}px;background:#1e1e2e;border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:8px;z-index:9998;min-width:200px;box-shadow:0 4px 20px rgba(0,0,0,.6)`;
+  panel.style.cssText = `position:fixed;left:${panelX}px;top:${panelY}px;background:var(--lk-panel);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:8px;z-index:9998;min-width:200px;box-shadow:0 4px 20px rgba(0,0,0,.6)`;
   panel.innerHTML =
     `<div style="font-size:11px;font-weight:700;color:var(--dnd-gold,#f59e0b);margin-bottom:6px">⚔️ ${esc(token.name)}</div>` +
     attacks.map((a, i) =>
-      `<div style="padding:6px 10px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#e2e8f0;font-size:11px"
+      `<div style="padding:6px 10px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--lk-text);font-size:11px"
            id="atk-row-${i}"
            onmouseenter="this.style.background='rgba(255,255,255,.08)'"
            onmouseleave="this.style.background=''"
            onclick="window._doAtkRoll(${i})">
         <span>${esc(a.name)}</span>
-        <span style="color:#94a3b8;font-size:10px">+${a.toHit} / ${esc(a.damageDice)} | ${a.rangeFt ?? 5}ft</span>
+        <span style="color:var(--lk-muted);font-size:10px">+${a.toHit} / ${esc(a.damageDice)} | ${a.rangeFt ?? 5}ft</span>
       </div>`
     ).join('');
   document.body.appendChild(panel);
@@ -728,9 +728,9 @@ async function _showSizeDialog(token) {
   const SIZES = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
-    'background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
+    'background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
     'z-index:9999;min-width:180px;font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.7)';
-  d.innerHTML = '<div style="font-size:11px;font-weight:700;color:#d4af37;margin-bottom:8px">Token Size</div>' +
+  d.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:8px">Token Size</div>' +
     SIZES.map(s =>
       `<button onclick="window._setSizeFor('${s}')" style="display:block;width:100%;margin:2px 0;padding:5px 8px;text-align:left;` +
       `background:${s === (token.size || 'medium') ? 'rgba(212,175,55,.2)' : 'rgba(255,255,255,.05)'};` +
@@ -778,10 +778,10 @@ async function _openLootModal(tokenId, token) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
 
   const modal = document.createElement('div');
-  modal.style.cssText = 'background:#1e1e2e;border:1px solid rgba(212,175,55,.35);border-radius:10px;padding:20px;min-width:300px;max-width:400px;max-height:75vh;overflow-y:auto';
+  modal.style.cssText = 'background:var(--lk-panel);border:1px solid rgba(212,175,55,.35);border-radius:10px;padding:20px;min-width:300px;max-width:400px;max-height:75vh;overflow-y:auto';
 
   const itemsHtml = unclaimed.length === 0
-    ? '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:16px">Nothing left to loot.</div>'
+    ? '<div style="font-size:12px;color:var(--lk-muted);text-align:center;padding:16px">Nothing left to loot.</div>'
     : unclaimed.map(li => {
         const item = itemLib[li.itemId];
         if (!item) return '';
@@ -791,18 +791,18 @@ async function _openLootModal(tokenId, token) {
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#2a2a40;border-radius:8px;margin-bottom:8px">' +
           imgHtml +
           '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:12px;font-weight:600;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(item.name) + '</div>' +
-            '<div style="font-size:10px;color:#94a3b8">' + esc(item.type) + (li.qty > 1 ? ' · ×' + li.qty : '') + '</div>' +
+            '<div style="font-size:12px;font-weight:600;color:var(--lk-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(item.name) + '</div>' +
+            '<div style="font-size:10px;color:var(--lk-muted)">' + esc(item.type) + (li.qty > 1 ? ' · ×' + li.qty : '') + '</div>' +
           '</div>' +
           '<button data-itemid="' + item.id + '" data-itemname="' + esc(item.name) + '" class="loot-want-btn" ' +
-            'style="flex-shrink:0;padding:5px 12px;border-radius:6px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.12);color:#d4af37;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap">I Want This</button>' +
+            'style="flex-shrink:0;padding:5px 12px;border-radius:6px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.12);color:var(--lk-gold);cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap">I Want This</button>' +
         '</div>';
       }).join('');
 
   modal.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
-      '<span style="font-size:14px;font-weight:700;color:#d4af37">🔍 ' + esc(token.name) + ' — Loot</span>' +
-      '<button id="loot-modal-close" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:20px;line-height:1">✕</button>' +
+      '<span style="font-size:14px;font-weight:700;color:var(--lk-gold)">🔍 ' + esc(token.name) + ' — Loot</span>' +
+      '<button id="loot-modal-close" style="background:none;border:none;color:var(--lk-muted);cursor:pointer;font-size:20px;line-height:1">✕</button>' +
     '</div>' +
     itemsHtml;
 

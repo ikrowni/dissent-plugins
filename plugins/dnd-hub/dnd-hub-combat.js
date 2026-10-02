@@ -7,14 +7,14 @@ import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
 
 export const CONDITIONS = [
-  { id: 'Blinded',       icon: '👁', color: '#94a3b8' },
+  { id: 'Blinded',       icon: '👁', color: 'var(--lk-muted)' },
   { id: 'Charmed',       icon: '💖', color: '#ec4899' },
-  { id: 'Deafened',      icon: '🔇', color: '#94a3b8' },
+  { id: 'Deafened',      icon: '🔇', color: 'var(--lk-muted)' },
   { id: 'Exhaustion',    icon: '😮', color: '#f97316' },
   { id: 'Frightened',    icon: '😱', color: '#a855f7' },
   { id: 'Grappled',      icon: '🤼', color: '#f59e0b' },
   { id: 'Incapacitated', icon: '💤', color: '#6b7280' },
-  { id: 'Invisible',     icon: '🌫', color: '#e2e8f0' },
+  { id: 'Invisible',     icon: '🌫', color: 'var(--lk-text)' },
   { id: 'Paralyzed',     icon: '⚡', color: '#facc15' },
   { id: 'Petrified',     icon: '🪨', color: '#78716c' },
   { id: 'Poisoned',      icon: '☠', color: '#22c55e' },

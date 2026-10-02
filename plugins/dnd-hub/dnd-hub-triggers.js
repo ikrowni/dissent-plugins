@@ -189,7 +189,7 @@ export async function fireTrigger(trigger, tokenId) {
 
 export function showTriggerToast(msg) {
   const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #ef4444;color:#f87171;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.5)';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #ef4444;color:#f87171;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.5)';
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 4000);
@@ -216,13 +216,13 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
 
   const d = document.createElement('div');
   d.id = 'trigger-dialog';
-  d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--dnd-surface,#1e1e2e);border:1px solid var(--dnd-border,#3f3f5a);border-radius:12px;padding:20px;z-index:9999;min-width:300px;color:var(--dnd-text,#e2e8f0);box-shadow:0 8px 32px rgba(0,0,0,0.5)';
+  d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:12px;padding:20px;z-index:9999;min-width:300px;color:var(--lk-text);box-shadow:0 8px 32px rgba(0,0,0,0.5)';
   d.innerHTML = `
     <div style="font-weight:700;font-size:14px;margin-bottom:12px">🪤 ${existingTrigger ? 'Edit' : 'New'} Trigger (Cell ${cx},${cy})</div>
     <label style="font-size:12px;display:block;margin-bottom:4px">Label</label>
-    <input id="td-label" value="${esc(trigger.label)}" style="width:100%;box-sizing:border-box;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+    <input id="td-label" value="${esc(trigger.label)}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
     <label style="font-size:12px;display:block;margin-bottom:4px">Type</label>
-    <select id="td-type" style="width:100%;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px" onchange="window._triggerDialogTypeChange()">
+    <select id="td-type" style="width:100%;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px" onchange="window._triggerDialogTypeChange()">
       <option value="message" ${trigger.type==='message'?'selected':''}>💬 Message</option>
       <option value="trap"    ${trigger.type==='trap'   ?'selected':''}>🪤 Trap (damage)</option>
       <option value="teleport"${trigger.type==='teleport'?'selected':''}>🌀 Teleport</option>
@@ -230,17 +230,17 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     </select>
     <div id="td-fields-message" style="${trigger.type!=='message'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Message text</label>
-      <textarea id="td-message" style="width:100%;box-sizing:border-box;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;min-height:60px;margin-bottom:10px">${esc(trigger.message)}</textarea>
+      <textarea id="td-message" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;min-height:60px;margin-bottom:10px">${esc(trigger.message)}</textarea>
     </div>
     <div id="td-fields-trap" style="${trigger.type!=='trap'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Damage expression (e.g. 2d6+2)</label>
-      <input id="td-damage" value="${esc(trigger.damageExpr)}" style="width:100%;box-sizing:border-box;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+      <input id="td-damage" value="${esc(trigger.damageExpr)}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
     </div>
     <div id="td-fields-teleport" style="${trigger.type!=='teleport'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Destination cell X</label>
-      <input id="td-destcx" type="number" value="${trigger.destCx ?? ''}" style="width:100%;box-sizing:border-box;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+      <input id="td-destcx" type="number" value="${trigger.destCx ?? ''}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
       <label style="font-size:12px;display:block;margin-bottom:4px">Destination cell Y</label>
-      <input id="td-destcy" type="number" value="${trigger.destCy ?? ''}" style="width:100%;box-sizing:border-box;background:var(--dnd-bg,#13131f);border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+      <input id="td-destcy" type="number" value="${trigger.destCy ?? ''}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
     </div>
     <div id="td-fields-sound" style="${trigger.type!=='sound'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Audio file</label>
@@ -254,7 +254,7 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
       <input id="td-oneshot" type="checkbox" ${trigger.oneShot?'checked':''}> One-shot (disable after firing)
     </label>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="document.getElementById('trigger-dialog').remove()" style="background:transparent;border:1px solid var(--dnd-border,#3f3f5a);color:inherit;padding:6px 14px;border-radius:6px;cursor:pointer">Cancel</button>
+      <button onclick="document.getElementById('trigger-dialog').remove()" style="background:transparent;border:1px solid var(--lk-line);color:inherit;padding:6px 14px;border-radius:6px;cursor:pointer">Cancel</button>
       <button id="td-save" style="background:var(--dnd-primary,#6366f1);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Save</button>
     </div>`;
   document.body.appendChild(d);

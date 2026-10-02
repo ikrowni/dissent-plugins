@@ -35,7 +35,7 @@ export function updateRuler(toX, toY) {
 
   const outOfRange = MAP.selectedAttack && distFt > MAP.selectedAttack.rangeFt;
   const lineColor  = outOfRange ? 0xef4444 : 0xd4af37;
-  const textColor  = outOfRange ? '#ef4444' : '#d4af37';
+  const textColor  = outOfRange ? '#ef4444' : 'var(--lk-gold)';
 
   let label = `${distFt}ft`;
   if (MAP.activeTurnTokenId && MAP.rulerStart) {

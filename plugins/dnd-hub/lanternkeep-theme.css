@@ -1,0 +1,82 @@
+/* lanternkeep-theme.css — the one look for LanternKeep (dnd-hub, dnd-master, dnd-player).
+ *
+ * ⚠️ SOURCE FILE. Each plugin loads a vendored copy (scripts/vendor-shared.mjs). Edit here, re-vendor.
+ * Link it BEFORE the plugin's own stylesheet.
+ *
+ * Every variable name the three plugins grew separately (--dnd-gold, --gold, --muted, --surface …) is
+ * ALIASED to one token set below, so ~600 existing var(--…) uses follow the theme without edits.
+ * Prefer the --lk-* names in new code.
+ *
+ * Cinzel: SIL Open Font License 1.1 — lanternkeep-fonts/OFL.txt.
+ */
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:400 900;font-display:swap;
+  src:url(lanternkeep-fonts/Cinzel-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:400 900;font-display:swap;
+  src:url(lanternkeep-fonts/Cinzel-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+:root{
+  /* tokens */
+  --lk-bg:#0d0a07; --lk-panel:#16110b; --lk-raise:#1f1810; --lk-raise2:#2a2015;
+  --lk-line:#4a3a20; --lk-line-soft:rgba(224,181,82,.16);
+  --lk-gold:#e0b552; --lk-gold-dim:#a8843a; --lk-gold-ink:#241806;
+  --lk-ember:#c4542f; --lk-good:#7fbf6a; --lk-blue:#6aa3d9;
+  --lk-text:#efe4cc; --lk-muted:#9c8c70; --lk-dim:#5f533f;
+  --lk-radius:8px; --lk-title:'Cinzel',Georgia,'Times New Roman',serif;
+  --lk-ui:system-ui,-apple-system,'Segoe UI',sans-serif;
+
+  /* aliases: dnd-hub */
+  --dnd-red:var(--lk-ember); --dnd-gold:var(--lk-gold); --dnd-dark:var(--lk-bg);
+  --dnd-surface:var(--lk-raise); --dnd-border:var(--lk-line); --dnd-text:var(--lk-text);
+  --dnd-muted:var(--lk-muted); --dnd-dim:var(--lk-dim); --dnd-bg:var(--lk-bg);
+  --dnd-green:var(--lk-good); --dnd-primary:var(--lk-gold);
+  /* aliases: dnd-master / dnd-player */
+  --gold:var(--lk-gold); --red:var(--lk-ember); --bg:var(--lk-bg);
+  --surface:var(--lk-raise); --surface2:var(--lk-raise2); --border:var(--lk-line);
+  --text:var(--lk-text); --muted:var(--lk-muted); --dim:var(--lk-dim);
+  --primary:var(--lk-gold); --fg:var(--lk-text); --radius:10px;
+}
+
+html,body{background:var(--lk-bg);color:var(--lk-text);font-family:var(--lk-ui)}
+::selection{background:rgba(224,181,82,.35)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--lk-line);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--lk-gold-dim)}
+
+.lk-title{font-family:var(--lk-title);letter-spacing:.06em;color:var(--lk-gold)}
+
+/* buttons — same names the plugins already use */
+.btn{font-family:var(--lk-ui);border-radius:var(--lk-radius);transition:background .15s,border-color .15s,transform .05s}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn-gold{background:linear-gradient(#e7c068,#b88b34);color:var(--lk-gold-ink);border:1px solid var(--lk-gold)}
+.btn-gold:hover{background:linear-gradient(#f0cd78,#c4983f)}
+.btn-primary,.btn-red{background:linear-gradient(#d0653f,#9f3f21);color:#fff6ea;border:1px solid #d77a52}
+.btn-primary:hover,.btn-red:hover{background:linear-gradient(#db7149,#ad4727)}
+.btn-ghost{background:var(--lk-raise);color:var(--lk-text);border:1px solid var(--lk-line)}
+.btn-ghost:hover{background:var(--lk-raise2);border-color:var(--lk-gold-dim)}
+
+/* form controls */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{
+  background:var(--lk-raise);color:var(--lk-text);border:1px solid var(--lk-line);border-radius:6px;font-family:var(--lk-ui)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--lk-gold-dim);box-shadow:0 0 0 2px rgba(224,181,82,.15)}
+input::placeholder,textarea::placeholder{color:var(--lk-dim)}
+input[type=range]{accent-color:var(--lk-gold)}
+input[type=checkbox],input[type=radio]{accent-color:var(--lk-gold)}
+option{background:var(--lk-panel);color:var(--lk-text)}
+
+/* dialogs and menus built in JS add .lk-dialog / .lk-menu */
+.lk-dialog{background:var(--lk-panel);border:1px solid var(--lk-gold-dim);border-radius:12px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,220,150,.06);color:var(--lk-text)}
+.lk-menu{background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+
+/* icons from lk-icons.js */
+.lk-icon{display:inline-block;vertical-align:-.15em;flex-shrink:0}
+
+/* lantern glow: a slow, uneven flicker */
+@keyframes lk-flicker{0%,100%{opacity:.85;filter:drop-shadow(0 0 10px rgba(224,160,60,.55))}
+  22%{opacity:1;filter:drop-shadow(0 0 16px rgba(240,180,70,.75))}
+  41%{opacity:.78;filter:drop-shadow(0 0 8px rgba(224,160,60,.45))}
+  63%{opacity:.95;filter:drop-shadow(0 0 14px rgba(240,180,70,.7))}}
+.lk-glow{animation:lk-flicker 3.2s ease-in-out infinite;color:var(--lk-gold)}
+@media (prefers-reduced-motion:reduce){.lk-glow{animation:none}}

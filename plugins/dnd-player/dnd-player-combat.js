@@ -135,12 +135,12 @@ function _showActionPicker(key) {
   const menu = document.createElement('div');
   menu.style.cssText =
     'position:fixed;left:' + rect.left + 'px;top:' + (rect.bottom + 4) + 'px;' +
-    'background:#1e1e2e;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:4px;' +
+    'background:var(--lk-panel);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:4px;' +
     'z-index:9001;min-width:' + menuW + 'px;box-shadow:0 4px 16px rgba(0,0,0,.6);max-height:240px;overflow-y:auto';
 
   choices.forEach(label => {
     const item = document.createElement('div');
-    item.style.cssText = 'padding:7px 10px;font-size:11px;cursor:pointer;border-radius:5px;color:#e2e8f0;white-space:nowrap';
+    item.style.cssText = 'padding:7px 10px;font-size:11px;cursor:pointer;border-radius:5px;color:var(--lk-text);white-space:nowrap';
     item.textContent = label;
     item.onmouseenter = () => { item.style.background = 'rgba(255,255,255,.08)'; };
     item.onmouseleave = () => { item.style.background = ''; };

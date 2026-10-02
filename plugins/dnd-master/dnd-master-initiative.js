@@ -18,7 +18,7 @@ function rollDice(n, d, mod) { mod = mod || 0; let t = 0; for (let i = 0; i < n;
 
 function renderInitRow(c, i, isCurrent) {
   const isSelected = _selectedRows.has(i);
-  const dotColor = c.type === 'player' ? '#3b82f6' : c.type === 'monster' ? '#ef4444' : '#94a3b8';
+  const dotColor = c.type === 'player' ? '#3b82f6' : c.type === 'monster' ? '#ef4444' : 'var(--lk-muted)';
   const hpFrac   = c.hpMax > 0 ? c.hp / c.hpMax : 1;
   const hpColor  = hpFrac > 0.5 ? '#22c55e' : hpFrac > 0.25 ? '#f59e0b' : '#ef4444';
   const nameStyle = 'font-size:11px;font-weight:' + (isCurrent ? '800' : '600') +

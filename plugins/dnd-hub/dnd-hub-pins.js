@@ -48,10 +48,10 @@ function _showDMPinMenu(pin) {
   const d = document.createElement('div');
   d.id = 'pin-menu';
   d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
-    'background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
+    'background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
     'z-index:9998;min-width:200px;font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.7)';
   d.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:#d4af37;margin-bottom:8px">PIN: ' + esc(pin.label || '(no label)') + '</div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:8px">PIN: ' + esc(pin.label || '(no label)') + '</div>' +
     '<button id="pin-del-btn" style="width:100%;padding:6px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer;margin-bottom:6px">\uD83D\uDDD1 Delete Pin</button>' +
     '<button id="pin-cancel-btn" style="width:100%;padding:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.7);font-size:11px;cursor:pointer">Cancel</button>';
   document.body.appendChild(d);
@@ -73,12 +73,12 @@ export function showPinDialog(worldX, worldY) {
   const d = document.createElement('div');
   d.id = 'pin-dialog';
   d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
-    'background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
+    'background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
     'z-index:9998;min-width:220px;font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.7)';
   const journalOpts = '<option value="">\u2014 None \u2014</option>' +
     journals.map(j => '<option value="' + esc(j.id) + '">' + esc(j.title) + '</option>').join('');
   d.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:#d4af37;margin-bottom:10px">\uD83D\uDCCC New Map Pin</div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:10px">\uD83D\uDCCC New Map Pin</div>' +
     '<input id="pin-label-input" placeholder="Label (optional)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px">' +
     '<select id="pin-journal-select" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px">' + journalOpts + '</select>' +
     '<div style="display:flex;gap:8px;margin-bottom:8px">' +
@@ -88,7 +88,7 @@ export function showPinDialog(worldX, worldY) {
         '<input type="radio" name="pvis" value="all"> All players</label>' +
     '</div>' +
     '<div style="display:flex;gap:6px">' +
-      '<button id="pin-place-btn" style="flex:1;padding:7px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:#d4af37;font-size:11px;font-weight:700;cursor:pointer">Place Pin</button>' +
+      '<button id="pin-place-btn" style="flex:1;padding:7px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer">Place Pin</button>' +
       '<button id="pin-cancel-btn" style="padding:7px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.7);font-size:11px;cursor:pointer">Cancel</button>' +
     '</div>';
   document.body.appendChild(d);
@@ -148,10 +148,10 @@ export function showHandoutOverlay({ title, content }) {
   overlay.id = 'handout-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
   overlay.innerHTML =
-    '<div style="background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
-      '<div style="font-size:13px;font-weight:800;color:#d4af37;margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">' + esc(title) + '</div>' +
+    '<div style="background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">' + esc(title) + '</div>' +
       '<div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;white-space:pre-wrap">' + esc(content) + '</div>' +
-      '<button onclick="document.getElementById(\'handout-overlay\').remove()" style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:#d4af37;font-size:11px;font-weight:700;cursor:pointer">Dismiss</button>' +
+      '<button onclick="document.getElementById(\'handout-overlay\').remove()" style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer">Dismiss</button>' +
     '</div>';
   document.body.appendChild(overlay);
 }

@@ -41,15 +41,15 @@
     },
     {
       "url": "dnd-player-combat.js",
-      "sha256": "4aeeb523a3336618cb3313117ffa071ed1f1205fc56159f4ff0aab21643a3b34"
+      "sha256": "c307f2e3373f68ecba22f396ffa7380547fb7b0657a733caa296e0d6ef6e584a"
     },
     {
       "url": "dnd-player-levelup.js",
-      "sha256": "fca22a1b3610848bbb7992914169152a821c22a84f9fa3a95ccb9c86b3835f60"
+      "sha256": "bbebb89b47943bac6553a32d10c5ccd426bc700bfa5cf8e59ef47d56cf9ea743"
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "9b67487e69080896850ef1db7cc9e819ad80582da754e83ba05d7375cbb32778"
+      "sha256": "669416ba86c41eabb186e67dc2d88907b82ca79df6579b34232d7e223a61d951"
     },
     {
       "url": "dnd-player-resources.js",
@@ -57,7 +57,7 @@
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "b7b372f6b4b5556f1267e34021605d1ba75d296332b5e15cc1b5e81d3e923155"
+      "sha256": "55bfb3fa02741db9ffd4c51dc98d18130c6ea581b19f3dab23a02f0b0037ad95"
     },
     {
       "url": "dnd-player-spells.js",
@@ -65,7 +65,7 @@
     },
     {
       "url": "dnd-player-styles.css",
-      "sha256": "f786a696b31b1c224ed2628cf5f3841ba0191386f0ba895c9ba2299852c86434"
+      "sha256": "c0cca4244a491792f1ff66f30abc548c2d7f24c8645c80e871c479106f3d7e76"
     },
     {
       "url": "dnd-srd/classes.json",
@@ -78,6 +78,22 @@
     {
       "url": "dnd-srd/spells.json",
       "sha256": "12890c8c7749a115bcfb9f3c4cad0e4a983139d6bd849dbc43f312e046fb12a1"
+    },
+    {
+      "url": "lanternkeep-fonts/Cinzel-latin-ext.woff2",
+      "sha256": "8fc2606f8ae6c569f444e138dba052d9a6e3f0657f9031796503bbb94eced600"
+    },
+    {
+      "url": "lanternkeep-fonts/Cinzel-latin.woff2",
+      "sha256": "09941fb1c169c38fd414536b37690057fc01b3117a5c63dd6571186540c8f370"
+    },
+    {
+      "url": "lanternkeep-fonts/OFL.txt",
+      "sha256": "f2b3029aba64c378bf0963b62945eee15e564fe4330b934c8f2eb058282b5e83"
+    },
+    {
+      "url": "lanternkeep-theme.css",
+      "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
     }
   ]
 }

@@ -1,11 +1,6 @@
 /* dnd-hub-styles.css — all styles for dnd-hub plugin */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --dnd-red:#c0392b;--dnd-gold:#d4af37;--dnd-dark:#1a0a0a;--dnd-surface:rgba(255,255,255,0.05);
-  --dnd-border:rgba(212,175,55,0.2);--dnd-text:rgba(255,255,255,0.92);
-  --dnd-muted:rgba(255,255,255,0.45);--dnd-dim:rgba(255,255,255,0.2);
-  --bg:#110808;--radius:10px;
-}
+/* Colour tokens come from lanternkeep-theme.css (linked first). */
 html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   background:var(--bg);color:var(--dnd-text);overflow:hidden}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}

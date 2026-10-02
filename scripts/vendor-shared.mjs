@@ -76,6 +76,14 @@ const VENDORED = [
     source: "dnd-campaign-pick.js",
     targets: ["dnd-master/dnd-campaign-pick.js", "dnd-player/dnd-campaign-pick.js"],
   },
+  // LanternKeep look: one theme and its font, in all three plugins (raw / binary copies).
+  ...["dnd-hub", "dnd-master", "dnd-player"].flatMap((id) => [
+    { source: "lanternkeep-theme.css", raw: true, targets: [`${id}/lanternkeep-theme.css`] },
+    { source: "lanternkeep-fonts/OFL.txt", raw: true, targets: [`${id}/lanternkeep-fonts/OFL.txt`] },
+    ...["Cinzel-latin.woff2", "Cinzel-latin-ext.woff2"].map((f) => ({
+      source: `lanternkeep-fonts/${f}`, binary: true, targets: [`${id}/lanternkeep-fonts/${f}`],
+    })),
+  ]),
   // The realtime event vocabulary all three D&D plugins speak. dnd-hub included: it is a
   // copy there too, so no plugin owns the vocabulary the others depend on.
   {
@@ -152,17 +160,19 @@ const check = process.argv.includes("--check");
 let stale = 0;
 let wrote = 0;
 
-for (const { source, targets, raw } of VENDORED) {
+for (const { source, targets, raw, binary } of VENDORED) {
   if (!existsSync(join(PLUGINS_DIR, source))) {
     console.error(`✗ missing source: plugins/${source}`);
     process.exit(1);
   }
   for (const target of targets) {
-    const want = raw ? readFileSync(join(PLUGINS_DIR, source), "utf8") : render(source, target);
+    // binary: byte-for-byte (fonts, images) — never decoded as text.
+    const want = binary ? readFileSync(join(PLUGINS_DIR, source))
+      : raw ? readFileSync(join(PLUGINS_DIR, source), "utf8") : render(source, target);
     const path = join(PLUGINS_DIR, target);
-    const have = existsSync(path) ? readFileSync(path, "utf8") : null;
+    const have = existsSync(path) ? readFileSync(path, binary ? undefined : "utf8") : null;
 
-    if (have === want) {
+    if (binary ? (have && Buffer.compare(have, want) === 0) : have === want) {
       console.log(`  ok    ${target}  (${sha(want)})`);
       continue;
     }

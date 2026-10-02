@@ -324,7 +324,7 @@ function _invItemCard(item, idx) {
   const leftBtn = isConsumable
     ? `<button onclick="window.useConsumable(${idx})" style="font-size:10px;padding:3px 8px;background:rgba(21,128,61,.2);border:1px solid rgba(21,128,61,.4);border-radius:4px;color:#4ade80;cursor:pointer;flex-shrink:0;white-space:nowrap">🧪 Use</button>`
     : item.equipped
-      ? `<button onclick="toggleEquipped(${idx},false)" style="font-size:10px;padding:3px 8px;background:rgba(212,175,55,.2);border:1px solid rgba(212,175,55,.5);border-radius:4px;color:var(--dnd-gold,#d4af37);cursor:pointer;flex-shrink:0;white-space:nowrap">✦ Equipped</button>`
+      ? `<button onclick="toggleEquipped(${idx},false)" style="font-size:10px;padding:3px 8px;background:rgba(212,175,55,.2);border:1px solid rgba(212,175,55,.5);border-radius:4px;color:var(--lk-gold);cursor:pointer;flex-shrink:0;white-space:nowrap">✦ Equipped</button>`
       : `<button onclick="toggleEquipped(${idx},true)" style="font-size:10px;padding:3px 8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap">Equip</button>`;
   return `
     <div style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px">
@@ -354,10 +354,10 @@ export function renderInventory() {
     ? items.map((item, i) => _invItemCard(item, i)).join('')
     : '<div style="font-size:11px;color:var(--muted)">No items in inventory.</div>';
   const currencies = [
-    {key:'platinum',symbol:'pp',color:'#e2e8f0'},
+    {key:'platinum',symbol:'pp',color:'var(--lk-text)'},
     {key:'gold',symbol:'gp',color:'var(--dnd-gold)'},
     {key:'electrum',symbol:'ep',color:'#a78bfa'},
-    {key:'silver',symbol:'sp',color:'#94a3b8'},
+    {key:'silver',symbol:'sp',color:'var(--lk-muted)'},
     {key:'copper',symbol:'cp',color:'#c2855c'},
   ];
   document.getElementById('currency-grid').innerHTML = currencies.map(c => `

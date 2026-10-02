@@ -51,7 +51,7 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "6970b18eff766f97f2c1d2f9dcb851e03eb542cff3089d75e066292464973e43"
+      "sha256": "5db5bd25e515102fa7962e1aef5fd924594a85eaa403f65c5fa85e8404adf0eb"
     },
     {
       "url": "dnd-master-items.js",
@@ -103,15 +103,31 @@
     },
     {
       "url": "dnd-master-styles.css",
-      "sha256": "94874ff8f110c70f49b40cfedab30e0a2af0824d5e64903effe9303a4e38c30e"
+      "sha256": "9d3586b9d8fe5d48a110ebd025239373fa74b8dda3efbc6507df233d3700da14"
     },
     {
       "url": "dnd-master-triggers.js",
-      "sha256": "784f0508f11b01632cc81d74d7f0d070e1387f60dd3aa52b9cde9a73d275d20e"
+      "sha256": "51fd9fc0e3d897beec5e344bf529a6205833e452cd21466c496ab3fdc54dbaa1"
     },
     {
       "url": "dnd-srd/monsters.json",
       "sha256": "7dfaba3ada3d5cfef04f73d649f936d942387fe4e0c03901947540fe0a11cf37"
+    },
+    {
+      "url": "lanternkeep-fonts/Cinzel-latin-ext.woff2",
+      "sha256": "8fc2606f8ae6c569f444e138dba052d9a6e3f0657f9031796503bbb94eced600"
+    },
+    {
+      "url": "lanternkeep-fonts/Cinzel-latin.woff2",
+      "sha256": "09941fb1c169c38fd414536b37690057fc01b3117a5c63dd6571186540c8f370"
+    },
+    {
+      "url": "lanternkeep-fonts/OFL.txt",
+      "sha256": "f2b3029aba64c378bf0963b62945eee15e564fe4330b934c8f2eb058282b5e83"
+    },
+    {
+      "url": "lanternkeep-theme.css",
+      "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
     }
   ]
 }

@@ -629,7 +629,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.isDM) return;
       // DM hub shows a warning when any token exceeds its movement speed
       const t = document.createElement('div');
-      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
       t.textContent = `⚠ ${p.tokenName} is attempting to move beyond their speed (${p.distanceMoved}ft of ${p.speed}ft).`;
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 5000);
@@ -681,12 +681,12 @@ function _showPendingTriggerConfirm(p) {
 
   const d = document.createElement('div');
   d.id = 'trigger-confirm-overlay';
-  d.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #f59e0b;color:#fbbf24;padding:14px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);text-align:center;min-width:240px';
+  d.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:14px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);text-align:center;min-width:240px';
   d.innerHTML = `
     <div style="font-weight:700;margin-bottom:8px">🪤 Trigger: ${trig.label || trig.type}</div>
-    <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Token entered this tile. Fire?</div>
+    <div style="font-size:11px;color:var(--lk-muted);margin-bottom:12px">Token entered this tile. Fire?</div>
     <div style="display:flex;gap:8px;justify-content:center">
-      <button id="tcp-cancel" style="background:transparent;border:1px solid #475569;color:#94a3b8;padding:6px 14px;border-radius:6px;cursor:pointer">Cancel</button>
+      <button id="tcp-cancel" style="background:transparent;border:1px solid #475569;color:var(--lk-muted);padding:6px 14px;border-radius:6px;cursor:pointer">Cancel</button>
       <button id="tcp-fire" style="background:#ef4444;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Fire!</button>
     </div>`;
   document.body.appendChild(d);

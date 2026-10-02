@@ -670,7 +670,7 @@ export function initKeyboardHandlers() {
       if (movedSoFar > tokenSpeed) {
         // Show toast on this hub (player sees it directly)
         const toastEl = document.createElement('div');
-        toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+        toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
         toastEl.textContent = `Movement exceeds your speed for this turn (${movedSoFar}ft of ${tokenSpeed}ft used).`;
         document.body.appendChild(toastEl);
         setTimeout(() => toastEl.remove(), 4000);
@@ -780,9 +780,9 @@ function _showShortcutsModal() {
   modal.id = 'kb-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
   modal.innerHTML =
-    '<div style="background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;' +
+    '<div style="background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;' +
     'max-width:400px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
-      '<div style="font-size:13px;font-weight:800;color:#d4af37;margin-bottom:12px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">&#x2328; Keyboard Shortcuts</div>' +
+      '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:12px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">&#x2328; Keyboard Shortcuts</div>' +
       SHORTCUTS.map(([k, v]) =>
         '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)">' +
           '<kbd style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;' +
@@ -791,7 +791,7 @@ function _showShortcutsModal() {
         '</div>'
       ).join('') +
       '<button onclick="document.getElementById(\'kb-modal\').remove()" ' +
-        'style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:#d4af37;font-size:11px;font-weight:700;cursor:pointer">Close</button>' +
+        'style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer">Close</button>' +
     '</div>';
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
@@ -813,7 +813,7 @@ function _showTemplateContextMenu(clientX, clientY, wx, wy) {
     'background:#1a1a2e;border:1px solid rgba(212,175,55,.4);border-radius:8px;' +
     'padding:6px;z-index:9100;min-width:160px;box-shadow:0 6px 24px rgba(0,0,0,.6)';
   menu.innerHTML =
-    '<div style="font-size:10px;color:#d4af37;font-weight:700;padding:4px 6px 6px;' +
+    '<div style="font-size:10px;color:var(--lk-gold);font-weight:700;padding:4px 6px 6px;' +
       'border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px">Place Template</div>' +
     ['circle','cone','line','cube'].map(t =>
       `<div onclick="_placeTemplateAt('${t}',${wx},${wy})" ` +

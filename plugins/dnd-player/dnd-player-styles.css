@@ -1,11 +1,6 @@
 /* dnd-player-styles.css — all styles for dnd-player plugin */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --dnd-red:#c0392b;--dnd-gold:#d4af37;--bg:#0e0808;
-  --surface:rgba(255,255,255,0.05);--border:rgba(212,175,55,0.18);
-  --text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.45);
-  --dim:rgba(255,255,255,0.2);
-}
+/* Colour tokens come from lanternkeep-theme.css (linked first). */
 html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;display:flex;flex-direction:column}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}

@@ -235,10 +235,10 @@ function _nextHandout() {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   overlay.innerHTML =
-    '<div style="background:#1a1610;border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:340px;width:90%;max-height:75vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
-      '<div style="font-size:13px;font-weight:800;color:#d4af37;margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">\uD83D\uDCDC ' + esc(title) + '</div>' +
+    '<div style="background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:340px;width:90%;max-height:75vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">\uD83D\uDCDC ' + esc(title) + '</div>' +
       '<div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;white-space:pre-wrap">' + esc(content) + '</div>' +
-      '<button style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:#d4af37;font-size:11px;font-weight:700;cursor:pointer" id="handout-dismiss-btn">Dismiss' +
+      '<button style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer" id="handout-dismiss-btn">Dismiss' +
         (_handoutQueue.length > 0 ? ' (' + _handoutQueue.length + ' more)' : '') + '</button>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -308,7 +308,7 @@ async function recomputeZoneVolumes() {
 
 function _showPlayerToast(msg) {
   const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid #6366f1;color:#a5b4fc;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.5)';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #6366f1;color:#a5b4fc;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.5)';
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 4000);
@@ -406,7 +406,7 @@ function initTabHTML() {
     <div id="xp-bar-section" style="margin-top:8px"></div>
     <div id="levelup-banner" style="display:none;margin-top:8px;padding:10px 14px;
       background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);border-radius:8px;
-      text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:#d4af37"
+      text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--lk-gold)"
       onclick="startLevelUp()">⬆ Level Up! Click to begin →</div>`;
   document.getElementById('tab-abilities').innerHTML = `
     <div style="font-size:11px;font-weight:700;color:var(--dnd-gold);margin-bottom:10px">ABILITY SCORES</div>
@@ -1116,8 +1116,8 @@ function openCharEdit() {
   o.id = 'char-edit-overlay';
   o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9500;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
   o.innerHTML =
-    '<div style="background:#1a1a2e;border:1px solid rgba(212,175,55,.4);border-radius:12px;padding:18px;width:100%;max-width:380px;color:#e2e8f0">' +
-      '<div style="font-size:13px;font-weight:800;color:#d4af37;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">' +
+    '<div style="background:#1a1a2e;border:1px solid rgba(212,175,55,.4);border-radius:12px;padding:18px;width:100%;max-width:380px;color:var(--lk-text)">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">' +
         '✏️ Edit Character' +
         '<button onclick="document.getElementById(\'char-edit-overlay\').remove()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0">&times;</button>' +
       '</div>' +
@@ -1125,7 +1125,7 @@ function openCharEdit() {
         '<div id="ce-portrait-preview" style="width:72px;height:72px;border-radius:50%;background:#2a2a40;border:2px solid rgba(212,175,55,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:6px">' +
           (CHAR.portraitFileId ? '<img id="ce-portrait-img" style="width:100%;height:100%;object-fit:cover">' : '🧙') +
         '</div>' +
-        '<button onclick="document.getElementById(\'ce-portrait-input\').click()" style="font-size:10px;padding:4px 10px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:5px;color:#d4af37;cursor:pointer">📷 ' + (CHAR.portraitFileId ? 'Change Portrait' : 'Upload Portrait') + '</button>' +
+        '<button onclick="document.getElementById(\'ce-portrait-input\').click()" style="font-size:10px;padding:4px 10px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:5px;color:var(--lk-gold);cursor:pointer">📷 ' + (CHAR.portraitFileId ? 'Change Portrait' : 'Upload Portrait') + '</button>' +
         '<input type="file" id="ce-portrait-input" accept="image/*" style="display:none">' +
       '</div>' +
       '<label style="font-size:10px;color:var(--muted);display:block;margin-bottom:8px">Name<br>' + inp('ce-name', CHAR.name||'') + '</label>' +
@@ -1148,8 +1148,8 @@ function openCharEdit() {
       '<label style="font-size:10px;color:var(--muted);display:block;margin-bottom:12px">Total XP<br>' +
         inp('ce-xp', CHAR.xp||0, 'number', 'min="0"') + '</label>' +
       '<div style="display:flex;gap:8px">' +
-        '<button onclick="document.getElementById(\'char-edit-overlay\').remove()" style="flex:1;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#94a3b8;cursor:pointer;font-size:12px">Cancel</button>' +
-        '<button id="ce-save-btn" style="flex:2;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:#d4af37;cursor:pointer;font-size:12px;font-weight:700">Save Changes</button>' +
+        '<button onclick="document.getElementById(\'char-edit-overlay\').remove()" style="flex:1;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--lk-muted);cursor:pointer;font-size:12px">Cancel</button>' +
+        '<button id="ce-save-btn" style="flex:2;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:var(--lk-gold);cursor:pointer;font-size:12px;font-weight:700">Save Changes</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(o);

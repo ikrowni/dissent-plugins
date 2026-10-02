@@ -28,7 +28,7 @@ export async function renderTriggersTab() {
       ${triggers.length === 0
         ? '<div style="font-size:11px;color:var(--muted);padding:6px 0">No triggers placed. Use the Trap tool on the map.</div>'
         : triggers.map(t => `
-          <div style="background:var(--surface2,#1e1e2e);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px">
+          <div style="background:var(--lk-panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px">
             <div style="font-weight:700;margin-bottom:2px">${_esc(t.label || t.type)} — Cell (${t.cx},${t.cy})</div>
             <div style="color:var(--muted)">Type: ${_esc(t.type)} | ${t.requireConfirm ? 'Confirm required' : 'Auto-fire'} | ${t.oneShot ? 'One-shot' : 'Repeatable'} | ${t.disabled ? '<span style="color:#ef4444">Disabled</span>' : '<span style="color:#22c55e">Active</span>'}</div>
           </div>`).join('')}
@@ -36,7 +36,7 @@ export async function renderTriggersTab() {
       ${audioZones.length === 0
         ? '<div style="font-size:11px;color:var(--muted);padding:6px 0">No audio zones placed. Use the Zone tool on the map.</div>'
         : audioZones.map(z => `
-          <div style="background:var(--surface2,#1e1e2e);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px">
+          <div style="background:var(--lk-panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11px">
             <div style="font-weight:700;margin-bottom:2px">🔊 ${_esc(z.name)}</div>
             <div style="color:var(--muted)">Radius: ${z.radius} cells | Volume: ${Math.round((z.maxVolume || 1) * 100)}% | ${z.loop ? 'Loop' : 'One-shot'} | ${z.fileId ? 'Audio loaded' : 'No audio'}</div>
           </div>`).join('')}
