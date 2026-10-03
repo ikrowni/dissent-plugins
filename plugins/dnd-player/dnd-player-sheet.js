@@ -2,6 +2,8 @@
 import { esc, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
+import { allowedLevel } from './lk-levelling.js';
+import { rule } from './lk-table-rules.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
   armorClass, weaponProfile } from './lk-rules5e.js';
 
@@ -84,7 +86,6 @@ function _lookupFeatureDesc(name) {
   }
   return '';
 }
-function xpThresholdForLevel(level) { return XP_THRESHOLDS_SHEET[Math.min((level||1)+1, 20)] ?? Infinity; }
 
 let _char = null;
 let _saveChar = null;
@@ -110,6 +111,10 @@ export async function announceHp(source) {
     dead: !!_char.dead, source, name: _char.name || 'Player',
   }).catch(() => {});
 }
+
+let _getCampaign = () => null;
+/** Where the sheet reads the campaign record (levels, xp, settings): set once by dnd-player-main.js. */
+export function setCampaignGetter(fn) { _getCampaign = fn; }
 
 export function setSheetState(char, saveCharFn, userId, setDiceLabel, rollDice, campaignId) {
   _char = char; _saveChar = saveCharFn; _userId = userId;
@@ -223,14 +228,18 @@ export function renderMain() {
   // Level-up banner
   const levelBanner = document.getElementById('levelup-banner');
   if (levelBanner) {
-    const ready = (_char.level || 1) < 20 && (_char.xp || 0) >= xpThresholdForLevel(_char.level);
+    // The DM's campaign record decides (milestone grants, or the XP the DM gave); players cannot edit their level.
+    const camp = _getCampaign();
+    const ready = (_char.level || 1) < allowedLevel(camp, _userId, _char, rule(camp?.settings, 'levelByXp'));
     levelBanner.style.display = ready ? 'block' : 'none';
   }
 
   // XP progress bar
   const xpEl = document.getElementById('xp-bar-section');
-  if (xpEl) {
-    const xp  = _char.xp || 0;
+  const campXp = _getCampaign();
+  if (xpEl && !rule(campXp?.settings, 'levelByXp')) xpEl.innerHTML = '';
+  else if (xpEl) {
+    const xp  = campXp?.xp?.[_userId] ?? _char.xp ?? 0;
     const lvl = Math.min(_char.level || 1, 20);
     if (lvl >= 20) {
       xpEl.innerHTML = '<div style="font-size:9px;text-align:center;color:var(--dnd-gold);padding:2px 0">⭐ Max Level (' + xp.toLocaleString() + ' XP)</div>';

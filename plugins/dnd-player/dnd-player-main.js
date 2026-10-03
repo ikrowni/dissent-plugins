@@ -1,7 +1,7 @@
 // dnd-player-main.js — bootstrap: init, tab switching, event dispatch + dice roller
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, request, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
-import { setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeathSaves,
+import { setCampaignGetter, setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeathSaves,
   changeHP, updateTempHP, toggleCondition, toggleDeathSave, rollDeathSaveNow, changeExhaustion, effectLabel,
   toggleInspiration, doShortRest, doLongRest, toggleEquipped,
   rollAbilityCheck, rollSkillCheck, debounceSaveNotes,
@@ -15,9 +15,6 @@ import { saveBonus, trapPrompt, trapResult, needsMyRoll, deathSaveTurn } from '.
 import { playerStrip, playerStripHtml } from './lk-party.js';
 import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
-import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
-         levelUpRollHP, levelUpTakeAverage, levelUpToggleSpell,
-         levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
 import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds } from './dnd-hub-shared-storage.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
@@ -29,6 +26,7 @@ let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
 let SERVER_DATA = null;
+setCampaignGetter(() => SERVER_DATA?.campaigns?.[CAMPAIGN_ID] || null);
 let _deathPromptKey = null;
 let _initiative = null;
 const tableRule = k => rule(SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.settings, k);
@@ -532,7 +530,7 @@ function initTabHTML() {
     <div id="levelup-banner" style="display:none;margin-top:8px;padding:10px 14px;
       background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);border-radius:8px;
       text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--lk-gold)"
-      onclick="startLevelUp()">⬆ Level Up! Click to begin →</div>`;
+      onclick="startLevelUp()">⬆ Level up! Open it when you’re ready →</div>`;
   document.getElementById('tab-abilities').innerHTML = `
     <div style="font-size:11px;font-weight:700;color:var(--dnd-gold);margin-bottom:10px">ABILITY SCORES</div>
     <div class="ability-grid" id="ability-grid"></div>
@@ -967,6 +965,17 @@ async function onEvent(ev) {
     return;
   }
 
+  // The DM levelled heroes up or gave XP: the campaign record changed; the Level up button may appear.
+  if (p.type === EV.LEVEL_GRANT && p.campaignId === CAMPAIGN_ID) {
+    const camp = SERVER_DATA?.campaigns?.[CAMPAIGN_ID];
+    if (camp) {
+      if (p.levels) camp.levels = { ...(camp.levels || {}), ...p.levels };
+      if (p.xp) camp.xp = { ...(camp.xp || {}), ...p.xp };
+    }
+    renderAll();
+    return;
+  }
+
   // The Hub saved my hero (a level-up, or a new hero): reload it.
   if (p.type === EV.HERO_UPDATED && p.userId === USER_ID && p.campaignId === CAMPAIGN_ID) {
     onInit({});
@@ -1281,19 +1290,9 @@ async function onEvent(ev) {
   }
 }
 
-async function startLevelUp() {
-  // Load SRD data first, then start wizard (so spell/feat pickers are populated)
-  let srdData = { classes: [], feats: [], spells: [] };
-  try {
-    const base = new URL('./dnd-srd/', document.baseURI).href;
-    const [classes, feats, spells] = await Promise.all([
-      fetch(base + 'classes.json').then(r => r.json()),
-      fetch(base + 'feats.json').then(r => r.json()),
-      fetch(base + 'spells.json').then(r => r.json()),
-    ]);
-    srdData = { classes, feats, spells };
-  } catch { /* SRD load failure — wizard starts with empty pickers */ }
-  await _startLevelUp(CHAR, saveChar, CAMPAIGN_ID, USER_ID, srdData);
+// The Level up button opens the level-up scene in the map area (dnd-hub-levelup.js): the Hub runs it and saves.
+function startLevelUp() {
+  localPublish('dnd-hub', EV.LEVELUP_OPEN, { type: EV.LEVELUP_OPEN, campaignId: CAMPAIGN_ID, userId: USER_ID });
 }
 
 function openCharEdit() {
@@ -1339,8 +1338,6 @@ function openCharEdit() {
         '<label style="font-size:10px;color:var(--muted)">Speed<br>'  + inp('ce-speed', CHAR.speed||30, 'number','min="0"') + '</label>' +
         '<label style="font-size:10px;color:var(--muted)">HP Max<br>' + inp('ce-hpmax', CHAR.hpMax||1,  'number','min="1"') + '</label>' +
       '</div>' +
-      '<label style="font-size:10px;color:var(--muted);display:block;margin-bottom:12px">Total XP<br>' +
-        inp('ce-xp', CHAR.xp||0, 'number', 'min="0"') + '</label>' +
       '<div style="display:flex;gap:8px">' +
         '<button onclick="document.getElementById(\'char-edit-overlay\').remove()" style="flex:1;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--lk-muted);cursor:pointer;font-size:12px">Cancel</button>' +
         '<button id="ce-save-btn" style="flex:2;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:var(--lk-gold);cursor:pointer;font-size:12px;font-weight:700">Save Changes</button>' +
@@ -1375,7 +1372,6 @@ function openCharEdit() {
     CHAR.ac    = _int('ce-ac',    CHAR.ac||10);
     CHAR.speed = _int('ce-speed', CHAR.speed||30);
     CHAR.hpMax = Math.max(1, _int('ce-hpmax', CHAR.hpMax||1));
-    CHAR.xp    = _int('ce-xp',   CHAR.xp||0);
     // Portrait upload
     const fileInput = document.getElementById('ce-portrait-input');
     if (fileInput?.files[0]) {
@@ -1423,14 +1419,6 @@ window.toggleAction = toggleAction;
 window.clearActionEconomy = clearActionEconomy;
 window.toggleResourcePip = toggleResourcePip;
 window.startLevelUp        = startLevelUp;
-window.levelUpBack         = levelUpBack;
-window.levelUpNext         = levelUpNext;
-window.closeLevelUp        = closeLevelUp;
-window.levelUpRollHP       = levelUpRollHP;
-window.levelUpTakeAverage  = levelUpTakeAverage;
-window.levelUpToggleSpell  = levelUpToggleSpell;
-window.levelUpASIMode      = levelUpASIMode;
-window.levelUpFeat         = levelUpFeat;
 window.renderAll           = renderAll;
 window.toggleFeatureExpand  = toggleFeatureExpand;
 window.saveFeatureDesc      = saveFeatureDesc;

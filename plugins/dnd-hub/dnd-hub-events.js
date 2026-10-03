@@ -8,6 +8,8 @@ import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261005m';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
+import { allowedLevel } from './lk-levelling.js';
+import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
@@ -151,7 +153,7 @@ const PRIVILEGED_EVENTS = new Set([
   'token:turn-start','token:conditions','combat:settings',
   'scene:load','pins:update','audio:play','audio:zone-update',
   'shop:open','shop:volume','contest:roll',
-  'session:start','map:view',
+  'session:start','map:view','level:grant',
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -784,6 +786,31 @@ export async function handleMapEvent(p) {
           renderTokens();
         }
       }
+      break;
+    }
+    case EV.LEVEL_GRANT: {
+      // The DM levelled heroes up (milestone) or gave XP (experience): the campaign record is the authority.
+      const camp = serverData?.campaigns?.[p.campaignId];
+      if (!camp) return;
+      if (p.levels) camp.levels = { ...(camp.levels || {}), ...p.levels };
+      if (p.xp) camp.xp = { ...(camp.xp || {}), ...p.xp };
+      if (p.campaignId !== MAP.campaignId) return;
+      const byXp = rule(camp.settings, 'levelByXp');
+      const sums = camp.characterSummaries || {};
+      for (const uid of Object.keys({ ...(p.levels || {}), ...(p.xp || {}) })) {
+        const s = sums[uid];
+        if (!s) continue;
+        const to = allowedLevel(camp, uid, s, byXp);
+        if (to <= (s.level || 1)) continue;
+        if (uid === userId) levelBurst(`Level ${to}!`);
+        else showTriggerToast(`${s.name} can reach level ${to}`);
+      }
+      break;
+    }
+    case EV.LEVELUP_OPEN: {
+      // From my own sheet (localPublish): open the level-up scene for my hero.
+      if (p.userId !== userId) return;
+      await openLevelUp(p.campaignId);
       break;
     }
     case 'trigger:pending': {
