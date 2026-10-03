@@ -1,5 +1,6 @@
 // dnd-hub-ruler.js — measurement ruler, map ping animation, active-turn ring
 import { MAP, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
+import { gridFeet } from './lk-rules5e.js';
 
 // ── Ruler ─────────────────────────────────────────────────────────────────────
 
@@ -30,8 +31,8 @@ export function updateRuler(toX, toY) {
   const { x: fx, y: fy } = MAP.rulerStart;
   const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;
 
-  const distPx = Math.sqrt((toX - fx) ** 2 + (toY - fy) ** 2);
-  const distFt  = Math.round(distPx / gs * 5);
+  // Squares, as the 5e grid counts them: a diagonal step is 5 ft like any other (audit G5).
+  const distFt  = gridFeet(toX - fx, toY - fy, gs);
 
   const outOfRange = MAP.selectedAttack && distFt > MAP.selectedAttack.rangeFt;
   const lineColor  = outOfRange ? 0xef4444 : 0xd4af37;

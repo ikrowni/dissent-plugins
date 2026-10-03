@@ -1,5 +1,5 @@
 // dnd-player-main.js — bootstrap: init, tab switching, event dispatch + dice roller
-import { handleSDKMessage, getIdentity, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, request } from '../plugin-sdk.js';
+import { handleSDKMessage, getIdentity, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, request, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
 import { setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeathSaves,
   changeHP, updateTempHP, toggleCondition, toggleDeathSave, rollDeathSaveNow, changeExhaustion, effectLabel,
@@ -186,6 +186,27 @@ function switchTab(name) {
   if (name === 'spells') loadSRDSpells().then(() => renderSpells());
   if (name === 'resources') renderResources();
   if (name === 'main') renderConcentration();
+  if (name === 'notes') renderPartyJournal().catch(() => {});
+}
+
+/**
+ * The journals the DM marked "Player visible", to reread at any time. Players used to see one only when the
+ * DM pushed it as a handout (gone once dismissed) or through a map pin (audit K1).
+ */
+async function renderPartyJournal() {
+  const el = document.getElementById('party-journal');
+  if (!el || !CAMPAIGN_ID) return;
+  SERVER_DATA = await loadHubDmCompanion().catch(() => null) || SERVER_DATA;
+  const list = Object.values(SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.journals || {})
+    .filter(j => j.visibility === 'player')
+    .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+  el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--dnd-gold);margin-bottom:6px">PARTY JOURNAL</div>' +
+    (list.length ? list.map(j =>
+      '<details style="margin-bottom:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px">' +
+        '<summary style="cursor:pointer;font-size:12px;font-weight:600">' + esc(j.title || 'Untitled') + '</summary>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:6px;white-space:pre-wrap;line-height:1.5">' + esc(j.content || '') + '</div>' +
+      '</details>').join('')
+      : '<div style="font-size:11px;color:var(--muted)">Nothing shared yet. Pages the DM shares appear here.</div>');
 }
 
 function selectDie(die) {
@@ -493,6 +514,7 @@ function initTabHTML() {
   document.getElementById('tab-features').innerHTML = `
     <div id="features-list" style="display:flex;flex-direction:column;gap:6px"></div>`;
   document.getElementById('tab-notes').innerHTML = `
+    <div id="party-journal" style="margin-bottom:12px"></div>
     <textarea id="notes-area" placeholder="Your private notes…" oninput="debounceSaveNotes()"
       style="width:100%;height:100%;min-height:300px;background:transparent;border:none;
       color:var(--text);font-size:12px;line-height:1.6;outline:none;resize:none;font-family:inherit"></textarea>`;

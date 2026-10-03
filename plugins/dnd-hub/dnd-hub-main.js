@@ -26,7 +26,7 @@ import {
   selectBackground, renderCCEquipment, toggleEquipItem, filterEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
 } from './dnd-hub-char-steps.js?v=20261002a';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20260502p4';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
 import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261002a';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20260502p4';

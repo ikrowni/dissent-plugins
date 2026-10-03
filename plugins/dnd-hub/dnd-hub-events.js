@@ -11,7 +11,7 @@ import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
 import { loadSRD } from './dnd-hub-char.js?v=20261002a';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20260502p4';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261002a';
 import { checkAutoHit } from './dnd-hub-combat.js?v=20261002a';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20260502p4';
@@ -435,10 +435,8 @@ export async function handleMapEvent(p) {
         const indiv = splitRolls(parsed.count, parsed.sides, p.result, parsed.mod);
         animateDice(parsed.sides, indiv);
       }
-      if (p.rollType === 'attack' && MAP.campaignId && MAP.selectedTokens.size > 0) {
-        const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-        if (settings?.autoHit) checkAutoHit(p.result, p.rolls?.[0]);
-      }
+      // Someone else's attack is judged on THEIR screen, against the targets they selected; judging it
+      // here against whatever this viewer had selected gave different verdicts on different screens (G6).
       break;
     }
     case 'map:ping': {

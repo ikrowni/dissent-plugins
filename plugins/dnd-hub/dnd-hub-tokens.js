@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20260502p4';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261002a';
 import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20261002a';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
@@ -555,8 +555,6 @@ export function showContextMenu(token, cx, cy) {
     destroyContextMenu();
   });
 
-  _addItem(menu, '🎲 Roll Attack', () => {}, true);        // Phase 3
-  _addItem(menu, '📖 Character Sheet', () => {}, true);    // Phase 4
 
   if (token.lootable && (token.lootItems || []).some(li => !li.claimed)) {
     _addItem(menu, '🔍 Search for Loot', () => { destroyContextMenu(); _openLootModal(token.id, token); });
