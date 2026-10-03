@@ -19,4 +19,8 @@ describe('DM sections', () => {
     }
     expect(sectionOf('settings')).toBe(null);
   });
+  it('has the Homebrew tab in World (subclasses and feats the DM types in)', () => {
+    expect(sectionOf('homebrew')).toBe('world');
+    expect(TAB_LABELS.homebrew).toBe('Homebrew');
+  });
 });

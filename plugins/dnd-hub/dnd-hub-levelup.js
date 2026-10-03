@@ -1,6 +1,7 @@
 // dnd-hub-levelup.js — the level-up scene (spec 2026-10-03 growing your hero §1), in the map area, built from the
 // Hero Forge's pieces. Nothing is saved until the last step; several waiting levels run one after another.
 import { SRD, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
+import { loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { storageGetUser } from '../plugin-sdk.js';
 import { rule } from './lk-table-rules.js';
 import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './lk-levelling.js';
@@ -24,8 +25,12 @@ export function levelCtx(campaignId) {
 
 /** Open the scene for my hero in `campaignId`, if a level is waiting. `onDone` runs when no level is left. */
 export async function openLevelUp(campaignId, onDone = null) {
-  const hero = (await storageGetUser('characters') || {})[campaignId];
+  // A fresh read: the DM may have added subclasses or feats, or granted levels, since this screen loaded.
+  // Only the fields the level-up reads are copied in: replacing the campaign object would detach the open map.
+  const fresh = (await loadHubDm().catch(() => null))?.campaigns?.[campaignId];
   const camp = serverData?.campaigns?.[campaignId];
+  if (fresh && camp) for (const k of ['library', 'levels', 'xp', 'settings', 'startingLevel']) if (k in fresh) camp[k] = fresh[k];
+  const hero = (await storageGetUser('characters') || {})[campaignId];
   if (!hero || !camp) return false;
   if ((hero.level || 1) >= allowedLevel(camp, userId, hero, rule(camp.settings, 'levelByXp'))) { onDone?.(); return false; }
   const plan = levelPlan(hero, levelCtx(campaignId));

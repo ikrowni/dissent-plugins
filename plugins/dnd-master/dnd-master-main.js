@@ -16,6 +16,7 @@ import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
   addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261004a';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
+import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
 import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261004a';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
@@ -80,6 +81,7 @@ function switchDMTab(name) {
   if (name === 'sounds')     renderSoundsTab();
   if (name === 'triggers')   renderTriggersTab();
   if (name === 'notes')      renderNotesTab();
+  if (name === 'homebrew')   renderHomebrewTab();
   if (name === 'logs')       renderLogsTab();
   if (name === 'players')    renderPlayersTab();
 }
@@ -141,6 +143,7 @@ async function onInit(data) {
   setItemsState(sharedState);
   setShopsState(sharedState);
   setNotesState(sharedState);
+  setHomebrewState(sharedState);
   setLogsState(sharedState);
   setScenesState(sharedState);
   setJournalsState(sharedState);
@@ -330,3 +333,4 @@ window.levelUpParty = () => Levels.levelUpParty();
 window.levelUpHero = uid => Levels.levelUpHeroes([uid]);
 window.giveXpParty = () => { const n = prompt('Experience for every hero:', '100'); if (n !== null) Levels.giveXp(Object.keys(dmCampaign?.characterSummaries || {}), n); };
 window.giveXpHero = uid => { const n = prompt('Experience for this hero:', '100'); if (n !== null) Levels.giveXp([uid], n); };
+window.addHomebrewSubclass = addHomebrewSubclass; window.addHomebrewFeat = addHomebrewFeat; window.deleteHomebrew = deleteHomebrew;
