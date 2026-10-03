@@ -71,6 +71,11 @@ const VENDORED = [
       "dnd-player/dnd-campaign-merge.js",
     ],
   },
+  // LanternKeep content packs (sample adventure now, PDF import later).
+  {
+    source: "lk-content-pack.js",
+    targets: ["dnd-hub/lk-content-pack.js", "dnd-master/lk-content-pack.js", "dnd-player/lk-content-pack.js"],
+  },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",
