@@ -69,11 +69,11 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "7cde07067f00a5865e11a0e00a4d3b4ddb3fe9e470b870fe36b7f6fed36e9628"
+      "sha256": "4589c316be292d4559ecb6903350f568278bb7ac50c351385efad9763d18870a"
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "0afa3304b8a7c12207a9036ecf3641260cdfabd597a10529b58921701ac88d41"
+      "sha256": "d9f37bfd00020080af1833d23845c355fe28117414e30288e96ea7db2ca0fd8d"
     },
     {
       "url": "dnd-hub-fog.js",
@@ -105,7 +105,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "999af00f0647c492cd3acfb0f9ec0adf4f48b4734ff3cb3e55e5cce977e92e94"
+      "sha256": "a594627fc646d8c8b8fd2ba2f4629ba3d0c777d364d639b2c6538b22786b7187"
     },
     {
       "url": "dnd-hub-map-bg.js",
@@ -245,7 +245,7 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "00e7cf1702a601d707046891374487174a7255b675f3474df82c61001eb10e28"
+      "sha256": "31c543e677490e076261ed9e140345c9869dd735bce6abc7663e2e0e26984f9b"
     },
     {
       "url": "lk-table-rules.js",
