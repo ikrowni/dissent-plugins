@@ -662,6 +662,8 @@ export function initKeyboardHandlers() {
     if (e.key === 'Escape') { clearRuler(); destroyContextMenu(); return; }
     if (e.key === '?') { _showShortcutsModal(); return; }
     if (!MAP.mapData) return;
+    // The map's keys only while the map is on screen (the hero forge uses ←/→ too).
+    if (document.getElementById('screen-campaign')?.classList.contains('hidden')) return;
     if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
 
     // ── WASD / Arrow key token movement: one square per press ────────────

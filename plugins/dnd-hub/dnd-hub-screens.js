@@ -7,7 +7,7 @@ import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=2026100
 import { loadMapData } from './dnd-hub-map-bg.js?v=20261005m';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261003p';
 import { campaignRecord } from './dnd-hub-rules.js';
-import { showQuickCharacter } from './dnd-hub-quick-screen.js';
+import { showQuickCharacter } from './dnd-hub-forge.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────

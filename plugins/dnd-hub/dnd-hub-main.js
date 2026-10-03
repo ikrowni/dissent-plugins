@@ -4,7 +4,7 @@ import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20261005m';
-import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
+import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003p';
@@ -86,8 +86,8 @@ window.selectSubrace       = selectSubrace;
 window.renderRaceDetails   = renderRaceDetails;
 window.selectClass         = selectClass;
 window.renderSubclassOptions = renderSubclassOptions;
-// Quick character (dnd-hub-quick-screen.js)
-window.quickPickHero = quickPickHero; window.quickPickRace = quickPickRace; window.quickPickClass = quickPickClass; window.quickBuildOwn = quickBuildOwn; window.quickBack = quickBack; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; 
+// Hero Forge (dnd-hub-forge.js)
+window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
 window.__lkKits = STARTING_KITS;
 window.startSampleAdventure = startSampleAdventure;
 window.toggleClassSkill = toggleClassSkill; window.toggleExtraSkill = toggleExtraSkill; window.setHalfElfBonus = setHalfElfBonus;

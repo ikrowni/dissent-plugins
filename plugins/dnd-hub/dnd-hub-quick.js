@@ -1,5 +1,5 @@
 // dnd-hub-quick.js — Quick character: a complete, rules-valid draft from a race and a class (spec 2026-10-03 §2).
-// Pure: data in, draft out. The page is dnd-hub-quick-screen.js; saving is the creator's own path.
+// Pure: data in, draft out. The page is the Hero Forge (dnd-hub-forge.js); saving is the creator's own path.
 import { ABILITY_KEYS, CANTRIPS_KNOWN, classSkillChoice, draftScores, spellLimitL1 } from './dnd-hub-draft-rules.js';
 import { armorClass, weaponProfile, hitDieFor, abilityMod, isWeaponId } from './lk-rules5e.js';
 
