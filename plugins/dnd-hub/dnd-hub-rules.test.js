@@ -124,3 +124,20 @@ describe('seedCell', () => {
     expect(seedCell({}, 1)).toEqual({ cx: 4, cy: 3 });
   });
 });
+
+import { acceptMove } from './dnd-hub-rules.js';
+
+describe('acceptMove (audit O6)', () => {
+  it('ignores my own echoed moves', () => {
+    expect(acceptMove({}, { tokenId: 't', clientId: 'me', seq: 5 }, 'me')).toBe(false);
+  });
+  it('ignores a move older than the last one applied from that screen', () => {
+    const seen = {};
+    expect(acceptMove(seen, { tokenId: 't', clientId: 'b', seq: 7 }, 'me')).toBe(true);   // final (snapped) arrives first
+    expect(acceptMove(seen, { tokenId: 't', clientId: 'b', seq: 6 }, 'me')).toBe(false);  // the live-drag one, late
+    expect(acceptMove(seen, { tokenId: 't', clientId: 'b', seq: 8 }, 'me')).toBe(true);
+  });
+  it('moves without a sequence (older clients) are applied as before', () => {
+    expect(acceptMove({}, { tokenId: 't' }, 'me')).toBe(true);
+  });
+});

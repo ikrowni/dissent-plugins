@@ -5,10 +5,10 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261003b';
+import { renderTokens, moveStamp } from './dnd-hub-tokens.js?v=20261003c';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261003b';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261003c';
 import { showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20260502p4';
@@ -536,7 +536,7 @@ export async function initPixiApp() {
       MAP.mapData.tokens[tokenId].y = snappedY;
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
       await saveHubDm( serverData);
-      await realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x: snappedX, y: snappedY, fromUserId: userId });
+      await realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x: snappedX, y: snappedY, fromUserId: userId, ...moveStamp() });
       renderTokens();
     } else {
       // Never placed on this map (the DM may not have opened it since this player
@@ -704,7 +704,7 @@ export function initKeyboardHandlers() {
             MAP._wasdPendingMove = null;
             realtimePublish(EV.TOKEN_MOVE, {
               type: EV.TOKEN_MOVE, campaignId: MAP.campaignId,
-              tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, fromUserId: userId,
+              tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, fromUserId: userId, ...moveStamp(),
             });
           }
         }, 80);

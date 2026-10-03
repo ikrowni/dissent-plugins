@@ -10,6 +10,12 @@ import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
+
+// This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
+// echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
+export const CLIENT_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+let _moveSeq = 0;
+export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
 import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
@@ -336,7 +342,7 @@ function setupTokenDrag(container, token) {
     const now = Date.now();
     if (now - lastPublish > 30) {
       lastPublish = now;
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId });
+      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId, ...moveStamp() });
     }
     if (MAP.activeTurnTokenId === token.id) {
       updateRuler(step.x, step.y);
@@ -370,7 +376,7 @@ function setupTokenDrag(container, token) {
       container.x = savedX; container.y = savedY;
       clearRuler();
       // Tell everyone: they watched the live drag and must see it go back.
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, fromUserId: userId });
+      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, fromUserId: userId, ...moveStamp() });
       return;
     }
 
@@ -421,7 +427,7 @@ function setupTokenDrag(container, token) {
     // Recompute local LOS after player moves their own token
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
-    const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId };
+    const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId, ...moveStamp() };
     realtimePublish(EV.TOKEN_MOVE, movePayload);
     // My own sidebar sets zone-audio volume from where my token stands; it never heard this before.
     if (token.id === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, movePayload);

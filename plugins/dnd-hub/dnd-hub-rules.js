@@ -120,3 +120,19 @@ export function seedCell(mapData, i) {
   const s = mapData?.startCell;
   return s ? { cx: s.cx + i, cy: s.cy } : { cx: 2 + i * 2, cy: 3 };
 }
+
+/**
+ * Should a received token move be applied? 🔴 The node echoes a plugin's own realtime events back to the
+ * screen that sent them, and the live-drag move and the final snapped move travel as separate requests, so
+ * they can arrive in either order. A late live-drag echo used to overwrite the dragger's own snapped position
+ * (audit O6, 2 runs in 7). Drop my own echoes and anything older than the last move applied from that screen.
+ * `seen` is { "<token>|<client>": seq }, updated in place.
+ */
+export function acceptMove(seen, p, myClientId) {
+  if (!p.clientId || p.seq == null) return true;
+  if (p.clientId === myClientId) return false;
+  const k = `${p.tokenId}|${p.clientId}`;
+  if (seen[k] != null && p.seq <= seen[k]) return false;
+  seen[k] = p.seq;
+  return true;
+}

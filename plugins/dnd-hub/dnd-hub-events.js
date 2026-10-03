@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache } from './dnd-hub-tokens.js?v=20261003b';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID } from './dnd-hub-tokens.js?v=20261003c';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
@@ -22,6 +22,7 @@ import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { isRepeat, publishTo } from './lk-bus.js';
+import { acceptMove } from './dnd-hub-rules.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
 // used to skip re-animating our own broadcast when it bounces back via realtime.
@@ -141,6 +142,7 @@ function isDMEvent(p) {
 }
 
 let _hpSaveTimer = null;
+const _seenMoves = {};
 
 export async function handleMapEvent(p) {
   if (!p.type) return;
@@ -221,6 +223,7 @@ export async function handleMapEvent(p) {
       break;
     }
     case 'token:move': {
+      if (!acceptMove(_seenMoves, p, CLIENT_ID)) return; // my own echo, or older than a move already applied (O6)
       if (p.tokenId === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, p); // zone audio in my sidebar
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       // Players can only move their own token — but allow moves originating from the DM
