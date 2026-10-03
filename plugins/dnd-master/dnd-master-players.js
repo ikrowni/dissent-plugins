@@ -27,7 +27,16 @@ let _saveTimers = {};
 
 export function setPlayersState(state) { _state = state; }
 
-export async function renderPlayersTab() {
+let _loading = Promise.resolve();
+/** The players list's load in flight (switchDMTab starts it without waiting). */
+export const playersLoaded = () => _loading;
+
+export function renderPlayersTab() {
+  _loading = _renderPlayersTab();
+  return _loading;
+}
+
+async function _renderPlayersTab() {
   const el = document.getElementById('tab-players');
   if (!el) return;
   _selected = null;

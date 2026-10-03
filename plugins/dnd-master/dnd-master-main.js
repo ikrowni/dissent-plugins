@@ -24,7 +24,7 @@ import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
 import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20260503';
 import { setLaunchCallback } from './dnd-master-encounter.js?v=20261003d';
 import { setEndCallback    } from './dnd-master-initiative.js';
-import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
+import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
   dmEditExhaustion, dmEditNotes } from './dnd-master-players.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
@@ -32,6 +32,7 @@ import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections
 import { icon } from './lk-icons.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { isRepeat } from './lk-bus.js';
+import { setPartyState, applyPartyUpdate } from './dnd-master-party.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 
@@ -48,6 +49,7 @@ function renderNav() {
   document.getElementById('subtab-bar').innerHTML = tabs.map(t => `
     <button class="dm-subtab${t === _activeTab ? ' active' : ''}" onclick="switchDMTab('${t}')">${TAB_LABELS[t]}</button>`).join('');
   document.getElementById('subtab-bar').classList.toggle('hidden', tabs.length < 2);
+  document.getElementById('party-panel')?.classList.toggle('hidden', sec !== 'run');
   document.getElementById('dm-settings-btn')?.classList.toggle('active', _activeTab === 'settings');
 }
 
@@ -143,6 +145,7 @@ async function onInit(data) {
   setEncounterState({ dmCampaign, dmCampaignId, serverData, srdMonsters, switchDMTab, userId });
   await loadEncounterDraft();
   setPlayersState({ dmCampaign, dmCampaignId });
+  setPartyState({ dmCampaign, dmCampaignId });
   setLaunchCallback(() => appendLogEntry({ type: 'combat-start', message: 'Encounter launched \u2014 Round 1' }));
   setEndCallback(()    => appendLogEntry({ type: 'combat-end',   message: 'Encounter ended' }));
   renderEncounterBuilder();
@@ -165,6 +168,7 @@ function onEvent(ev) {
     const el = document.getElementById('tab-initiative');
     if (el && !el.classList.contains('hidden')) renderInitiativeTracker();
   }
+  if (p.type === EV.PARTY_UPDATE) { applyPartyUpdate(p); return; }
   if (p.type === EV.INITIATIVE_ROLL && p.campaignId === dmCampaignId) {
     if (isRepeat(p)) return;
     // The roller's own id: a player can roll only for themselves.
@@ -225,6 +229,12 @@ window.moveInitiative      = moveInitiative;
 window.rerollInitiative    = rerollInitiative;
 window.endEncounter        = endEncounter;
 window.rollMissingInitiative = rollMissingInitiative;
+// Party at a glance: a row opens the existing player editor (its sheets load first).
+window.openPartyMember = async uid => {
+  switchDMTab('players');      // starts loading the sheets
+  await playersLoaded();       // one load, so a late list render cannot cover the editor
+  dmOpenPlayer(uid);
+};
 // Read-only, for the playtest (like window.MAP on the Hub).
 window.__dmInitiative = () => getInitiativeState();
 window.updateHP            = updateHP;
