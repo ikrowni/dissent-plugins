@@ -8,23 +8,23 @@ export const DIFFICULTIES = ['Easy', 'Medium', 'Tricky'];
 
 // art: true once dnd-hub/art/<id>.webp exists (owner-generated paintings; see the art prompts doc).
 export const RACE_INFO = {
-  dwarf: { colour: '#d9772b', signature: 'Shrugs off poison', art: false,
+  dwarf: { colour: '#d9772b', signature: 'Shrugs off poison', art: true,
     lore: 'Mountain folk who carve their halls into the roots of the world. Slow to trust, slower to forget, and very hard to knock down.' },
-  elf: { colour: '#9fd3b4', signature: 'Never needs sleep', art: false,
+  elf: { colour: '#9fd3b4', signature: 'Never needs sleep', art: true,
     lore: 'An old people of starlit forests who rest in a few hours of quiet trance. Their eyes catch what others miss.' },
-  halfling: { colour: '#e0a84a', signature: 'Lucky: rerolls a 1', art: false,
+  halfling: { colour: '#e0a84a', signature: 'Lucky: rerolls a 1', art: true,
     lore: 'Small, cheerful folk who love a full pantry and a warm hearth, and keep surviving things nobody should survive.' },
-  human: { colour: '#e0b552', signature: 'Good at everything', art: false,
+  human: { colour: '#e0b552', signature: 'Good at everything', art: true,
     lore: 'The youngest and most restless people, found everywhere, ambitious beyond their short years.' },
-  dragonborn: { colour: '#c08a4a', signature: 'Breathes fire, ice or lightning', art: false,
+  dragonborn: { colour: '#c08a4a', signature: 'Breathes fire, ice or lightning', art: true,
     lore: 'Tall, scaled descendants of dragons who carry their ancestors’ fury in their breath.' },
-  gnome: { colour: '#4fb3a6', signature: 'Hard to fool with magic', art: false,
+  gnome: { colour: '#4fb3a6', signature: 'Hard to fool with magic', art: true,
     lore: 'Tiny, endlessly curious tinkerers and illusion-makers whose minds slip out of a spell’s grip.' },
-  'half-elf': { colour: '#e39a9a', signature: 'Two extra skills', art: false,
+  'half-elf': { colour: '#e39a9a', signature: 'Two extra skills', art: true,
     lore: 'Born between two worlds and belonging fully to neither: charming, adaptable, welcome almost anywhere.' },
-  'half-orc': { colour: '#b5523b', signature: 'Refuses to fall once', art: false,
+  'half-orc': { colour: '#b5523b', signature: 'Refuses to fall once', art: true,
     lore: 'Strong and fierce, with an orc’s fury and a human’s will. When they should go down, they often don’t.' },
-  tiefling: { colour: '#d4413b', signature: 'Resists fire', art: false,
+  tiefling: { colour: '#d4413b', signature: 'Resists fire', art: true,
     lore: 'Marked by an old infernal bargain: horns, a tail, eyes like coals, and a little hellfire in the blood.' },
 };
 

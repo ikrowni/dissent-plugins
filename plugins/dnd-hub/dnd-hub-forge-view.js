@@ -27,7 +27,7 @@ export function stage(v, { kind, dir }) {
   const badges = kind === 'race' ? v.badges
     : [v.role, `${v.difficulty} to play`, `Main ability ${v.main}`, v.sturdy];
   return `<div class="forge-stage forge-slide ${dir < 0 ? 'back' : ''}" id="forge-stage">
-    <div class="forge-art" id="forge-art">${art(v, 200)}</div>
+    <div class="forge-art${v.art ? ' has-art' : ''}" id="forge-art">${art(v, 200)}</div>
     <div>
       <h2 class="forge-name">${esc(v.name)}</h2>
       <div class="forge-blurb">${esc(v.blurb)}</div>

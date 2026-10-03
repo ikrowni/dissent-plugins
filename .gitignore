@@ -11,3 +11,7 @@ build/
 
 # STS2 Companion build cache — downloaded Spire Codex art and export, reused across builds
 scripts/sts2/.cache/
+
+# LanternKeep art drop folders: raw paintings go in art/races/ or art/classes/ (or ~/lanternkeep-art-originals);
+# they are converted to art/<id>.webp, reviewed, then committed. Never commit the raw files (2–3 MB each).
+plugins/dnd-hub/art/*/

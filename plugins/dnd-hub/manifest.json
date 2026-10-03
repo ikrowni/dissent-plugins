@@ -28,8 +28,40 @@
   "sdk_version": "1",
   "resources": [
     {
-      "url": "art/races/Haf-Orc.jpg",
-      "sha256": "0f2db41c42c9b52faf2ebaf9648045f4f1045769c55337059aa8542e9abdfd31"
+      "url": "art/dragonborn.webp",
+      "sha256": "25133b2755136880ad69ec9892070086876e0ec8c77cd64e5c0aecc0615d508a"
+    },
+    {
+      "url": "art/dwarf.webp",
+      "sha256": "3790e540e10b82821f11023f405ce7a6cdf346b8f763f7515da1ebf9605c5709"
+    },
+    {
+      "url": "art/elf.webp",
+      "sha256": "216a7bd68dc719f56548dc2578bdf5e864c3da683679f33d73c22236e461423c"
+    },
+    {
+      "url": "art/gnome.webp",
+      "sha256": "b4b3f0d6f5f24e942a3c0f6b406a4a88d6178b1a2362d0b02abc7543f8f56f68"
+    },
+    {
+      "url": "art/half-elf.webp",
+      "sha256": "19f6d5ab485c9b37ab1763cd62541cb22cbec254d079e55bbd966d731211b93d"
+    },
+    {
+      "url": "art/half-orc.webp",
+      "sha256": "8b84f4a6fa95318be3032557e476aa565a4d56cefa76d0ac0f66ee83693499ca"
+    },
+    {
+      "url": "art/halfling.webp",
+      "sha256": "bff57b0e33fa5795b17ad45d9b43602a8db50bf33a78642f9ed7a1727b3f5d27"
+    },
+    {
+      "url": "art/human.webp",
+      "sha256": "541586e52da2c7a1e0c6f066d7a6bd38c4df205b372b422a5aa4f5728b7d3c3a"
+    },
+    {
+      "url": "art/tiefling.webp",
+      "sha256": "c93d877e1f6fee5215a6bf1a0d65b0e714b108675fdcc4fb60a2a2741e921117"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -113,11 +145,11 @@
     },
     {
       "url": "dnd-hub-forge-view.js",
-      "sha256": "a6ca72714a0cd2619d8885e1b3ac2194705df01e0e5213fb2e0cac0359d7c7da"
+      "sha256": "765a022ca1ee7f85a9d296147f76803d82fa5d1f3c5aa0ca790dcb4bd4f339f3"
     },
     {
       "url": "dnd-hub-forge.css",
-      "sha256": "f828f8753ad582095633f0f011c4c5afd1d154ab14fb2c10f94b89aa6020d4d7"
+      "sha256": "3325ca311dc128bae681ddbccb5c1bbb49243c2a6189765ad14289862a5790f4"
     },
     {
       "url": "dnd-hub-forge.js",
@@ -297,7 +329,7 @@
     },
     {
       "url": "lk-hero-data.js",
-      "sha256": "7636b55f2609c768a012259f5818b0cd6f84216cf8d9b046e915a888cab1f905"
+      "sha256": "aa89958ac7b37bc6d5c8c805ee5180f69149bbb124836f3c16117f5654c6d52e"
     },
     {
       "url": "lk-icons.js",
