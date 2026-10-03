@@ -4,6 +4,7 @@
 export const EV = {
   // Hub → its own sidebars (localPublish): the campaign the Hub is now showing.
   CAMPAIGN_ACTIVE:    'campaign:active',
+  CAMPAIGN_QUERY:     'campaign:query',   // a sidebar asks the Hub which campaign is open (it answers with CAMPAIGN_ACTIVE)
 
   // Map
   MAP_SET:            'map:set',

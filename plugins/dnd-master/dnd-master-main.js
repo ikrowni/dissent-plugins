@@ -1,6 +1,6 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
-import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, localPublish } from '../plugin-sdk.js';
+import { EV } from './dnd-hub-event-types.js?v=20261007k';
 import { loadSRDMonsters, getSRDMonsters, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
@@ -14,15 +14,15 @@ import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, del
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261004a';
+  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261007k';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261004a';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261007k';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20260503';
+import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261007k';
 import { setLaunchCallback } from './dnd-master-encounter.js?v=20261006s';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
@@ -32,6 +32,7 @@ import { pickCampaign } from './dnd-campaign-pick.js';
 import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
 import { icon } from './lk-icons.js';
 import { loadHubDmCompanion, setSecretsUser } from './dnd-hub-shared-storage.js';
+import { sealedHtml } from './lk-sealed.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
 import * as Levels from './dnd-master-levels.js';
@@ -88,11 +89,29 @@ function switchDMTab(name) {
 
 // Set by the Hub's CAMPAIGN_ACTIVE announcement; see onEvent.
 let _announcedCampaignId = null;
+// What the Hub said is open: 'unknown', 'none' (no campaign: stay sealed), 'open', or 'fallback' (no answer).
+let _hubState = 'unknown', _hubAsked = false;
+
+/** The DM tools are closed until the DM opens a campaign at the table (lk-sealed.js). */
+function seal(title, text) {
+  document.getElementById('dm-app').classList.add('hidden');
+  const el = document.getElementById('loading');
+  el.classList.remove('hidden');
+  el.innerHTML = sealedHtml({ title, text });
+}
+const sealTable = () => seal('The DM\'s tools', 'Open or create a campaign at the LanternKeep table, and your tools for running it open here.');
 
 async function onInit(data) {
   const id = await getIdentity();
   userId = id?.id ?? null;
   setSecretsUser(userId); // before the first load: the DM's sidebar joins its secret record
+  if (!_hubAsked) {
+    _hubAsked = true;
+    localPublish('dnd-hub', EV.CAMPAIGN_QUERY, { type: EV.CAMPAIGN_QUERY });
+    setTimeout(() => { if (_hubState === 'unknown') { _hubState = 'fallback'; onInit({}); } }, 6000);
+  }
+  if (_hubState === 'unknown') return; // the answer calls onInit again
+  if (_hubState === 'none') { dmCampaignId = null; dmCampaign = null; sealTable(); return; }
   serverData = await loadHubDmCompanion() || { campaigns: {} };
 
   // Restore items/shops from the dm-catalog backup in case dnd-hub overwrote hub-dm
@@ -116,10 +135,7 @@ async function onInit(data) {
   if (!myCampaign) {
     // Not 'hide': PluginRuntime treats a hide as permanent until remount, so someone who
     // later starts running a campaign would never get this panel back.
-    const el = document.getElementById('loading');
-    el.classList.remove('hidden');
-    el.innerHTML = '<div class="lk-note"><b class="lk-title">For the DM</b><span>This panel is for the campaign\'s Dungeon Master. Your character is in the LanternKeep Player panel.</span></div>';
-    document.getElementById('dm-app').classList.add('hidden');
+    seal('For the DM', 'This panel is for the campaign\'s Dungeon Master. Your character is in the LanternKeep Player panel.');
     return;
   }
   document.getElementById('loading').classList.add('hidden');
@@ -167,10 +183,13 @@ function onEvent(ev) {
 
   // The Hub opened a campaign: follow it if this user runs it and it isn't shown yet.
   if (p.type === EV.CAMPAIGN_ACTIVE) {
+    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; dmCampaignId = null; dmCampaign = null; sealTable(); return; }
+    const wasSealed = _hubState !== 'open' && _hubState !== 'fallback';
+    _hubState = 'open';
     _announcedCampaignId = p.campaignId || null;
     // The DM opened a campaign: ask the host to show this panel (see dnd-player's twin).
     if (p.role === 'dm') parent.postMessage({ type: 'dissent:slot-action', action: 'focus' }, '*');
-    if (p.role === 'dm' && p.campaignId !== dmCampaignId) onInit({});
+    if ((p.role === 'dm' && p.campaignId !== dmCampaignId) || (wasSealed && !dmCampaignId)) onInit({});
     return;
   }
   if (p.type === 'initiative:update' && p.campaignId === dmCampaignId) {

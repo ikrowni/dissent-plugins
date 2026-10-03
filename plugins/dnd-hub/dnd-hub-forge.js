@@ -1,9 +1,9 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20260502p4';
+import { SRD } from './dnd-hub-state.js?v=20261007k';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261006s';
+import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261007k';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx } from './dnd-hub-forge-fx.js';
@@ -12,11 +12,11 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20260502p4';
+import { serverData, CC } from './dnd-hub-state.js?v=20261007k';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261003a';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261007k';
 
 const ALL_SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
   'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'];

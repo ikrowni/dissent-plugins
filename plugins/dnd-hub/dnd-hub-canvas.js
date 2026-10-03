@@ -1,22 +1,22 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20261007k';
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261006s';
-import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261006s';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261006s';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261006s';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261005m';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261006s';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261006s';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261006s';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261006s';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261006s';
-import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261006s';
+import { EV } from './dnd-hub-event-types.js?v=20261007k';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261007k';
+import { renderGrid } from './dnd-hub-grid.js?v=20261007k';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261007k';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261007k';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261007k';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261007k';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261007k';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261007k';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261007k';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261007k';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261007k';
+import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261007k';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261006s';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261007k';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
@@ -855,7 +855,7 @@ function _showTemplateContextMenu(clientX, clientY, wx, wy) {
 
 window._placeTemplateAt = async (type, wx, wy) => {
   document.getElementById('tmpl-ctx-menu')?.remove();
-  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261006s');
+  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261007k');
   await addTemplate(type, wx, wy, 10, 0, 10, 0xff4444, userId);
 };
 

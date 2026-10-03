@@ -1,12 +1,12 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261007k';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20260502p4';
+import { EV } from './dnd-hub-event-types.js?v=20261007k';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261006s';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261006s';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261006s';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261007k';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261007k';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261007k';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
@@ -314,11 +314,22 @@ export async function createCampaign() {
 // ── Campaign View ─────────────────────────────────────────────────────────────
 // Tell this client's sidebars which campaign the Hub is showing. They used to pick once
 // at load, so joining a campaign left them on "Join a campaign" until a reload.
+// 🔴 Also when NO campaign is open (lobby, the Hero Forge, the campaign list): campaignId null, role 'none'. The sidebars
+// then stay sealed. They used to fall back to the last campaign, so a player making a new hero saw an old hero's sheet.
+let _screen = 'loading';
 function announceCampaign(campaignId, role) {
-  const payload = { type: EV.CAMPAIGN_ACTIVE, campaignId, role };
+  const payload = { type: EV.CAMPAIGN_ACTIVE, campaignId: campaignId || null, role: campaignId ? role : 'none' };
   localPublish('dnd-player', EV.CAMPAIGN_ACTIVE, payload);
   localPublish('dnd-master', EV.CAMPAIGN_ACTIVE, payload);
 }
+/** What the Hub shows right now, told to the sidebars (on every screen change, and when a sidebar asks). */
+export function announceCurrent() {
+  if (_screen === 'loading') return; // not decided yet: the next screen change announces
+  if (_screen === 'campaign' && MAP.campaignId) announceCampaign(MAP.campaignId, MAP.isDM ? 'dm' : 'player');
+  else announceCampaign(null);
+}
+document.addEventListener('lk:screen', e => { _screen = e.detail; announceCurrent(); });
+document.addEventListener('lk:campaign-query', () => announceCurrent());
 
 export async function enterCampaignAsDM(campaignId) {
   await renderCampaignView(campaignId, true);

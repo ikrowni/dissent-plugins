@@ -16,6 +16,7 @@ import { playerStrip, playerStripHtml } from './lk-party.js';
 import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds, setSecretsUser } from './dnd-hub-shared-storage.js';
+import { sealedHtml } from './lk-sealed.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
@@ -571,18 +572,39 @@ function initTabHTML() {
 
 // Set by the Hub's CAMPAIGN_ACTIVE announcement; see onEvent.
 let _announcedCampaignId = null;
+// What the Hub said is open: 'unknown' (not heard yet), 'none' (lobby, Hero Forge: stay sealed), 'open', or 'fallback'
+// (no answer: a Hub too old to answer; pick a campaign the old way).
+let _hubState = 'unknown', _hubAsked = false;
+
+/** The sheet is closed: nothing to use until there is a hero in an open campaign (lk-sealed.js). */
+function seal(title, text, action) {
+  const app = document.getElementById('app');
+  if (app) app.style.display = 'none';
+  const el = document.getElementById('loading');
+  el.style.display = '';
+  el.innerHTML = sealedHtml({ title, text, action });
+}
+const sealTable = () => seal('Your sheet', 'Your character sheet opens here once your hero is ready and you sit down at a table.');
 
 async function onInit(data) {
   const identity = await getIdentity();
   USER_ID = identity?.id ?? null;
   setSecretsUser(USER_ID);
+  // Ask the Hub what it shows (it may have loaded first, and its announcement gone before this frame listened).
+  if (!_hubAsked) {
+    _hubAsked = true;
+    localPublish('dnd-hub', EV.CAMPAIGN_QUERY, { type: EV.CAMPAIGN_QUERY });
+    setTimeout(() => { if (_hubState === 'unknown') { _hubState = 'fallback'; onInit({}); } }, 6000);
+  }
+  if (_hubState === 'unknown') return; // the answer calls onInit again
+  if (_hubState === 'none') { CAMPAIGN_ID = null; CHAR = null; sealTable(); return; }
   SERVER_DATA = await loadHubDmCompanion() || { campaigns: {} };
   const storedCampaignId = await storageGetCompanion('dnd-hub', 'activePlayerCampaignId', 'user');
   // The Hub's announcement (CAMPAIGN_ACTIVE) wins over the stored id: it is what the
   // user is looking at right now.
   const myCampaign = pickCampaign(SERVER_DATA.campaigns, _announcedCampaignId || storedCampaignId, USER_ID);
   CAMPAIGN_ID = myCampaign?.id ?? null;
-  if (!CAMPAIGN_ID) { document.getElementById('loading').innerHTML = '<div class="lk-note"><b class="lk-title">No character yet</b><span>Join a game at the LanternKeep table to see your sheet here.</span></div>'; return; }
+  if (!CAMPAIGN_ID) { sealTable(); return; }
   // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
   // character in the campaign is what proves you are playing it; membership does not.
   // Two copies exist: the player's own (user scope) and the server mirror the DM reads and edits.
@@ -613,18 +635,14 @@ async function onInit(data) {
   // Not 'hide': PluginRuntime treats a hide as permanent until remount, so a DM who
   // later builds a character would never get the sheet back. Point at the right panel.
   if (isDMOnly) {
-    document.getElementById('loading').innerHTML =
-      '<div class="lk-note"><b class="lk-title">You\'re the DM</b><span>Your tools are in the LanternKeep DM panel. Switch with ⇅ above.</span></div>';
+    seal('You\'re the DM', 'Your tools are in the LanternKeep DM panel. Switch with ⇅ above.');
     return;
   }
 
   if (!CHAR) {
-    document.getElementById('loading').innerHTML =
-      '<div style="text-align:center;padding:16px">' +
-      '<span>Create your character at the LanternKeep table first.</span><br><br>' +
-      '<button onclick="window._retryPlayerInit()" style="padding:6px 14px;border-radius:6px;border:none;background:var(--primary,#7c3aed);color:#fff;cursor:pointer;font-size:13px">↺ Refresh</button>' +
-      '</div>';
     window._retryPlayerInit = () => onInit({});
+    seal('No hero yet', 'Make your hero at the LanternKeep table. Your sheet opens here when they are ready.',
+      { label: '↺ Check again', onclick: 'window._retryPlayerInit()' });
     return;
   }
   _lastCampaignId = CAMPAIGN_ID;
@@ -957,7 +975,11 @@ async function onEvent(ev) {
   // The Hub switched campaign, or the player just joined or finished a character:
   // re-pick instead of waiting for a reload.
   if (p.type === EV.CAMPAIGN_ACTIVE) {
-    const changed = p.campaignId !== CAMPAIGN_ID;
+    // No campaign open at the Hub (lobby, the Hero Forge): close the sheet.
+    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; CAMPAIGN_ID = null; CHAR = null; sealTable(); return; }
+    const wasSealed = _hubState !== 'open' && _hubState !== 'fallback';
+    _hubState = 'open';
+    const changed = p.campaignId !== CAMPAIGN_ID || wasSealed;
     _announcedCampaignId = p.campaignId || null;
     // A player opened a campaign: ask the host to show this panel (sidebar focus). The
     // host ignores it once the user has picked a panel themselves; older hosts ignore it.

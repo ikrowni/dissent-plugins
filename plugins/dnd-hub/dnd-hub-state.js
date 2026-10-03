@@ -140,4 +140,6 @@ export function showScreen(name) {
   });
   const target = document.getElementById(`screen-${name}`);
   if (target) { target.classList.remove('hidden'); target.classList.add('fade-in'); }
+  // dnd-hub-screens.js tells the sidebars whether a campaign is open (they stay sealed when none is).
+  document.dispatchEvent(new CustomEvent('lk:screen', { detail: name }));
 }

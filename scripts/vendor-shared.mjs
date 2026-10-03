@@ -86,6 +86,11 @@ const VENDORED = [
     source: "lk-secrets.js",
     targets: ["dnd-hub/lk-secrets.js", "dnd-master/lk-secrets.js", "dnd-player/lk-secrets.js"],
   },
+  // The sealed panel a sidebar shows before there is a hero or an open campaign.
+  {
+    source: "lk-sealed.js",
+    targets: ["dnd-master/lk-sealed.js", "dnd-player/lk-sealed.js"],
+  },
   // Uploads — one helper that shows the node's "where to get storage" message.
   {
     source: "lk-upload.js",

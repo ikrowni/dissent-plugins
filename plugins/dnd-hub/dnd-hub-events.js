@@ -1,36 +1,36 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261007k';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261006s';
+import { EV } from './dnd-hub-event-types.js?v=20261007k';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261007k';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261006s';
+import { renderGrid } from './dnd-hub-grid.js?v=20261007k';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261007k';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261006s';
-import { renderFog } from './dnd-hub-fog.js?v=20261006s';
-import { renderWalls } from './dnd-hub-walls.js?v=20261006s';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
-import { loadSRD } from './dnd-hub-char.js?v=20261006s';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261005m';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261006s';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261007k';
+import { renderFog } from './dnd-hub-fog.js?v=20261007k';
+import { renderWalls } from './dnd-hub-walls.js?v=20261007k';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261007k';
+import { loadSRD } from './dnd-hub-char.js?v=20261007k';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261007k';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261007k';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261006s';
-import { renderLights } from './dnd-hub-lights.js?v=20261006s';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261006s';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261006s';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261006s';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261007k';
+import { renderLights } from './dnd-hub-lights.js?v=20261007k';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261007k';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261007k';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261007k';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261007k';
 import { saveHubDm, loadHubDm, setSecretsUser } from './dnd-hub-storage.js?v=20261006s';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261006s';
+import { setView } from './dnd-hub-canvas.js?v=20261007k';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -814,6 +814,10 @@ export async function handleMapEvent(p) {
       }
       break;
     }
+    case EV.CAMPAIGN_QUERY:
+      // A sidebar on this screen loaded and asks what is open (dnd-hub-screens.js answers; no import cycle).
+      document.dispatchEvent(new Event('lk:campaign-query'));
+      break;
     case EV.LEVELUP_OPEN: {
       // From my own sheet (localPublish): open the level-up scene for my hero.
       if (p.userId !== userId) return;

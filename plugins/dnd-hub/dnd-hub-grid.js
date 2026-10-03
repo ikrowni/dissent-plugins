@@ -1,5 +1,5 @@
 // dnd-hub-grid.js — grid overlay rendering
-import { MAP, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, effectiveGs } from './dnd-hub-state.js?v=20261007k';
 
 export function renderGrid() {
   const layers = MAP.layers;
