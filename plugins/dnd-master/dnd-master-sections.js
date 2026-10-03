@@ -1,6 +1,6 @@
 // dnd-master-sections.js — the DM panel's five sections. Was 15 tiny tabs in one row that ran off the
 // edge of the sidebar; grouped by what a DM is doing: running the fight, preparing foes, the world, loot,
-// sound. Setup lives behind the gear in the header.
+// sound. Table rules live behind the gear in the header.
 
 export const ALL_TABS = ['encounter','initiative','monsters','maps','actors','items','shops','scenes','journals',
   'sounds','triggers','notes','logs','settings','players'];
@@ -17,7 +17,7 @@ export const TAB_LABELS = {
   initiative: 'Initiative', players: 'Players', logs: 'Log',
   encounter: 'Encounter', monsters: 'Monsters', actors: 'NPCs', triggers: 'Traps',
   maps: 'Maps', scenes: 'Scenes', journals: 'Journals', notes: 'Notes',
-  items: 'Items', shops: 'Shops', sounds: 'Sounds', settings: 'Setup',
+  items: 'Items', shops: 'Shops', sounds: 'Sounds', settings: 'Table rules',
 };
 
 export function sectionOf(tab) {

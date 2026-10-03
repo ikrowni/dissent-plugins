@@ -1,44 +1,52 @@
-// dnd-master-settings.js — DM automation toggles (Phase 2)
-import { storageSetCompanion, realtimePublish } from '../plugin-sdk.js';
+// dnd-master-settings.js — the DM's Table rules page: presets, switches, then the table (hearing range, export).
+// What each preset and switch means lives in lk-table-rules.js.
 import { EV } from './dnd-hub-event-types.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
+import { esc } from '../plugin-sdk.js';
+import { PRESET_ORDER, PRESET_INFO, RULE_KEYS, RULE_INFO, rule, presetOf, applyPreset, defaultSettings } from './lk-table-rules.js';
 
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
 
-const DEFAULT_SETTINGS = { autoHit: true, autoDamage: true, turnLock: false, deathSaves: true, spatialRange: 60, concentrationAutoRoll: false };
-
 export function setSettingsState(state) { _state = state; }
 
-function getSettings() {
-  return _state.dmCampaign?.settings || { ...DEFAULT_SETTINGS };
-}
+const getSettings = () => _state.dmCampaign?.settings || defaultSettings();
+const heading = (text, top = 16) =>
+  `<div style="font-size:11px;font-weight:700;color:var(--gold);margin:${top}px 0 10px;letter-spacing:.05em">${text}</div>`;
 
 export function renderSettings() {
   const el = document.getElementById('tab-settings');
   if (!el) return;
   const s = getSettings();
+  const current = presetOf(s);
+  const cards = PRESET_ORDER.map(p => {
+    const on = p === current;
+    return `<button class="lk-preset${on ? ' active' : ''}" data-preset="${p}" onclick="pickPreset('${p}')" ` +
+      `style="flex:1;text-align:left;padding:8px;border-radius:8px;cursor:pointer;background:var(--surface);color:var(--text);` +
+      `border:1px solid ${on ? 'var(--gold)' : 'var(--border)'}">` +
+      `<div style="font-size:12px;font-weight:700;color:${on ? 'var(--gold)' : 'var(--text)'}">${PRESET_INFO[p].label}</div>` +
+      `<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.35">${PRESET_INFO[p].blurb}</div></button>`;
+  }).join('');
+  const groups = [...new Set(RULE_KEYS.map(k => RULE_INFO[k].group))];
   el.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;letter-spacing:.05em">AUTOMATION</div>' +
-    _row('autoHit',    'Auto Hit/Miss',   s.autoHit,    'Compare attack rolls to AC of selected token') +
-    _row('autoDamage', 'Auto Damage',      s.autoDamage, 'Apply damage rolls automatically after a hit') +
-    _row('turnLock',   'Turn Lock',        s.turnLock,   'Prevent non-active players from moving tokens') +
-    _row('deathSaves', 'Death Saves',      s.deathSaves, 'Show death save UI when a token reaches 0 HP') +
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:16px 0 12px;letter-spacing:.05em">SPATIAL AUDIO</div>' +
+    heading('TABLE RULES', 0) +
+    `<div style="display:flex;gap:6px">${cards}</div>` +
+    `<div id="table-rules-preset" data-preset="${current}" style="font-size:10px;color:var(--muted);margin-top:6px">` +
+      (current === 'custom' ? 'Custom: your own mix of switches. Pick a preset to reset them all.' : `Playing ${PRESET_INFO[current].label}.`) +
+    '</div>' +
+    groups.map(g => heading(g.toUpperCase()) +
+      RULE_KEYS.filter(k => RULE_INFO[k].group === g).map(k => _row(k, RULE_INFO[k].label, rule(s, k), RULE_INFO[k].desc)).join('')
+    ).join('') +
+    heading('TABLE') +
     '<div class="setting-row">' +
       '<div style="flex:1">' +
         '<div style="font-size:11px;font-weight:600;color:var(--text)">Hearing Range (ft)</div>' +
         '<div style="font-size:10px;color:var(--muted);margin-top:2px">Max distance players can hear each other (10–300 ft)</div>' +
       '</div>' +
-      `<input type="number" min="10" max="300" step="5" value="${s.spatialRange ?? 60}" ` +
+      `<input type="number" min="10" max="300" step="5" value="${esc(String(s.spatialRange ?? 60))}" ` +
         `onchange="setSpatialRange(+this.value)" ` +
         `style="width:60px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;text-align:center">` +
     '</div>' +
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:16px 0 12px;letter-spacing:.05em">CONCENTRATION</div>' +
-    _row('concentrationAutoRoll', 'Auto-roll Concentration Saves',
-      s.concentrationAutoRoll ?? false,
-      'Automatically roll CON save when a concentrating player takes damage') +
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:16px 0 12px;letter-spacing:.05em">BACKUP</div>' +
     '<div class="setting-row">' +
       '<div style="flex:1">' +
         '<div style="font-size:11px;font-weight:600;color:var(--text)">Export Campaign</div>' +
@@ -55,33 +63,35 @@ function _row(key, label, checked, desc) {
       `<div style="font-size:10px;color:var(--muted);margin-top:2px">${desc}</div>` +
     `</div>` +
     `<label class="toggle-switch">` +
-      `<input type="checkbox" onchange="toggleSetting('${key}',this.checked)"${checked ? ' checked' : ''}>` +
+      `<input type="checkbox" data-rule="${key}" onchange="toggleSetting('${key}',this.checked)"${checked ? ' checked' : ''}>` +
       `<span class="toggle-slider"></span>` +
     `</label>` +
   `</div>`;
 }
 
-export async function setSpatialRange(value) {
+/** Save the campaign's settings and tell the Hub and every player sheet (they apply them live). */
+async function _saveSettings(settings) {
   const { dmCampaignId, dmCampaign, serverData, userId } = _state;
-  if (!dmCampaign) return;
-  const range = Math.max(10, Math.min(300, value || 60));
-  if (!dmCampaign.settings) dmCampaign.settings = { ...DEFAULT_SETTINGS };
-  dmCampaign.settings.spatialRange = range;
-  serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
+  dmCampaign.settings = settings;
+  serverData.campaigns[dmCampaignId].settings = settings;
   await saveHubDmCompanion(serverData);
-  // The Hub applies auto hit/miss and spatial audio from these; it used to hear only on reload.
-  await publishTo(['hub'], EV.COMBAT_SETTINGS, { campaignId: dmCampaignId, settings: dmCampaign.settings, fromUserId: userId });
+  await publishTo(['hub', 'player'], EV.COMBAT_SETTINGS, { campaignId: dmCampaignId, settings, fromUserId: userId });
+  renderSettings();
+}
+
+export async function pickPreset(name) {
+  if (!_state.dmCampaign) return;
+  await _saveSettings(applyPreset(getSettings(), name));
 }
 
 export async function toggleSetting(key, value) {
-  const { dmCampaignId, dmCampaign, serverData, userId } = _state;
-  if (!dmCampaign) return;
-  if (!dmCampaign.settings) dmCampaign.settings = { ...DEFAULT_SETTINGS };
-  dmCampaign.settings[key] = value;
-  serverData.campaigns[dmCampaignId].settings = dmCampaign.settings;
-  await saveHubDmCompanion(serverData);
-  // The Hub applies auto hit/miss and spatial audio from these; it used to hear only on reload.
-  await publishTo(['hub'], EV.COMBAT_SETTINGS, { campaignId: dmCampaignId, settings: dmCampaign.settings, fromUserId: userId });
+  if (!_state.dmCampaign) return;
+  await _saveSettings({ ...getSettings(), [key]: !!value });
+}
+
+export async function setSpatialRange(value) {
+  if (!_state.dmCampaign) return;
+  await _saveSettings({ ...getSettings(), spatialRange: Math.max(10, Math.min(300, value || 60)) });
 }
 
 export function exportCampaign() {

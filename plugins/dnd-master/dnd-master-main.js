@@ -9,7 +9,7 @@ import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMo
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign } from './dnd-master-settings.js?v=20260417p10';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261003d';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
@@ -230,6 +230,7 @@ window.quickRoll           = quickRoll;
 window.quickRollExpr       = quickRollExpr;
 window.renderMonsterSearch = renderMonsterSearch;
 window.toggleSetting       = toggleSetting;
+window.pickPreset          = pickPreset;
 window.setSpatialRange     = setSpatialRange;
 window.exportCampaign      = exportCampaign;
 // Maps tab
