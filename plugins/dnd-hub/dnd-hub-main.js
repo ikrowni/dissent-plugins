@@ -5,6 +5,7 @@ import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20261002a';
 import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
+import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003a';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261003b';
@@ -88,6 +89,7 @@ window.renderSubclassOptions = renderSubclassOptions;
 // Quick character (dnd-hub-quick-screen.js)
 window.quickPickHero = quickPickHero; window.quickPickRace = quickPickRace; window.quickPickClass = quickPickClass; window.quickBuildOwn = quickBuildOwn; window.quickBack = quickBack; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; 
 window.__lkKits = STARTING_KITS;
+window.startSampleAdventure = startSampleAdventure;
 window.toggleClassSkill = toggleClassSkill; window.toggleExtraSkill = toggleExtraSkill; window.setHalfElfBonus = setHalfElfBonus;
 window.selectAbilityMethod = selectAbilityMethod;
 window.renderAbilityMethodUI = renderAbilityMethodUI;

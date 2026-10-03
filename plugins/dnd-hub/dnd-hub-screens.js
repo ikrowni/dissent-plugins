@@ -45,6 +45,14 @@ export function renderDMPortalFrame() {
       </div>
       <span style="margin-left:auto;color:var(--dnd-gold);font-size:18px">→</span>
     </div>
+    <div class="new-campaign-btn" id="btn-sample-adventure" onclick="startSampleAdventure()" style="margin-top:8px">
+      <div class="new-campaign-icon">${icon('lantern', { size: 20 })}</div>
+      <div class="new-campaign-text">
+        <strong>Start the sample adventure</strong>
+        <span>The Dark Lighthouse — one evening, ready to play, for 3–5 level-1 heroes</span>
+      </div>
+      <span style="margin-left:auto;color:var(--dnd-gold);font-size:18px">→</span>
+    </div>
     <div class="section-label">Your Campaigns</div>
     <div class="campaign-list" id="dm-campaign-list"></div>`;
 }
