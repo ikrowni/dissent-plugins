@@ -3,6 +3,9 @@
 // null = ready, string = used with that label
 let _actions = { action: null, bonusAction: null, reaction: null };
 let _lastInitiativeActive = false;
+let _needsRoll = false;
+/** Show the "Roll initiative" card (the DM's table has players roll their own). */
+export function setNeedsInitiativeRoll(v) { _needsRoll = !!v; }
 let _lastInitiative = null;
 let _charClass = '';
 
@@ -82,8 +85,15 @@ export function renderCombat(initiativeActive) {
       '</div>';
   }
 
+  const rollCard = _needsRoll
+    ? '<div id="init-roll-card" style="padding:10px;margin-bottom:12px;border:1px solid var(--dnd-gold);border-radius:8px;text-align:center">' +
+        '<div style="font-size:12px;font-weight:700;margin-bottom:6px">Combat! Roll initiative.</div>' +
+        '<button class="btn btn-gold btn-sm" onclick="rollInitiativeNow()">Roll initiative</button>' +
+      '</div>'
+    : '';
+
   el.innerHTML =
-    combatHeader +
+    rollCard + combatHeader +
     '<div style="font-size:11px;font-weight:700;color:var(--dnd-gold);margin-bottom:12px;letter-spacing:.05em">ACTION ECONOMY</div>' +
     Object.entries(LABELS).map(([key, { emoji, label, desc }]) => {
       const usedLabel = _actions[key];

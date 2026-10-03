@@ -9,7 +9,9 @@ import { setSheetState, setInventoryImageUrls, renderAll, renderMain, renderDeat
   computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem } from './dnd-player-sheet.js';
 import { setSpellState, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
          castSpell, setConcentration, clearConcentration } from './dnd-player-spells.js';
-import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData } from './dnd-player-combat.js';
+import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData, setNeedsInitiativeRoll } from './dnd-player-combat.js';
+import { rule } from './lk-table-rules.js';
+import { saveBonus, trapPrompt, trapResult, needsMyRoll, deathSaveTurn } from './dnd-player-table.js';
 import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
@@ -17,13 +19,16 @@ import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
-import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod, profBonus } from './lk-rules5e.js';
-import { isRepeat } from './lk-bus.js';
+import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
+import { isRepeat, publishTo } from './lk-bus.js';
 
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
 let SERVER_DATA = null;
+let _deathPromptKey = null;
+let _initiative = null;
+const tableRule = k => rule(SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.settings, k);
 let _lastCampaignId = null;
 let selectedDie = 'd20';
 let rollAdvMode = null;
@@ -377,6 +382,32 @@ async function recomputeZoneVolumes() {
       delete _zoneAudioEls[id];
     }
   }
+}
+
+async function _takeTrap(p, d20) {
+  const bonus = p.saveAbility ? saveBonus(CHAR, effectiveChar() || CHAR, p.saveAbility) : 0;
+  const { damage, note } = trapResult(p, d20, bonus, tableRule('hints'));
+  const eff = computeEffectiveStats(CHAR);
+  Object.assign(CHAR, applyDamage({ ...CHAR, hpMax: eff.hpMax }, damage), { hpMax: CHAR.hpMax });
+  await saveChar();
+  renderAll();
+  _showPlayerToast(`🪤 Trap! ${damage} damage.${note}`);
+  announceHp('Trap');
+}
+
+/** Classic and Raw tables: the player rolls the trap's save themselves. */
+function _showTrapPrompt(p) {
+  document.getElementById('trap-prompt')?.remove();
+  const box = document.createElement('div');
+  box.id = 'trap-prompt';
+  box.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:9999;padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--dnd-red,#b91c1c);text-align:center';
+  box.innerHTML = `<div style="font-size:12px;font-weight:700;margin-bottom:8px">🪤 A trap! ${esc(trapPrompt(p, tableRule('hints')))}</div>` +
+    '<button class="btn btn-gold btn-sm">Roll</button>';
+  box.querySelector('button').addEventListener('click', () => {
+    box.remove();
+    _takeTrap(p, Math.floor(Math.random() * 20) + 1).catch(e => console.error('[dnd-player] trap', e));
+  });
+  document.body.appendChild(box);
 }
 
 function _showPlayerToast(msg) {
@@ -833,6 +864,17 @@ function weaponAttack(equipIdx) {
   rollDice('attack');
 }
 
+/** My initiative: d20 + DEX modifier, sent to the DM's tracker (Table rules: playersRollInitiative). */
+async function rollInitiativeNow() {
+  if (!CHAR || !needsMyRoll(_initiative, USER_ID)) return;
+  const d20 = Math.floor(Math.random() * 20) + 1;
+  const roll = d20 + abilityMod((effectiveChar() || CHAR).dex);
+  setNeedsInitiativeRoll(false);
+  renderCombat(_initiativeActive);
+  _showPlayerToast(`Initiative: ${roll} (d20 ${d20})`);
+  await publishTo(['master'], EV.INITIATIVE_ROLL, { campaignId: CAMPAIGN_ID, userId: USER_ID, roll, fromUserId: USER_ID });
+}
+
 function weaponRollDamage() {
   if (!_pendingWeaponDamage) return;
   const { item, weaponEffect, toHitRoll } = _pendingWeaponDamage;
@@ -1027,14 +1069,13 @@ async function onEvent(ev) {
         const dmgMatch = srcStr.match(/(\d+)\s*damage/i);
         const dmg = dmgMatch ? parseInt(dmgMatch[1], 10) : 0;
         const dc  = Math.max(10, Math.floor(dmg / 2));
-        const hubDm = await loadHubDmCompanion().catch(() => null);
-        const autoRoll = hubDm?.campaigns?.[CAMPAIGN_ID]?.settings?.concentrationAutoRoll ?? false;
+        const autoRoll = tableRule('concentrationAutoRoll');
         if (autoRoll && dmg > 0) {
           document.getElementById('dice-mod').value = Math.floor(((CHAR.con ?? 10) - 10) / 2);
           document.getElementById('roll-label').textContent = `Concentration DC ${dc} CON Save`;
           await rollDice();
         } else if (dmg > 0) {
-          _showPlayerToast(`Concentration check! DC ${dc} CON save (${CHAR.concentration.spellName})`);
+          _showPlayerToast(`Concentration check! ${tableRule('hints') ? `DC ${dc} ` : ''}CON save (${CHAR.concentration.spellName})`);
         }
       })();
     }
@@ -1062,11 +1103,31 @@ async function onEvent(ev) {
     return;
   }
 
-  // Initiative state changed — show/hide action economy
+  // The DM changed the Table rules: they apply here at once.
+  if (p.type === EV.COMBAT_SETTINGS && p.campaignId === CAMPAIGN_ID) {
+    if (isRepeat(p)) return;
+    SERVER_DATA = SERVER_DATA || { campaigns: {} };
+    SERVER_DATA.campaigns[CAMPAIGN_ID] = { ...(SERVER_DATA.campaigns[CAMPAIGN_ID] || {}), settings: p.settings };
+    return;
+  }
+
+  // Initiative state changed — show/hide action economy; ask for my roll; remind me of death saves
   if (p.type === 'initiative:update') {
+    if (isRepeat(p)) return;
+    _initiative = p.initiative;
     _initiativeActive = !!p.initiative?.active;
     setInitiativeData(p.initiative);
+    const mustRoll = needsMyRoll(p.initiative, USER_ID);
+    setNeedsInitiativeRoll(mustRoll);
     renderCombat(_initiativeActive);
+    if (mustRoll) { switchTab('combat'); _showPlayerToast('Combat! Roll initiative.'); }
+    const turn = deathSaveTurn(p.initiative, USER_ID, CHAR, _deathPromptKey);
+    if (turn && tableRule('deathSaves')) {
+      _deathPromptKey = turn;
+      switchTab('main');
+      document.getElementById('death-saves-section')?.scrollIntoView({ block: 'center' });
+      _showPlayerToast('Your turn at 0 HP: roll a death save.');
+    }
     return;
   }
 
@@ -1117,24 +1178,10 @@ async function onEvent(ev) {
   if (p.type === EV.TRIGGER_FIRED && p.campaignId === CAMPAIGN_ID) {
     if (isRepeat(p)) return;
     if (p.action === 'trap' && p.tokenId === 'player_' + USER_ID && CHAR) {
-      // The trap hit me: roll the save (d20 + ability + proficiency if trained), half damage on a success,
+      // The trap hit me. The table either rolls my save (trapSavesAuto) or asks me to; half damage on a success,
       // then temporary HP, 0 HP and death saves as usual (audit H1, N1).
-      let dmg = p.damage || 0, note = '';
-      if (p.saveAbility && p.saveDC) {
-        const ab = p.saveAbility;
-        const eff = effectiveChar() || CHAR;
-        const bonus = abilityMod(eff[ab]) + ((CHAR.savingThrows || []).includes(ab) ? profBonus(CHAR.level) : 0);
-        const d20 = Math.floor(Math.random() * 20) + 1;
-        const ok = d20 + bonus >= p.saveDC;
-        if (ok) dmg = Math.floor(dmg / 2);
-        note = ` ${ab.toUpperCase()} save ${d20}${bonus >= 0 ? '+' : ''}${bonus} = ${d20 + bonus} vs DC ${p.saveDC}: ${ok ? 'half damage' : 'failed'}.`;
-      }
-      const eff = computeEffectiveStats(CHAR);
-      Object.assign(CHAR, applyDamage({ ...CHAR, hpMax: eff.hpMax }, dmg), { hpMax: CHAR.hpMax });
-      await saveChar();
-      renderAll();
-      _showPlayerToast(`🪤 Trap! ${dmg} damage.${note}`);
-      announceHp('Trap');
+      if (p.saveAbility && p.saveDC && !tableRule('trapSavesAuto')) { _showTrapPrompt(p); return; }
+      await _takeTrap(p, Math.floor(Math.random() * 20) + 1);
       return;
     }
     if (p.message) _showPlayerToast(p.message);
@@ -1349,6 +1396,7 @@ window.removeInventoryItem  = removeInventoryItem;
 window.openCharEdit        = openCharEdit;
 window.weaponAttack        = weaponAttack;
 window.weaponRollDamage    = weaponRollDamage;
+window.rollInitiativeNow   = rollInitiativeNow;
 window.useConsumable       = useConsumable;
 window.__announceHp        = announceHp;
 
