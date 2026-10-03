@@ -737,8 +737,8 @@ export async function handleMapEvent(p) {
         c.interested.push({ userId: p.userId, displayName: p.displayName });
       }
       MAP.lootContests[p.contestKey] = c;
-      // Relay to DM master sidebar — separate iframe, cannot share MAP state
-      realtimePublishCompanion('dnd-master', EV.LOOT_INTEREST, p).catch(() => {});
+      // The DM's sidebar is a separate iframe; players cannot publish to it (no consent → 403), so the DM's Hub hands it on.
+      if (MAP.isDM) localPublish('dnd-master', EV.LOOT_INTEREST, p);
       break;
     }
     case EV.LOOT_RESOLVED: {

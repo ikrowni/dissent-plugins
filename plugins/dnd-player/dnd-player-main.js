@@ -820,7 +820,7 @@ function _renderShopTab(shopItems) {
       btn.style.opacity = '0.6';
       const contestKey = 'shop_' + _activeShopId + '_' + slotId;
       const payload = {
-        type: 'loot:interest',
+        type: EV.LOOT_INTEREST,
         contestKey,
         tokenId: null, shopId: _activeShopId,
         itemId, itemName,
@@ -829,8 +829,8 @@ function _renderShopTab(shopItems) {
         displayName: CHAR?.name || USER_ID,
         campaignId: CAMPAIGN_ID, fromUserId: USER_ID,
       };
-      realtimePublish('loot:interest', payload);
-      realtimePublishCompanion('dnd-master', 'loot:interest', payload);
+      // Players cannot publish to the DM's sidebar (no consent → 403); the DM's Hub hands it on.
+      publishTo(['hub'], EV.LOOT_INTEREST, payload).catch(() => {});
     });
   });
 }
