@@ -203,7 +203,9 @@ function onEvent(ev) {
     appendLogEntry({ type: 'hp-change', message: hpMsg });
   }
   if (p.type === 'token:death-save' && p.campaignId === dmCampaignId) {
-    appendLogEntry({ type: 'death-save', message: (p.name || 'Token') + ' death save: ' + (p.success ? 'success' : 'failure') });
+    // A player's sheet sends the tallies (and, for a roll, a message); it never sent `success`.
+    const tally = p.successes !== undefined ? ' death saves: ' + p.successes + ' success, ' + (p.failures || 0) + ' failure' : ' death save';
+    appendLogEntry({ type: 'death-save', message: p.message || ((p.name || 'Token') + tally) });
   }
   if (p.type === 'loot:interest' && p.campaignId === dmCampaignId) {
     handleLootInterest(p);

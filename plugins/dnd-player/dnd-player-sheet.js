@@ -99,11 +99,12 @@ const _expandedInvItems = new Set();
 
 /**
  * Tell the Hub (the token) and the DM sidebar the hero's HP. One place, with the token id the Hub matches on;
+ * players cannot publish to the DM sidebar (no consent → 403), so the DM's Hub hands it on.
  * the old broadcasts had no campaign or token id and reached only other copies of this sidebar (audit N1).
  */
 export async function announceHp(source) {
   if (!_char || !_userId) return;
-  await publishTo(['hub', 'master'], EV.HP_CHANGE, {
+  await publishTo(['hub'], EV.HP_CHANGE, {
     campaignId: _campaignId, tokenId: 'player_' + _userId, userId: _userId, fromUserId: _userId,
     hp: _char.hp, hpMax: _effectiveStats.hpMax || _char.hpMax, hpTemp: _char.hpTemp || 0,
     dead: !!_char.dead, source, name: _char.name || 'Player',
@@ -510,12 +511,12 @@ export async function toggleDeathSave(type, index) {
   renderMain();
   // Broadcast updated death save counts to the hub (so DM and other clients see state)
   if (_campaignId && _userId) {
-    publishTo(['hub', 'master'], EV.TOKEN_DEATH_SAVE, {
+    publishTo(['hub'], EV.TOKEN_DEATH_SAVE, {
       campaignId: _campaignId,
       tokenId: 'player_' + _userId,
       successes: _char.deathSaves.successes,
       failures: _char.deathSaves.failures,
-      fromUserId: _userId,
+      name: _char.name, fromUserId: _userId,
     }).catch(() => {});
   }
 }
@@ -528,10 +529,10 @@ export async function rollDeathSaveNow() {
   await _saveChar();
   renderMain();
   const msg = _char.dead ? 'died' : (_char.hp > 0 ? 'rolled a 20 and is back up!' : _char.stable ? 'is stable' : 'rolled ' + d20);
-  publishTo(['hub', 'master'], EV.TOKEN_DEATH_SAVE, {
+  publishTo(['hub'], EV.TOKEN_DEATH_SAVE, {
     campaignId: _campaignId, tokenId: 'player_' + _userId,
     successes: _char.deathSaves?.successes || 0, failures: _char.deathSaves?.failures || 0,
-    stable: !!_char.stable, dead: !!_char.dead, d20, message: `${_char.name} ${msg}`, fromUserId: _userId,
+    stable: !!_char.stable, dead: !!_char.dead, d20, message: `${_char.name} ${msg}`, name: _char.name, fromUserId: _userId,
   }).catch(() => {});
   if (d20 === 20 || _char.dead) announceHp(d20 === 20 ? 'Natural 20 on a death save' : 'Died');
 }

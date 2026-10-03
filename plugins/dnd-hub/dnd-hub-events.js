@@ -372,6 +372,9 @@ export async function handleMapEvent(p) {
       break;
     }
     case 'hp:change': {
+      // A player's own HP (their sheet): players cannot publish to the DM's sidebar (no consent → 403), so the DM's
+      // Hub hands it on. The DM's own changes already reach the sidebar directly.
+      if (MAP.isDM && p.campaignId === MAP.campaignId && !isDMEvent(p)) localPublish('dnd-master', EV.HP_CHANGE, p);
       if (!MAP.mapData?.tokens) return;
       const tokenObj = Object.values(MAP.mapData.tokens).find(t =>
         t.id === p.tokenId || `player_${t.userId}` === p.tokenId
@@ -490,6 +493,8 @@ export async function handleMapEvent(p) {
     }
     case 'token:death-save':
       // Hub shows death state via hp<=0 skull (buildTokenSprite); player sidebar handles the save UI.
+      // A player's save goes on to the DM's sidebar log, the same way as their HP.
+      if (MAP.isDM && p.campaignId === MAP.campaignId && !isDMEvent(p)) localPublish('dnd-master', EV.TOKEN_DEATH_SAVE, p);
       break;
     case EV.PARTY_UPDATE: {
       // A hero's summary changed. The Hub's copy feeds passive Perception for traps and token names; the DM's Hub
