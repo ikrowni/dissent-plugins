@@ -31,9 +31,10 @@
 @keyframes forge-flash{0%{box-shadow:0 0 0 0 rgba(224,181,82,.9)}100%{box-shadow:0 0 0 40px rgba(224,181,82,0)}}
 .forge-sweep{animation:forge-sweep .5s ease-in forwards}
 @keyframes forge-sweep{to{opacity:0;transform:translateY(-24px)}}
-.forge-card{max-width:520px;margin:0 auto;border:1px solid var(--lk-gold);border-radius:12px;padding:22px;background:rgba(22,17,11,.85);position:relative}
-.forge-card .frame{position:absolute;inset:-1px;pointer-events:none}
-.forge-card .frame rect{stroke:var(--lk-gold);stroke-width:1.5;fill:none;stroke-dasharray:2000;stroke-dashoffset:2000;animation:forge-draw 1.6s ease-out forwards}
+.forge-card{max-width:520px;margin:0 auto;border:1px solid transparent;border-radius:12px;padding:22px;background:rgba(22,17,11,.85);position:relative}
+.forge-card .frame{position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);pointer-events:none;overflow:visible}
+/* The frame IS the card's border, drawn on: sized in CSS so it sits exactly on the edge. */
+.forge-card .frame rect{x:1px;y:1px;width:calc(100% - 2px);height:calc(100% - 2px);stroke:var(--lk-gold);stroke-width:1.5;fill:none;stroke-dasharray:2000;stroke-dashoffset:2000;animation:forge-draw 1.6s ease-out forwards}
 @keyframes forge-draw{to{stroke-dashoffset:0}}
 .forge-card .emblems{display:flex;justify-content:center;gap:8px;color:var(--lk-gold)}
 .forge-stats{display:flex;gap:10px;justify-content:center;margin:14px 0}

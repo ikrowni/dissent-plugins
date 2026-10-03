@@ -47,7 +47,7 @@ export function emblemRow(views, selected, label) {
 export function reveal(draft, race, cls, p) {
   const stat = (to, label) => `<div class="lk-stat"><b data-to="${to}">0</b><span>${esc(label)}</span></div>`;
   return `<div class="forge-card" id="forge-card">
-    <svg class="frame" width="100%" height="100%" preserveAspectRatio="none"><rect x="1" y="1" width="99%" height="99%" rx="12"/></svg>
+    <svg class="frame" aria-hidden="true"><rect rx="12"/></svg>
     <div class="emblems"><span style="color:${race.colour}">${emblem(race.emblem, 72)}</span>${emblem(cls.emblem, 72)}</div>
     <div class="forge-title" style="text-align:center;margin-top:10px">Here's your hero</div>
     <input id="quick-name" value="${esc(draft.name)}" maxlength="60" aria-label="Name"
