@@ -6,6 +6,7 @@ import { icon } from './lk-icons.js';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261003a';
+import { showQuickCharacter } from './dnd-hub-quick-screen.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
@@ -327,7 +328,8 @@ export async function enterCampaignAsDM(campaignId) {
 export async function enterCampaignAsPlayer(campaignId) {
   const characters = await storageGetUser('characters') || {};
   if (!characters[campaignId]) {
-    startCharacterCreator(campaignId);
+    // New heroes start at Quick character; "Step by step instead" opens the full creator.
+    showQuickCharacter(campaignId);
     return;
   }
   // Persist the active campaign so the dnd-player sidebar can read it on init.
