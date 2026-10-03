@@ -33,11 +33,11 @@
     },
     {
       "url": "dnd-hub-ambience-sound.js",
-      "sha256": "e33a0b8002485385a599e167665e924eb0e0bbcb2d33c6f4a0bf5f57c8cf7880"
+      "sha256": "1384d5e2a27fde217c2e2ae3b56d47bf8be0b71288d9b8e86e244073e867f072"
     },
     {
       "url": "dnd-hub-ambience.js",
-      "sha256": "66afcb657ab92052cf8a143d11f6d5333e79473b21a701855f28411c46ae31a6"
+      "sha256": "5f67f1404b3967af1dc91ef8b6dbcbe4afe5456f7f5612b34b0b9b11a22722d0"
     },
     {
       "url": "dnd-hub-audio-zones.js",
