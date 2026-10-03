@@ -967,6 +967,12 @@ async function onEvent(ev) {
     return;
   }
 
+  // The Hub saved my hero (a level-up, or a new hero): reload it.
+  if (p.type === EV.HERO_UPDATED && p.userId === USER_ID && p.campaignId === CAMPAIGN_ID) {
+    onInit({});
+    return;
+  }
+
   // DM edited this player's sheet — reload from server storage and re-render
   if (p.type === 'sheet:dm-update' && p.userId === USER_ID) {
     storageGetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server').then(updated => {

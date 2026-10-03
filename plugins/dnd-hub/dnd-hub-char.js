@@ -1,6 +1,6 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
 import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20260502p4';
-import { storageGetUser, storageSetUser, storageSet, storageGet, realtimePublish, getIdentity, genId } from '../plugin-sdk.js';
+import { storageGetUser, storageSetUser, storageSet, storageGet, realtimePublish, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261003a';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
@@ -193,6 +193,8 @@ export async function finishCharacterCreation() {
     equipment,
     gold: CC.draft.useStartingGold ? getStartingGold() : 0,
     silver: 0, copper: 0, platinum: 0, electrum: 0,
+    fightingStyle: CC.draft.fightingStyle || null,
+    invocations: [], metamagic: [], feats: [], pactBoon: null,
     features: [
       ...(race?.traits?.map(t => t.name) || []),
       ...(L1_FEATURES[CC.draft.class] || []),
@@ -210,28 +212,9 @@ export async function finishCharacterCreation() {
     updatedAt: new Date().toISOString(),
   };
 
-  const userData = await storageGetUser('characters') || {};
-  userData[CC.campaignId] = character;
-  // Heroes of deleted campaigns filled this value to the 64 KB cap, and every save then failed (413). A new hero is
-  // rare, so always check against a fresh index read.
-  await pruneDeadHeroes(userData, CC.campaignId, null, () => storageGet('hub-index'));
-  await storageSetUser('characters', userData);
-  // The server mirror the DM reads — so the DM sees the sheet at once, not after the player's first save (audit E3).
-  await storageSet(`player_sheet_${CC.campaignId}_${identity.id}`, character, 'server');
+  for (const sk of CC.draft.expertise || []) if (character.skills[sk]) character.skills[sk] = 'expertise';
+  await saveHero(CC.campaignId, character);
   await storageSetUser(`char-draft-${CC.campaignId}`, null);
-
-  // Update campaign character summary in server storage
-  const serverData = await loadHubDm();
-  if (serverData?.campaigns?.[CC.campaignId]) {
-    if (!serverData.campaigns[CC.campaignId].characterSummaries) {
-      serverData.campaigns[CC.campaignId].characterSummaries = {};
-    }
-    // AC, DEX, passive Perception and live HP: what initiative, auto hit/miss and the party view need (audit F2).
-    serverData.campaigns[CC.campaignId].characterSummaries[identity.id] = characterSummary(character);
-    serverData.campaigns[CC.campaignId].updatedAt = new Date().toISOString();
-    await saveHubDm( serverData);
-    setServerData(serverData); // sync module-level state so renderTokens sees the new summary
-  }
 
   await realtimePublish(EV.CHARACTER_CREATED, {
     type: EV.CHARACTER_CREATED, campaignId: CC.campaignId,
@@ -240,6 +223,30 @@ export async function finishCharacterCreation() {
 
   alert(`${character.name} is ready for adventure! 🎲`);
   if (_onFinish) await _onFinish(CC.campaignId);
+}
+
+/** The Hub's one way to store a hero: the user's value, the DM's mirror, and the campaign summary. */
+export async function saveHero(campaignId, character) {
+  const identity = await getIdentity();
+  const userData = await storageGetUser('characters') || {};
+  userData[campaignId] = character;
+  // Heroes of deleted campaigns filled this value to the 64 KB cap, and every save then failed (413). Check against a
+  // fresh index read.
+  await pruneDeadHeroes(userData, campaignId, null, () => storageGet('hub-index'));
+  await storageSetUser('characters', userData);
+  // The server mirror the DM reads — so the DM sees the sheet at once (audit E3).
+  await storageSet(`player_sheet_${campaignId}_${identity.id}`, character, 'server');
+  const serverData = await loadHubDm();
+  if (serverData?.campaigns?.[campaignId]) {
+    serverData.campaigns[campaignId].characterSummaries = serverData.campaigns[campaignId].characterSummaries || {};
+    // AC, DEX, passive Perception and live HP: what initiative, auto hit/miss and the party view need (audit F2).
+    serverData.campaigns[campaignId].characterSummaries[identity.id] = characterSummary(character);
+    serverData.campaigns[campaignId].updatedAt = new Date().toISOString();
+    await saveHubDm(serverData);
+    setServerData(serverData); // sync module-level state so renderTokens sees the new summary
+  }
+  // The sheet in this player's sidebar holds its own copy of the hero: tell it to reload.
+  localPublish('dnd-player', EV.HERO_UPDATED, { type: EV.HERO_UPDATED, campaignId, userId: identity.id });
 }
 
 /** Save a complete draft (Quick character) through the one creator save path. */

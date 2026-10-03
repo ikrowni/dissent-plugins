@@ -39,6 +39,9 @@ export const EV = {
   COMBAT_SETTINGS:    'combat:settings',    // Phase 2
   INITIATIVE_ROLL:    'initiative:roll',    // a player's own initiative roll → DM tracker (Table rules)
   DAMAGE_REQUEST:     'combat:damage',      // a player's Hub asks the DM's Hub to apply auto damage
+  LEVEL_GRANT:        'level:grant',        // DM → everyone: the campaign's levels / xp changed
+  LEVELUP_OPEN:       'levelup:open',       // a player's sheet → their own Hub: open the level-up scene
+  HERO_UPDATED:       'hero:updated',       // the Hub → the player's own sheet: reload the hero
   PARTY_UPDATE:       'party:update',       // a hero's summary changed → Hub, other sheets, DM sidebar (via the DM's Hub)
   SESSION_START:      'session:start',      // DM starts the evening → Hub (scene, music, recap card) + player sheets
   VIEW_SET:           'map:view',           // the DM's Hub → players' Hubs: centre (world px) and zoom
