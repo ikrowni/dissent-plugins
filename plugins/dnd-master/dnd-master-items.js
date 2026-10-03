@@ -2,6 +2,7 @@
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { appendLogEntry } from './dnd-master-logs.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingItemImg = null;
@@ -331,6 +332,8 @@ export async function handleContestResult(p) {
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
   delete _lootContests[contestKey];
+  // End session's recap draft reads loot from the log (spec 2026-10-03 §6).
+  appendLogEntry({ type: 'loot', message: `${winner.name || 'Someone'} took ${contest.itemName}` }).catch(() => {});
 
   const payload = {
     type: EV.LOOT_RESOLVED, contestKey,

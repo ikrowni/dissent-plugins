@@ -129,6 +129,10 @@ export async function deleteScene(id) {
 export async function loadScene(id) {
   const scene = _state.dmCampaign.scenes?.[id];
   if (!scene) return;
+  // Start session offers this scene next time (there was no record of the current scene).
+  _state.dmCampaign.lastSceneId = id;
+  _state.serverData.campaigns[_state.dmCampaignId] = _state.dmCampaign;
+  saveHubDmCompanion(_state.serverData).catch(() => {});
   // The Hub switches the map and plays the video and soundtrack; the player sheet opens a shop.
   // It used to reach the DM sidebar and the sheet only — the map never changed (audit N).
   await publishTo(['hub', 'player'], EV.SCENE_LOAD, {

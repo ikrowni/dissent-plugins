@@ -40,6 +40,8 @@ export const EV = {
   INITIATIVE_ROLL:    'initiative:roll',    // a player's own initiative roll → DM tracker (Table rules)
   DAMAGE_REQUEST:     'combat:damage',      // a player's Hub asks the DM's Hub to apply auto damage
   PARTY_UPDATE:       'party:update',       // a hero's summary changed → Hub, other sheets, DM sidebar (via the DM's Hub)
+  SESSION_START:      'session:start',      // DM starts the evening → Hub (scene, music, recap card) + player sheets
+  VIEW_SET:           'map:view',           // the DM's Hub → players' Hubs: centre (world px) and zoom
 
   // Initiative
   INITIATIVE_UPDATE:  'initiative:update',

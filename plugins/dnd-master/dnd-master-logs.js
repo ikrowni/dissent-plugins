@@ -34,11 +34,15 @@ const _BADGE = {
   'combat-end':    'log-badge-combat',
   'scene-load':    'log-badge-combat',
   'weapon-attack': 'log-badge-roll',
+  'session-start': 'log-badge-combat',
+  'session-end':   'log-badge-combat',
+  'loot':          'log-badge-roll',
 };
 const _LABEL = {
   'roll': 'Roll', 'hp-change': 'HP', 'death-save': 'Death',
   'combat-start': 'Combat\u2191', 'combat-end': 'Combat\u2193', 'scene-load': 'Scene',
   'weapon-attack': '\u2694\ufe0f Atk',
+  'session-start': 'Session', 'session-end': 'Session', 'loot': 'Loot',
 };
 
 function _entryHtml(entry) {
