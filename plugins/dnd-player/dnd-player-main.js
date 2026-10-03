@@ -12,6 +12,7 @@ import { setSpellState, loadSRDSpells, renderSpells, toggleSpellExpand, expendSp
 import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData, setNeedsInitiativeRoll } from './dnd-player-combat.js';
 import { rule } from './lk-table-rules.js';
 import { saveBonus, trapPrompt, trapResult, needsMyRoll, deathSaveTurn } from './dnd-player-table.js';
+import { playerStrip, playerStripHtml } from './lk-party.js';
 import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
@@ -145,9 +146,14 @@ function scheduleSummarySync() {
     if (!camp) return;
     const prev = camp.characterSummaries?.[USER_ID];
     if (prev && JSON.stringify({ ...prev, ...next }) === JSON.stringify(prev)) return;
-    camp.characterSummaries = { ...(camp.characterSummaries || {}), [USER_ID]: { ...(prev || {}), ...next } };
+    const summary = { ...(prev || {}), ...next };
+    camp.characterSummaries = { ...(camp.characterSummaries || {}), [USER_ID]: summary };
     await saveHubDmCompanion(sd).catch(() => {});
     SERVER_DATA = sd;
+    // Party at a glance: other sheets and the Hub hear it; the DM's Hub hands it to the DM sidebar (players
+    // cannot publish to dnd-master).
+    await publishTo(['hub'], EV.PARTY_UPDATE, { campaignId: CAMPAIGN_ID, userId: USER_ID, summary, fromUserId: USER_ID })
+      .catch(e => console.error('[dnd-player] party update', e));
   }, 2000);
 }
 
@@ -161,6 +167,14 @@ async function saveChar() {
     await storageSetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server', CHAR);
   }
   scheduleSummarySync();
+}
+
+/** My companions at the top of Main: names, a band of health, conditions, "Down". No numbers (lk-party). */
+function renderPartyStrip() {
+  const el = document.getElementById('party-strip');
+  if (!el) return;
+  const camp = SERVER_DATA?.campaigns?.[CAMPAIGN_ID];
+  el.innerHTML = playerStripHtml(playerStrip(camp?.characterSummaries, USER_ID, camp?.members));
 }
 
 function renderConcentration() {
@@ -456,6 +470,7 @@ initDiceBar();
 
 function initTabHTML() {
   document.getElementById('tab-main').innerHTML = `
+    <div id="party-strip" style="margin-bottom:10px"></div>
     <div id="concentration-banner" style="display:none;align-items:center;gap:8px;
       padding:8px 10px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.35);
       border-radius:8px;margin-bottom:12px;font-size:11px;color:var(--dnd-gold)"></div>
@@ -549,6 +564,7 @@ function initTabHTML() {
     <textarea id="notes-area" placeholder="Your private notes…" oninput="debounceSaveNotes()"
       style="width:100%;height:100%;min-height:300px;background:transparent;border:none;
       color:var(--text);font-size:12px;line-height:1.6;outline:none;resize:none;font-family:inherit"></textarea>`;
+  renderPartyStrip();
 }
 
 // Set by the Hub's CAMPAIGN_ACTIVE announcement; see onEvent.
@@ -1100,6 +1116,16 @@ async function onEvent(ev) {
   // Active combatant changed — clear action economy if it's our turn
   if (p.type === 'token:turn-start' && USER_ID && p.tokenId === 'player_' + USER_ID) {
     clearActionEconomy();
+    return;
+  }
+
+  // A companion's summary changed (their HP, conditions, death saves): redraw my strip.
+  if (p.type === EV.PARTY_UPDATE && p.campaignId === CAMPAIGN_ID) {
+    if (isRepeat(p) || p.fromUserId !== p.userId || p.userId === USER_ID || !p.summary) return;
+    SERVER_DATA = SERVER_DATA || { campaigns: {} };
+    const camp = SERVER_DATA.campaigns[CAMPAIGN_ID] = SERVER_DATA.campaigns[CAMPAIGN_ID] || {};
+    camp.characterSummaries = { ...(camp.characterSummaries || {}), [p.userId]: p.summary };
+    renderPartyStrip();
     return;
   }
 
