@@ -5,7 +5,7 @@ import { loadSRDMonsters, getSRDMonsters, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261003d';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261006s';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative } from './dnd-master-initiative.js';
@@ -23,7 +23,7 @@ import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJour
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
 import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20260503';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261003d';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261006s';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -31,7 +31,7 @@ import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenP
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
 import { icon } from './lk-icons.js';
-import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, setSecretsUser } from './dnd-hub-shared-storage.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
 import * as Levels from './dnd-master-levels.js';
@@ -92,6 +92,7 @@ let _announcedCampaignId = null;
 async function onInit(data) {
   const id = await getIdentity();
   userId = id?.id ?? null;
+  setSecretsUser(userId); // before the first load: the DM's sidebar joins its secret record
   serverData = await loadHubDmCompanion() || { campaigns: {} };
 
   // Restore items/shops from the dm-catalog backup in case dnd-hub overwrote hub-dm

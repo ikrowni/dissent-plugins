@@ -81,6 +81,11 @@ const VENDORED = [
     source: "lk-table-rules.js",
     targets: ["dnd-hub/lk-table-rules.js", "dnd-master/lk-table-rules.js", "dnd-player/lk-table-rules.js"],
   },
+  // DM secrets — what of a campaign only the DM may read, and what live events may carry.
+  {
+    source: "lk-secrets.js",
+    targets: ["dnd-hub/lk-secrets.js", "dnd-master/lk-secrets.js", "dnd-player/lk-secrets.js"],
+  },
   // Uploads — one helper that shows the node's "where to get storage" message.
   {
     source: "lk-upload.js",

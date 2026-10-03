@@ -1,14 +1,15 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
 import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20260502p4';
-import { storageGet, storageSet, storageGetUser, storageSetUser, realtimePublish, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
+import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
+import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261005m';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261005m';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261003p';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261006s';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261006s';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261006s';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
-import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';
+import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {

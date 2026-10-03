@@ -1,34 +1,36 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
 import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
-import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
+import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
+import { realtimePublish } from './dnd-hub-publish.js';
+import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261005m';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261006s';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261005m';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261006s';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
-import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
-import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261006s';
+import { renderFog } from './dnd-hub-fog.js?v=20261006s';
+import { renderWalls } from './dnd-hub-walls.js?v=20261006s';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
-import { loadSRD } from './dnd-hub-char.js?v=20261003p';
+import { loadSRD } from './dnd-hub-char.js?v=20261006s';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261005m';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261003d';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261006s';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20260502p4';
-import { renderLights } from './dnd-hub-lights.js?v=20260502p4';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261003d';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261006s';
+import { renderLights } from './dnd-hub-lights.js?v=20261006s';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261006s';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261006s';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
-import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261006s';
+import { saveHubDm, loadHubDm, setSecretsUser } from './dnd-hub-storage.js?v=20261006s';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261005m';
+import { setView } from './dnd-hub-canvas.js?v=20261006s';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -73,6 +75,7 @@ function splitRolls(count, sides, total, mod) {
 export async function onInit(initData) {
   const identity = await getIdentity();
   setUserId(identity?.id ?? null);
+  setSecretsUser(identity?.id ?? null); // before the first load: the DM's screen joins its secret record
 
   await loadSRD();
 
@@ -360,7 +363,11 @@ export async function handleMapEvent(p) {
       }
       if (!MAP.mapData) return;
       MAP.mapData.tokens = MAP.mapData.tokens || {};
-      if (p.tokens) p.tokens.forEach(t => { MAP.mapData.tokens[t.id] = t; });
+      // A hidden token arrives as a stub (lk-secrets.js); on a screen that has it (the DM's echo) it only hides it.
+      if (p.tokens) p.tokens.forEach(t => {
+        const kept = receivedToken(MAP.mapData.tokens[t.id], t, MAP.isDM);
+        if (kept) MAP.mapData.tokens[t.id] = kept; else delete MAP.mapData.tokens[t.id];
+      });
       if (p.deleted) p.deleted.forEach(id => { delete MAP.mapData.tokens[id]; });
       renderTokens();
       if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
@@ -728,7 +735,7 @@ export async function handleMapEvent(p) {
     }
     case 'pins:update': {
       if (p.campaignId !== MAP.campaignId || p.mapId !== MAP.mapId || !MAP.mapData) return;
-      MAP.mapData.pins = p.pins || [];
+      MAP.mapData.pins = receivedPins(MAP.mapData.pins, p.pins, MAP.isDM); // DM-only pins never travel
       renderPins();
       break;
     }

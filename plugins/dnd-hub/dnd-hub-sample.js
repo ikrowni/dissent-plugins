@@ -2,11 +2,11 @@
 // (spec 2026-10-03 §3).
 import { serverData, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { getIdentity, genId } from '../plugin-sdk.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { compileMap, validatePack } from './lk-content-pack.js';
 import { packFileId } from './dnd-hub-pack-map.js';
-import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261003b';
+import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261006s';
 
 const html = parts => (parts || []).map(p => p).join('\n\n');
 

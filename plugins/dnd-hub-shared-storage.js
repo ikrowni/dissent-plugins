@@ -16,6 +16,7 @@
 // The legacy 'hub-dm' key is still read as a fallback and is never written here.
 import { storageGetCompanion, storageSetCompanion } from './plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
+import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
 
 const HUB = 'dnd-hub';
 
@@ -32,14 +33,30 @@ let _indexIds = null;
 export const cachedIndexIds = () => (_indexIds ? [..._indexIds] : null);
 
 /** Reassemble dnd-hub's campaign blob from its shards. */
+// 🔴 DM secrets: the same two-record layout as dnd-hub/dnd-hub-storage.js (read that header). Only the campaign's
+// DM joins, splits or writes `dm-camp-<id>` (dnd-hub's USER scope); a player's save never strips.
+let _me = null;
+/** Who this screen is signed in as; set before the first load. Unset = never treated as the DM. */
+export function setSecretsUser(id) { _me = id || null; }
+const _secretUnreadable = new Set();
+
+async function readSecret(id, pub) {
+  if (!isCampaignDm(pub, _me)) return { sec: null, ok: true };
+  const sec = await storageGetCompanion(HUB, secretKey(id), 'user');
+  return { sec, ok: !!sec || !pub?.secretsKept };
+}
+
 export async function loadHubDmCompanion() {
   const idx = await storageGetCompanion(HUB, 'hub-index', 'server');
   if (idx && Array.isArray(idx.campaignIds)) {
     _indexIds = [...idx.campaignIds];
     const campaigns = {};
     for (const id of idx.campaignIds) {
-      const camp = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
-      if (!camp) continue;
+      const pub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
+      if (!pub) continue;
+      const { sec, ok } = await readSecret(id, pub);
+      if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+      const camp = isCampaignDm(pub, _me) ? joinCampaign(pub, sec) : pub;
       campaigns[id] = camp;
       _lastSeen.set(id, JSON.stringify(camp));
     }
@@ -97,9 +114,7 @@ export async function saveHubDmCompanion(data) {
     // Re-read and three-way merge (dnd-campaign-merge.js), so a sidebar save keeps what
     // the Hub or another player changed since this sidebar loaded.
     const baseJson = _lastSeen.get(id);
-    const remote = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
-    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, camp, remote);
-    await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', merged);
+    const merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, camp);
     _lastSeen.set(id, JSON.stringify(merged));
     for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
     Object.assign(camp, merged);
@@ -109,4 +124,28 @@ export async function saveHubDmCompanion(data) {
   }
   await storageSetCompanion(HUB, 'hub-index', 'server', { campaignIds: nextIds, rest });
   _indexIds = [...nextIds];
+}
+
+/** Merge one campaign with what is stored and write it (the DM's screen: both records); returns the merged whole. */
+async function writeCampaign(id, base, local) {
+  const remotePub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
+  if (!isCampaignDm(local, _me)) {
+    const merged = mergeCampaign(base, withoutStubs(local), remotePub);
+    await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', merged);
+    return merged;
+  }
+  let { sec: remoteSec, ok } = await readSecret(id, remotePub || local);
+  if (!ok) _secretUnreadable.add(id);
+  const blind = _secretUnreadable.has(id);
+  if (blind) remoteSec = splitCampaign(local).sec;
+  const remote = remotePub ? joinCampaign(remotePub, remoteSec) : null;
+  const merged = mergeCampaign(base, local, remote);
+  const { pub, sec } = splitCampaign(merged);
+  await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', pub);
+  if (blind) console.warn('[dnd-hub-shared-storage] the DM-only part of campaign %s could not be read; not writing it', id);
+  // Written even when empty: a public record marked secretsKept with no secret record reads as a failed read.
+  else if (!remoteSec || JSON.stringify(sec || {}) !== JSON.stringify(remoteSec)) {
+    await storageSetCompanion(HUB, secretKey(id), 'user', sec || {});
+  }
+  return joinCampaign(pub, sec);
 }

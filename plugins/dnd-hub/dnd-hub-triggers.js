@@ -1,8 +1,9 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
-import { storageSet, realtimePublish, genId, esc, request } from '../plugin-sdk.js';
+import { storageSet, genId, esc, request } from '../plugin-sdk.js';
+import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';

@@ -4,7 +4,7 @@
 // 🔴 The trail is drawn UNDER the fog layer. Another player's path through fog must not show
 // them the shape of rooms they have not seen.
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261006s';
 import { activeTokenId } from './dnd-hub-rules.js';
 import { cellAt, cellCentre, turnKey, moveMode, pathFeet, speedOf, checkReportedPath } from './dnd-hub-movement.js';
 

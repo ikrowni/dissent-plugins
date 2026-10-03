@@ -1,5 +1,6 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
+import { publicPayload } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
@@ -275,7 +276,7 @@ export async function spawnTokensOnMap() {
   await saveHubDmCompanion(freshData);
   const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
   localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
-  realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
+  realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, publicPayload(EV.TOKENS_SPAWN, spawnPayload)); // hidden ones travel as stubs (lk-secrets.js)
 }
 
 /** A player's own initiative roll (Table rules: playersRollInitiative). */

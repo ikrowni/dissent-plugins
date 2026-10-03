@@ -14,6 +14,7 @@
 // it when no sharded index exists yet.
 import { storageGet, storageSet } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
+import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
 
 export const HUB_LEGACY_KEY = 'hub-dm';
 export const HUB_INDEX_KEY = 'hub-index';
@@ -34,19 +35,47 @@ let _indexIds = null;
 let _onRemoteMerged = null;
 export function setOnRemoteMerged(fn) { _onRemoteMerged = fn; }
 
+// 🔴 DM secrets (lk-secrets.js): on the campaign DM's screen a campaign is TWO records, the public `hub-camp-<id>`
+// (server scope, every member reads it) and `dm-camp-<id>` (this user's own scope). Everything here works on the
+// joined whole; only the DM's screen joins, splits or writes the secret record. A player's screen never strips:
+// before the DM's first save the public record still holds the secrets, and stripping them there would delete them.
+let _me = null;
+/** Who this screen is signed in as; set before the first load. Unset = never treated as the DM. */
+export function setSecretsUser(id) { _me = id || null; }
+// Campaigns whose secret record read as null although the public one says it exists: a failed read. Never write
+// the secret record for these this session, or one bad read replaces the traps with nothing.
+const _secretUnreadable = new Set();
+
+/** The secret record when this screen is the campaign's DM: `{ sec, ok }` (ok false = a failed read). */
+async function readSecret(id, pub) {
+  if (!isCampaignDm(pub, _me)) return { sec: null, ok: true };
+  const sec = await storageGet(secretKey(id), 'user');
+  return { sec, ok: !!sec || !pub?.secretsKept };
+}
+
 /** Reassemble the DM blob from its shards, falling back to the legacy value. */
 export async function loadHubDm() {
   const idx = await storageGet(HUB_INDEX_KEY);
   if (idx && Array.isArray(idx.campaignIds)) {
     _indexIds = [...idx.campaignIds];
     const campaigns = {};
+    let moveOut = false;
     for (const id of idx.campaignIds) {
-      const camp = await storageGet(hubCampKey(id));
-      if (!camp) continue; // shard missing — skip rather than resurrect a stub
+      const pub = await storageGet(hubCampKey(id));
+      if (!pub) continue; // shard missing — skip rather than resurrect a stub
+      const { sec, ok } = await readSecret(id, pub);
+      if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+      const camp = isCampaignDm(pub, _me) ? joinCampaign(pub, sec) : pub;
       campaigns[id] = camp;
-      _lastWritten.set(id, JSON.stringify(camp));
+      // A DM's campaign whose public record still holds secrets (written before the split) is left unmarked, so the
+      // next save moves them out; the load below starts that save.
+      if (isCampaignDm(pub, _me) && (!pub.secretsKept || splitCampaign(pub).sec)) {
+        _lastWritten.delete(id); moveOut = true;
+      } else _lastWritten.set(id, JSON.stringify(camp));
     }
-    return { ...(idx.rest ?? {}), campaigns };
+    const data = { ...(idx.rest ?? {}), campaigns };
+    if (moveOut) queueMicrotask(() => saveHubDm(data).catch(e => console.warn('[dnd-hub-storage] moving DM secrets out failed', e)));
+    return data;
   }
 
   const legacy = await storageGet(HUB_LEGACY_KEY);
@@ -116,10 +145,8 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
     // Re-read and three-way merge, so edits made elsewhere since we loaded survive.
     // See dnd-campaign-merge.js for why this replaces a plain overwrite.
     const baseJson = _lastWritten.get(id);
-    const remote = await storageGet(hubCampKey(id));
     const localNow = JSON.parse(JSON.stringify(camp)); // what this save merges and writes
-    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, localNow, remote);
-    await storageSet(hubCampKey(id), merged);
+    const merged = await _writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, localNow);
     const mergedJson = JSON.stringify(merged);
     _lastWritten.set(id, mergedJson);
     if (mergedJson !== JSON.stringify(localNow)) {
@@ -141,4 +168,31 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
   // consistent set rather than advertising a campaign that was never stored.
   await storageSet(HUB_INDEX_KEY, { campaignIds: nextIds, rest });
   _indexIds = [...nextIds];
+}
+
+/**
+ * Merge one campaign with what is stored and write it; returns the merged whole. On the DM's screen the stored
+ * whole is the public record joined with the secret one, and the result is split again: a secret that reached the
+ * public record some other way (an old record, a player's save) moves to the secret one.
+ */
+async function _writeCampaign(id, base, localNow) {
+  const remotePub = await storageGet(hubCampKey(id));
+  if (!isCampaignDm(localNow, _me)) {
+    const merged = mergeCampaign(base, withoutStubs(localNow), remotePub);
+    await storageSet(hubCampKey(id), merged);
+    return merged;
+  }
+  let { sec: remoteSec, ok } = await readSecret(id, remotePub || localNow);
+  if (!ok) _secretUnreadable.add(id);
+  const blind = _secretUnreadable.has(id);
+  // Unreadable: treat the stored secrets as this screen's own, so the merge neither deletes nor writes them.
+  if (blind) remoteSec = splitCampaign(localNow).sec;
+  const remote = remotePub ? joinCampaign(remotePub, remoteSec) : null;
+  const merged = mergeCampaign(base, localNow, remote);
+  const { pub, sec } = splitCampaign(merged);
+  await storageSet(hubCampKey(id), pub);
+  if (blind) console.warn('[dnd-hub-storage] the DM-only part of campaign %s could not be read; not writing it', id);
+  // Written even when empty: a public record marked secretsKept with no secret record reads as a failed read.
+  else if (!remoteSec || JSON.stringify(sec || {}) !== JSON.stringify(remoteSec)) await storageSet(secretKey(id), sec || {}, 'user');
+  return joinCampaign(pub, sec);
 }

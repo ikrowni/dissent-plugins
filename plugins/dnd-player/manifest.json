@@ -37,7 +37,7 @@
     },
     {
       "url": "dnd-hub-shared-storage.js",
-      "sha256": "7633614c1fa924a5dca5d56ae8ab4e3234bb5bfa2f0c9ff4bf2d4c6d65c8d9fb"
+      "sha256": "4b2e83cf0d3485ce7ed337822b79b6b8a716afc0f66045fc833115df0328e093"
     },
     {
       "url": "dnd-player-combat.js",
@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "3b482c364c73e57fd3723f706a44582800b263406f327291fb61a4eb62e507de"
+      "sha256": "cd8b0921ffa72204dad0f1e7d9965d89017fbff21dd2e182a31914d67a6f4729"
     },
     {
       "url": "dnd-player-resources.js",
@@ -118,6 +118,10 @@
     {
       "url": "lk-rules5e.js",
       "sha256": "da2370e59ebf8b401cecf52f585d7069f727bc7604fa7674b2b2e6a173f71863"
+    },
+    {
+      "url": "lk-secrets.js",
+      "sha256": "7479cdb5e098fb1126611c1c04021aa7d28b9bf151f26ec6dda8b1dd490e7d40"
     },
     {
       "url": "lk-table-rules.js",

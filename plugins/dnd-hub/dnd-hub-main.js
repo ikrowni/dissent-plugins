@@ -2,28 +2,28 @@
 import { levelupPick, levelupRoll, levelupRollDie, levelupAbility, levelupBack, levelupNext, levelupContinue } from './dnd-hub-levelup.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
-import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
+import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261006s';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261005m';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261006s';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003p';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261003b';
-import { setZoom } from './dnd-hub-canvas.js?v=20261005m';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261006s';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261006s';
+import { setZoom } from './dnd-hub-canvas.js?v=20261006s';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261003b';
-import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20260502p4';
+} from './dnd-hub-screens.js?v=20261006s';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261006s';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20261005m';
-import { resetFog, renderFog } from './dnd-hub-fog.js?v=20260502p4';
-import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20260502p4';
-import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20260502p4';
+} from './dnd-hub-map-bg.js?v=20261006s';
+import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261006s';
+import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261006s';
+import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261006s';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
@@ -31,13 +31,13 @@ import {
   triggerPortraitUpload, handlePortraitUpload,
 } from './dnd-hub-char-steps.js?v=20261003a';
 import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261005m';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261005m';
-import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
-import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261003d';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261006s';
+import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261006s';
+import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261006s';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261006s';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
-         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
+         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261006s';
 
 // Render static lobby screen HTML (all other screens render on navigate)
 renderLobbyScreen();

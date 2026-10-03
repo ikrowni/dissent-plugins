@@ -1,5 +1,6 @@
 // dnd-master-encounter.js — encounter builder: monster list, roster, XP budget, launch
 import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
+import { publicPayload } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
@@ -414,7 +415,7 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
     await saveHubDmCompanion(freshData);
     const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
     localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
-    realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
+    realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, publicPayload(EV.TOKENS_SPAWN, spawnPayload)); // hidden ones travel as stubs (lk-secrets.js)
   } catch { /* ignore spawn failure \u2014 no active map or storage unavailable */ }
 }
 

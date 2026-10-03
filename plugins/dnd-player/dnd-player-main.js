@@ -15,7 +15,7 @@ import { saveBonus, trapPrompt, trapResult, needsMyRoll, deathSaveTurn } from '.
 import { playerStrip, playerStripHtml } from './lk-party.js';
 import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
-import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds } from './dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds, setSecretsUser } from './dnd-hub-shared-storage.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
@@ -575,6 +575,7 @@ let _announcedCampaignId = null;
 async function onInit(data) {
   const identity = await getIdentity();
   USER_ID = identity?.id ?? null;
+  setSecretsUser(USER_ID);
   SERVER_DATA = await loadHubDmCompanion() || { campaigns: {} };
   const storedCampaignId = await storageGetCompanion('dnd-hub', 'activePlayerCampaignId', 'user');
   // The Hub's announcement (CAMPAIGN_ACTIVE) wins over the stored id: it is what the
