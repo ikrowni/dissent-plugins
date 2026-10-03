@@ -2,8 +2,9 @@
 import { MAP, serverData, userId, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
 import { wallPx } from './dnd-hub-walls.js?v=20260502p4';
+import { renderPins } from './dnd-hub-pins.js?v=20260502p4';
 
-function getOpaqueSegments(mapData) {
+export function getOpaqueSegments(mapData) {
   const segs = [...(mapData.walls || [])];
   Object.values(mapData.doors || {}).forEach(d => {
     if (d.state === 'closed' || d.state === 'locked' || d.isWindow) segs.push(d);
@@ -27,7 +28,7 @@ function raySegmentIntersect(ox, oy, dx, dy, x1, y1, x2, y2) {
 // Visibility polygon via angular sweep. Casts rays toward every wall endpoint
 // (plus ±ε to capture both sides of a corner) and fills gaps with uniform circle
 // samples for open areas. Returns a polygon as {x,y}[] in canvas-pixel space.
-function computeVisibilityPolygon(ox, oy, visionPx, walls) {
+export function computeVisibilityPolygon(ox, oy, visionPx, walls) {
   const angles = [];
 
   // Uniform circle samples — ensures correct shape when no walls are in range.
@@ -101,13 +102,13 @@ export function computeVisibleCells(tokenX, tokenY, visionFeet, mapData) {
 // Client-side only: compute smooth visibility polygons for each player token.
 // Stored in MAP.localVisiblePoly (Array<{x,y}[]>) — never saved to server.
 export function computeLocalPlayerLOS() {
-  if (MAP.isDM || !MAP.mapData) { MAP.localVisiblePoly = null; return; }
+  if (MAP.isDM || !MAP.mapData) { MAP.localVisiblePoly = null; MAP.localSightCells = null; return; }
 
   const myTokens = Object.values(MAP.mapData.tokens || {}).filter(t =>
     t.type === 'player' && t.visible && t.userId === userId
   );
 
-  if (!myTokens.length) { MAP.localVisiblePoly = null; return; }
+  if (!myTokens.length) { MAP.localVisiblePoly = null; MAP.localSightCells = new Set(); return; }
 
   const gs = effectiveGs(MAP.mapData);
   const walls = getOpaqueSegments(MAP.mapData).map(seg => wallPx(seg));
@@ -120,6 +121,14 @@ export function computeLocalPlayerLOS() {
   }
 
   MAP.localVisiblePoly = polys.length > 0 ? polys : null;
+
+  // Squares my tokens have a line of sight to at ANY distance. A lit square clears the fog only if it is one of
+  // these: a lit room behind a wall used to show through the fog to every player, wherever they stood.
+  const farFeet = ((MAP._bgImgW || 2000) + (MAP._bgImgH || 2000)) / gs * 5;
+  const sight = new Set();
+  for (const t of myTokens) computeVisibleCells(t.x, t.y, farFeet, MAP.mapData).forEach(c => sight.add(c));
+  MAP.localSightCells = sight;
+  renderPins(); // a pin shows once its square has been seen
 }
 
 // DM-only: compute LOS from all player tokens, update server fog state.

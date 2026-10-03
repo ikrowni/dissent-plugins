@@ -26,7 +26,10 @@ export function renderFog() {
   const oy = (MAP._bgOffset?.y ?? 0) + (MAP.mapData.gridOffsetY || 0);
   const fogState = MAP.mapData.fogState || {};
   // Phase 6: cells illuminated by light sources (union'd into visible set below)
-  const litCells = computeLitCells(MAP.mapData.lights || [], MAP.mapData);
+  // A player sees a lit square only along a line of sight (dnd-hub-los.js localSightCells).
+  const allLit = computeLitCells(MAP.mapData.lights || [], MAP.mapData);
+  const sightCells = MAP.isDM ? null : (MAP.localSightCells || new Set());
+  const litCells = sightCells ? new Set([...allLit].filter(c => sightCells.has(c))) : allLit;
   const W = MAP.app.screen.width;
   const H = MAP.app.screen.height;
   const z = MAP.zoom || 1;

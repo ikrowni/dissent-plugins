@@ -5,8 +5,9 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261005m';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp } from './dnd-hub-tokens.js?v=20261005m';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261005m';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
+import { cellsBetween } from './dnd-hub-movement.js';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
@@ -19,7 +20,7 @@ import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20260502p4';
 import { renderLights } from './dnd-hub-lights.js?v=20260502p4';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers, checkTriggers, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261003d';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261003d';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
@@ -132,6 +133,9 @@ export function onEvent(ev) {
   // event carries sender_id, set by the node from the authenticated caller; it replaces the claim. Events relayed
   // on this screen by a sibling plugin (localPublish) have none and come from this user's own screen.
   if (ev.sender_id && typeof payload === 'object') payload.fromUserId = ev.sender_id;
+  // The event's name is its type. Several senders (traps, the VTT import) put no `type` in the payload, and
+  // handleMapEvent drops a typeless payload: a trap that fired reached nobody, not even the DM.
+  if (typeof payload === 'object' && !payload.type && ev.event) payload.type = ev.event;
   handleMapEvent(payload).catch(e => console.error('[dnd-hub] event handler error:', e));
 }
 
@@ -167,7 +171,7 @@ function _sendBack(p) {
   const tok = MAP.mapData?.tokens?.[p.tokenId];
   if (!tok) return;
   const turn = MAP.turnMove?.tokenId === p.tokenId ? MAP.turnMove : null;
-  realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: p.tokenId,
+  publishMove({ type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: p.tokenId,
     x: tok.x, y: tok.y, final: true, turnPath: turn?.path || null, turnKey: turn?.key || null,
     fromUserId: userId, ...moveStamp() });
   const spr = MAP.tokenSprites[p.tokenId];
@@ -272,7 +276,14 @@ export async function handleMapEvent(p) {
         if (verdict === 'wait') return;
         if (verdict === 'bounce') { _sendBack(p); return; }
       }
-      if (p.turnPath && MAP.turnMove && p.turnKey === MAP.turnMove.key && p.tokenId === MAP.turnMove.tokenId) commitPath(p.turnPath);
+      // The squares this move entered, for traps: a fight move's new path squares, else where it stands now.
+      const walked = p.turnPath && MAP.turnMove && p.turnKey === MAP.turnMove.key && p.tokenId === MAP.turnMove.tokenId;
+      // (Outside a fight: every square on the line from where this screen last had it, as frames arrive ~3 a second.)
+      const was = MAP.mapData.tokens?.[p.tokenId];
+      const now = triggerCell(p.x, p.y);
+      const entered = walked ? p.turnPath.slice(Math.max(1, MAP.turnMove.path.length))
+        : was ? cellsBetween(triggerCell(was.x, was.y), now) : [now];
+      if (walked) commitPath(p.turnPath);
       if (MAP.mapData.tokens?.[p.tokenId]) {
         MAP.mapData.tokens[p.tokenId].x = p.x;
         MAP.mapData.tokens[p.tokenId].y = p.y;
@@ -302,11 +313,8 @@ export async function handleMapEvent(p) {
       if (lightsMoved) { renderLights(); renderFog(); }
       // The DM's screen put my token back: see from where it really is.
       if (!MAP.isDM && p.tokenId === 'player_' + userId) { computeLocalPlayerLOS(); renderFog(); }
-      // Phase 7: check trigger tiles on any token move — DM fires effects,
-      // players check only their own token so the DM hub isn't required.
-      if (MAP.isDM || p.tokenId === 'player_' + userId) {
-        checkTriggers(p.tokenId, p.x, p.y).catch(() => {});
-      }
+      // Traps: the DM's screen springs them (dnd-hub-triggers.js checkTriggers).
+      if (MAP.isDM) checkTriggers(p.tokenId, entered).catch(() => {});
       // Phase 8: update spatial audio gains after any token move
       {
         const moveCampaign = serverData?.campaigns?.[MAP.campaignId];
@@ -363,6 +371,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       if (p.cells) {
         p.cells.forEach(([key, state]) => { MAP.mapData.fogState[key] = state; });
+        renderPins();
       }
       renderFog();
       break;

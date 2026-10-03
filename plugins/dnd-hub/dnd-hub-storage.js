@@ -73,8 +73,26 @@ export async function loadHubDm() {
  * stale id left in the index is harmless by comparison: the loader skips a
  * shard that is missing.
  */
-export async function saveHubDm(data, { allowRemovals = false } = {}) {
-  if (!data) return;
+// 🔴 One save at a time. Callers fire saves without waiting (every arrow press, every drop), and overlapping saves
+// each merged against an old copy; a stale one finishing last wrote its result over the live map, and the token
+// jumped back to where it was seconds earlier (owner report 2026-10-03, reproduced). Saves asked for while one runs
+// collapse into ONE more save of the newest data, which also keeps a burst of moves under the node's write limit.
+let _saving = null, _again = null, _againPromise = null;
+export function saveHubDm(data, opts = {}) {
+  if (!data) return Promise.resolve();
+  if (_saving) {
+    _again = { data, allowRemovals: !!(_again?.allowRemovals || opts.allowRemovals) };
+    _againPromise ??= _saving.catch(() => {}).then(() => {
+      const a = _again; _again = null; _againPromise = null;
+      return saveHubDm(a.data, { allowRemovals: a.allowRemovals });
+    });
+    return _againPromise;
+  }
+  _saving = _saveOnce(data, opts).finally(() => { _saving = null; });
+  return _saving;
+}
+
+async function _saveOnce(data, { allowRemovals = false } = {}) {
   const { campaigns = {}, ...rest } = data;
   const nextIds = Object.keys(campaigns);
 
@@ -99,15 +117,18 @@ export async function saveHubDm(data, { allowRemovals = false } = {}) {
     // See dnd-campaign-merge.js for why this replaces a plain overwrite.
     const baseJson = _lastWritten.get(id);
     const remote = await storageGet(hubCampKey(id));
-    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, camp, remote);
+    const localNow = JSON.parse(JSON.stringify(camp)); // what this save merges and writes
+    const merged = mergeCampaign(baseJson ? JSON.parse(baseJson) : undefined, localNow, remote);
     await storageSet(hubCampKey(id), merged);
     const mergedJson = JSON.stringify(merged);
     _lastWritten.set(id, mergedJson);
-    if (mergedJson !== json) {
-      // Adopt in place: callers hold references into this object (MAP.mapData is
-      // campaigns[id].maps[mapId]), so replace contents rather than the object.
-      for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
-      Object.assign(camp, merged);
+    if (mergedJson !== JSON.stringify(localNow)) {
+      // Adopt what OTHERS changed, keeping what changed HERE while the write was in flight (a token kept moving):
+      // a merge with the written snapshot as its base. Adopting `merged` whole put the token back.
+      const adopted = mergeCampaign(localNow, camp, merged);
+      // In place: callers hold references into this object (MAP.mapData is campaigns[id].maps[mapId]).
+      for (const k of Object.keys(camp)) if (!(k in adopted)) delete camp[k];
+      Object.assign(camp, adopted);
       _onRemoteMerged?.(id);
     }
   }

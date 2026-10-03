@@ -95,42 +95,35 @@ export async function saveTriggersAndBroadcast() {
 
 // ── Token entry check (DM-only) ────────────────────────────────────────────────
 
-export async function checkTriggers(tokenId, wx, wy) {
-  if (!MAP.mapData?.triggers?.length) return;
+const _lastCell = {}; // tokenId → "cx,cy" last checked: live drag frames on one square must not fire it again
 
-  const { cx, cy } = worldToCell(wx, wy);
-  const hit = MAP.mapData.triggers.filter(t => t.cx === cx && t.cy === cy && !t.disabled);
-  if (!hit.length) return;
-
-  if (MAP.isDM) {
-    // DM hub: fire directly
+/**
+ * The DM's screen springs traps on the squares a token entered: `cells` is every square of the move (a fight
+ * move's path, so a trap in the middle of the path counts), or just where it stopped. Only the DM's screen does
+ * this; players' screens used to ask as well, so one step could fire a trap twice.
+ */
+export async function checkTriggers(tokenId, cells) {
+  if (!MAP.isDM || !MAP.mapData?.triggers?.length || !cells?.length) return;
+  for (const { cx, cy } of cells) {
+    const key = `${cx},${cy}`;
+    if (_lastCell[tokenId] === key) continue;
+    _lastCell[tokenId] = key;
+    const hit = MAP.mapData.triggers.filter(t => t.cx === cx && t.cy === cy && !t.disabled);
     for (const trig of hit) {
       if (trig.requireConfirm) {
         await realtimePublish(EV.TRIGGER_PENDING, {
-          campaignId: MAP.campaignId,
-          triggerId: trig.id,
-          tokenId,
-          cx, cy,
-          label: trig.label || trig.type,
+          type: EV.TRIGGER_PENDING, campaignId: MAP.campaignId, triggerId: trig.id, tokenId,
+          cx, cy, label: trig.label || trig.type, fromUserId: userId,
         });
       } else {
         await fireTrigger(trig, tokenId);
       }
     }
-  } else {
-    // Player hub: ask DM to process the trigger
-    for (const trig of hit) {
-      await realtimePublish(EV.TRIGGER_PENDING, {
-        campaignId: MAP.campaignId,
-        triggerId: trig.id,
-        tokenId,
-        cx, cy,
-        label: trig.label || trig.type,
-        autoFire: !trig.requireConfirm,
-      });
-    }
   }
 }
+
+/** The square a world point is in, as triggers count squares. */
+export const triggerCell = worldToCell;
 
 // ── Fire a trigger ─────────────────────────────────────────────────────────────
 
@@ -139,6 +132,7 @@ export async function fireTrigger(trigger, tokenId) {
 
   if (type === 'message') {
     await realtimePublish(EV.TRIGGER_FIRED, {
+      type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
       tokenId,
@@ -156,6 +150,7 @@ export async function fireTrigger(trigger, tokenId) {
     const name = tok?.name || 'Someone';
     if (trigger.spotDC && summary && (summary.passivePerception || 0) >= trigger.spotDC) {
       await realtimePublish(EV.TRIGGER_FIRED, {
+      type: EV.TRIGGER_FIRED, fromUserId: userId,
         campaignId: MAP.campaignId, triggerId: trigger.id, tokenId, action: 'trap-spotted',
         message: `${name} spots a trap here (passive Perception ${summary.passivePerception}).`,
       });
@@ -166,6 +161,7 @@ export async function fireTrigger(trigger, tokenId) {
     const save = trigger.saveAbility && trigger.saveDC
       ? ` ${trigger.saveAbility.toUpperCase()} save${hints ? ` DC ${trigger.saveDC}` : ''} for half.` : '';
     await realtimePublish(EV.TRIGGER_FIRED, {
+      type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
       tokenId,
@@ -179,6 +175,7 @@ export async function fireTrigger(trigger, tokenId) {
 
   if (type === 'teleport' && trigger.destCx != null) {
     await realtimePublish(EV.TRIGGER_FIRED, {
+      type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
       tokenId,
@@ -190,6 +187,7 @@ export async function fireTrigger(trigger, tokenId) {
 
   if (type === 'sound' && trigger.fileId) {
     await realtimePublish(EV.TRIGGER_FIRED, {
+      type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
       tokenId,

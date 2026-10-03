@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
-import { renderTokens, moveStamp } from './dnd-hub-tokens.js?v=20261005m';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261005m';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261005m';
 import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261005m';
@@ -17,7 +17,7 @@ import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTem
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { refreshGuide } from './dnd-hub-map-bg.js?v=20261005m';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
-import { toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
+import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
 
 export async function initPixiApp() {
@@ -684,6 +684,7 @@ export function initKeyboardHandlers() {
       const newX = token.x + dir[0] * gs;
       const newY = token.y + dir[1] * gs;
       if (wouldCrossWall(token.x, token.y, newX, newY)) return;
+      if (!onMap(newX, newY)) return; // the arrow keys used to walk a token off the edge of the map
       const to = toCell(newX, newY);
       const turn = turnFor(tokenId);
       let turnPath = null;
@@ -711,7 +712,7 @@ export function initKeyboardHandlers() {
 
       if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
-      // Debounce the broadcast — keyboard auto-repeat fires ~10×/sec
+      // Coalesce the broadcast: one message carries a burst of presses
       MAP._wasdPendingMove = { tokenId, x: newX, y: newY, facing: newFacing, turnPath, turnKey: turn?.key ?? null };
       if (!MAP._wasdBroadcastTimer) {
         MAP._wasdBroadcastTimer = setTimeout(() => {
@@ -719,13 +720,13 @@ export function initKeyboardHandlers() {
           const m = MAP._wasdPendingMove;
           if (m) {
             MAP._wasdPendingMove = null;
-            realtimePublish(EV.TOKEN_MOVE, {
+            publishMove({
               type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, final: true,
               tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, turnPath: m.turnPath, turnKey: m.turnKey,
               fromUserId: userId, ...moveStamp(),
             });
           }
-        }, 80);
+        }, 300); // the node allows 5 publishes a second; held keys repeat ~30 a second
       }
       return;
     }

@@ -2,8 +2,25 @@
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { computeVisibleCells } from './dnd-hub-los.js?v=20260502p4';
+import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20260502p4';
+import { wallPx } from './dnd-hub-walls.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+
+// ── Two shapes of light ───────────────────────────────────────────────────────
+
+/**
+ * A light in map pixels. Lights placed with the Light tool are pixels (x, y, radius); lights from a Universal VTT
+ * import are grid squares (cx, cy, range, colour "AARRGGBB"), and were never drawn or lit anything.
+ */
+export function lightPx(light, mapData = MAP.mapData) {
+  if (light.x != null && light.radius != null) return light;
+  const gs = effectiveGs(mapData);
+  const ox = (MAP._bgOffset?.x ?? 0) + (mapData?.gridOffsetX || 0);
+  const oy = (MAP._bgOffset?.y ?? 0) + (mapData?.gridOffsetY || 0);
+  const hex = typeof light.color === 'string' ? parseInt(light.color.slice(-6), 16) : light.color;
+  return { ...light, x: ox + (light.cx || 0) * gs, y: oy + (light.cy || 0) * gs, radius: (light.range || 3) * gs,
+    color: Number.isFinite(hex) ? hex : undefined };
+}
 
 // ── Raycasting ────────────────────────────────────────────────────────────────
 
@@ -17,7 +34,8 @@ export function computeLitCells(lights, mapData) {
   if (!lights?.length || !mapData) return new Set();
   const gs = effectiveGs(mapData);
   const all = new Set();
-  for (const light of lights) {
+  for (const raw of lights) {
+    const light = lightPx(raw, mapData);
     const r = getEffectiveRadius(light);
     // computeVisibleCells expects visionFeet; radius is in world pixels → convert
     const radiusFeet = (r / gs) * 5;
@@ -65,17 +83,21 @@ export function renderLights() {
   const lights = MAP.mapData.lights || [];
   if (!lights.length) return;
 
+  // Warm light that stops at walls (it used to be a 7–18 % disc that went straight through them, too faint to tell
+  // whether a light worked). Drawn under the fog: players see it only where they can see.
+  const walls = getOpaqueSegments(MAP.mapData).map(seg => wallPx(seg));
+  const glow = new PIXI.Graphics();
+  glow.blendMode = 'add';
   const g = new PIXI.Graphics();
-  for (const light of lights) {
+  for (const raw of lights) {
+    const light = lightPx(raw);
     const r = getEffectiveRadius(light);
-    const col = light.color ?? 0xfff5cc;
-
-    // Three concentric circles: edge glow → mid → bright center
-    g.circle(light.x, light.y, r)       .fill({ color: col, alpha: 0.07 });
-    g.circle(light.x, light.y, r * 0.6) .fill({ color: col, alpha: 0.11 });
-    g.circle(light.x, light.y, r * 0.28).fill({ color: col, alpha: 0.18 });
-
-    // Small white center dot so DM can see the source position
+    const col = light.color ?? 0xffd9a0;
+    for (const [k, a] of [[1, 0.10], [0.7, 0.10], [0.45, 0.12], [0.22, 0.16]]) {
+      const poly = computeVisibilityPolygon(light.x, light.y, r * k, walls);
+      if (poly.length >= 3) glow.poly(poly.flatMap(p => [p.x, p.y])).fill({ color: col, alpha: a });
+    }
+    // The source itself, so the DM can find and select it
     if (MAP.isDM) {
       const isSelected = light.id === MAP.activeLightId;
       g.circle(light.x, light.y, isSelected ? 7 : 5)
@@ -93,7 +115,7 @@ export function renderLights() {
     }
   }
 
-  layer.addChild(g);
+  layer.addChild(glow, g);
 }
 
 // ── Flicker ticker ────────────────────────────────────────────────────────────

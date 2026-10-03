@@ -26,6 +26,20 @@ export const cellBlocked = (a, b) => {
   return wouldCrossWall(p.x, p.y, q.x, q.y);
 };
 
+/** Inside the map image (world frame: the map at native size from the origin). True while its size is unknown. */
+export function onMap(x, y) {
+  const w = MAP._bgImgW, h = MAP._bgImgH;
+  if (!w || !h) return true;
+  return x >= 0 && y >= 0 && x <= w && y <= h;
+}
+
+/** A point pulled back inside the map image. */
+export function clampToMap(p) {
+  const w = MAP._bgImgW, h = MAP._bgImgH;
+  if (!w || !h) return p;
+  return { x: Math.min(w - 1, Math.max(1, p.x)), y: Math.min(h - 1, Math.max(1, p.y)) };
+}
+
 export const modeFor = tokenId => moveMode({ isDM: MAP.isDM, activeTurnTokenId: MAP.activeTurnTokenId, tokenId });
 
 export function speedFor(tokenId) {

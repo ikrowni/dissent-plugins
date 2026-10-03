@@ -16,11 +16,41 @@ import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } fr
 export const CLIENT_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
+
+// 🔴 The node allows each user 300 realtime publishes a minute (5 a second, router_plugins.go). A drag used to send
+// a frame every 30 ms and the arrow keys one per press, so most were refused with 429: other screens fell seconds
+// behind and sometimes never got the final square. Live frames now go at most every 300 ms (newest wins); a
+// finished move goes at once and is retried if refused, unless a newer one for that token has gone since.
+const LIVE_MS = 300;
+let _liveTimer = null, _liveNext = null, _liveLast = 0;
+const _finalSeq = {};
+export function publishMove(payload) {
+  if (!payload.final) {
+    _liveNext = payload;
+    if (_liveTimer) return;
+    _liveTimer = setTimeout(() => {
+      _liveTimer = null;
+      const m = _liveNext; _liveNext = null;
+      if (m) { _liveLast = Date.now(); realtimePublish(EV.TOKEN_MOVE, m); }
+    }, Math.max(0, _liveLast + LIVE_MS - Date.now()));
+    return;
+  }
+  if (_liveTimer) { clearTimeout(_liveTimer); _liveTimer = null; _liveNext = null; }
+  _liveLast = Date.now();
+  _finalSeq[payload.tokenId] = payload.seq;
+  return _sendFinal(payload, 0);
+}
+async function _sendFinal(payload, tries) {
+  // realtimePublish resolves undefined when sent, null when refused.
+  if ((await realtimePublish(EV.TOKEN_MOVE, payload)) !== null || tries >= 4) return;
+  await new Promise(r => setTimeout(r, 1500 * (tries + 1)));
+  if (_finalSeq[payload.tokenId] === payload.seq) return _sendFinal(payload, tries + 1);
+}
 import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
-import { toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
+import { clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath } from './dnd-hub-movement.js';
 
 const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
@@ -333,7 +363,7 @@ function setupTokenDrag(container, token) {
 
   container.on('globalpointermove', e => {
     if (!dragging) return;
-    const pos = e.getLocalPosition(MAP.layers.tokens);
+    const pos = clampToMap(e.getLocalPosition(MAP.layers.tokens)); // never off the edge of the map
     const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;
     // Stop at walls WHILE dragging. Everyone else watches this token move, so a token
     // that slid through a wall and only snapped back on drop looked like it went through.
@@ -354,7 +384,7 @@ function setupTokenDrag(container, token) {
     const now = Date.now();
     if (now - lastPublish > 30) {
       lastPublish = now;
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId, ...moveStamp() });
+      publishMove({ type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId, ...moveStamp() });
     }
   });
 
@@ -388,7 +418,7 @@ function setupTokenDrag(container, token) {
       if (dragTurn) renderTrail();
       dragPath = null;
       // Tell everyone: they watched the live drag and must see it go back.
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, final: true, fromUserId: userId, ...moveStamp() });
+      publishMove({ type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, final: true, fromUserId: userId, ...moveStamp() });
       return;
     }
 
@@ -416,7 +446,7 @@ function setupTokenDrag(container, token) {
     const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY,
       facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, final: true,
       turnPath: turnPath || null, turnKey: turnPath ? dragTurn?.key : null, fromUserId: userId, ...moveStamp() };
-    realtimePublish(EV.TOKEN_MOVE, movePayload);
+    publishMove(movePayload);
     // My own sidebar sets zone-audio volume from where my token stands; it never heard this before.
     if (token.id === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, movePayload);
   };

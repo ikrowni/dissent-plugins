@@ -1,5 +1,5 @@
 // dnd-hub-pins.js — map pin placement, rendering, and journal overlay
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish, genId, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
@@ -14,7 +14,7 @@ export function renderPins() {
   _pinSprites = [];
   const pins = MAP.mapData?.pins || [];
   pins.forEach((pin, i) => {
-    if (!MAP.isDM && pin.visible !== 'all') return;
+    if (!MAP.isDM && (pin.visible !== 'all' || !_seenByPlayer(pin))) return;
     const container = new PIXI.Container();
     container.x = pin.cx;
     container.y = pin.cy;
@@ -29,16 +29,42 @@ export function renderPins() {
     const label = new PIXI.Text({ text: String(i + 1), style: { fontSize: 9, fontWeight: 'bold', fill: 0x000000 } });
     label.anchor.set(0.5, 0.5);
     container.addChild(label);
+    if (pin.label) {
+      const name = new PIXI.Text({ text: pin.label, style: { fontSize: 11, fontWeight: 'bold', fill: 0xf3d27a,
+        fontFamily: 'Georgia, serif', stroke: { color: 0x000000, width: 3 } } });
+      name.anchor.set(0.5, 0); name.y = 11;
+      container.addChild(name);
+    }
 
     container.on('pointerdown', (e) => {
       e.stopPropagation();
       if (MAP.isDM) { _showDMPinMenu(pin); }
-      else if (pin.visible === 'all' && pin.journalId) { _showJournalOverlay(pin.journalId); }
+      else _showPinToPlayer(pin);
     });
 
     MAP.layers.ui.addChild(container);
     _pinSprites.push(container);
   });
+}
+
+// A player sees a pin once its square has been seen (it is drawn above the fog, so it would otherwise give away
+// what is in rooms they have not reached).
+function _seenByPlayer(pin) {
+  const md = MAP.mapData;
+  const gs = effectiveGs(md);
+  const ox = (MAP._bgOffset?.x ?? 0) + (md.gridOffsetX || 0), oy = (MAP._bgOffset?.y ?? 0) + (md.gridOffsetY || 0);
+  const key = `${Math.floor((pin.cx - ox) / gs)},${Math.floor((pin.cy - oy) / gs)}`;
+  const st = md.fogState?.[key];
+  return st === 'visible' || st === 'explored' || !!MAP.localSightCells?.has(key);
+}
+
+// What a player gets on clicking a pin: its note, then the linked journal page. Before, a pin with no linked
+// journal did nothing at all, so a DM's note on the map never reached anyone (owner report 2026-10-03).
+function _showPinToPlayer(pin) {
+  const journal = pin.journalId ? serverData?.campaigns?.[MAP.campaignId]?.journals?.[pin.journalId] : null;
+  const page = journal?.visibility === 'player' ? journal : null;
+  const content = [pin.note, page ? page.content : ''].filter(Boolean).join('\n\n');
+  showHandoutOverlay({ title: pin.label || page?.title || 'Map note', content: content || '(no note)' });
 }
 
 // ── DM pin management menu ────────────────────────────────────────────────────
@@ -51,7 +77,9 @@ function _showDMPinMenu(pin) {
     'background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:8px;padding:12px;' +
     'z-index:9998;min-width:200px;font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.7)';
   d.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:8px">PIN: ' + esc(pin.label || '(no label)') + '</div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:6px">PIN: ' + esc(pin.label || '(no label)') + '</div>' +
+    (pin.note ? '<div style="font-size:11px;color:rgba(255,255,255,.8);white-space:pre-wrap;margin-bottom:6px">' + esc(pin.note) + '</div>' : '') +
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">' + (pin.visible === 'all' ? 'Players can open it once they have seen this spot' : 'DM only') + '</div>' +
     '<button id="pin-del-btn" style="width:100%;padding:6px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer;margin-bottom:6px">\uD83D\uDDD1 Delete Pin</button>' +
     '<button id="pin-cancel-btn" style="width:100%;padding:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.7);font-size:11px;cursor:pointer">Cancel</button>';
   document.body.appendChild(d);
@@ -79,13 +107,15 @@ export function showPinDialog(worldX, worldY) {
     journals.map(j => '<option value="' + esc(j.id) + '">' + esc(j.title) + '</option>').join('');
   d.innerHTML =
     '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);margin-bottom:10px">\uD83D\uDCCC New Map Pin</div>' +
-    '<input id="pin-label-input" placeholder="Label (optional)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px">' +
+    '<input id="pin-label-input" placeholder="Title (shown on the map)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px">' +
+    '<textarea id="pin-note-input" rows="3" placeholder="Note (what players read when they click it)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px;resize:vertical;font-family:inherit"></textarea>' +
+    '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px">Linked journal page (optional)</div>' +
     '<select id="pin-journal-select" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:6px 8px;color:#fff;font-size:11px;outline:none;margin-bottom:8px">' + journalOpts + '</select>' +
     '<div style="display:flex;gap:8px;margin-bottom:8px">' +
       '<label style="font-size:10px;display:flex;align-items:center;gap:4px;cursor:pointer;color:rgba(255,255,255,.7)">' +
-        '<input type="radio" name="pvis" value="dm" checked> DM only</label>' +
+        '<input type="radio" name="pvis" value="all" checked> Players too</label>' +
       '<label style="font-size:10px;display:flex;align-items:center;gap:4px;cursor:pointer;color:rgba(255,255,255,.7)">' +
-        '<input type="radio" name="pvis" value="all"> All players</label>' +
+        '<input type="radio" name="pvis" value="dm"> DM only</label>' +
     '</div>' +
     '<div style="display:flex;gap:6px">' +
       '<button id="pin-place-btn" style="flex:1;padding:7px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer">Place Pin</button>' +
@@ -99,12 +129,13 @@ export function showPinDialog(worldX, worldY) {
 
 async function _placePin(worldX, worldY) {
   const label     = document.getElementById('pin-label-input')?.value?.trim() || '';
+  const note      = document.getElementById('pin-note-input')?.value?.trim() || '';
   const journalId = document.getElementById('pin-journal-select')?.value || null;
   const visible   = document.querySelector('input[name="pvis"]:checked')?.value || 'dm';
   _removePinDialog();
   if (!MAP.mapData) return;
   if (!MAP.mapData.pins) MAP.mapData.pins = [];
-  const pin = { id: genId(), cx: worldX, cy: worldY, label, journalId: journalId || null, visible };
+  const pin = { id: genId(), cx: worldX, cy: worldY, label, note, journalId: journalId || null, visible };
   MAP.mapData.pins.push(pin);
   // Persist
   const camp = serverData?.campaigns?.[MAP.campaignId];
@@ -135,12 +166,6 @@ export async function deletePinById(id) {
 }
 
 // ── Player journal overlay ────────────────────────────────────────────────────
-
-function _showJournalOverlay(journalId) {
-  const journal = serverData?.campaigns?.[MAP.campaignId]?.journals?.[journalId];
-  if (!journal || journal.visibility !== 'player') return;
-  showHandoutOverlay({ title: journal.title, content: journal.content });
-}
 
 export function showHandoutOverlay({ title, content }) {
   document.getElementById('handout-overlay')?.remove();
