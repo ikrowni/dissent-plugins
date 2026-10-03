@@ -316,7 +316,11 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
       try {
         const res = await request('files:upload', { data: buf, name: file.name, mime: file.type });
         fileId = res?.id || null;
-      } catch (e) { console.error('Trigger sound upload failed', e); }
+      } catch (e) {
+        console.error('Trigger sound upload failed', e);
+        alert(`That sound could not be uploaded (${e.message || e}). Try an MP3.`);
+        return;
+      }
     }
 
     const updated = {

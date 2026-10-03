@@ -41,7 +41,7 @@
     },
     {
       "url": "dnd-hub-audio-zones.js",
-      "sha256": "e288b40241afe5d8be252501f6b0c81a173c9df4268d6c9ff2b008df66d7c0d1"
+      "sha256": "accabc416dbdbeabea7b82eade537abd0bcde33822251119359466c86e9d12e8"
     },
     {
       "url": "dnd-hub-canvas.js",
@@ -189,7 +189,7 @@
     },
     {
       "url": "dnd-hub-triggers.js",
-      "sha256": "3d6c4ed310c09d1a29112202db987c59973a9f7068f4f1ca7311b0ee6840d204"
+      "sha256": "4af988ddeeb79fa591169a743dd3b1e9916330f6b11748faafccf80a486c11da"
     },
     {
       "url": "dnd-hub-turn-move.js",

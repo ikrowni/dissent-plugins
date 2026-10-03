@@ -164,7 +164,10 @@ export function showZoneDialog(wx, wy, existingZone) {
         });
         fileId = res?.id || null;
       } catch (e) {
+        // It used to log this and save the zone with no sound, which looked like success.
         console.error('Zone audio upload failed', e);
+        alert(`That sound could not be uploaded (${e.message || e}). Try an MP3.`);
+        return;
       }
     }
 
