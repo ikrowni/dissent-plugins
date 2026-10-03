@@ -5,7 +5,7 @@ import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261006s';
 import { showCredits } from './dnd-hub-credits.js';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20261006s';
-import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute } from './dnd-hub-forge.js';
+import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261006s';
@@ -92,6 +92,8 @@ window.levelupPick = levelupPick; window.levelupRoll = levelupRoll; window.level
 window.levelupAbility = levelupAbility; window.levelupBack = levelupBack; window.levelupNext = levelupNext; window.levelupContinue = levelupContinue;
 window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
 window.__lkKits = STARTING_KITS;
+// The Hero Forge's guided steps (dnd-hub-forge-shape*.js).
+window.shapePick = shapePick; window.shapeScore = shapeScore; window.shapeScores = shapeScores; window.shapeHalfElf = shapeHalfElf; window.shapeSkill = shapeSkill; window.shapeExtraSkill = shapeExtraSkill; window.shapeCantrip = shapeCantrip; window.shapeSpell = shapeSpell; window.shapeText = shapeText; window.shapeNewName = shapeNewName; window.shapeNext = shapeNext; window.shapeBack = shapeBack; window.shapeFinish = shapeFinish; window.forgeShowQuick = forgeShowQuick;
 window.startSampleAdventure = startSampleAdventure;
 window.toggleClassSkill = toggleClassSkill; window.toggleExtraSkill = toggleExtraSkill; window.setHalfElfBonus = setHalfElfBonus;
 window.selectAbilityMethod = selectAbilityMethod;

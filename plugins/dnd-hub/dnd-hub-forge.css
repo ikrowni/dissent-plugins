@@ -57,3 +57,10 @@
 .lvl-burst{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:9998;font-family:var(--lk-title);font-size:64px;color:#f3e3b5;text-shadow:0 0 30px rgba(224,181,82,.8);animation:lvl-burst 2.2s ease-out forwards}
 @keyframes lvl-burst{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(1.08)}}
 @media (prefers-reduced-motion:reduce){.lvl-burst{animation:none;opacity:1}}
+/* The guided steps after race and class, and the tucked-away ready-made heroes. */
+.forge-dots{display:flex;gap:4px}
+.forge-dots span{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
+.forge-dots span.on{background:var(--lk-gold)}
+.forge-hurry{align-self:center;background:none;border:0;color:var(--lk-muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
+.forge-hurry:hover,.forge-hurry:focus-visible{color:var(--lk-gold)}
+.lvl-ab select,.forge-ui select,.forge-ui input,.forge-ui textarea{background:rgba(13,10,7,.7);border:1px solid var(--lk-line);border-radius:6px;color:var(--lk-text);padding:6px 8px;font:inherit}

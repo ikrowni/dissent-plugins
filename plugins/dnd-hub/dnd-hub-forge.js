@@ -2,7 +2,7 @@
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
 import { SRD } from './dnd-hub-state.js?v=20260502p4';
 import { storageSetUser } from '../plugin-sdk.js';
-import { quickBuild, previewStats, READY_HEROES } from './dnd-hub-quick.js';
+import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
 import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261006s';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
@@ -12,7 +12,17 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData } from './dnd-hub-state.js?v=20260502p4';
+import { serverData, CC } from './dnd-hub-state.js?v=20260502p4';
+import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
+import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
+import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261003a';
+
+const ALL_SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
+  'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'];
+// Which validateDraft step each guided step answers for (its numbers are the old creator's steps).
+const RULE_STEP = { heritage: 0, skills: 1, abilities: 2, spells: 5, details: 6 };
+let _showQuick = false, _shapeError = '';
 
 let _campaignId = null, _s = null, _draft = null, _fx = null, _dir = 1, _picksPlan = null;
 const _sound = createForgeSound();
@@ -28,7 +38,7 @@ function draftHero(d) {
 const open = () => !root()?.classList.contains('hidden') && !!root()?.querySelector('.forge');
 
 export function showQuickCharacter(campaignId) {
-  _campaignId = campaignId; _draft = null;
+  _campaignId = campaignId; _draft = null; _showQuick = false; _shapeError = '';
   _s = initForge((SRD.races || []).length, (SRD.classes || []).length);
   window.showScreen('char-creator');
   root().innerHTML = '<div class="forge"><canvas class="forge-fx" id="forge-fx"></canvas><div class="forge-ui" id="forge-ui"></div></div>';
@@ -46,8 +56,11 @@ function render() {
   const race = R[_s.race], cls = C[_s.cls];
   _fx?.setTint(race?.colour);
   if (_s.scene === 'race') {
-    ui.innerHTML = topBar('Choose your people', { muted: _sound.muted(), canBack: false }) + quickStrip(READY_HEROES)
-      + stage(race, { kind: 'race', dir: _dir }) + emblemRow(R, _s.race, 'Races');
+    // Ready-made heroes are tucked away (owner, 2026-10-03): the Forge is for making your own.
+    ui.innerHTML = topBar('Choose your people', { muted: _sound.muted(), canBack: false })
+      + stage(race, { kind: 'race', dir: _dir }) + emblemRow(R, _s.race, 'Races')
+      + (_showQuick ? quickStrip(READY_HEROES)
+        : '<button class="forge-hurry" id="forge-hurry" onclick="forgeShowQuick()">In a hurry? Take a ready-made hero</button>');
   } else if (_s.scene === 'class') {
     ui.innerHTML = topBar('Choose your calling', { muted: _sound.muted(), canBack: true })
       + stage(cls, { kind: 'class', dir: _dir }) + emblemRow(C, _s.cls, 'Classes');
@@ -61,6 +74,9 @@ function render() {
         step({ type: 'choose' });
       },
       onBack: () => step({ type: 'back' }, -1) });
+    return;
+  } else if (_s.scene === 'shape') {
+    renderShape(ui, race, cls);
     return;
   } else {
     if (!_draft) _draft = quickBuild(SRD, race.id, cls.id);
@@ -90,10 +106,12 @@ export function forgeChoose() {
   document.getElementById('forge-art')?.classList.add('forge-flash');
   stageEl?.classList.add('forge-sweep');
   if (_s.scene === 'class') {
-    // Build the hero now: its level-1 picks (if the class has any) come before the reveal.
-    _draft = quickBuild(SRD, races()[_s.race].id, classes()[_s.cls].id);
+    // Build the hero now, filled with suggestions: its level-1 picks (if the class has any), then the guided steps,
+    // come before the reveal. Coming back to the same race and class keeps what was chosen.
+    const raceId = races()[_s.race].id, classId = classes()[_s.cls].id;
+    if (!_draft || _draft.race !== raceId || _draft.class !== classId) _draft = quickBuild(SRD, raceId, classId);
     _picksPlan = firstLevelPicks(draftHero(_draft), levelCtx(_campaignId));
-    _s = { ..._s, picks: _picksPlan.steps.length > 0 };
+    _s = { ..._s, picks: _picksPlan.steps.length > 0, nShape: shapeSteps(_draft, SRD).length };
   }
   setTimeout(() => step({ type: 'choose' }), stageEl ? 450 : 0);
 }
@@ -125,7 +143,7 @@ export async function quickPlay() {
 }
 
 /** Back to the class scene, keeping the race; a new class makes a new hero. */
-export function quickChange() { takeName(); _draft = null; step({ type: 'change' }, -1); }
+export function quickChange() { takeName(); if (_s.quick || !_s.nShape) _draft = null; step({ type: 'change' }, -1); }
 
 /** Full creator with this hero filled in (kept for anything that still calls it). */
 export async function quickOpenFullCreator() {
@@ -148,3 +166,82 @@ window.addEventListener('wheel', e => {
   e.preventDefault();
   step({ type: 'browse', by: e.deltaY > 0 ? 1 : -1 }, e.deltaY > 0 ? 1 : -1);
 }, { passive: false });
+
+// ── The guided steps (dnd-hub-forge-shape.js) ─────────────────────────────────────────────────────────────────────
+
+function renderShape(ui, race, cls) {
+  // The creator's helpers (portrait upload) work on CC.draft: make it this hero.
+  CC.campaignId = _campaignId; CC.draft = _draft;
+  const kinds = shapeSteps(_draft, SRD);
+  if (_s.nShape !== kinds.length) _s = { ..._s, nShape: kinds.length, shape: Math.min(_s.shape, kinds.length - 1) };
+  const kind = kinds[_s.shape];
+  const srdRace = (SRD.races || []).find(r => r.id === _draft.race);
+  const ctx = { srd: SRD, race: srdRace, cls, main: (CLASS_PRIORITY[_draft.class] || []).slice(0, 2),
+    finals: draftScores(_draft, SRD.races), skills: skillStep(_draft, SRD), spells: spellStep(_draft, SRD),
+    kit: kitNames({ equipment: STARTING_KITS[_draft.class] || _draft.equipment }, SRD), gold: getStartingGold(), allSkills: ALL_SKILLS };
+  ui.innerHTML = shapeHeader(_draft, race, cls, _s.shape, kinds.length, kind, _sound.muted())
+    + `<div class="forge-slide ${_dir < 0 ? 'back' : ''}">${shapeBody(kind, _draft, ctx)}</div>`
+    + shapeFooter(_shapeError, _s.shape === kinds.length - 1);
+  // Keyboard players: Enter goes on; Tab reaches the choices. Not while an error asks for a fix.
+  if (!_shapeError) document.getElementById('shape-next')?.focus({ preventScroll: true });
+}
+const shapeKind = () => shapeSteps(_draft, SRD)[_s.shape];
+const reshape = () => { _shapeError = ''; render(); };
+
+export function shapePick(kv) {
+  const [k, v] = String(kv).split(':');
+  if (k === 'subrace') _draft.subrace = v;
+  else if (k === 'background') _draft.background = v;
+  else if (k === 'gear') {
+    _draft.useStartingGold = v === 'gold';
+    _draft.equipment = v === 'gold' ? [] : [...(STARTING_KITS[_draft.class] || [])];
+  }
+  _sound.whoosh(); reshape();
+}
+export function shapeScore(ability, value) { _draft.baseScores = swapScore(_draft.baseScores, ability, Number(value)); reshape(); }
+export function shapeScores(mode) {
+  const prio = CLASS_PRIORITY[_draft.class] || [];
+  if (mode === 'roll') { _draft.baseScores = rollScores(prio); _draft.abilityMethod = 'manual-roll'; _sound.chime(); }
+  else { _draft.baseScores = Object.fromEntries(prio.map((a, i) => [a, [15, 14, 13, 12, 10, 8][i]])); _draft.abilityMethod = 'standard-array'; }
+  reshape();
+}
+export function shapeHalfElf(i, ability) { const b = [...(_draft.halfElfBonus || [])]; b[i] = ability; _draft.halfElfBonus = b; reshape(); }
+export function shapeSkill(n) {
+  _draft.proficiencyChoices = toggleLimited(_draft.proficiencyChoices, n, skillStep(_draft, SRD).choose);
+  _draft.extraSkills = (_draft.extraSkills || []).filter(x => !_draft.proficiencyChoices.includes(x));
+  reshape();
+}
+export function shapeExtraSkill(n) { _draft.extraSkills = toggleLimited(_draft.extraSkills, n, 2); reshape(); }
+export function shapeCantrip(id) { _draft.cantrips = toggleLimited(_draft.cantrips, id, spellStep(_draft, SRD).cantrips); reshape(); }
+export function shapeSpell(id) { _draft.spells = toggleLimited(_draft.spells, id, spellStep(_draft, SRD).spells); reshape(); }
+/** Typing: no re-render, or the field loses focus. */
+export function shapeText(field, value) { _draft[field] = value; }
+export function shapeNewName() {
+  _draft.name = quickBuild(SRD, _draft.race, _draft.class).name;
+  const el = document.getElementById('shape-name');
+  if (el) el.value = _draft.name;
+}
+
+/** The first rule this step (or, with `all`, any step) leaves unmet. */
+function shapeProblem(all = false) {
+  // A prepared caster's spell count follows WIS: trim picks the new scores no longer allow.
+  const sp = spellStep(_draft, SRD);
+  if ((_draft.spells || []).length > sp.spells) _draft.spells = _draft.spells.slice(0, sp.spells);
+  const want = RULE_STEP[shapeKind()];
+  return validateDraft(_draft, SRD).find(p => all || p.step === want) || null;
+}
+export function shapeNext() {
+  const p = shapeProblem();
+  if (p) { _shapeError = p.message; render(); return; }
+  _shapeError = '';
+  if (_s.shape === _s.nShape - 1) _sound.chime(); else _sound.whoosh();
+  step({ type: 'choose' });
+}
+export function shapeBack() { _shapeError = ''; step({ type: 'back' }, -1); }
+export function shapeFinish() {
+  const p = shapeProblem(true);
+  if (p) { _shapeError = p.message; render(); return; }
+  _shapeError = ''; _sound.chime();
+  step({ type: 'finish' });
+}
+export function forgeShowQuick() { _showQuick = true; render(); document.querySelector('.forge-quick button')?.focus(); }

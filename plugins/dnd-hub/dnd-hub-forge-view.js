@@ -13,7 +13,6 @@ export function topBar(title, { muted, canBack }) {
       : `<button class="screen-back" onclick="showScreen('campaign')" aria-label="Back">${icon('arrow-left')}</button>`}
     <div class="forge-title">${esc(title)}</div>
     <button class="btn btn-ghost btn-sm forge-mute" onclick="forgeToggleMute()" aria-pressed="${muted}" aria-label="${muted ? 'Sound off' : 'Sound on'}">${icon(muted ? 'volume-x' : 'volume-2')}</button>
-    <button class="btn btn-ghost btn-sm" onclick="quickStepByStep()">Step by step instead</button>
   </div>`;
 }
 
