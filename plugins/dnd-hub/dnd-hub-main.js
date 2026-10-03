@@ -3,7 +3,7 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261003c';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261003d';
 import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
@@ -30,10 +30,10 @@ import {
   triggerPortraitUpload, handlePortraitUpload,
 } from './dnd-hub-char-steps.js?v=20261003a';
 import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261003c';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261003d';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261002a';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261003d';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
          clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20260502p4';

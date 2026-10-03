@@ -3,7 +3,7 @@ import { MAP, segmentsIntersect } from './dnd-hub-state.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderLights } from './dnd-hub-lights.js?v=20260502p4';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20260502p4';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261002a';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261003d';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 
 // Convert a stored wall/door segment to canvas pixel coordinates.

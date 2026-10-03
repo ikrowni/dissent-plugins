@@ -3,6 +3,7 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20260
 import { storageSet, realtimePublish, genId, esc, request } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
+import { rule } from './lk-table-rules.js';
 
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
@@ -161,8 +162,9 @@ export async function fireTrigger(trigger, tokenId) {
       return 'spotted';
     }
     const dmg = rollDiceExpr(trigger.damageExpr || '1d6');
+    const hints = rule(serverData?.campaigns?.[MAP.campaignId]?.settings, 'hints');
     const save = trigger.saveAbility && trigger.saveDC
-      ? ` ${trigger.saveAbility.toUpperCase()} save DC ${trigger.saveDC} for half.` : '';
+      ? ` ${trigger.saveAbility.toUpperCase()} save${hints ? ` DC ${trigger.saveDC}` : ''} for half.` : '';
     await realtimePublish(EV.TRIGGER_FIRED, {
       campaignId: MAP.campaignId,
       triggerId: trigger.id,

@@ -6,8 +6,8 @@ import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261002a';
-import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20261002a';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261003d';
+import { showTriggerToast } from './dnd-hub-triggers.js?v=20261003d';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
 
@@ -19,6 +19,9 @@ export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
 import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
+import { rule } from './lk-table-rules.js';
+
+const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
 
 // Portrait texture cache — keyed by portraitFileId
 const _portraitCache = new Map();  // fileId → PIXI.Texture
@@ -253,8 +256,7 @@ export function buildTokenSprite(token, gs) {
   }
 
   // turnLock faded overlay — non-active player tokens can't move when turnLock is on
-  const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-  if (settings?.turnLock && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id) {
+  if (tableRule('turnLock') && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id) {
     const overlay = new PIXI.Graphics();
     overlay.circle(0, 0, r).fill({ color: 0x000000, alpha: 0.45 });
     container.addChild(overlay);
@@ -298,8 +300,7 @@ function setupTokenDrag(container, token) {
   }
 
   // turnLock: non-active combatants cannot drag during initiative
-  const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-  if (settings?.turnLock && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id && !MAP.isDM) {
+  if (tableRule('turnLock') && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id && !MAP.isDM) {
     container.eventMode = 'static';
     container.cursor = 'not-allowed';
     return;
@@ -513,11 +514,16 @@ function _showMonsterAttackPanel(token, panelX, panelY) {
     const d20   = Math.floor(Math.random() * 20) + 1;
     const total = d20 + a.toHit;
     const target = MAP.selectedToken && MAP.selectedToken !== token.id ? MAP.mapData?.tokens?.[MAP.selectedToken] : null;
-    const out = attackOutcome(d20, total, target?.ac ?? -Infinity);
-    // A crit doubles the damage dice; a miss deals none (audit G1, G3).
-    const dmg   = out.hit ? _rollExpr(out.crit ? critDamageExpr(a.damageDice) : a.damageDice) : 0;
+    // Raw tables get the numbers only; the DM rules on the hit (Table rules: autoHit).
+    const judge = !!target && tableRule('autoHit');
+    const out = attackOutcome(d20, total, judge ? (target.ac ?? 10) : -Infinity);
+    // A crit doubles the damage dice; a judged miss deals none (audit G1, G3).
+    const dmg   = judge && !out.hit ? 0 : _rollExpr(out.crit ? critDamageExpr(a.damageDice) : a.damageDice);
     panel.remove();
-    _showAttackToast(token.name, a.name, d20, total, a.toHit, dmg, out.crit, target ? { name: target.name, ac: target.ac ?? 10, hit: out.hit } : null);
+    _showAttackToast(token.name, a.name, d20, total, a.toHit, dmg, out.crit, judge ? { name: target.name, ac: target.ac ?? 10, hit: out.hit } : null);
+    if (judge && out.hit && dmg > 0 && tableRule('autoDamage')) {
+      damageTokens([target.id], dmg, MAP.campaignId).catch(e => console.error('[dnd-hub] auto damage', e));
+    }
   };
 
   setTimeout(() => {
