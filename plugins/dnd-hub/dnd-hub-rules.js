@@ -1,5 +1,7 @@
 // plugins/dnd-hub/dnd-hub-rules.js — pure gameplay rules, kept free of Pixi and storage
 // so they can be tested.
+import { defaultSettings } from './lk-table-rules.js';
+import { attackOutcome } from './lk-rules5e.js';
 
 /**
  * Player ids that need a token placed on this map. Only the DM's client calls this.
@@ -112,6 +114,7 @@ export function campaignRecord({ id, name, description = '', dmUserId, dmDisplay
     library: { monsters: {}, spells: {}, items: {}, subclasses: {} },
     dmNotes: '', activeMapId: null, initiative: null, encounters: {},
     journals: {}, items: {}, scenes: {},
+    settings: defaultSettings(),
   };
 }
 
@@ -135,4 +138,31 @@ export function acceptMove(seen, p, myClientId) {
   if (seen[k] != null && p.seq <= seen[k]) return false;
   seen[k] = p.seq;
   return true;
+}
+
+/**
+ * Hit or miss for one attack roll against each target. `natural` is the d20 as rolled (a 20 always hits and is a
+ * critical, a 1 always misses). Null with no target. Decided on the attacker's screen, shown on every screen.
+ */
+export function attackVerdict(targets, natural, total) {
+  if (!targets?.length) return null;
+  const rows = targets.map(t => {
+    const ac = t.ac ?? 10;
+    return { id: t.id, name: t.name, ac, hit: attackOutcome(natural, total, ac).hit };
+  });
+  const crit = natural === 20;
+  const tail = crit ? ' — CRITICAL HIT, roll the damage dice twice' : natural === 1 ? ' — a natural 1 misses' : '';
+  return {
+    text: rows.map(r => `${r.name}: ${r.hit ? 'HIT' : 'MISS'} (AC ${r.ac})`).join(' | ') + tail,
+    hitIds: rows.filter(r => r.hit).map(r => r.id),
+    crit,
+  };
+}
+
+/** The token whose turn it is in the DM's tracker, or null while it waits for rolls or no fight is on. */
+export function activeTokenId(init) {
+  if (!init?.active || init.waiting) return null;
+  const c = init.order?.[init.currentIndex || 0];
+  if (!c) return null;
+  return c.type === 'player' ? `player_${c.userId}` : c.id;
 }

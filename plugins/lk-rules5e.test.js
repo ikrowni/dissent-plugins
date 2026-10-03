@@ -3,7 +3,7 @@ import {
   abilityMod, profBonus, maxSlotsFor, normalizeSlots, withSlotsForLevel, isAsiLevel, hitDieFor,
   applyDamage, applyHealing, rollDeathSave, markDeathSave, attackOutcome, critDamageExpr,
   encounterMultiplier, adjustedEncounterXp, shortRestSpend, longRest, characterSummary,
-  spellSaveDC, spellAttackBonus, conHpBonusOnIncrease,
+  spellSaveDC, spellAttackBonus, conHpBonusOnIncrease, saveForHalf,
 } from './lk-rules5e.js';
 
 describe('basics', () => {
@@ -259,5 +259,14 @@ describe('skills', () => {
   });
   it('race skill table', () => {
     expect(RACE_SKILLS['half-orc']).toEqual(['Intimidation']);
+  });
+});
+
+describe('saveForHalf', () => {
+  it('halves the damage, rounding down, when the save meets the DC', () => {
+    expect(saveForHalf(7, 13, 13)).toEqual({ saved: true, damage: 3 });
+  });
+  it('keeps full damage on a failed save', () => {
+    expect(saveForHalf(7, 12, 13)).toEqual({ saved: false, damage: 7 });
   });
 });

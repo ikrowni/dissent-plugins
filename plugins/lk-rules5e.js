@@ -158,6 +158,12 @@ export function attackOutcome(d20, total, ac) {
   return { hit: total >= (ac ?? 10), crit: false };
 }
 
+/** A saving throw for half damage: `total` against `dc`; a success halves it, rounding down (SRD "Saving Throws"). */
+export function saveForHalf(damage, total, dc) {
+  const saved = total >= dc;
+  return { saved, damage: saved ? Math.floor(damage / 2) : damage };
+}
+
 /** "1d6+2" → "2d6+2": a critical hit doubles the dice, never the modifier. */
 export function critDamageExpr(expr) {
   const m = String(expr || '').replace(/\s+/g, '').match(/^(\d*)d(\d+)([+-]\d+)?$/i);

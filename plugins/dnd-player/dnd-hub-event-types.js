@@ -37,6 +37,8 @@ export const EV = {
   // HP & combat
   HP_CHANGE:          'hp:change',
   COMBAT_SETTINGS:    'combat:settings',    // Phase 2
+  INITIATIVE_ROLL:    'initiative:roll',    // a player's own initiative roll → DM tracker (Table rules)
+  DAMAGE_REQUEST:     'combat:damage',      // a player's Hub asks the DM's Hub to apply auto damage
 
   // Initiative
   INITIATIVE_UPDATE:  'initiative:update',

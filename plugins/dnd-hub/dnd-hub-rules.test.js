@@ -111,7 +111,6 @@ describe('campaignRecord', () => {
     expect(c).toMatchObject({ id: 'c1', name: 'N', description: '', dmUserId: 'u', visibility: 'open', autoAccept: true,
       maxPlayers: 4, startingLevel: 1, members: [], maps: {}, encounters: {}, journals: {}, items: {}, scenes: {},
       activeMapId: null, status: 'active' });
-    expect('settings' in c).toBe(false); // Table rules (piece 3) sets the preset
   });
 });
 
@@ -139,5 +138,54 @@ describe('acceptMove (audit O6)', () => {
   });
   it('moves without a sequence (older clients) are applied as before', () => {
     expect(acceptMove({}, { tokenId: 't' }, 'me')).toBe(true);
+  });
+});
+
+import { attackVerdict, activeTokenId } from './dnd-hub-rules.js';
+
+describe('campaignRecord settings', () => {
+  it('a new campaign starts on the Guided preset', async () => {
+    const { presetOf } = await import('./lk-table-rules.js');
+    const c = campaignRecord({ id: 'c1', name: 'x', dmUserId: 'u1' });
+    expect(presetOf(c.settings)).toBe('guided');
+    expect(c.settings.spatialRange).toBe(60);
+  });
+});
+
+describe('attackVerdict', () => {
+  const gob = { id: 'g1', name: 'Goblin', ac: 15 }, rat = { id: 'r1', name: 'Rat', ac: 12 };
+  it('says hit or miss for each target', () => {
+    const v = attackVerdict([gob, rat], 8, 13);
+    expect(v.hitIds).toEqual(['r1']);
+    expect(v.text).toBe('Goblin: MISS (AC 15) | Rat: HIT (AC 12)');
+    expect(v.crit).toBe(false);
+  });
+  it('a natural 20 hits whatever the AC and is a critical', () => {
+    const v = attackVerdict([{ ...gob, ac: 30 }], 20, 25);
+    expect(v.hitIds).toEqual(['g1']);
+    expect(v.crit).toBe(true);
+    expect(v.text).toContain('CRITICAL');
+  });
+  it('a natural 1 misses whatever the total', () => {
+    expect(attackVerdict([gob], 1, 40).hitIds).toEqual([]);
+  });
+  it('a missing AC counts as 10', () => {
+    expect(attackVerdict([{ id: 'x', name: 'X' }], 5, 10).hitIds).toEqual(['x']);
+  });
+  it('no target, no verdict', () => {
+    expect(attackVerdict([], 15, 20)).toBe(null);
+  });
+});
+
+describe('activeTokenId', () => {
+  const order = [{ type: 'player', userId: 'u2', roll: 18 }, { type: 'monster', id: 'm1', roll: 9 }];
+  it('a player row is their player_ token; a monster row is its own id', () => {
+    expect(activeTokenId({ active: true, currentIndex: 0, order })).toBe('player_u2');
+    expect(activeTokenId({ active: true, currentIndex: 1, order })).toBe('m1');
+  });
+  it('none while the tracker waits for rolls, or when no fight is on', () => {
+    expect(activeTokenId({ active: true, waiting: true, currentIndex: 0, order })).toBe(null);
+    expect(activeTokenId({ active: false, order })).toBe(null);
+    expect(activeTokenId(null)).toBe(null);
   });
 });
