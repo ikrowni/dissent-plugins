@@ -73,7 +73,7 @@
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "d580ad5db28ac96171ac913f856dfce3fb78182083b2513caa9f19076fc4038c"
+      "sha256": "0afa3304b8a7c12207a9036ecf3641260cdfabd597a10529b58921701ac88d41"
     },
     {
       "url": "dnd-hub-fog.js",
@@ -105,7 +105,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "7cae44126e9991e54b4b23f98e963b0a7e2fc87863da619994b3a0f123a86ab7"
+      "sha256": "999af00f0647c492cd3acfb0f9ec0adf4f48b4734ff3cb3e55e5cce977e92e94"
     },
     {
       "url": "dnd-hub-map-bg.js",

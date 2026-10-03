@@ -498,6 +498,12 @@ export async function handleMapEvent(p) {
       localPublish('dnd-master', EV.INITIATIVE_ROLL, p);
       break;
     }
+    case EV.WEAPON_ATTACK: {
+      // A player's weapon to-hit / damage roll, for the DM's sidebar log; same route as EV.INITIATIVE_ROLL.
+      if (p.campaignId !== MAP.campaignId || !MAP.isDM) return;
+      localPublish('dnd-master', EV.WEAPON_ATTACK, p);
+      break;
+    }
     case EV.DAMAGE_REQUEST: {
       // A player's Hub judged a hit and rolled damage; only the DM's Hub changes HP, and only if the table applies damage.
       if (p.campaignId !== MAP.campaignId || !MAP.isDM || !rule(serverData?.campaigns?.[p.campaignId]?.settings, 'autoDamage')) return;

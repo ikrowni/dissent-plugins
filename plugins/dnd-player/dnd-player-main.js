@@ -995,8 +995,8 @@ async function onEvent(ev) {
         toHitTotal,
         label: `${item.name} — Attack`,
       };
-      realtimePublish(EV.WEAPON_ATTACK, attackPayload);
-      realtimePublishCompanion('dnd-master', EV.WEAPON_ATTACK, attackPayload);
+      // Players cannot publish to the DM's sidebar (no consent → 403); the DM's Hub hands it on.
+      await publishTo(['hub'], EV.WEAPON_ATTACK, attackPayload);
       return;
     }
 
@@ -1028,8 +1028,7 @@ async function onEvent(ev) {
           }
         } : {}),
       };
-      realtimePublish(EV.WEAPON_ATTACK, damagePayload);
-      realtimePublishCompanion('dnd-master', EV.WEAPON_ATTACK, damagePayload);
+      await publishTo(['hub'], EV.WEAPON_ATTACK, damagePayload);
       return;
     }
 
