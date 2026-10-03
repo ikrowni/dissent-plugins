@@ -4,7 +4,7 @@ import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
 import { onInit, onEvent } from './dnd-hub-events.js?v=20261002a';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261002a';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003a';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20260502p4';
 import { setZoom } from './dnd-hub-canvas.js?v=20260502p4';
 import {
@@ -25,7 +25,7 @@ import {
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
   selectBackground, renderCCEquipment, toggleEquipItem, filterEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261002a';
+} from './dnd-hub-char-steps.js?v=20261003a';
 import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
 import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261002a';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';

@@ -3,6 +3,7 @@ import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityM
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 import { armorClass } from './lk-rules5e.js';
+import { CANTRIPS_KNOWN, spellLimitL1 as spellLimitFor, classSkillChoice as skillChoiceFor, draftScores as scoresFor } from './dnd-hub-draft-rules.js';
 
 // ── Race ──────────────────────────────────────────────────────────────────────
 export function renderCCRace(el) {
@@ -109,11 +110,7 @@ export function renderCCClass(el) {
 }
 
 /** The class's "choose N skills" (and Half-Elf's two of any). Every hero used to have no skills at all. */
-export function classSkillChoice(classId) {
-  const cls = (SRD.classes || []).find(c => c.id === classId);
-  const pc = (cls?.proficiency_choices || []).find(p => (p.from || []).some(f => String(f).startsWith('Skill: ')));
-  return pc ? { choose: pc.choose, from: pc.from.filter(f => f.startsWith('Skill: ')).map(f => f.slice(7)) } : { choose: 0, from: [] };
-}
+export function classSkillChoice(classId) { return skillChoiceFor(SRD.classes, classId); }
 const ALL_SKILLS = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History','Insight','Intimidation',
   'Investigation','Medicine','Nature','Perception','Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
 
@@ -420,23 +417,12 @@ export function getStartingGold() {
 
 // ── Spells ────────────────────────────────────────────────────────────────────
 // Cantrips/spells known at level 1 per class (SRD classes.json has no spellcasting table)
-const CANTRIPS_KNOWN = { bard:2, cleric:3, druid:2, sorcerer:4, warlock:2, wizard:3 };
-const SPELLS_KNOWN_L1 = { bard:4, sorcerer:2, warlock:2, wizard:6 }; // wizard: six in the spellbook
 
 /**
  * Final ability scores of the draft: base + race + subrace bonuses + a half-elf's two +1s. One function for
  * the review step and the saved character (the save used to drop subrace bonuses — audit A6).
  */
-export function draftScores() {
-  const out = { ...CC.draft.baseScores };
-  const race = (SRD.races || []).find(r => r.id === CC.draft.race);
-  const sub = race?.subraces?.find(x => x.id === CC.draft.subrace) || null;
-  for (const a of ABILITIES) out[a] = finalScore(out[a], racialBonus(race, sub, a.toUpperCase()));
-  if (CC.draft.race === 'half-elf') {
-    for (const a of new Set(CC.draft.halfElfBonus || [])) if (a !== 'cha' && out[a] !== undefined) out[a] += 1;
-  }
-  return out;
-}
+export function draftScores() { return scoresFor(CC.draft, SRD.races); }
 
 /** A half-elf picks two abilities other than Charisma for +1 each. */
 export function setHalfElfBonus(i, ability) {
@@ -450,11 +436,7 @@ export function setHalfElfBonus(i, ability) {
  * How many 1st-level spells a new (level 1) character takes. Clerics and druids prepare ability
  * modifier + level (min 1); paladins and rangers have no spells until level 2 (audit J2).
  */
-export function spellLimitL1(classId) {
-  if (SPELLS_KNOWN_L1[classId] != null) return SPELLS_KNOWN_L1[classId];
-  if (classId === 'cleric' || classId === 'druid') return Math.max(1, abilityMod(draftScores().wis) + 1);
-  return 0;
-}
+export function spellLimitL1(classId) { return spellLimitFor(classId, draftScores().wis); }
 const SPELLCASTING_CLASSES = new Set(['bard','cleric','druid','paladin','ranger','sorcerer','warlock','wizard','artificer']);
 
 export function renderCCSpells(el) {

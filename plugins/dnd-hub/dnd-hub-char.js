@@ -2,11 +2,12 @@
 import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20260502p4';
 import { storageGetUser, storageSetUser, storageSet, storageGet, realtimePublish, getIdentity, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261002a';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261003a';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { classSkillChoice, draftScores } from './dnd-hub-char-steps.js?v=20261002a';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261003a';
+import { validateDraft } from './dnd-hub-draft-rules.js';
 
 // Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
 // proficiencies ("All armor", "Shields", …) instead (audit A9).
@@ -126,34 +127,9 @@ export async function ccNext() {
 }
 
 export function ccValidateStep() {
-  switch (CC.step) {
-    case 0: {
-      if (!CC.draft.race) { alert('Please select a race.'); return false; }
-      const race = (SRD.races || []).find(r => r.id === CC.draft.race);
-      if (race?.subraces?.length && !CC.draft.subrace) { alert(`Please choose your ${race.name} subrace.`); return false; }
-      break;
-    }
-    case 2: {
-      const b = CC.draft.baseScores || {};
-      if (CC.draft.abilityMethod === 'standard-array') {
-        const vals = ['str','dex','con','int','wis','cha'].map(a => b[a]);
-        if (vals.some(v => !v) || [...vals].sort((x, y) => x - y).join() !== '8,10,12,13,14,15') {
-          alert('Assign each of 15, 14, 13, 12, 10 and 8 to one ability.'); return false;
-        }
-      }
-      const he = CC.draft.halfElfBonus || [];
-      if (CC.draft.race === 'half-elf' && (!he[0] || !he[1] || he[0] === he[1])) { alert('Half-elves choose two different abilities for +1.'); return false; }
-      break;
-    }
-    case 1: {
-      if (!CC.draft.class) { alert('Please select a class.'); return false; }
-      const { choose } = classSkillChoice(CC.draft.class);
-      if ((CC.draft.proficiencyChoices || []).length !== choose) { alert(`Please choose ${choose} skills.`); return false; }
-      if (CC.draft.race === 'half-elf' && (CC.draft.extraSkills || []).length !== 2) { alert('Half-elves choose two more skills.'); return false; }
-      break;
-    }
-    case 6: if (!CC.draft.name.trim()) { alert('Please enter a character name.'); return false; } break;
-  }
+  // The same rules Quick character is tested against (dnd-hub-draft-rules.js).
+  const problem = validateDraft(CC.draft, SRD).find(p => p.step === CC.step);
+  if (problem) { alert(problem.message); return false; }
   return true;
 }
 
@@ -260,4 +236,11 @@ export async function finishCharacterCreation() {
 
   alert(`${character.name} is ready for adventure! 🎲`);
   if (_onFinish) await _onFinish(CC.campaignId);
+}
+
+/** Save a complete draft (Quick character) through the one creator save path. */
+export async function finishWithDraft(campaignId, draft) {
+  CC.campaignId = campaignId;
+  CC.draft = { ...CC.draft, ...draft };
+  await finishCharacterCreation();
 }
