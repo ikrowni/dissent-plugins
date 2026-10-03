@@ -127,6 +127,11 @@ export async function onInit(initData) {
 export function onEvent(ev) {
   const payload = ev.data;
   if (!payload) return;
+  // 🔴 fromUserId inside the payload is only the sender's claim: a tampered screen could say it was the DM (or say
+  // nothing, which isDMEvent let through) and reveal fog, move tokens or load maps on everyone's screen. A network
+  // event carries sender_id, set by the node from the authenticated caller; it replaces the claim. Events relayed
+  // on this screen by a sibling plugin (localPublish) have none and come from this user's own screen.
+  if (ev.sender_id && typeof payload === 'object') payload.fromUserId = ev.sender_id;
   handleMapEvent(payload).catch(e => console.error('[dnd-hub] event handler error:', e));
 }
 
