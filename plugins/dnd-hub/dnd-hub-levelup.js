@@ -1,16 +1,16 @@
 // dnd-hub-levelup.js — the level-up scene (spec 2026-10-03 growing your hero §1), in the map area, built from the
 // Hero Forge's pieces. Nothing is saved until the last step; several waiting levels run one after another.
-import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261007k';
+import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261007v';
 import { loadHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { storageGetUser } from '../plugin-sdk.js';
 import { rule } from './lk-table-rules.js';
 import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './lk-levelling.js';
 import { raceView, classView } from './lk-hero-data.js';
-import { createForgeFx } from './dnd-hub-forge-fx.js';
+import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
 import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
-import { saveHero } from './dnd-hub-char.js?v=20261007k';
+import { saveHero } from './dnd-hub-char.js?v=20261007v';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
 
 let S = null; // { campaignId, hero, plan, i, choices, error, onDone, fx, back }
@@ -37,9 +37,9 @@ export async function openLevelUp(campaignId, onDone = null) {
   if (!plan) { onDone?.(); return false; }
   S = { campaignId, hero, plan, i: 0, choices: {}, error: '', onDone, back: document.querySelector('[id^="screen-"]:not(.hidden)')?.id?.slice(7) || 'campaign' };
   window.showScreen('char-creator');
-  root().innerHTML = '<div class="forge"><canvas class="forge-fx" id="forge-fx"></canvas><div class="forge-ui" id="forge-ui"></div></div>';
+  root().innerHTML = FORGE_SHELL;
   S.fx = createForgeFx(document.getElementById('forge-fx'));
-  S.fx.setTint(raceView((SRD.races || []).find(r => r.id === hero.race) || { id: hero.race, name: hero.race }).colour);
+  { const [rv, cv] = views(); setAura([rv.aura[0], cv.aura[0]], S.fx); }
   S.fx.start();
   sound.chime();
   render();

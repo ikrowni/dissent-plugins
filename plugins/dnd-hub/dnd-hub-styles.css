@@ -168,3 +168,39 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .lk-stat{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;border:1px solid var(--dnd-border);border-radius:8px;background:var(--dnd-surface)}
 .lk-stat b{font-size:16px;color:var(--dnd-gold)}
 .lk-stat span{font-size:10px;color:var(--dnd-muted)}
+
+/* ── Screen transitions (dnd-hub-state.js showScreen) ─────────────────────────────────────────────────────── */
+.lk-leaving{pointer-events:none;z-index:1;animation:lk-leave .38s cubic-bezier(.4,0,.6,1) forwards}
+.lk-entering{z-index:2;animation:lk-enter .62s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lk-leave{to{opacity:0;transform:scale(1.035);filter:blur(6px) brightness(.6)}}
+@keyframes lk-enter{from{opacity:0;transform:scale(.97) translateY(10px);filter:blur(8px) brightness(1.4)}60%{filter:blur(0) brightness(1.08)}to{opacity:1;transform:none;filter:none}}
+.lk-sweep{position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,206,120,.16) 45%,rgba(255,236,190,.28) 50%,rgba(255,206,120,.16) 55%,transparent 70%);
+  background-size:260% 100%;animation:lk-sweep .85s ease-out forwards;mix-blend-mode:screen}
+@keyframes lk-sweep{from{background-position:120% 0;opacity:1}to{background-position:-60% 0;opacity:0}}
+
+/* ── Life in the lobby and lists ───────────────────────────────────────────────────────────────────────────── */
+.lobby-logo{animation:lk-lantern 4.8s ease-in-out infinite}
+@keyframes lk-lantern{0%,100%{filter:drop-shadow(0 0 10px rgba(224,160,60,.35))}45%{filter:drop-shadow(0 0 22px rgba(255,190,90,.6))}55%{filter:drop-shadow(0 0 16px rgba(240,170,70,.45))}}
+.lobby-title{animation:lk-title-in .9s .1s cubic-bezier(.2,.8,.2,1) both}
+.lobby-sub{animation:lk-title-in .9s .25s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lk-title-in{from{opacity:0;letter-spacing:.3em;filter:blur(4px)}to{opacity:1;filter:none}}
+.lobby-card{animation:forge-rise-lk .6s cubic-bezier(.2,.8,.2,1) both}
+.lobby-card:nth-child(2){animation-delay:.1s}.lobby-card:nth-child(3){animation-delay:.2s}
+.lobby-card:hover .lobby-card-icon{animation:lk-bob .9s ease-in-out infinite}
+@keyframes lk-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes forge-rise-lk{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+#screen-lobby{background-size:140% 140%;animation:lk-breathe-bg 9s ease-in-out infinite alternate}
+@keyframes lk-breathe-bg{from{background-position:50% 40%}to{background-position:50% 60%}}
+.btn-gold{position:relative;overflow:hidden}
+.btn-gold:hover{box-shadow:0 0 18px rgba(224,181,82,.45)}
+@media (prefers-reduced-motion:reduce){
+  .lk-leaving,.lk-entering,.lk-sweep,.lobby-logo,.lobby-title,.lobby-sub,.lobby-card,.lobby-card:hover .lobby-card-icon,#screen-lobby{animation:none!important}
+}
+.campaign-row,.available-card{animation:forge-rise-lk .5s cubic-bezier(.2,.8,.2,1) both;transition:transform .18s,box-shadow .25s,border-color .18s}
+.campaign-row:nth-child(2),.available-card:nth-child(2){animation-delay:.06s}
+.campaign-row:nth-child(3),.available-card:nth-child(3){animation-delay:.12s}
+.campaign-row:nth-child(4),.available-card:nth-child(4){animation-delay:.18s}
+.campaign-row:nth-child(n+5),.available-card:nth-child(n+5){animation-delay:.24s}
+.campaign-row:hover,.available-card:hover{transform:translateX(3px);box-shadow:-3px 0 0 var(--lk-gold),0 8px 22px rgba(0,0,0,.4)}
+@media (prefers-reduced-motion:reduce){.campaign-row,.available-card{animation:none!important}}

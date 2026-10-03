@@ -1,11 +1,25 @@
-// dnd-hub-forge-fx.js — the Hero Forge's living background: embers rising, lantern flicker, a little parallax, tinted
-// by the chosen race. Off under prefers-reduced-motion. Pauses while the page is hidden.
-const MAX_EMBERS = 70;
+// dnd-hub-forge-fx.js — the Hero Forge's living background: an atmosphere of two colours per race and class (CSS, so
+// it also changes under reduced motion), embers rising, lantern flicker, a little parallax. The embers are off under
+// prefers-reduced-motion. Pauses while the page is hidden.
+const MAX_EMBERS = 90;
+
+/** The Forge's layers: atmosphere, embers, then the UI (#forge-ui). */
+export const FORGE_SHELL = '<div class="forge"><div class="forge-aura" aria-hidden="true"></div><div class="forge-rays" aria-hidden="true"></div>'
+  + '<canvas class="forge-fx" id="forge-fx"></canvas><div class="forge-ui" id="forge-ui"></div></div>';
+
+/** Turn the background to `aura` ([light from below, haze from above]); CSS eases between colours. */
+export function setAura(aura, fx) {
+  const el = document.querySelector('#screen-char-creator .forge');
+  if (!el || !aura) return;
+  el.style.setProperty('--aura1', aura[0]);
+  el.style.setProperty('--aura2', aura[1]);
+  fx?.setTint(aura[0]);
+}
 
 export function createForgeFx(canvas) {
   const ctx = canvas.getContext('2d');
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  let tint = '#e0b552', raf = 0, running = false, px = 0, py = 0;
+  let tint = '#e0b552', target = '#e0b552', mix = 1, raf = 0, running = false, px = 0, py = 0;
   const embers = [];
 
   const size = () => {
@@ -23,9 +37,10 @@ export function createForgeFx(canvas) {
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
     // Lantern light: a soft pool low in the frame, breathing.
+    if (mix < 1) { mix = Math.min(1, mix + 0.02); tint = lerpHex(tint, target, mix); }
     const flicker = 0.85 + 0.15 * Math.sin(t / 310) * Math.sin(t / 97);
     const g = ctx.createRadialGradient(w * (0.5 + px * 0.05), h * 0.9, 0, w * 0.5, h * 0.9, h * 0.9);
-    g.addColorStop(0, hexA(tint, 0.22 * flicker)); g.addColorStop(1, 'rgba(0,0,0,0)');
+    g.addColorStop(0, hexA(tint, 0.3 * flicker)); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     while (embers.length < MAX_EMBERS) embers.push(spawn());
     for (const e of embers) {
@@ -50,11 +65,17 @@ export function createForgeFx(canvas) {
       window.removeEventListener('resize', size); window.removeEventListener('pointermove', onMove);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     },
-    setTint(hex) { tint = hex || tint; },
+    setTint(hex) { if (hex && hex !== target) { target = hex; mix = 0; } },
   };
 }
 
 function hexA(hex, a) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a.toFixed(3)})`;
+}
+
+function lerpHex(a, b, k) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = sh => Math.round((pa >> sh & 255) + ((pb >> sh & 255) - (pa >> sh & 255)) * k);
+  return '#' + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1);
 }

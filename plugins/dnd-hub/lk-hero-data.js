@@ -6,6 +6,18 @@ import { RACE_BLURBS, CLASS_BLURBS } from './dnd-hub-quick.js';
 export const ROLES = ['Front line', 'Ranged', 'Healer', 'Magic', 'Sneaky', 'Support'];
 export const DIFFICULTIES = ['Easy', 'Medium', 'Tricky'];
 
+// The Forge's background for each race and class: [light from below, haze from above]. Owner, 2026-10-03: the race
+// colours alone were too close to tell apart (most are warm golds), so each gets its own atmosphere.
+export const AURAS = {
+  dwarf: ['#ff6a1a', '#7a2e0e'], elf: ['#3ddc97', '#1e4d8c'], halfling: ['#ffc94a', '#5e8f2f'], human: ['#e8b54a', '#2f4fa8'],
+  dragonborn: ['#ff3d2e', '#c9a227'], gnome: ['#29e0d0', '#7b4dff'], 'half-elf': ['#ff8fb3', '#7a5cd6'],
+  'half-orc': ['#d4351c', '#6b4a2a'], tiefling: ['#ff2a6d', '#5b1a8c'],
+  barbarian: ['#ff3b1f', '#8a1c0c'], bard: ['#ff5fd2', '#ffb347'], cleric: ['#fff1b8', '#d9a520'], druid: ['#7ddc3d', '#2f6b3a'],
+  fighter: ['#7fa7d9', '#3b4a63'], monk: ['#ffae35', '#d9480f'], paladin: ['#ffe27a', '#8fb4ff'], ranger: ['#4caf50', '#8d6e3f'],
+  rogue: ['#8a5cff', '#1a1033'], sorcerer: ['#ff4d4d', '#a64dff'], warlock: ['#7cff4d', '#6a00a8'], wizard: ['#3d7bff', '#7f5af0'],
+};
+const DEFAULT_AURA = ['#e0b552', '#3a2410'];
+
 // art: true once dnd-hub/art/<id>.webp exists (owner-generated paintings; see the art prompts doc).
 export const RACE_INFO = {
   dwarf: { colour: '#d9772b', signature: 'Shrugs off poison', art: true,
@@ -55,6 +67,7 @@ export function raceView(r) {
   const bonusText = bonuses.length >= 6 ? ['+1 to every ability'] : bonuses.map(b => `${b.ability} +${b.bonus}`);
   return {
     id: r.id, name: r.name, blurb: RACE_BLURBS[r.id] || '', lore: info.lore || '', colour: info.colour || '#e0b552',
+    aura: AURAS[r.id] || DEFAULT_AURA,
     badges: [...bonusText, `${r.speed} ft`, ...(r.darkvision ? ['Darkvision'] : []), ...(info.signature ? [info.signature] : [])],
     emblem: `race-${r.id}`, art: info.art ? `art/${r.id}.webp` : null,
   };
@@ -66,6 +79,6 @@ export function classView(c) {
   return {
     id: c.id, name: c.name, blurb: CLASS_BLURBS[c.id] || '', role: info.role, difficulty: info.difficulty,
     main: String(info.main || '').toUpperCase(), sturdy: sturdiness(c.hit_die), plays: info.plays || '',
-    emblem: `class-${c.id}`, art: info.art ? `art/${c.id}.webp` : null,
+    emblem: `class-${c.id}`, art: info.art ? `art/${c.id}.webp` : null, aura: AURAS[c.id] || DEFAULT_AURA,
   };
 }

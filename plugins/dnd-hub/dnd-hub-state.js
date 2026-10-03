@@ -133,13 +133,40 @@ export function abilityMod(score) { return Math.floor((score - 10) / 2); }
 export function fmtMod(mod) { return mod >= 0 ? `+${mod}` : `${mod}`; }
 
 // ── Screen navigation (here to avoid cycle: events.js and screens.js both need it) ──
+// Screen changes cross-fade (owner, 2026-10-03: "cool transitions when moving from screen to screen"): the old screen
+// drifts back and dims while the new one rises out of a soft blur, and a band of lantern light sweeps across. The old
+// screen stays visible (not clickable) for the length of its exit, then is hidden. Reduced motion: an instant swap.
+const SCREENS = ['loading', 'lobby', 'dm-portal', 'join', 'cam-wizard', 'char-creator', 'campaign'];
+const _leaving = new Map(); // element → timer
 export function showScreen(name) {
-  ['loading', 'lobby', 'dm-portal', 'join', 'cam-wizard', 'char-creator', 'campaign'].forEach(s => {
-    const el = document.getElementById(`screen-${s}`);
-    if (el) el.classList.add('hidden');
-  });
+  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   const target = document.getElementById(`screen-${name}`);
-  if (target) { target.classList.remove('hidden'); target.classList.add('fade-in'); }
+  const wasShown = target && !target.classList.contains('hidden') && !_leaving.has(target);
+  SCREENS.forEach(s => {
+    const el = document.getElementById(`screen-${s}`);
+    if (!el || el === target) return;
+    if (_leaving.has(el)) { clearTimeout(_leaving.get(el)); _leaving.delete(el); el.classList.remove('lk-leaving'); el.classList.add('hidden'); }
+    else if (!el.classList.contains('hidden') && !still && !wasShown) {
+      el.classList.add('lk-leaving');
+      _leaving.set(el, setTimeout(() => { el.classList.remove('lk-leaving'); el.classList.add('hidden'); _leaving.delete(el); }, 380));
+    } else el.classList.add('hidden');
+  });
+  if (target) {
+    if (_leaving.has(target)) { clearTimeout(_leaving.get(target)); _leaving.delete(target); target.classList.remove('lk-leaving'); }
+    target.classList.remove('hidden');
+    if (!wasShown && !still) {
+      target.classList.remove('lk-entering', 'fade-in'); void target.offsetWidth; target.classList.add('lk-entering');
+      sweep();
+    }
+  }
   // dnd-hub-screens.js tells the sidebars whether a campaign is open (they stay sealed when none is).
   document.dispatchEvent(new CustomEvent('lk:screen', { detail: name }));
+}
+
+/** A band of warm light across the whole Hub, once. */
+function sweep() {
+  const el = document.createElement('div');
+  el.className = 'lk-sweep';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
 }

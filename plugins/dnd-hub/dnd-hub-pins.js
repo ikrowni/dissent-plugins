@@ -1,5 +1,5 @@
 // dnd-hub-pins.js — map pin placement, rendering, and journal overlay
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261007k';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261007v';
 import { storageSet, genId, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261007k';

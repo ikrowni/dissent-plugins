@@ -1,36 +1,36 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261007k';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261007v';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261007k';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261007k';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261007v';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261007k';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261007k';
+import { renderGrid } from './dnd-hub-grid.js?v=20261007v';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261007v';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261007k';
-import { renderFog } from './dnd-hub-fog.js?v=20261007k';
-import { renderWalls } from './dnd-hub-walls.js?v=20261007k';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261007k';
-import { loadSRD } from './dnd-hub-char.js?v=20261007k';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261007k';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261007k';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261007v';
+import { renderFog } from './dnd-hub-fog.js?v=20261007v';
+import { renderWalls } from './dnd-hub-walls.js?v=20261007v';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261007v';
+import { loadSRD } from './dnd-hub-char.js?v=20261007v';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261007v';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261007v';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261007k';
-import { renderLights } from './dnd-hub-lights.js?v=20261007k';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261007k';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261007k';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261007k';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261007k';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261007v';
+import { renderLights } from './dnd-hub-lights.js?v=20261007v';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261007v';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261007v';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261007v';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261007v';
 import { saveHubDm, loadHubDm, setSecretsUser } from './dnd-hub-storage.js?v=20261006s';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261007k';
+import { setView } from './dnd-hub-canvas.js?v=20261007v';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -138,6 +138,9 @@ export function onEvent(ev) {
   // event carries sender_id, set by the node from the authenticated caller; it replaces the claim. Events relayed
   // on this screen by a sibling plugin (localPublish) have none and come from this user's own screen.
   if (ev.sender_id && typeof payload === 'object') payload.fromUserId = ev.sender_id;
+  // The last events this screen received (type, sender, time): the playtest reads it when an event goes missing.
+  (window.__lkRecent ||= []).push({ t: payload.type || ev.event, from: ev.sender_id || 'local', at: Date.now() });
+  if (window.__lkRecent.length > 40) window.__lkRecent.shift();
   // The event's name is its type. Several senders (traps, the VTT import) put no `type` in the payload, and
   // handleMapEvent drops a typeless payload: a trap that fired reached nobody, not even the DM.
   if (typeof payload === 'object' && !payload.type && ev.event) payload.type = ev.event;

@@ -1,6 +1,7 @@
 // plugins/dnd-hub/lk-hero-data.test.js
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import * as mod from './lk-hero-data.js';
 import { RACE_INFO, CLASS_INFO, ROLES, DIFFICULTIES, raceView, classView, sturdiness } from './lk-hero-data.js';
 
 const races = JSON.parse(readFileSync(new URL('./dnd-srd/races.json', import.meta.url)));
@@ -44,5 +45,20 @@ describe('classView', () => {
     expect(sturdiness(6)).toBe('Fragile');
     const v = classView(classes.find(c => c.id === 'wizard'));
     expect(v).toMatchObject({ name: 'Wizard', role: 'Magic', difficulty: 'Tricky', main: 'INT', sturdy: 'Fragile', emblem: 'class-wizard' });
+  });
+});
+
+describe('auras (the Forge background)', () => {
+  const { AURAS } = mod;
+  it('every SRD race and class has its own atmosphere, and no two share a main colour', () => {
+    const ids = [...races.map(r => r.id), ...classes.map(c => c.id)];
+    for (const id of ids) expect(AURAS[id], id).toHaveLength(2);
+    const mains = ids.map(id => AURAS[id][0].toLowerCase());
+    expect(new Set(mains).size).toBe(mains.length);
+    for (const a of Object.values(AURAS)) for (const c of a) expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+  it('views carry the aura', () => {
+    expect(mod.raceView(races[0]).aura).toEqual(AURAS[races[0].id]);
+    expect(mod.classView(classes[0]).aura).toEqual(AURAS[classes[0].id]);
   });
 });

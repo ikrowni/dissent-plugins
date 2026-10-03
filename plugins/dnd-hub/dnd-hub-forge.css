@@ -64,3 +64,65 @@
 .forge-hurry{align-self:center;background:none;border:0;color:var(--lk-muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
 .forge-hurry:hover,.forge-hurry:focus-visible{color:var(--lk-gold)}
 .lvl-ab select,.forge-ui select,.forge-ui input,.forge-ui textarea{background:rgba(13,10,7,.7);border:1px solid var(--lk-line);border-radius:6px;color:var(--lk-text);padding:6px 8px;font:inherit}
+
+/* ── Atmosphere (owner, 2026-10-03: "the colour differences are far too low") ────────────────────────────────────
+   Two colours per race and class (lk-hero-data.js AURAS), set as --aura1/--aura2 by setAura(). Registered so the
+   browser eases between them; under reduced motion they still change, just at once. */
+@property --aura1{syntax:'<color>';inherits:true;initial-value:#e0b552}
+@property --aura2{syntax:'<color>';inherits:true;initial-value:#3a2410}
+.forge{transition:--aura1 1.2s ease,--aura2 1.4s ease}
+.forge-aura{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(120% 75% at 50% 112%,color-mix(in srgb,var(--aura1) 58%,transparent) 0,color-mix(in srgb,var(--aura1) 18%,transparent) 45%,transparent 72%),
+    radial-gradient(85% 65% at 8% -12%,color-mix(in srgb,var(--aura2) 62%,transparent) 0,transparent 62%),
+    radial-gradient(70% 55% at 104% 4%,color-mix(in srgb,var(--aura2) 38%,transparent) 0,transparent 60%),
+    linear-gradient(180deg,color-mix(in srgb,var(--aura2) 14%,var(--lk-bg)) 0,var(--lk-bg) 55%,color-mix(in srgb,var(--aura1) 16%,var(--lk-bg)) 100%)}
+/* Slow light shafts from above, in the haze colour. */
+.forge-rays{position:absolute;inset:-20% -10% 30% -10%;pointer-events:none;opacity:.32;mix-blend-mode:screen;
+  background:repeating-conic-gradient(from 200deg at 30% -10%,color-mix(in srgb,var(--aura2) 55%,transparent) 0 3deg,transparent 3deg 11deg);
+  -webkit-mask-image:radial-gradient(70% 80% at 30% 0,#000 0,transparent 75%);mask-image:radial-gradient(70% 80% at 30% 0,#000 0,transparent 75%);
+  animation:forge-rays 18s ease-in-out infinite alternate}
+@keyframes forge-rays{from{transform:rotate(-3deg) translateX(-2%)}to{transform:rotate(3deg) translateX(2%)}}
+/* The chosen colour reaches the hero's name and the Choose button. */
+.forge-name{text-shadow:0 0 28px color-mix(in srgb,var(--aura1) 55%,transparent),0 2px 0 rgba(0,0,0,.5);transition:text-shadow 1.2s}
+.forge-choose{box-shadow:0 0 0 1px color-mix(in srgb,var(--aura1) 60%,transparent),0 8px 30px color-mix(in srgb,var(--aura1) 40%,transparent)}
+.forge-art{box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 50px color-mix(in srgb,var(--aura1) 30%,transparent);transition:box-shadow 1.2s}
+.forge-row button[aria-pressed="true"]{box-shadow:0 0 18px color-mix(in srgb,var(--aura1) 70%,transparent)}
+
+/* ── Life: subtle motion (all off under reduced motion) ─────────────────────────────────────────────────────── */
+/* The name arrives letter-bright: a sheen passes over it once. */
+.forge-stage .forge-name{background:linear-gradient(100deg,#f3e3b5 40%,#fff 50%,#f3e3b5 60%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
+  filter:drop-shadow(0 0 16px color-mix(in srgb,var(--aura1) 60%,transparent));animation:forge-sheen 1.6s .25s ease-out both}
+@keyframes forge-sheen{from{background-position:100% 0}to{background-position:-50% 0}}
+/* Badges, cards and rows rise in one after another. */
+.forge-badges span,.lvl-card,.lvl-ab,.forge-stats .lk-stat{animation:forge-rise .5s cubic-bezier(.2,.8,.2,1) both}
+.forge-badges span:nth-child(2),.lvl-card:nth-child(2),.lvl-ab:nth-child(2){animation-delay:.05s}
+.forge-badges span:nth-child(3),.lvl-card:nth-child(3),.lvl-ab:nth-child(3){animation-delay:.1s}
+.forge-badges span:nth-child(4),.lvl-card:nth-child(4),.lvl-ab:nth-child(4){animation-delay:.15s}
+.forge-badges span:nth-child(5),.lvl-card:nth-child(5),.lvl-ab:nth-child(5){animation-delay:.2s}
+.forge-badges span:nth-child(6),.lvl-card:nth-child(6),.lvl-ab:nth-child(6){animation-delay:.25s}
+.lvl-card:nth-child(n+7){animation-delay:.3s}
+@keyframes forge-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* Cards lift towards the hand, and a chosen one glows once. */
+.lvl-card{transition:transform .18s,border-color .18s,box-shadow .25s,background .25s}
+.lvl-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--aura1,#e0b552) 70%,var(--lk-line));box-shadow:0 10px 26px rgba(0,0,0,.45)}
+.lvl-card[aria-pressed="true"]{border-color:var(--lk-gold);background:linear-gradient(160deg,color-mix(in srgb,var(--aura1,#e0b552) 22%,rgba(22,17,11,.9)),rgba(22,17,11,.9));
+  box-shadow:0 0 0 1px var(--lk-gold),0 0 24px color-mix(in srgb,var(--aura1,#e0b552) 45%,transparent);animation:forge-picked .6s ease-out}
+@keyframes forge-picked{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--aura1,#e0b552) 90%,transparent)}100%{box-shadow:0 0 0 1px var(--lk-gold),0 0 24px color-mix(in srgb,var(--aura1,#e0b552) 45%,transparent)}}
+/* The step dots fill as you go; the current one glows. */
+.forge-dots span{transition:background .4s}
+.forge-dots span.on:last-of-type,.forge-dots span.on:not(:has(+ .on)){box-shadow:0 0 10px var(--lk-gold);animation:forge-fill .6s ease-out both;transform-origin:left}
+@keyframes forge-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+/* The hero's two emblems float a little, out of step. */
+.lvl-hero > span,.lvl-hero > svg{animation:forge-float 5s ease-in-out infinite}
+.lvl-hero > svg{animation-delay:-2.5s}
+@keyframes forge-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+/* A gold sheen crosses the main button now and then. */
+.forge-ui .btn-gold{position:relative;overflow:hidden}
+.forge-ui .btn-gold::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-120%);animation:forge-btn-sheen 5s 1.2s ease-in-out infinite}
+@keyframes forge-btn-sheen{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+@media (prefers-reduced-motion:reduce){
+  .forge-rays,.forge-stage .forge-name,.forge-badges span,.lvl-card,.lvl-ab,.forge-stats .lk-stat,.forge-dots span.on,.lvl-hero > span,.lvl-hero > svg,.forge-ui .btn-gold::after{animation:none!important}
+  .forge-stage .forge-name{color:#f3e3b5;background:none}
+  .forge{transition:none}
+}
