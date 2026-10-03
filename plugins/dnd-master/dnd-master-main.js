@@ -14,10 +14,10 @@ import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, del
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20260502p4';
+  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261004a';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20260502p4';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261004a';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
@@ -33,6 +33,8 @@ import { icon } from './lk-icons.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate } from './dnd-master-party.js';
+import { setSessionState, openStartSession, startSessionNow, onSessionSceneChange, closeSessionWindow,
+  openEndSession, saveEndSession } from './dnd-master-session.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 
@@ -50,6 +52,7 @@ function renderNav() {
     <button class="dm-subtab${t === _activeTab ? ' active' : ''}" onclick="switchDMTab('${t}')">${TAB_LABELS[t]}</button>`).join('');
   document.getElementById('subtab-bar').classList.toggle('hidden', tabs.length < 2);
   document.getElementById('party-panel')?.classList.toggle('hidden', sec !== 'run');
+  document.getElementById('session-bar')?.classList.toggle('hidden', sec !== 'run');
   document.getElementById('dm-settings-btn')?.classList.toggle('active', _activeTab === 'settings');
 }
 
@@ -146,6 +149,7 @@ async function onInit(data) {
   await loadEncounterDraft();
   setPlayersState({ dmCampaign, dmCampaignId });
   setPartyState({ dmCampaign, dmCampaignId });
+  setSessionState({ dmCampaign, dmCampaignId, serverData, userId });
   setLaunchCallback(() => appendLogEntry({ type: 'combat-start', message: 'Encounter launched \u2014 Round 1' }));
   setEndCallback(()    => appendLogEntry({ type: 'combat-end',   message: 'Encounter ended' }));
   renderEncounterBuilder();
@@ -231,6 +235,8 @@ window.moveInitiative      = moveInitiative;
 window.rerollInitiative    = rerollInitiative;
 window.endEncounter        = endEncounter;
 window.rollMissingInitiative = rollMissingInitiative;
+// Start session / End session (spec 2026-10-03 §6).
+Object.assign(window, { openStartSession, startSessionNow, onSessionSceneChange, closeSessionWindow, openEndSession, saveEndSession });
 // Party at a glance: a row opens the existing player editor (its sheets load first).
 window.openPartyMember = async uid => {
   switchDMTab('players');      // starts loading the sheets
