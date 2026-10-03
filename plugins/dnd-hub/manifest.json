@@ -28,6 +28,10 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "art/races/Haf-Orc.jpg",
+      "sha256": "0f2db41c42c9b52faf2ebaf9648045f4f1045769c55337059aa8542e9abdfd31"
+    },
+    {
       "url": "dnd-campaign-merge.js",
       "sha256": "b71ea929bd63162c0a0f7ad3a645c27ee774c8061eaca5fb052791ee4944e9e9"
     },
@@ -109,7 +113,7 @@
     },
     {
       "url": "dnd-hub-forge-view.js",
-      "sha256": "024e7b745106da7ab83081c75f50f613eb18c4cb3ba1873ad68f1981bb59936f"
+      "sha256": "a6ca72714a0cd2619d8885e1b3ac2194705df01e0e5213fb2e0cac0359d7c7da"
     },
     {
       "url": "dnd-hub-forge.css",
@@ -117,7 +121,7 @@
     },
     {
       "url": "dnd-hub-forge.js",
-      "sha256": "291d60d90672bfde55dc595db07e35077d39cc5b093b6b18488a8b36639bae08"
+      "sha256": "9f8d906f2124de005caeb578232eeaf45cdf4b6a3ccce05e5fcaf072e8fd84fc"
     },
     {
       "url": "dnd-hub-frame.js",
@@ -137,11 +141,11 @@
     },
     {
       "url": "dnd-hub-levelup-view.js",
-      "sha256": "0f4f655dc1c5d984f3bca44cea27a2eb59fe1c58908c023cfe523f30d3143043"
+      "sha256": "4e6968143d9212e363f2ceb639704ee7e6d9425193cd516d86acde4588150e9a"
     },
     {
       "url": "dnd-hub-levelup.js",
-      "sha256": "72672dd6b88948aba2100cee979e5a1fda8b6c8d6f0e5f48affbe2503e94936b"
+      "sha256": "4bbfd97316c9b38c2d5db4e7d557e37be66d08e693858dc43902b7a7185b6c81"
     },
     {
       "url": "dnd-hub-lights.js",
@@ -177,7 +181,7 @@
     },
     {
       "url": "dnd-hub-quick.js",
-      "sha256": "c28b7d7bca4bb0cb8fa1d4d1608433e87a6ce88f982add9509de40e2ec10d6e6"
+      "sha256": "ea17cddd76ff744dbd1edff3b31799994e55d302ef5780ad609ce73a03de1785"
     },
     {
       "url": "dnd-hub-ruler.js",

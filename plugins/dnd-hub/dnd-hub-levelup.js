@@ -8,7 +8,7 @@ import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './l
 import { raceView, classView } from './lk-hero-data.js';
 import { createForgeFx } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
-import { reveal } from './dnd-hub-forge-view.js';
+import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
 import { saveHero } from './dnd-hub-char.js?v=20261003p';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
@@ -111,9 +111,10 @@ function showReveal(h) {
   const [rv, cv] = views();
   const ui = document.getElementById('forge-ui');
   ui.innerHTML = `<div class="forge-top"><div class="forge-title">Level ${h.level}</div></div>`
-    + reveal(h, rv, cv, previewStatsOfHero(h)).replace('Here’s your hero', 'Stronger now').replace('Here\'s your hero', 'Stronger now')
+    + reveal(h, rv, cv, previewStatsOfHero(h), h.level).replace('Here’s your hero', 'Stronger now').replace('Here\'s your hero', 'Stronger now')
       .replace(/<button id="quick-play"[^>]*>Play<\/button>/, '<button id="lvl-continue" class="btn btn-gold" style="width:100%;padding:12px" onclick="levelupContinue()">Continue</button>')
       .replace(/<button class="btn btn-ghost"[^>]*onclick="quickChange\(\)"[^>]*>Change something<\/button>/, '');
+  countUp(ui);
   sound.swell();
 }
 

@@ -150,7 +150,8 @@ export function previewStats(srd, draft) {
 
 /** The reveal card's numbers for a saved hero (level-up). */
 export function previewStatsOfHero(h) {
-  const weapon = (h.equipment || []).find(e => e.type === 'weapon' && e.equipped);
+  // Any equipped weapon the rules know (items added in play may carry no type).
+  const weapon = (h.equipment || []).find(e => e.equipped && isWeaponId(e.id));
   const w = weapon ? weaponProfile({ id: weapon.id }, h) : null;
   return { hp: h.hpMax, ac: h.ac, attack: w ? { name: weapon.name, toHit: w.toHit, damage: w.damage, damageType: w.damageType } : null };
 }

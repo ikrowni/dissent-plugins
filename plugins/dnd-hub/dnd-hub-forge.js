@@ -8,7 +8,7 @@ import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
-import { topBar, quickStrip, stage, emblemRow, reveal } from './dnd-hub-forge-view.js';
+import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub-forge-view.js';
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
@@ -72,13 +72,6 @@ function render() {
   document.getElementById('forge-choose')?.focus({ preventScroll: true });
 }
 
-function countUp(ui) {
-  for (const b of ui.querySelectorAll('[data-to]')) {
-    const to = Number(b.dataset.to), t0 = performance.now();
-    const tick = t => { const k = Math.min(1, (t - t0) / 900); b.textContent = String(Math.round(to * k)); if (k < 1) requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
-  }
-}
 
 function step(action, dir = 1) {
   const before = _s;

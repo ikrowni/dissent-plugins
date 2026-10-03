@@ -44,7 +44,7 @@ export function emblemRow(views, selected, label) {
 }
 
 /** Scene 3: the hero card. `p` from previewStats; numbers start at 0 and count up (data-to). */
-export function reveal(draft, race, cls, p) {
+export function reveal(draft, race, cls, p, level = 1) {
   const stat = (to, label) => `<div class="lk-stat"><b data-to="${to}">0</b><span>${esc(label)}</span></div>`;
   return `<div class="forge-card" id="forge-card">
     <svg class="frame" aria-hidden="true"><rect rx="12"/></svg>
@@ -52,10 +52,21 @@ export function reveal(draft, race, cls, p) {
     <div class="forge-title" style="text-align:center;margin-top:10px">Here's your hero</div>
     <input id="quick-name" value="${esc(draft.name)}" maxlength="60" aria-label="Name"
       style="display:block;width:100%;margin-top:10px;text-align:center;font-family:var(--lk-title);font-size:24px;background:transparent;border:0;border-bottom:1px solid var(--lk-line);color:#f3e3b5;padding:6px">
-    <div style="text-align:center;color:var(--lk-muted);font-size:13px;margin-top:6px">${esc(race.name)} ${esc(cls.name)} · level 1 · ${esc(cls.role)}</div>
+    <div style="text-align:center;color:var(--lk-muted);font-size:13px;margin-top:6px">${esc(race.name)} ${esc(cls.name)} · level ${level} · ${esc(cls.role)}</div>
     <div class="forge-stats">${stat(p.hp, 'HP')}${stat(p.ac, 'AC')}
       ${p.attack ? `<div class="lk-stat" style="flex:2"><b>${esc(p.attack.name)} ${p.attack.toHit >= 0 ? '+' : ''}${p.attack.toHit}</b><span>${esc(p.attack.damage)} ${esc(p.attack.damageType)}</span></div>` : ''}</div>
     <button id="quick-play" class="btn btn-gold" style="width:100%;padding:12px" onclick="quickPlay()">Play</button>
     <button class="btn btn-ghost" style="width:100%;margin-top:6px" onclick="quickChange()">Change something</button>
   </div>`;
+}
+
+/** Numbers on the hero card count up from 0 (data-to). Reduced motion: they are set at once. */
+export function countUp(root) {
+  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  for (const b of root.querySelectorAll('[data-to]')) {
+    const to = Number(b.dataset.to) || 0, t0 = performance.now();
+    if (still) { b.textContent = String(to); continue; }
+    const tick = t => { const k = Math.min(1, (t - t0) / 900); b.textContent = String(Math.round(to * k)); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
 }

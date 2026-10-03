@@ -20,9 +20,9 @@ export function header(hero, raceView, classView, level, stepIndex, stepCount, k
 export function body(step, choice, hero) {
   switch (step.kind) {
     case 'hp': return `<div class="lvl-grid">
-      ${card('average', `Take ${step.average + step.conMod} (average)`, `d${step.die} average ${step.average} + CON ${step.conMod >= 0 ? '+' : ''}${step.conMod}`, choice?.mode === 'average', 'hp', false)}
+      ${card('average', `Take ${Math.max(1, step.average + step.conMod) + (step.hillDwarf ? 1 : 0)} (average)`, `d${step.die} average ${step.average} + CON ${step.conMod >= 0 ? '+' : ''}${step.conMod}${step.hillDwarf ? ' + 1 (hill dwarf)' : ''}`, choice?.mode === 'average', 'hp', false)}
       <div class="lvl-card ${choice?.mode === 'roll' ? 'on' : ''}"><b>Roll a d${step.die}</b>
-        <span>Roll it at the table or here, then CON ${step.conMod >= 0 ? '+' : ''}${step.conMod} is added.</span>
+        <span>Roll it at the table or here, then CON ${step.conMod >= 0 ? '+' : ''}${step.conMod}${step.hillDwarf ? ' and 1 (hill dwarf) are' : ' is'} added.</span>
         <div style="display:flex;gap:6px;margin-top:6px"><input id="lvl-roll" type="number" min="1" max="${step.die}" value="${choice?.roll ?? ''}" style="width:70px" oninput="levelupRoll(this.value)">
         <button class="btn btn-ghost btn-sm" onclick="levelupRollDie(${step.die})">Roll</button></div></div></div>`;
     case 'subclass': case 'fightingStyle': case 'pactBoon':
