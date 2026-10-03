@@ -13,7 +13,8 @@ import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } fr
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
-export const CLIENT_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+import { CLIENT_ID } from './dnd-hub-client-id.js';
+export { CLIENT_ID };
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
 

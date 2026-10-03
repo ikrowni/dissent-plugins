@@ -16,6 +16,7 @@ import { setZoom } from './dnd-hub-canvas.js?v=20261005m';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';
+import { CLIENT_ID } from './dnd-hub-client-id.js';
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is
   // fitted with zoom/pan instead, once per map file, so a resize or re-render never
@@ -229,7 +230,7 @@ export async function setGridSettings(patch) {
   renderFog();
   renderTokens();
   syncGridPanel();
-  await realtimePublish('map:grid-settings', {
+  await realtimePublish('map:grid-settings', { clientId: CLIENT_ID,
     type: 'map:grid-settings',
     campaignId: MAP.campaignId,
     mapId: MAP.mapId,
@@ -278,7 +279,7 @@ export async function removeAllWalls() {
     await saveHubDm( serverData);
   }
   renderWalls();
-  await realtimePublish('walls:update', { type: 'walls:update', campaignId: MAP.campaignId, walls: [] });
+  await realtimePublish('walls:update', { clientId: CLIENT_ID, type: 'walls:update', campaignId: MAP.campaignId, walls: [] });
 }
 
 export async function removeAllDoors() {
@@ -291,7 +292,7 @@ export async function removeAllDoors() {
     await saveHubDm( serverData);
   }
   renderWalls();
-  await realtimePublish('door:state', { type: 'door:state', campaignId: MAP.campaignId, doors: {} });
+  await realtimePublish('door:state', { clientId: CLIENT_ID, type: 'door:state', campaignId: MAP.campaignId, doors: {} });
 }
 
 export function renderNoMapPlaceholder() {
@@ -555,10 +556,10 @@ export async function runVTTImport() {
       type: 'map:set', campaignId: MAP.campaignId, mapId,
       fileId: upload.id, signedUrl: upload.url,
     });
-    await realtimePublish('walls:update', {
+    await realtimePublish('walls:update', { clientId: CLIENT_ID,
       type: 'walls:update', campaignId: MAP.campaignId, walls,
     });
-    await realtimePublish('door:state', {
+    await realtimePublish('door:state', { clientId: CLIENT_ID,
       type: 'door:state', campaignId: MAP.campaignId, doors,
     });
 

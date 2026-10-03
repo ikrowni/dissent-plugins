@@ -20,6 +20,7 @@ import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, n
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
 
+import { CLIENT_ID } from './dnd-hub-client-id.js';
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
   if (!wrap) return;
@@ -251,7 +252,7 @@ export async function initPixiApp() {
         await saveHubDm( serverData);
         renderWalls();
         refreshGuide();
-        await realtimePublish(EV.WALLS_UPDATE, { type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
+        await realtimePublish(EV.WALLS_UPDATE, { clientId: CLIENT_ID, type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
       } else if (tool === 'door') {
         const doorId = genId();
         if (!MAP.mapData.doors) MAP.mapData.doors = {};
@@ -265,7 +266,7 @@ export async function initPixiApp() {
         await saveHubDm( serverData);
         renderWalls();
         refreshGuide();
-        await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
+        await realtimePublish(EV.DOOR_STATE, { clientId: CLIENT_ID, type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
       }
       drawStart = null;
     });
@@ -605,7 +606,7 @@ export async function initPixiApp() {
     serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
     renderWalls();
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
-    await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
+    await realtimePublish(EV.DOOR_STATE, { clientId: CLIENT_ID, type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
     // Whoever opens it saves it: merge-on-save makes that safe without the DM online.
     await saveHubDm(serverData);
   });
@@ -742,7 +743,7 @@ export function initKeyboardHandlers() {
         await saveHubDm( serverData);
       }
       renderWalls();
-      await realtimePublish(EV.WALLS_UPDATE, { type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
+      await realtimePublish(EV.WALLS_UPDATE, { clientId: CLIENT_ID, type: EV.WALLS_UPDATE, campaignId: MAP.campaignId, walls: MAP.mapData.walls, fromUserId: userId });
     } else if (MAP.selectedDoor) {
       const doors = { ...(MAP.mapData.doors || {}) };
       delete doors[MAP.selectedDoor];
@@ -753,7 +754,7 @@ export function initKeyboardHandlers() {
         await saveHubDm( serverData);
       }
       renderWalls();
-      await realtimePublish(EV.DOOR_STATE, { type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
+      await realtimePublish(EV.DOOR_STATE, { clientId: CLIENT_ID, type: EV.DOOR_STATE, campaignId: MAP.campaignId, doors: MAP.mapData.doors, fromUserId: userId });
     } else if (MAP.activeLightId && MAP.isDM && MAP.mapData) {
       MAP.mapData.lights = (MAP.mapData.lights || []).filter(l => l.id !== MAP.activeLightId);
       MAP.activeLightId = null;

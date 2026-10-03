@@ -5,6 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
 import { guarded } from './lk-upload.js';
+import { CLIENT_ID } from './dnd-hub-client-id.js';
 let _zoneSprites = [];  // { id, circle, label } — tracked for selective removal
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ export function renderAudioZones() {
 
 export async function saveZonesAndBroadcast() {
   await saveHubDm( serverData);
-  await realtimePublish(EV.AUDIO_ZONE_UPDATE, {
+  await realtimePublish(EV.AUDIO_ZONE_UPDATE, { clientId: CLIENT_ID,
     campaignId: MAP.campaignId,
     mapId: MAP.mapId,
     audioZones: MAP.mapData.audioZones || [],

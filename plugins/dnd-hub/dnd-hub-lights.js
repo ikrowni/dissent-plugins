@@ -6,6 +6,7 @@ import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from
 import { wallPx } from './dnd-hub-walls.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
+import { CLIENT_ID } from './dnd-hub-client-id.js';
 // ── Two shapes of light ───────────────────────────────────────────────────────
 
 /**
@@ -150,7 +151,7 @@ export async function saveLightsAndBroadcast() {
   if (!MAP.mapData || !MAP.campaignId || !MAP.mapId) return;
   serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
   await saveHubDm( serverData);
-  await realtimePublish(EV.LIGHTS_UPDATE, {
+  await realtimePublish(EV.LIGHTS_UPDATE, { clientId: CLIENT_ID,
     type: EV.LIGHTS_UPDATE,
     campaignId: MAP.campaignId,
     mapId: MAP.mapId,

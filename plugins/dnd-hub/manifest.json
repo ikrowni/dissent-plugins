@@ -41,11 +41,11 @@
     },
     {
       "url": "dnd-hub-audio-zones.js",
-      "sha256": "06816bfa8de4bcba521dab67a4fdcc2a51f9a964f2b6bb2025d237cae42d8c36"
+      "sha256": "339a6abc442510f6ffba6e8c21d1f06afa6daafa776374b363582956680146fc"
     },
     {
       "url": "dnd-hub-canvas.js",
-      "sha256": "ece390f4fd26dfb58dfd1f6c2d3e87bd664d64cbf367436b06a60653ba07f71f"
+      "sha256": "196ac031b974648e183fb1f29f35cc2fb6bebb7006d24d454dd0c9767ccc1094"
     },
     {
       "url": "dnd-hub-char-format.js",
@@ -58,6 +58,10 @@
     {
       "url": "dnd-hub-char.js",
       "sha256": "9eb1494a40400e7c9324a8d8beb629d2d6cd6970bc0e268ea9a93181a028e540"
+    },
+    {
+      "url": "dnd-hub-client-id.js",
+      "sha256": "42a2a970cc132ec22203506bec00bee2929e116378c52c86b1239fdeace88bb6"
     },
     {
       "url": "dnd-hub-combat.js",
@@ -81,7 +85,7 @@
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "07219c52436b896ca70513eb05ccc07f02293cbf8ef894b11918f57b19518dbe"
+      "sha256": "25304a764a4a5dde3533e2f9e4c910a162c1aa6a9cffabe78a31e892c1ecd595"
     },
     {
       "url": "dnd-hub-fog.js",
@@ -105,7 +109,7 @@
     },
     {
       "url": "dnd-hub-lights.js",
-      "sha256": "5c89dc4d788df84241b81379166f572647b4437299329350ba328ca9b858b981"
+      "sha256": "2a6028dda753a4ba06c3b8fd3fa356a10860649e5922e57c1f29d670b5f213be"
     },
     {
       "url": "dnd-hub-los.js",
@@ -117,7 +121,7 @@
     },
     {
       "url": "dnd-hub-map-bg.js",
-      "sha256": "54527a83fd5479feea90d0b3387dc85371c55280ff05634de1f171f146bcdb42"
+      "sha256": "b00134a050818068dc53f49b4706a50a4ff77145fb43250f47ad709c79c3b59e"
     },
     {
       "url": "dnd-hub-movement.js",
@@ -133,7 +137,7 @@
     },
     {
       "url": "dnd-hub-pins.js",
-      "sha256": "89853f1e4df72614aabb338336fcc2136ed43d576d2a5f6b624346211d590d16"
+      "sha256": "02354b7b096742662e939e75efc09a3aab0fd1cb11792284c6f86b7d898828c7"
     },
     {
       "url": "dnd-hub-quick-screen.js",
@@ -185,7 +189,7 @@
     },
     {
       "url": "dnd-hub-tokens.js",
-      "sha256": "1b89adf95e7388e2ae4e0f35744104b13b43e64dde212caf5b778712c40b27e7"
+      "sha256": "1f2e921b4fdd6ecb5361e63c850ec1e4ef4d6db9fba6b1d2fbe3dd7c86412bdf"
     },
     {
       "url": "dnd-hub-triggers.js",

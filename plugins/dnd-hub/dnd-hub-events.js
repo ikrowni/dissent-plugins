@@ -136,8 +136,14 @@ export function onEvent(ev) {
   // The event's name is its type. Several senders (traps, the VTT import) put no `type` in the payload, and
   // handleMapEvent drops a typeless payload: a trap that fired reached nobody, not even the DM.
   if (typeof payload === 'object' && !payload.type && ev.event) payload.type = ev.event;
+  // My own echo of a whole-state edit (grid, walls, doors, lights, pins, sound zones) is old by the time it comes
+  // back: this screen already applied the edit, and may have made another since. Applying the echo undid it (the
+  // grid's opacity went back, toolbar test 2026-10-03).
+  if (payload.clientId === CLIENT_ID && OWN_ECHO_IGNORED.has(payload.type)) return;
   handleMapEvent(payload).catch(e => console.error('[dnd-hub] event handler error:', e));
 }
+
+const OWN_ECHO_IGNORED = new Set(['map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update']);
 
 const PRIVILEGED_EVENTS = new Set([
   'hp:change','fog:reveal','fog:reset','map:set','initiative:update',
