@@ -4,9 +4,11 @@ import { EV } from './dnd-hub-event-types.js';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
 import { adjustedEncounterXp } from './lk-rules5e.js';
+import { preparedToDraft, spawnPositions } from './dnd-master-prepared.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 let encounterCreatures = [];
+let _preparedSpawn = null; // cells for the loaded prepared encounter (content packs)
 let _targetDifficulty = null;
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, srdMonsters: [], switchDMTab: null, userId: null };
 let _onLaunch = null;
@@ -80,6 +82,14 @@ function _parseAttacks(srdMonster) {
 export function renderEncounterBuilder() {
   const el = document.getElementById('tab-encounter');
   el.innerHTML =
+    (Object.values(_state.dmCampaign?.encounters || {}).length
+      ? '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px">PREPARED</div>' +
+        Object.values(_state.dmCampaign.encounters).map(e =>
+          '<div class="setting-row"><div style="flex:1;font-size:11px">' + esc(e.name) +
+          ' <span style="color:var(--muted)">' + esc(e.difficulty || '') + '</span></div>' +
+          '<button class="btn btn-ghost btn-sm" onclick="loadPreparedEncounter(\'' + esc(e.id) + '\')">Load</button></div>').join('') +
+        '<div style="height:10px"></div>'
+      : '') +
     '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.05em">ENCOUNTER BUILDER</div>' +
     '<input class="search-input" id="enc-search" placeholder="Search monsters\u2026" oninput="filterMonsters(this.value)">' +
     '<div id="enc-monster-list" style="height:' + _encMonsterListH + 'px;overflow-y:auto;margin-bottom:0"></div>' +
@@ -290,7 +300,16 @@ export function changeCount(idx, delta) {
   renderCreatureList(); renderXPBudget();
 }
 export function removeCreature(idx) { encounterCreatures.splice(idx, 1); _saveDraft(); renderCreatureList(); renderXPBudget(); }
-export function clearEncounter() { encounterCreatures = []; _targetDifficulty = null; _saveDraft(); renderCreatureList(); renderXPBudget(); }
+export function clearEncounter() { encounterCreatures = []; _targetDifficulty = null; _preparedSpawn = null; _saveDraft(); renderCreatureList(); renderXPBudget(); }
+
+/** Load a content pack's prepared encounter into the builder; its monsters will spawn on the pack's cells. */
+export function loadPreparedEncounter(id) {
+  const enc = _state.dmCampaign?.encounters?.[id];
+  if (!enc) return;
+  encounterCreatures = preparedToDraft(enc, _state.srdMonsters);
+  _preparedSpawn = enc.spawn || null;
+  _saveDraft(); renderCreatureList(); renderXPBudget();
+}
 
 export async function launchEncounter() {
   if (!encounterCreatures.length) { alert('Add monsters to the encounter first.'); return; }
@@ -338,17 +357,18 @@ export async function launchEncounter() {
     if (_onLaunch) _onLaunch();
     const lootByMonsterId = {};
     encounterCreatures.forEach(e => { lootByMonsterId[e.monster.id] = e.lootItems || []; });
-    encounterCreatures = []; _targetDifficulty = null; _saveDraft();
+    const spawnCells = _preparedSpawn;
+    encounterCreatures = []; _targetDifficulty = null; _preparedSpawn = null; _saveDraft();
     if (_state.switchDMTab) _state.switchDMTab('initiative');
 
     // Auto-spawn monster tokens on the active map
-    await _spawnMonsterTokens(order, _state.dmCampaignId, _state.userId, lootByMonsterId);
+    await _spawnMonsterTokens(order, _state.dmCampaignId, _state.userId, lootByMonsterId, spawnCells);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '\u2694\ufe0f Launch Encounter'; }
   }
 }
 
-async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId = {}) {
+async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId = {}, spawnCells = null) {
   try {
     const freshData = await loadHubDmCompanion();
     if (!freshData) return;
@@ -365,6 +385,8 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
     const spawnX = bgOffX + (bgW > 0 ? bgW + gs : gs * 15);
     mapData.tokens = mapData.tokens || {};
 
+    // A prepared encounter's monsters stand on their cells in the room; others in the old column off the map.
+    const pos = spawnPositions(order, spawnCells, mapData.gridSize || gs, null);
     const newTokens = [];
     let row = 0;
     for (const c of order) {
@@ -372,7 +394,7 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
       if (mapData.tokens[c.id]) continue;
       mapData.tokens[c.id] = {
         id: c.id, type: 'monster', name: c.name,
-        x: spawnX, y: oy + row * gs + gs / 2,
+        x: pos[order.indexOf(c)]?.x ?? spawnX, y: pos[order.indexOf(c)]?.y ?? (oy + row * gs + gs / 2),
         hp: c.hp, hpMax: c.hpMax, ac: c.ac || 10,
         conditions: [], visible: true,
         monsterId: c.monsterId || null,

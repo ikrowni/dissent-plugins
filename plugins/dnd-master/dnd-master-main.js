@@ -3,7 +3,7 @@ import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet } from '
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { loadSRDMonsters, getSRDMonsters, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
-import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter,
+import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
   toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20260502p4';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
@@ -206,6 +206,7 @@ window.switchDMTab         = switchDMTab;
 window.switchSection       = switchSection;
 window.filterMonsters               = filterMonsters;
 window.addMonsterToEncounter        = addMonsterToEncounter;
+window.loadPreparedEncounter        = loadPreparedEncounter;
 window.changeCount                  = changeCount;
 window.removeCreature               = removeCreature;
 window.clearEncounter               = clearEncounter;
