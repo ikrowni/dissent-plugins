@@ -872,7 +872,8 @@ async function rollInitiativeNow() {
   setNeedsInitiativeRoll(false);
   renderCombat(_initiativeActive);
   _showPlayerToast(`Initiative: ${roll} (d20 ${d20})`);
-  await publishTo(['master'], EV.INITIATIVE_ROLL, { campaignId: CAMPAIGN_ID, userId: USER_ID, roll, fromUserId: USER_ID });
+  // Via the Hub: players have not consented to the DM's sidebar, so the node refuses a publish to it (403).
+  await publishTo(['hub'], EV.INITIATIVE_ROLL, { campaignId: CAMPAIGN_ID, userId: USER_ID, roll, fromUserId: USER_ID });
 }
 
 function weaponRollDamage() {

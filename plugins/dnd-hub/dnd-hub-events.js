@@ -491,6 +491,13 @@ export async function handleMapEvent(p) {
     case 'token:death-save':
       // Hub shows death state via hp<=0 skull (buildTokenSprite); player sidebar handles the save UI.
       break;
+    case EV.INITIATIVE_ROLL: {
+      // A player's own initiative roll. Players cannot publish to the DM's sidebar (no consent → 403), so the
+      // DM's Hub hands it to the sidebar on the same screen.
+      if (p.campaignId !== MAP.campaignId || !MAP.isDM) return;
+      localPublish('dnd-master', EV.INITIATIVE_ROLL, p);
+      break;
+    }
     case EV.DAMAGE_REQUEST: {
       // A player's Hub judged a hit and rolled damage; only the DM's Hub changes HP, and only if the table applies damage.
       if (p.campaignId !== MAP.campaignId || !MAP.isDM || !rule(serverData?.campaigns?.[p.campaignId]?.settings, 'autoDamage')) return;
