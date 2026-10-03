@@ -5,10 +5,10 @@ import { loadSRDMonsters, getSRDMonsters, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20260502p4';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261003d';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
-  toggleInitRow, applyMassHP, spawnTokensOnMap } from './dnd-master-initiative.js';
+  toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative } from './dnd-master-initiative.js';
 import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261003d';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
@@ -22,7 +22,7 @@ import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJour
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
 import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20260503';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20260502p4';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261003d';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -31,6 +31,7 @@ import { pickCampaign } from './dnd-campaign-pick.js';
 import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
 import { icon } from './lk-icons.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { isRepeat } from './lk-bus.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
 
@@ -164,6 +165,12 @@ function onEvent(ev) {
     const el = document.getElementById('tab-initiative');
     if (el && !el.classList.contains('hidden')) renderInitiativeTracker();
   }
+  if (p.type === EV.INITIATIVE_ROLL && p.campaignId === dmCampaignId) {
+    if (isRepeat(p)) return;
+    // The roller's own id: a player can roll only for themselves.
+    if (p.fromUserId && p.fromUserId === p.userId) acceptInitiativeRoll(p.userId, p.roll).catch(e => console.error('[dnd-master] initiative roll', e));
+    return;
+  }
   if (p.type === 'combat:settings' && p.campaignId === dmCampaignId) {
     if (dmCampaign) dmCampaign.settings = p.settings;
     setSettingsState({ dmCampaign, dmCampaignId, serverData, userId });
@@ -217,6 +224,9 @@ window.setLootItem         = setLootItem;
 window.moveInitiative      = moveInitiative;
 window.rerollInitiative    = rerollInitiative;
 window.endEncounter        = endEncounter;
+window.rollMissingInitiative = rollMissingInitiative;
+// Read-only, for the playtest (like window.MAP on the Hub).
+window.__dmInitiative = () => getInitiativeState();
 window.updateHP            = updateHP;
 window.toggleInitRow       = toggleInitRow;
 window.applyMassHP         = applyMassHP;

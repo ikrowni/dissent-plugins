@@ -3,6 +3,7 @@ import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePubl
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { withPlayerRoll, rollMissing } from './dnd-master-init-order.js';
 
 let currentInitiative = null;
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
@@ -33,7 +34,7 @@ function renderInitRow(c, i, isCurrent) {
     ' onclick="toggleInitRow(' + i + ',event)"' +
     ' style="cursor:pointer;border-radius:4px;' + selBg + '">' +
     '<div class="init-dot" style="background:' + dotColor + '"></div>' +
-    '<div style="font-weight:700;font-size:11px;min-width:14px;color:var(--muted)">' + c.roll + '</div>' +
+    '<div style="font-weight:700;font-size:11px;min-width:14px;color:var(--muted)">' + (c.roll == null ? '…' : c.roll) + '</div>' +
     '<div style="flex:1;min-width:0">' +
       '<div style="' + nameStyle + '">' + esc(c.name) + conds + '</div>' +
       '<div style="display:flex;align-items:center;gap:4px;margin-top:2px">' +
@@ -57,8 +58,7 @@ async function saveAndBroadcastInit() {
   serverData.campaigns[dmCampaignId].initiative = currentInitiative;
   await saveHubDmCompanion(serverData);
   const initPayload = { type: EV.INITIATIVE_UPDATE, campaignId: dmCampaignId, initiative: currentInitiative, fromUserId: _state.userId };
-  await realtimePublish(EV.INITIATIVE_UPDATE, initPayload);
-  await realtimePublishCompanion('dnd-player', EV.INITIATIVE_UPDATE, initPayload);
+  await publishTo(['hub', 'player'], EV.INITIATIVE_UPDATE, initPayload);
 }
 
 export function renderInitiativeTracker() {
@@ -91,6 +91,15 @@ export function renderInitiativeTracker() {
       '</div>'
     : '<div style="font-size:9px;color:var(--muted);text-align:center;padding:3px 0">Shift-click rows to multi-select</div>';
 
+  const missing = init.order.filter(c => c.roll == null);
+  const waitBanner = init.waiting
+    ? '<div id="init-waiting" style="margin-bottom:8px;padding:6px 8px;border:1px solid rgba(212,175,55,.4);border-radius:6px;font-size:10px;color:var(--text)">' +
+        'Waiting for initiative from ' + missing.map(c => esc(c.name)).join(', ') +
+        '<button class="btn btn-ghost" style="margin-left:6px" onclick="rollMissingInitiative()">Roll for them</button>' +
+      '</div>'
+    : '';
+  const dis = init.waiting ? ' disabled' : '';
+
   el.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
       '<div style="font-size:11px;color:var(--muted)">Round <strong style="color:var(--gold);font-size:13px">' + init.round + '</strong></div>' +
@@ -100,16 +109,18 @@ export function renderInitiativeTracker() {
         '<button class="btn btn-red" onclick="endEncounter()">End</button>' +
       '</div>' +
     '</div>' +
+    waitBanner +
     '<div id="init-list" style="margin-bottom:8px">' + rows + '</div>' +
     massPanel +
     '<div style="display:flex;gap:6px;margin-top:6px">' +
-      '<button class="btn btn-ghost" style="flex:1" onclick="moveInitiative(-1)">\u2190 Prev</button>' +
-      '<button class="btn btn-gold" style="flex:1" onclick="moveInitiative(1)">Next \u2192</button>' +
+      '<button class="btn btn-ghost" style="flex:1"' + dis + ' onclick="moveInitiative(-1)">\u2190 Prev</button>' +
+      '<button class="btn btn-gold" style="flex:1"' + dis + ' onclick="moveInitiative(1)">Next \u2192</button>' +
     '</div>';
 }
 
 export async function moveInitiative(dir) {
   if (!currentInitiative || !currentInitiative.order || !currentInitiative.order.length) return;
+  if (currentInitiative.waiting) return;
   const len = currentInitiative.order.length;
   currentInitiative.currentIndex = (currentInitiative.currentIndex + dir + len) % len;
   if (dir > 0 && currentInitiative.currentIndex === 0) currentInitiative.round++;
@@ -136,6 +147,7 @@ export async function rerollInitiative() {
   currentInitiative.order.forEach(c => { c.roll = rollDice(1, 20, 0); });
   currentInitiative.order.sort((a, b) => b.roll - a.roll);
   currentInitiative.currentIndex = 0;
+  currentInitiative.waiting = false; // every row has a roll now
   await saveAndBroadcastInit();
   renderInitiativeTracker();
 }
@@ -154,8 +166,7 @@ export async function endEncounter() {
   _state.serverData.campaigns[_state.dmCampaignId].initiative = currentInitiative;
   await saveHubDmCompanion(_state.serverData);
   const endPayload = { type: EV.INITIATIVE_UPDATE, campaignId: _state.dmCampaignId, initiative: currentInitiative, fromUserId: _state.userId };
-  await realtimePublish(EV.INITIATIVE_UPDATE, endPayload);
-  await realtimePublishCompanion('dnd-player', EV.INITIATIVE_UPDATE, endPayload);
+  await publishTo(['hub', 'player'], EV.INITIATIVE_UPDATE, endPayload);
 
   // Remove monster tokens from the active map
   if (monsterIds.length) {
@@ -262,4 +273,23 @@ export async function spawnTokensOnMap() {
   const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
   localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
   realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
+}
+
+/** A player's own initiative roll (Table rules: playersRollInitiative). */
+export async function acceptInitiativeRoll(userId, roll) {
+  if (!Number.isFinite(Number(roll))) return;
+  const next = withPlayerRoll(currentInitiative, userId, Math.round(Number(roll)));
+  if (next === currentInitiative) return;
+  currentInitiative = next;
+  await saveAndBroadcastInit();
+  renderInitiativeTracker();
+}
+
+/** The DM rolls for every player who has not (someone stepped away). */
+export async function rollMissingInitiative() {
+  if (!currentInitiative?.active) return;
+  const chars = _state.dmCampaign?.characterSummaries || {};
+  currentInitiative = rollMissing(currentInitiative, c => rollDice(1, 20, Math.floor(((chars[c.userId]?.dex || 10) - 10) / 2)));
+  await saveAndBroadcastInit();
+  renderInitiativeTracker();
 }

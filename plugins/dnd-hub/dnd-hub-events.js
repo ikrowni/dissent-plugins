@@ -23,7 +23,7 @@ import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { isRepeat, publishTo } from './lk-bus.js';
-import { acceptMove } from './dnd-hub-rules.js';
+import { acceptMove, activeTokenId } from './dnd-hub-rules.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
 // used to skip re-animating our own broadcast when it bounces back via realtime.
@@ -397,10 +397,22 @@ export async function handleMapEvent(p) {
       }
       break;
     }
-    case 'initiative:update':
+    case 'initiative:update': {
       if (p.campaignId !== MAP.campaignId) return;
       renderInitiativeHUD(p.initiative);
+      // Turn lock and per-turn movement follow the DM's tracker (they used to follow only "Set as Active Turn").
+      const active = activeTokenId(p.initiative);
+      if (active !== MAP.activeTurnTokenId) {
+        MAP.activeTurnTokenId = active;
+        MAP.turnMovedDistance = 0;
+        if (active) {
+          MAP.turnMovedDistances.set(active, 0);
+          MAP.activeTurnTokenSpeed = MAP.mapData?.tokens?.[active]?.speed || 30;
+        }
+        renderTokens();
+      }
       break;
+    }
     case EV.DICE_PHYSICS_ROLL: {
       // A player asked us to run a genuine physics roll and report back the result.
       const { sides, count, mod = 0, label, expression, userId: rollerId, ts, advMode, rollType = null } = p;

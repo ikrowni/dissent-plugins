@@ -6,6 +6,9 @@ import { setInitiativeState } from './dnd-master-initiative.js';
 import { adjustedEncounterXp } from './lk-rules5e.js';
 import { preparedToDraft, spawnPositions } from './dnd-master-prepared.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { rule } from './lk-table-rules.js';
+import { startInitiative } from './dnd-master-init-order.js';
+import { publishTo } from './lk-bus.js';
 
 let encounterCreatures = [];
 let _preparedSpawn = null; // cells for the loaded prepared encounter (content packs)
@@ -321,11 +324,12 @@ export async function launchEncounter() {
     const members = (_state.dmCampaign && _state.dmCampaign.members) || [];
     const chars = (_state.dmCampaign && _state.dmCampaign.characterSummaries) || {};
 
+    const playersRoll = rule(_state.dmCampaign?.settings, 'playersRollInitiative');
     members.forEach(uid => {
       const c = chars[uid];
       if (!c) return;
       const initMod = abilityMod(c.dex || 10);
-      order.push({ id: 'player_' + uid, name: c.name, roll: rollDice(1, 20, initMod), type: 'player', userId: uid, hp: c.hp || 10, hpMax: c.hpMax || 10, ac: c.ac || 10, conditions: [] });
+      order.push({ id: 'player_' + uid, name: c.name, roll: playersRoll ? null : rollDice(1, 20, initMod), type: 'player', userId: uid, hp: c.hp || 10, hpMax: c.hpMax || 10, ac: c.ac || 10, conditions: [] });
     });
 
     encounterCreatures.forEach(entry => {
@@ -345,15 +349,14 @@ export async function launchEncounter() {
       }
     });
 
-    order.sort((a, b) => b.roll - a.roll);
-    const initiative = { active: true, round: 1, currentIndex: 0, order };
+    const initiative = startInitiative(order);
     _state.dmCampaign.initiative = initiative;
     _state.serverData.campaigns[_state.dmCampaignId].initiative = initiative;
     await saveHubDmCompanion(_state.serverData);
     setInitiativeState(initiative);
     const initPayload = { type: EV.INITIATIVE_UPDATE, campaignId: _state.dmCampaignId, initiative, fromUserId: _state.userId };
-    await realtimePublish(EV.INITIATIVE_UPDATE, initPayload);
-    await realtimePublishCompanion('dnd-player', EV.INITIATIVE_UPDATE, initPayload);
+    // The Hub never heard the old plain realtimePublish (it reaches only dnd-master).
+    await publishTo(['hub', 'player'], EV.INITIATIVE_UPDATE, initPayload);
     if (_onLaunch) _onLaunch();
     const lootByMonsterId = {};
     encounterCreatures.forEach(e => { lootByMonsterId[e.monster.id] = e.lootItems || []; });
