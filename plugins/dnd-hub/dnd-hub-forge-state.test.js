@@ -6,7 +6,7 @@ const s0 = () => initForge(9, 12);
 
 describe('forgeStep', () => {
   it('starts on the races, first of each', () => {
-    expect(s0()).toEqual({ scene: 'race', race: 0, cls: 0, nRaces: 9, nClasses: 12, quick: null });
+    expect(s0()).toEqual({ scene: 'race', race: 0, cls: 0, nRaces: 9, nClasses: 12, quick: null, picks: false });
   });
   it('browses the current scene and wraps both ways', () => {
     expect(forgeStep(s0(), { type: 'browse', by: -1 }).race).toBe(8);
@@ -40,6 +40,13 @@ describe('forgeStep', () => {
   it('change goes to the class scene and forgets the quick pick', () => {
     const s = forgeStep(s0(), { type: 'quickPick', id: 'human-cleric', race: 3, cls: 2 });
     expect(forgeStep(s, { type: 'change' })).toMatchObject({ scene: 'class', race: 3, cls: 2, quick: null });
+  });
+  it('choose on the class scene goes to the picks scene when the class has level-1 picks', () => {
+    const s = { ...initForge(9, 12), scene: 'class', picks: true };
+    expect(forgeStep(s, { type: 'choose' }).scene).toBe('picks');
+    expect(forgeStep({ ...s, scene: 'picks' }, { type: 'choose' }).scene).toBe('reveal');
+    expect(forgeStep({ ...s, scene: 'picks' }, { type: 'back' }).scene).toBe('class');
+    expect(forgeStep({ ...s, scene: 'reveal' }, { type: 'back' }).scene).toBe('picks');
   });
   it('ignores unknown actions', () => {
     const s = s0();

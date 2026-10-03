@@ -22,8 +22,6 @@ const L1_FEATURES = {
 };
 // XP to reach each level: a campaign that starts above level 1 hands the new hero this much XP, and the
 // level-up wizard (one tested path) walks them through every level's choices (audit A4).
-const XP_FOR_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000,
-  140000, 165000, 195000, 225000, 265000, 305000, 355000];
 
 // Callback injected by bootstrap to avoid screens.js ↔ char.js circular import.
 // Set via onFinishRegister(enterCampaignAsPlayer) before any user interaction.
@@ -134,7 +132,7 @@ export function ccValidateStep() {
   return true;
 }
 
-export async function finishCharacterCreation() {
+export async function finishCharacterCreation({ enter = true } = {}) {
   const identity = await getIdentity();
   if (!identity?.id) { alert('Could not verify identity.'); return; }
 
@@ -146,8 +144,6 @@ export async function finishCharacterCreation() {
   const hitDie = cls?.hit_die || hitDieFor(CC.draft.class);
   // Hill dwarves: +1 HP per level (Dwarven Toughness).
   const maxHP = Math.max(1, hitDie + abilityMod(finalScores.con)) + (CC.draft.subrace === 'hill-dwarf' ? 1 : 0);
-  const campaign = (await loadHubDm())?.campaigns?.[CC.campaignId];
-  const startLevel = Math.min(20, Math.max(1, campaign?.startingLevel || 1));
   const background = (SRD.backgrounds || []).find(b => b.id === CC.draft.background);
   // Starting kit: armour and shield worn, weapons in hand; named, so the inventory can show them.
   const equipment = (CC.draft.equipment || []).map(id => {
@@ -169,7 +165,7 @@ export async function finishCharacterCreation() {
     class: CC.draft.class,
     subclass: CC.draft.subclass,
     level: 1,
-    xp: XP_FOR_LEVEL[startLevel],
+    xp: 0, // the campaign record decides the level now (lk-levelling.js allowedLevel)
     background: CC.draft.background,
     alignment: CC.draft.alignment,
     deity: CC.draft.deity,
@@ -221,6 +217,7 @@ export async function finishCharacterCreation() {
     userId: identity.id, name: character.name, class: character.class, race: character.race,
   });
 
+  if (!enter) return; // the Forge plays the starting level's level-ups first
   alert(`${character.name} is ready for adventure! 🎲`);
   if (_onFinish) await _onFinish(CC.campaignId);
 }
@@ -250,8 +247,8 @@ export async function saveHero(campaignId, character) {
 }
 
 /** Save a complete draft (Quick character) through the one creator save path. */
-export async function finishWithDraft(campaignId, draft) {
+export async function finishWithDraft(campaignId, draft, { enter = true } = {}) {
   CC.campaignId = campaignId;
   CC.draft = { ...CC.draft, ...draft };
-  await finishCharacterCreation();
+  await finishCharacterCreation({ enter });
 }

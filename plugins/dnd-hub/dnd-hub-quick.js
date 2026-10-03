@@ -65,13 +65,13 @@ export const RECOMMENDED_SPELLS = {
 };
 
 export const READY_HEROES = [
-  { id: 'dwarf-fighter', race: 'dwarf', class: 'fighter', name: 'Thora Ironbrand', label: 'Brave dwarf fighter',
+  { id: 'dwarf-fighter', race: 'dwarf', class: 'fighter', name: 'Thora Ironbrand', label: 'Brave dwarf fighter', picks: { fightingStyle: 'defense' },
     blurb: 'Heavy armour, a sword and shield. Stands in front and keeps friends safe.' },
   { id: 'elf-wizard', race: 'elf', class: 'wizard', name: 'Aelin Starwhisper', label: 'Clever elf wizard',
     blurb: 'Fragile but powerful: magic missiles, sleep spells and a spellbook full of answers.' },
-  { id: 'halfling-rogue', race: 'halfling', class: 'rogue', name: 'Pip Underbough', label: 'Sneaky halfling rogue',
+  { id: 'halfling-rogue', race: 'halfling', class: 'rogue', name: 'Pip Underbough', label: 'Sneaky halfling rogue', picks: { expertise: ['Stealth', 'Perception'] },
     blurb: 'Quiet, quick and lucky. Opens locks, finds traps, strikes from the shadows.' },
-  { id: 'human-cleric', race: 'human', class: 'cleric', name: 'Brother Aldric', label: 'Kind human cleric',
+  { id: 'human-cleric', race: 'human', class: 'cleric', name: 'Brother Aldric', label: 'Kind human cleric', picks: { subclass: 'life' },
     blurb: 'Armoured healer. Keeps the party standing and smites what threatens it.' },
   { id: 'half-orc-barbarian', race: 'half-orc', class: 'barbarian', name: 'Grusk the Bold', label: 'Fierce half-orc barbarian',
     blurb: 'Rages, hits hard and shrugs off blows that would drop anyone else.' },
@@ -102,7 +102,7 @@ const NAMES = {
 };
 
 /** A complete creator draft for `raceId` + `classId`. `rng` picks the name; `name` overrides it. */
-export function quickBuild(srd, raceId, classId, rng = Math.random, name = null) {
+export function quickBuild(srd, raceId, classId, rng = Math.random, name = null, picks = {}) {
   const race = (srd.races || []).find(r => r.id === raceId);
   const prio = CLASS_PRIORITY[classId] || ABILITY_KEYS;
   const baseScores = Object.fromEntries(prio.map((a, i) => [a, ARRAY[i]]));
@@ -129,6 +129,8 @@ export function quickBuild(srd, raceId, classId, rng = Math.random, name = null)
   }
   const pool = NAMES[raceId] || ['Hero'];
   draft.name = name || pool[Math.floor(rng() * pool.length) % pool.length];
+  // A ready-made hero's level-1 picks (subclass, fighting style, expertise): growing-your-hero spec §1.
+  Object.assign(draft, picks);
   return draft;
 }
 

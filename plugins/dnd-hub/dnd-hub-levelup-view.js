@@ -11,10 +11,10 @@ const card = (id, name, desc, on, group, multi) =>
   `<button class="lvl-card" aria-pressed="${on}" onclick="levelupPick('${group}','${esc(id)}',${multi})"><b>${esc(name)}</b>${desc ? `<span>${esc(desc)}</span>` : ''}</button>`;
 
 export function header(hero, raceView, classView, level, stepIndex, stepCount, kind) {
-  return `<div class="forge-top"><div class="forge-title">Level ${level} · ${esc(TITLES[kind] || '')}</div>
+  return `<div class="forge-top"><div class="forge-title">${level === 1 ? '' : `Level ${level} · `}${esc(TITLES[kind] || '')}</div>
     <div style="margin-left:auto;color:var(--lk-muted);font-size:12px">${stepIndex + 1} / ${stepCount}</div></div>
     <div class="lvl-hero"><span style="color:${raceView.colour}">${emblem(raceView.emblem, 54)}</span>${emblem(classView.emblem, 54)}
-      <div><div class="forge-name" style="font-size:26px">${esc(hero.name)}</div><div style="color:var(--lk-muted)">${esc(classView.name)} ${level - 1} → ${level}</div></div></div>`;
+      <div><div class="forge-name" style="font-size:26px">${esc(hero.name)}</div><div style="color:var(--lk-muted)">${level === 1 ? `${esc(classView.name)} · your first choices` : `${esc(classView.name)} ${level - 1} → ${level}`}</div></div></div>`;
 }
 
 export function body(step, choice, hero) {
