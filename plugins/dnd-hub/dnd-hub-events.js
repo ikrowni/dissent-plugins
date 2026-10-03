@@ -491,6 +491,15 @@ export async function handleMapEvent(p) {
     case 'token:death-save':
       // Hub shows death state via hp<=0 skull (buildTokenSprite); player sidebar handles the save UI.
       break;
+    case EV.PARTY_UPDATE: {
+      // A hero's summary changed. The Hub's copy feeds passive Perception for traps and token names; the DM's Hub
+      // hands it to the DM sidebar, which players cannot reach (no consent → 403).
+      if (p.campaignId !== MAP.campaignId || p.fromUserId !== p.userId || !p.summary) return;
+      const camp = serverData?.campaigns?.[p.campaignId];
+      if (camp) camp.characterSummaries = { ...(camp.characterSummaries || {}), [p.userId]: p.summary };
+      if (MAP.isDM) localPublish('dnd-master', EV.PARTY_UPDATE, p);
+      break;
+    }
     case EV.INITIATIVE_ROLL: {
       // A player's own initiative roll. Players cannot publish to the DM's sidebar (no consent → 403), so the
       // DM's Hub hands it to the sidebar on the same screen.
