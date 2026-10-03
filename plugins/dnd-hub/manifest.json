@@ -28,8 +28,24 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "art/barbarian.webp",
+      "sha256": "31591a73ff77e3fadd09abc60f88556e9826a3b1954b0d5244cb28acc9b438e7"
+    },
+    {
+      "url": "art/bard.webp",
+      "sha256": "d513ae48b9c8150384ee38220cb2fc81d566641f1f9ed90cfb24af6243e61f3f"
+    },
+    {
+      "url": "art/cleric.webp",
+      "sha256": "4b077feff37f03147851920b0c948f38e57740a6523fade1a6f4161bf1b9f175"
+    },
+    {
       "url": "art/dragonborn.webp",
       "sha256": "25133b2755136880ad69ec9892070086876e0ec8c77cd64e5c0aecc0615d508a"
+    },
+    {
+      "url": "art/druid.webp",
+      "sha256": "2cbd758aead542c23ab865a9554259bc9548b8138c5164fd33c6940f75c6638c"
     },
     {
       "url": "art/dwarf.webp",
@@ -38,6 +54,10 @@
     {
       "url": "art/elf.webp",
       "sha256": "216a7bd68dc719f56548dc2578bdf5e864c3da683679f33d73c22236e461423c"
+    },
+    {
+      "url": "art/fighter.webp",
+      "sha256": "d9d067bc007eb5192b118d5f62215b2509699510ea863372ac4762855322db8d"
     },
     {
       "url": "art/gnome.webp",
@@ -60,8 +80,36 @@
       "sha256": "541586e52da2c7a1e0c6f066d7a6bd38c4df205b372b422a5aa4f5728b7d3c3a"
     },
     {
+      "url": "art/monk.webp",
+      "sha256": "936f161db1933e72ff7edda126d6467ed42201dc824a397a16b47ab1d4fd07ea"
+    },
+    {
+      "url": "art/paladin.webp",
+      "sha256": "ee90c4eab5678cdc92626a25beae7de709ff0e3163b40073135e587a5811f8ee"
+    },
+    {
+      "url": "art/ranger.webp",
+      "sha256": "1ba0cd1ced7c6c6053f9cecf2cd15dc838432703c64e4440718457ab4e09fc15"
+    },
+    {
+      "url": "art/rogue.webp",
+      "sha256": "fc9ac43449508886d2f9c7e6642982619aa86fe8713aeeba30a2ee823cd04dc3"
+    },
+    {
+      "url": "art/sorcerer.webp",
+      "sha256": "353b9b60eefe63081a33adeaef989a2a7e1fa1bac104d4309164b2d2a036bf1c"
+    },
+    {
       "url": "art/tiefling.webp",
       "sha256": "c93d877e1f6fee5215a6bf1a0d65b0e714b108675fdcc4fb60a2a2741e921117"
+    },
+    {
+      "url": "art/warlock.webp",
+      "sha256": "1ca64b6a67ab85e1787b50b151bec2a3a48fd01d2da92ba12be157988fa4ce25"
+    },
+    {
+      "url": "art/wizard.webp",
+      "sha256": "c4561c86c0722de3ea9b32edba978f3bb7cd4c4ae6bd210cb62a9243e315d242"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -329,7 +377,7 @@
     },
     {
       "url": "lk-hero-data.js",
-      "sha256": "aa89958ac7b37bc6d5c8c805ee5180f69149bbb124836f3c16117f5654c6d52e"
+      "sha256": "50a403456f0c1564d323dd65d41a4a7b11c3a7be83b67f99991dddbb7f2486fc"
     },
     {
       "url": "lk-icons.js",

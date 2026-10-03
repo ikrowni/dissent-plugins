@@ -29,18 +29,18 @@ export const RACE_INFO = {
 };
 
 export const CLASS_INFO = {
-  barbarian: { role: 'Front line', difficulty: 'Easy', main: 'str', art: false, plays: 'Rage to hit harder and shrug off blows. Wade in and swing.' },
-  bard: { role: 'Support', difficulty: 'Tricky', main: 'cha', art: false, plays: 'Inspire friends, heal them, and talk or trick your way past trouble.' },
-  cleric: { role: 'Healer', difficulty: 'Medium', main: 'wis', art: false, plays: 'Heal the party and smite foes with holy magic, in heavy armour.' },
-  druid: { role: 'Magic', difficulty: 'Tricky', main: 'wis', art: false, plays: 'Nature magic and healing; later you can turn into animals.' },
-  fighter: { role: 'Front line', difficulty: 'Easy', main: 'str', art: false, plays: 'The best with weapons and armour. Simple, sturdy and reliable.' },
-  monk: { role: 'Front line', difficulty: 'Medium', main: 'dex', art: false, plays: 'Fast unarmed strikes and acrobatics; no armour needed.' },
-  paladin: { role: 'Front line', difficulty: 'Medium', main: 'str', art: false, plays: 'A holy knight: heavy armour, smiting blows and some healing.' },
-  ranger: { role: 'Ranged', difficulty: 'Medium', main: 'dex', art: false, plays: 'Archer and tracker: a bow, wilderness skills and a little nature magic.' },
-  rogue: { role: 'Sneaky', difficulty: 'Medium', main: 'dex', art: false, plays: 'Strike from the shadows for big damage; picks locks and finds traps.' },
-  sorcerer: { role: 'Magic', difficulty: 'Medium', main: 'cha', art: false, plays: 'Magic in the blood: few spells, bent and twisted to your will.' },
-  warlock: { role: 'Magic', difficulty: 'Medium', main: 'cha', art: false, plays: 'A pact grants a few strong spells that return after a short rest.' },
-  wizard: { role: 'Magic', difficulty: 'Tricky', main: 'int', art: false, plays: 'The biggest spell list, studied from a spellbook. Fragile but full of answers.' },
+  barbarian: { role: 'Front line', difficulty: 'Easy', main: 'str', art: true, plays: 'Rage to hit harder and shrug off blows. Wade in and swing.' },
+  bard: { role: 'Support', difficulty: 'Tricky', main: 'cha', art: true, plays: 'Inspire friends, heal them, and talk or trick your way past trouble.' },
+  cleric: { role: 'Healer', difficulty: 'Medium', main: 'wis', art: true, plays: 'Heal the party and smite foes with holy magic, in heavy armour.' },
+  druid: { role: 'Magic', difficulty: 'Tricky', main: 'wis', art: true, plays: 'Nature magic and healing; later you can turn into animals.' },
+  fighter: { role: 'Front line', difficulty: 'Easy', main: 'str', art: true, plays: 'The best with weapons and armour. Simple, sturdy and reliable.' },
+  monk: { role: 'Front line', difficulty: 'Medium', main: 'dex', art: true, plays: 'Fast unarmed strikes and acrobatics; no armour needed.' },
+  paladin: { role: 'Front line', difficulty: 'Medium', main: 'str', art: true, plays: 'A holy knight: heavy armour, smiting blows and some healing.' },
+  ranger: { role: 'Ranged', difficulty: 'Medium', main: 'dex', art: true, plays: 'Archer and tracker: a bow, wilderness skills and a little nature magic.' },
+  rogue: { role: 'Sneaky', difficulty: 'Medium', main: 'dex', art: true, plays: 'Strike from the shadows for big damage; picks locks and finds traps.' },
+  sorcerer: { role: 'Magic', difficulty: 'Medium', main: 'cha', art: true, plays: 'Magic in the blood: few spells, bent and twisted to your will.' },
+  warlock: { role: 'Magic', difficulty: 'Medium', main: 'cha', art: true, plays: 'A pact grants a few strong spells that return after a short rest.' },
+  wizard: { role: 'Magic', difficulty: 'Tricky', main: 'int', art: true, plays: 'The biggest spell list, studied from a spellbook. Fragile but full of answers.' },
 };
 
 /** The hit die in words a new player understands. */
