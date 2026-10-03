@@ -2,6 +2,7 @@
 import { request, requestWithTransfer, storageGet, storageSet, realtimePublishCompanion, localPublish, genId, esc } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js';
 
+import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _localAudio = null; // currently playing local <audio> element
 
@@ -63,7 +64,7 @@ export async function uploadNewSound() {
   if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
   try {
     const buf = await file.arrayBuffer();
-    const res = await requestWithTransfer('files:upload',
+    const res = await guarded(requestWithTransfer)('files:upload',
       { name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf },
       [buf], 120000);
     if (!res?.id) throw new Error('Upload returned no file ID');
@@ -73,7 +74,7 @@ export async function uploadNewSound() {
     if (input) input.value = '';
     renderSoundsTab();
   } catch (e) {
-    alert('Upload failed: ' + (e?.message || String(e)));
+    if (!e?.shown) alert('Upload failed: ' + (e?.message || String(e)));
     if (btn) { btn.disabled = false; btn.textContent = '🎵 Upload Audio'; }
   }
 }

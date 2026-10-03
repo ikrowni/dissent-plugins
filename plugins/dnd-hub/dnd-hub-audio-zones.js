@@ -4,6 +4,7 @@ import { storageSet, realtimePublish, genId, esc, request } from '../plugin-sdk.
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 
+import { guarded } from './lk-upload.js';
 let _zoneSprites = [];  // { id, circle, label } — tracked for selective removal
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -158,7 +159,7 @@ export function showZoneDialog(wx, wy, existingZone) {
       try {
         // attachContext keeps zone audio tied to the campaign (reclaimed with it,
         // never swept as an abandoned upload) — plugin-storage spec §7.
-        const res = await request('files:upload', {
+        const res = await guarded(request)('files:upload', {
           data: buf, name: file.name, mime: file.type,
           attachContext: `campaign:${MAP.campaignId}`,
         });
@@ -166,7 +167,7 @@ export function showZoneDialog(wx, wy, existingZone) {
       } catch (e) {
         // It used to log this and save the zone with no sound, which looked like success.
         console.error('Zone audio upload failed', e);
-        alert(`That sound could not be uploaded (${e.message || e}). Try an MP3.`);
+        if (!e?.shown) alert(`That sound could not be uploaded (${e.message || e}).`);
         return;
       }
     }

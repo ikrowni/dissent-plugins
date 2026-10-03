@@ -1,11 +1,11 @@
 // dnd-hub-sample.js — "Start the sample adventure": a normal, editable campaign built from a content pack
 // (spec 2026-10-03 §3).
 import { serverData, setServerData } from './dnd-hub-state.js?v=20260502p4';
-import { getIdentity, genId, requestWithTransfer } from '../plugin-sdk.js';
+import { getIdentity, genId } from '../plugin-sdk.js';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { compileMap, validatePack } from './lk-content-pack.js';
-import { drawPackMap } from './dnd-hub-pack-map.js';
+import { packFileId } from './dnd-hub-pack-map.js';
 import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261003b';
 
 const html = parts => (parts || []).map(p => p).join('\n\n');
@@ -24,15 +24,10 @@ export async function startSampleAdventure() {
     const camp = campaignRecord({ id, name: pack.meta.name, description: pack.meta.description,
       dmUserId: identity.id, dmDisplayName: identity.displayName || 'Unknown DM' });
 
-    // Map: draw → upload (tied to this campaign, so deleting it reclaims the file) → map record.
+    // Map: drawn on every screen from the pack, never uploaded, so Quick start needs no storage (plan 2026-10-03).
     const pm = pack.maps[0];
-    const blob = await drawPackMap(pm);
-    const buf = await blob.arrayBuffer();
-    const up = await requestWithTransfer('files:upload', { name: `${pm.id}.png`, mime: 'image/png', size: buf.byteLength,
-      dmOnly: false, data: buf, attachContext: `campaign:${id}` }, [buf], 120000);
-    if (!up?.id) throw new Error('Map upload failed.');
     const mapId = genId();
-    camp.maps[mapId] = { id: mapId, fileId: up.id, name: pm.name, mime: 'image/png', ...compileMap(pm) };
+    camp.maps[mapId] = { id: mapId, fileId: packFileId('lanternkeep-sample', pm.id), name: pm.name, mime: 'image/png', ...compileMap(pm) };
     camp.activeMapId = mapId;
 
     // Story: one journal page per section; read-aloud first, DM notes after.

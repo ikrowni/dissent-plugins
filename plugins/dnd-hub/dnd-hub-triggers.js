@@ -5,6 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { rule } from './lk-table-rules.js';
 
+import { guarded } from './lk-upload.js';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -312,11 +313,11 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
       const file = soundFileEl.files[0];
       const buf  = await file.arrayBuffer();
       try {
-        const res = await request('files:upload', { data: buf, name: file.name, mime: file.type });
+        const res = await guarded(request)('files:upload', { data: buf, name: file.name, mime: file.type });
         fileId = res?.id || null;
       } catch (e) {
         console.error('Trigger sound upload failed', e);
-        alert(`That sound could not be uploaded (${e.message || e}). Try an MP3.`);
+        if (!e?.shown) alert(`That sound could not be uploaded (${e.message || e}).`);
         return;
       }
     }

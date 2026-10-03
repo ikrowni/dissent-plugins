@@ -6,6 +6,7 @@ import { armorClass } from './lk-rules5e.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { CANTRIPS_KNOWN, spellLimitL1 as spellLimitFor, classSkillChoice as skillChoiceFor, draftScores as scoresFor } from './dnd-hub-draft-rules.js';
 
+import { guarded } from './lk-upload.js';
 // ── Race ──────────────────────────────────────────────────────────────────────
 export function renderCCRace(el) {
   const races = SRD.races || [];
@@ -677,7 +678,7 @@ export async function handlePortraitUpload(input) {
     const { request } = await import('../plugin-sdk.js');
     // attachContext ties the portrait to the campaign so it is reclaimed with it
     // and never swept as an abandoned upload — plugin-storage spec §7.
-    const result = await request('files:upload', {
+    const result = await guarded(request)('files:upload', {
       data: buf, name: file.name, mime: file.type,
       attachContext: `campaign:${CC.campaignId}`,
     });
@@ -687,7 +688,7 @@ export async function handlePortraitUpload(input) {
     if (preview) preview.innerHTML = `<img src="${esc(result.url)}" style="width:100%;height:100%;object-fit:cover">`;
     if (btn) btn.textContent = '🔄 Change Portrait';
   } catch (err) {
-    alert('Portrait upload failed: ' + err.message);
+    if (!err?.shown) alert('Portrait upload failed: ' + err.message);
     if (btn) btn.textContent = '📷 Upload Portrait';
   }
   input.value = '';

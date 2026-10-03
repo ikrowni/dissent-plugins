@@ -41,7 +41,7 @@
     },
     {
       "url": "dnd-hub-audio-zones.js",
-      "sha256": "accabc416dbdbeabea7b82eade537abd0bcde33822251119359466c86e9d12e8"
+      "sha256": "06816bfa8de4bcba521dab67a4fdcc2a51f9a964f2b6bb2025d237cae42d8c36"
     },
     {
       "url": "dnd-hub-canvas.js",
@@ -53,7 +53,7 @@
     },
     {
       "url": "dnd-hub-char-steps.js",
-      "sha256": "3631aff8f0d2d9e063795976a3836513495bbcd6dac44dba7436b6fd679b8f21"
+      "sha256": "8c6c44f6baf0e2ff90d589cb9ddbad67ae4a9e3957834ca4d1492716a4700df1"
     },
     {
       "url": "dnd-hub-char.js",
@@ -117,7 +117,7 @@
     },
     {
       "url": "dnd-hub-map-bg.js",
-      "sha256": "63ee3633e6a048858c625c667f196ba8d464f511291cf6dedddaaa3138ae8934"
+      "sha256": "54527a83fd5479feea90d0b3387dc85371c55280ff05634de1f171f146bcdb42"
     },
     {
       "url": "dnd-hub-movement.js",
@@ -129,7 +129,7 @@
     },
     {
       "url": "dnd-hub-pack-map.js",
-      "sha256": "6f3c1a35a55908575c52fd62f0c6c023031660eed3e0ef0a9e5f3c39d450a0c4"
+      "sha256": "b84baf856c3d32c3aee413b8613e0ba1005bdf9cbc0426b006c217c15995a4ba"
     },
     {
       "url": "dnd-hub-pins.js",
@@ -153,7 +153,7 @@
     },
     {
       "url": "dnd-hub-sample.js",
-      "sha256": "8339566562f57ddb02d58618f8f7118b4eeec3ea1362a65cf45ea9cd9e2541aa"
+      "sha256": "431de724a8f45b1f960437ca5efd16fe76f51c2987edbfa26d14b8befeb210ae"
     },
     {
       "url": "dnd-hub-screens.js",
@@ -189,7 +189,7 @@
     },
     {
       "url": "dnd-hub-triggers.js",
-      "sha256": "455f815fb99e49b4dc0556fc45a8a8ae584053243c604851a65f3bde3425a241"
+      "sha256": "768487dfb33e7690069b09308071988c6bf9873e552d739a5b97750d150bb307"
     },
     {
       "url": "dnd-hub-turn-move.js",
@@ -266,6 +266,10 @@
     {
       "url": "lk-table-rules.js",
       "sha256": "4a8823184980f8809ee32e646d163f03684c5e496853417612af65f51e7be32d"
+    },
+    {
+      "url": "lk-upload.js",
+      "sha256": "5a1281c1b5ea46424aee788502ba9ca0fff8dbf2624a4a210d64b81ab1d9209c"
     },
     {
       "url": "packs/lanternkeep-sample.json",

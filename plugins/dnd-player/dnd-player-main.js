@@ -24,6 +24,7 @@ import { pickCampaign } from './dnd-campaign-pick.js';
 import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
+import { guarded } from './lk-upload.js';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1375,7 +1376,7 @@ function openCharEdit() {
       try {
         const file = fileInput.files[0];
         const buf  = await file.arrayBuffer();
-        const res  = await request('files:upload', { data: buf, name: file.name, mime: file.type });
+        const res  = await guarded(request)('files:upload', { data: buf, name: file.name, mime: file.type });
         if (res?.id) { CHAR.portraitUrl = res.url || ''; CHAR.portraitFileId = res.id; }
       } catch (e) { console.error('Portrait upload failed', e); }
     }

@@ -11,9 +11,11 @@ import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
+import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
 import { setZoom } from './dnd-hub-canvas.js?v=20261005m';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
+import { guarded } from './lk-upload.js';
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is
   // fitted with zoom/pan instead, once per map file, so a resize or re-render never
@@ -121,15 +123,20 @@ export async function renderMapBackground() {
     let mime = storedMime;
     let blobUrl;
     try {
-      const result = await request('files:loadArrayBuffer', { fileId: mapData.fileId });
-      mime = result?.mime || 'application/octet-stream';
-      if (needsProbe && mime.startsWith('video/')) {
-        // Edge case: old map entry without stored mime, and file turned out to
-        // be a video.  Re-enter via the video path by temporarily patching mime.
-        mapData.mime = mime;
-        return renderMapBackground();
+      if (parsePackFileId(mapData.fileId)) {
+        // A pack map (Quick start): drawn here, nothing stored.
+        blobUrl = URL.createObjectURL(await packMapBlob(mapData.fileId));
+      } else {
+        const result = await request('files:loadArrayBuffer', { fileId: mapData.fileId });
+        mime = result?.mime || 'application/octet-stream';
+        if (needsProbe && mime.startsWith('video/')) {
+          // Edge case: old map entry without stored mime, and file turned out to
+          // be a video.  Re-enter via the video path by temporarily patching mime.
+          mapData.mime = mime;
+          return renderMapBackground();
+        }
+        blobUrl = URL.createObjectURL(new Blob([result.buffer], { type: mime }));
       }
-      blobUrl = URL.createObjectURL(new Blob([result.buffer], { type: mime }));
     } catch (e) {
       alert('Failed to load map image: ' + (e?.message || String(e)));
       return;
@@ -316,7 +323,7 @@ export async function handleMapUpload(input) {
     // attachContext ties the file to this campaign so it is reclaimed when the
     // campaign is deleted, and is never treated as an abandoned upload by the
     // node's 7-day sweep. See the plugin-storage spec §7.
-    const uploadResult = await requestWithTransfer('files:upload', {
+    const uploadResult = await guarded(requestWithTransfer)('files:upload', {
       name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf,
       attachContext: `campaign:${MAP.campaignId}`,
     }, [buf], 120000);
@@ -354,7 +361,7 @@ export async function handleMapUpload(input) {
     renderFog();
     refreshGuide();
   } catch (err) {
-    alert('Upload failed: ' + err.message);
+    if (!err?.shown) alert('Upload failed: ' + err.message);
   } finally {
     if (btn) { btn.innerHTML = icon('map') + 'Map'; btn.disabled = false; }
   }
@@ -445,12 +452,12 @@ export async function runVTTImport() {
     const mime = (_vttVideo.type || 'video/webm').split(';')[0].trim();
     let upload;
     try {
-      upload = await requestWithTransfer('files:upload', {
+      upload = await guarded(requestWithTransfer)('files:upload', {
         name: _vttVideo.name, mime, size: _vttVideo.size,
         dmOnly: false, data: buf,
       }, [buf], 300000);
     } catch (e) {
-      throw new Error('Upload failed: ' + e.message);
+      throw e?.shown ? e : new Error('Upload failed: ' + e.message);
     }
     if (!upload?.id) throw new Error('Upload response missing file id');
 
@@ -557,7 +564,7 @@ export async function runVTTImport() {
 
   } catch (err) {
     console.error('[dnd-hub] VTT import error:', err);
-    alert('VTT import failed: ' + (err.message || String(err)));
+    if (!err?.shown) alert('VTT import failed: ' + (err.message || String(err)));
     if (btn) { btn.textContent = 'Import'; btn.disabled = false; }
   }
 }

@@ -4,6 +4,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { publishTo } from './lk-bus.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
+import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingVideo = null; // File object selected but not yet uploaded
 let _pendingAudio = null; // File object selected but not yet uploaded
@@ -90,20 +91,20 @@ export async function saveNewScene() {
   try {
     if (_pendingVideo) {
       const buf = await _pendingVideo.arrayBuffer();
-      const res = await requestWithTransfer('files:upload',
+      const res = await guarded(requestWithTransfer)('files:upload',
         { name: _pendingVideo.name, mime: _pendingVideo.type, size: _pendingVideo.size, dmOnly: false, data: buf },
         [buf], 120000);
       videoFileId = res?.id || null;
     }
     if (_pendingAudio) {
       const buf = await _pendingAudio.arrayBuffer();
-      const res = await requestWithTransfer('files:upload',
+      const res = await guarded(requestWithTransfer)('files:upload',
         { name: _pendingAudio.name, mime: _pendingAudio.type, size: _pendingAudio.size, dmOnly: false, data: buf },
         [buf], 120000);
       soundtrackFileId = res?.id || null;
     }
   } catch (e) {
-    alert('Upload failed: ' + (e?.message || String(e)));
+    if (!e?.shown) alert('Upload failed: ' + (e?.message || String(e)));
     if (btn) { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Save Scene'; }
     return;
   }

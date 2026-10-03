@@ -48,3 +48,25 @@ export async function drawPackMap(m) {
     g.beginPath(); g.moveTo(d.x1, d.y1); g.lineTo(d.x2, d.y2); g.stroke(); }
   return await new Promise(res => cv.toBlob(res, 'image/png'));
 }
+
+// ── A pack map needs no stored file (plan 2026-10-03, plugin files off the node) ─────────────────────────────
+// Every screen can draw it, so its map record's fileId names the pack map instead of an upload. Quick start then
+// works for a DM with no storage at all.
+
+/** The fileId of a drawn pack map. */
+export const packFileId = (pack, map) => `pack:${pack}/${map}`;
+
+/** { pack, map } for a drawn pack map's fileId, else null (an uploaded file). */
+export function parsePackFileId(id) {
+  const m = /^pack:([a-z0-9-]+)\/([a-z0-9-]+)$/i.exec(String(id ?? ''));
+  return m ? { pack: m[1], map: m[2] } : null;
+}
+
+/** Draw a pack map from its fileId, here, from the pack shipped with the plugin. */
+export async function packMapBlob(id) {
+  const ref = parsePackFileId(id);
+  const pack = await (await fetch(new URL(`./packs/${ref.pack}.json`, document.baseURI).href)).json();
+  const m = pack.maps.find(x => x.id === ref.map);
+  if (!m) throw new Error(`no map ${ref.map} in pack ${ref.pack}`);
+  return drawPackMap(m);
+}

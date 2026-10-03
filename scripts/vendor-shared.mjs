@@ -81,6 +81,11 @@ const VENDORED = [
     source: "lk-table-rules.js",
     targets: ["dnd-hub/lk-table-rules.js", "dnd-master/lk-table-rules.js", "dnd-player/lk-table-rules.js"],
   },
+  // Uploads — one helper that shows the node's "where to get storage" message.
+  {
+    source: "lk-upload.js",
+    targets: ["dnd-hub/lk-upload.js", "dnd-master/lk-upload.js", "dnd-player/lk-upload.js"],
+  },
   // Party at a glance — the DM's rows and the players' strip (the Hub draws neither).
   {
     source: "lk-party.js",

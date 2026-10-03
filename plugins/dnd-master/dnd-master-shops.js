@@ -3,6 +3,7 @@ import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTra
 import { EV } from './dnd-hub-event-types.js?v=20260503';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
+import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingShopVideo = null;   // File object for new shop upload
 const _shopVolDebounce = {};    // debounce timers keyed by shopId
@@ -119,7 +120,7 @@ export async function saveNewShop() {
   try {
     if (_pendingShopVideo) {
       const buf = await _pendingShopVideo.arrayBuffer();
-      const res = await requestWithTransfer('files:upload',
+      const res = await guarded(requestWithTransfer)('files:upload',
         { name: _pendingShopVideo.name, mime: _pendingShopVideo.type, size: _pendingShopVideo.size, dmOnly: false, data: buf },
         [buf], 120000);
       videoFileId = res?.id || null;
@@ -129,7 +130,7 @@ export async function saveNewShop() {
       videoFileId = sel?.value || null;
     }
   } catch (e) {
-    alert('Video upload failed: ' + (e?.message || String(e)));
+    if (!e?.shown) alert('Video upload failed: ' + (e?.message || String(e)));
     if (btn) { btn.disabled = false; btn.textContent = '+ Shop'; }
     return;
   }

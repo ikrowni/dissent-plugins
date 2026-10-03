@@ -3,6 +3,7 @@ import { request, requestWithTransfer, storageSetCompanion, realtimePublish, rea
 import { EV } from './dnd-hub-event-types.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
+import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _fileInput = null;
 const _thumbCache = new Map(); // mapId → signedUrl
@@ -28,7 +29,7 @@ export function renderMapsTab() {
 }
 
 async function _loadThumbnails(mapList) {
-  const toFetch = mapList.filter(m => m.fileId && !_thumbCache.has(m.id));
+  const toFetch = mapList.filter(m => m.fileId && !String(m.fileId).startsWith('pack:') && !_thumbCache.has(m.id));
   if (!toFetch.length) return;
   await Promise.all(toFetch.map(async m => {
     try {
@@ -105,8 +106,10 @@ export async function activateMapFromList(mapId) {
   const m    = maps[mapId];
   if (!m) return;
   try {
-    const r = await request('files:getUrl', { fileId: m.fileId });
-    if (!r?.url) { alert('Could not get map URL.'); return; }
+    // A Quick start map is drawn on each screen and has no stored file to fetch (fileId "pack:…").
+    const drawn = String(m.fileId || '').startsWith('pack:');
+    const r = drawn ? { url: null } : await request('files:getUrl', { fileId: m.fileId });
+    if (!drawn && !r?.url) { alert('Could not get map URL.'); return; }
     _state.dmCampaign.activeMapId = mapId;
     _state.serverData.campaigns[_state.dmCampaignId].activeMapId = mapId;
     await saveHubDmCompanion(_state.serverData);
@@ -141,7 +144,7 @@ async function _handleMapFile(file) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Uploading…'; }
   try {
     const buf          = await file.arrayBuffer();
-    const uploadResult = await requestWithTransfer('files:upload',
+    const uploadResult = await guarded(requestWithTransfer)('files:upload',
       { name: file.name, mime: file.type, dmOnly: false, data: buf }, [buf], 120000);
     const fileId = uploadResult?.id;
     const url    = uploadResult?.url;
@@ -169,7 +172,7 @@ async function _handleMapFile(file) {
     await realtimePublishCompanion('dnd-hub', EV.MAP_SET, uploadPayload);
     renderMapsTab();
   } catch (err) {
-    alert('Upload failed: ' + err.message);
+    if (!err?.shown) alert('Upload failed: ' + err.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '📁 Upload New Map'; }
   }

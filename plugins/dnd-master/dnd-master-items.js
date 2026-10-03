@@ -4,6 +4,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
+import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingItemImg = null;
 const _itemImageUrls = {};
@@ -373,13 +374,13 @@ export async function saveNewItem() {
   try {
     if (_pendingItemImg) {
       const buf = await _pendingItemImg.arrayBuffer();
-      const res = await requestWithTransfer('files:upload',
+      const res = await guarded(requestWithTransfer)('files:upload',
         { name: _pendingItemImg.name, mime: _pendingItemImg.type, size: _pendingItemImg.size, dmOnly: false, data: buf },
         [buf], 60000);
       imageFileId = res?.id || null;
     }
   } catch (e) {
-    alert('Image upload failed: ' + (e?.message || String(e)));
+    if (!e?.shown) alert('Image upload failed: ' + (e?.message || String(e)));
     if (btn) { btn.disabled = false; btn.textContent = '&#x2795; Create Item'; }
     return;
   }
