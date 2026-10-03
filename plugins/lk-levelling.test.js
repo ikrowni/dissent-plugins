@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { subclassLevel, levelPlan, firstLevelPicks, INVOCATIONS } from './lk-levelling.js';
+import { checkChoice, applyLevel } from './lk-levelling.js';
+import { applyFirstPicks } from './lk-levelling.js';
+import { xpLevel, allowedLevel, xpShare, XP_FOR_LEVEL } from './lk-levelling.js';
 
 const read = f => JSON.parse(readFileSync(new URL(`./dnd-hub/dnd-srd/${f}.json`, import.meta.url)));
 const srd = { classes: read('classes'), feats: read('feats'), spells: read('spells') };
@@ -88,5 +91,92 @@ describe('firstLevelPicks', () => {
 describe('option lists', () => {
   it('every invocation has a name and a description', () => {
     for (const i of INVOCATIONS) expect(i.name && i.desc).toBeTruthy();
+  });
+});
+
+
+describe('checkChoice', () => {
+  it('requires every step answered correctly', () => {
+    expect(checkChoice({ kind: 'hp', die: 10 }, { mode: 'roll', roll: 11 })).toMatch(/1 and 10/);
+    expect(checkChoice({ kind: 'hp', die: 10 }, { mode: 'average' })).toBe(null);
+    expect(checkChoice({ kind: 'subclass', options: [{ id: 'champion' }] }, 'nope')).toMatch(/Choose/);
+    expect(checkChoice({ kind: 'expertise', count: 2, options: ['A', 'B', 'C'] }, ['A'])).toMatch(/2/);
+    expect(checkChoice({ kind: 'asi', feats: [] }, { kind: 'asi', plus: { str: 1 } })).toMatch(/two points/);
+    expect(checkChoice({ kind: 'asi', feats: [] }, { kind: 'asi', plus: { str: 2 } })).toBe(null);
+    expect(checkChoice({ kind: 'asi', feats: [] }, { kind: 'asi', plus: { str: 3 } })).toMatch(/two points/);
+    expect(checkChoice({ kind: 'spells', cantrips: 1, spells: 0, options: { cantrips: [{ id: 'light' }], spells: [] } },
+      { cantrips: [], spells: [] })).toMatch(/cantrip/);
+    expect(checkChoice({ kind: 'features', list: [] }, undefined)).toBe(null);
+  });
+});
+
+describe('applyLevel', () => {
+  const plan = levelPlan(hero({ level: 3, subclass: 'champion', hp: 20, hpMax: 30 }), ctx());
+  it('average hit points, the level, the proficiency bonus and the features', () => {
+    const h = applyLevel(hero({ level: 3, subclass: 'champion', hp: 20, hpMax: 30 }), plan, { hp: { mode: 'average' }, asi: { kind: 'asi', plus: { str: 2 } } });
+    expect(h).toMatchObject({ level: 4, hpMax: 30 + 6 + 2, hp: 20 + 6 + 2, str: 18, proficiencyBonus: 2 });
+  });
+  it('a CON increase raises hit points for every level; scores stop at 20', () => {
+    const h = applyLevel(hero({ level: 3, subclass: 'champion', con: 15, str: 20, hpMax: 30, hp: 30 }), plan,
+      { hp: { mode: 'roll', roll: 1 }, asi: { kind: 'asi', plus: { con: 1, str: 1 } } });
+    expect(h.str).toBe(20);
+    expect(h.con).toBe(16);
+    expect(h.hpMax).toBe(30 + Math.max(1, 1 + 2) + 4); // +1 CON mod × level 4
+  });
+  it('at least 1 hit point a level, hill dwarves +1', () => {
+    const weak = hero({ level: 1, con: 3, hpMax: 5, hp: 5 });
+    const p = levelPlan(weak, ctx());
+    expect(applyLevel(weak, p, { hp: { mode: 'roll', roll: 1 } }).hpMax).toBe(6);
+    const dwarf = hero({ level: 1, subrace: 'hill-dwarf', hpMax: 13, hp: 13 });
+    expect(applyLevel(dwarf, levelPlan(dwarf, ctx()), { hp: { mode: 'average' } }).hpMax).toBe(13 + 6 + 2 + 1);
+  });
+  it('records subclass, style, expertise, pact, invocations, metamagic, feat and spells', () => {
+    const f2 = hero({ level: 2 });
+    expect(applyLevel(f2, levelPlan(f2, ctx()), { hp: { mode: 'average' }, subclass: 'champion' }).subclass).toBe('champion');
+    const r5 = hero({ class: 'rogue', level: 5, subclass: 'thief' });
+    expect(applyLevel(r5, levelPlan(r5, ctx()), { hp: { mode: 'average' }, expertise: ['Athletics', 'Perception'] }).skills)
+      .toEqual({ Athletics: 'expertise', Perception: 'expertise' });
+    const w = hero({ class: 'wizard', level: 1, spells: [] });
+    const ww = applyLevel(w, levelPlan(w, ctx()), { hp: { mode: 'average' }, subclass: 'evocation', spells: { cantrips: [], spells: ['shield', 'sleep'] } });
+    expect(ww.spells).toEqual(['shield', 'sleep']);
+    expect(ww.spellSlots[1]).toEqual([3, 3]);
+    const f3 = hero({ level: 3, subclass: 'champion' });
+    const ft = applyLevel(f3, levelPlan(f3, ctx()), { hp: { mode: 'average' }, asi: { kind: 'feat', id: 'grappler' } });
+    expect(ft.feats).toEqual(['grappler']);
+    expect(ft.features).toContain('Feat: Grappler');
+  });
+  it('refuses incomplete choices', () => {
+    const f2 = hero({ level: 2 });
+    expect(() => applyLevel(f2, levelPlan(f2, ctx()), { hp: { mode: 'average' } })).toThrow(/subclass/i);
+  });
+});
+
+describe('applyFirstPicks', () => {
+it('applyFirstPicks records a cleric subclass and a rogue expertise', () => {
+  const c = hero({ class: 'cleric' });
+  expect(applyFirstPicks(c, firstLevelPicks(c, ctx()), { subclass: 'life' }).subclass).toBe('life');
+  const r = hero({ class: 'rogue' });
+  expect(applyFirstPicks(r, firstLevelPicks(r, ctx()), { expertise: ['Athletics', 'Perception'] }).skills.Athletics).toBe('expertise');
+});
+});
+
+describe('authority', () => {
+  it('xpLevel follows the thresholds', () => {
+    expect([0, 299, 300, 899, 900, 355000].map(xpLevel)).toEqual([1, 1, 2, 2, 3, 20]);
+    expect(XP_FOR_LEVEL[4]).toBe(2700);
+  });
+  it('milestone: the granted level, never below the starting level or the hero\'s own', () => {
+    const camp = { startingLevel: 1, levels: { u: 3 } };
+    expect(allowedLevel(camp, 'u', { level: 2 }, false)).toBe(3);
+    expect(allowedLevel({ startingLevel: 3 }, 'u', { level: 1 }, false)).toBe(3);
+    expect(allowedLevel({}, 'u', { level: 5 }, false)).toBe(5);
+  });
+  it('experience: the campaign\'s XP, falling back to the hero\'s', () => {
+    expect(allowedLevel({ xp: { u: 900 } }, 'u', { level: 1, xp: 0 }, true)).toBe(3);
+    expect(allowedLevel({}, 'u', { level: 1, xp: 300 }, true)).toBe(2);
+  });
+  it('xpShare splits evenly, rounding down', () => {
+    expect(xpShare(100, ['a', 'b', 'c'])).toEqual({ a: 33, b: 33, c: 33 });
+    expect(xpShare(100, [])).toEqual({});
   });
 });

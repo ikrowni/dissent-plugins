@@ -1,7 +1,7 @@
 // lk-levelling.js — what each level gives a hero, and applying the player's choices (spec 2026-10-03 growing your hero).
 // ⚠️ SOURCE; vendored into dnd-hub, dnd-master and dnd-player (scripts/vendor-shared.mjs). Pure: no DOM, no storage.
 // Option names are SRD 5.1 names; every description is original. Never write the trademark in user-facing text.
-import { abilityMod, hitDieFor, isAsiLevel, maxSlotsFor } from './lk-rules5e.js';
+import { abilityMod, hitDieFor, isAsiLevel, maxSlotsFor, withSlotsForLevel } from './lk-rules5e.js';
 
 export const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -216,4 +216,128 @@ export function levelPlan(hero, ctx) {
 /** The choices a brand-new level-1 hero makes (Forge, build-your-own). */
 export function firstLevelPicks(hero, ctx) {
   return { level: 1, steps: pickSteps({ ...hero, level: 1 }, 1, ctx) };
+}
+const STEP_KEY = { hp: 'hp', subclass: 'subclass', fightingStyle: 'fightingStyle', expertise: 'expertise',
+  pactBoon: 'pactBoon', invocations: 'invocations', metamagic: 'metamagic', asi: 'asi', spells: 'spells' };
+export const choiceKey = kind => STEP_KEY[kind] || null;
+const ids = list => new Set((list || []).map(o => (typeof o === 'string' ? o : o.id)));
+const exactly = (picked, n, allowed) => Array.isArray(picked) && picked.length === n
+  && new Set(picked).size === n && picked.every(p => allowed.has(p));
+
+/** Null when `choice` answers `step`, else a sentence saying what is missing. */
+export function checkChoice(step, choice) {
+  switch (step.kind) {
+    case 'hp':
+      if (choice?.mode === 'average') return null;
+      if (choice?.mode === 'roll' && Number.isInteger(choice.roll) && choice.roll >= 1 && choice.roll <= step.die) return null;
+      return `Take the average, or roll a number between 1 and ${step.die}.`;
+    case 'subclass': case 'fightingStyle': case 'pactBoon':
+      return ids(step.options).has(choice) ? null : 'Choose one.';
+    case 'expertise': case 'invocations': case 'metamagic':
+      return exactly(choice, step.count, ids(step.options)) ? null : `Choose ${step.count}.`;
+    case 'asi': {
+      if (choice?.kind === 'feat') return ids(step.feats).has(choice.id) ? null : 'Choose a feat.';
+      const plus = choice?.plus || {};
+      const vals = Object.entries(plus).filter(([k]) => ABILITY_KEYS.includes(k)).map(([, v]) => v);
+      const ok = vals.reduce((a, b) => a + b, 0) === 2 && vals.every(v => v === 1 || v === 2) && vals.length === Object.keys(plus).length;
+      return ok ? null : 'Spend two points: +2 to one ability or +1 to two.';
+    }
+    case 'spells': {
+      const c = choice?.cantrips || [], s = choice?.spells || [];
+      if (!exactly(c, step.cantrips, ids(step.options.cantrips))) return `Choose ${step.cantrips} cantrip${step.cantrips === 1 ? '' : 's'}.`;
+      if (!exactly(s, step.spells, ids(step.options.spells))) return `Choose ${step.spells} spell${step.spells === 1 ? '' : 's'}.`;
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+const optName = (step, id) => (step.options || step.feats || []).find(o => o.id === id)?.name || id;
+
+/** The hero after `plan` with `choices` ({ hp, subclass, …, asi, spells }). Throws on an unanswered step. */
+export function applyLevel(hero, plan, choices) {
+  for (const step of plan.steps) {
+    const key = choiceKey(step.kind);
+    const why = key ? checkChoice(step, choices[key]) : null;
+    if (why) throw new Error(`${step.kind}: ${why}`);
+  }
+  const h = { ...hero, skills: { ...(hero.skills || {}) }, features: [...(hero.features || [])], spells: [...(hero.spells || [])] };
+  const level = plan.level;
+  h.level = level;
+  h.proficiencyBonus = Math.ceil(1 + level / 4);
+  h.hitDiceRemaining = Math.min(level, (hero.hitDiceRemaining ?? hero.level ?? 1) + 1);
+  for (const step of plan.steps) {
+    const c = choices[choiceKey(step.kind)];
+    switch (step.kind) {
+      case 'hp': {
+        const base = c.mode === 'average' ? step.average : c.roll;
+        const gain = Math.max(1, base + step.conMod) + (step.hillDwarf ? 1 : 0);
+        h.hpMax = (h.hpMax || 0) + gain; h.hp = (h.hp || 0) + gain; break;
+      }
+      case 'subclass': h.subclass = c; h.features.push(`${optName(step, c)} (subclass)`); break;
+      case 'fightingStyle': h.fightingStyle = c; h.features.push(`Fighting Style: ${optName(step, c)}`); break;
+      case 'pactBoon': h.pactBoon = c; h.features.push(optName(step, c)); break;
+      case 'expertise': for (const s of c) h.skills[s] = 'expertise'; break;
+      case 'invocations': h.invocations = [...(hero.invocations || []), ...c]; break;
+      case 'metamagic': h.metamagic = [...(hero.metamagic || []), ...c]; break;
+      case 'asi':
+        if (c.kind === 'feat') { h.feats = [...(hero.feats || []), c.id]; h.features.push(`Feat: ${optName(step, c.id)}`); }
+        else for (const [k, v] of Object.entries(c.plus)) {
+          const before = h[k] ?? 10, after = Math.min(20, before + v);
+          if (k === 'con') { const extra = (abilityMod(after) - abilityMod(before)) * level; h.hpMax += extra; h.hp += extra; }
+          h[k] = after;
+        }
+        break;
+      case 'spells': h.spells.push(...c.cantrips, ...c.spells); break;
+      case 'features': h.features.push(...step.list); break;
+      default: break;
+    }
+  }
+  h.spellSlots = withSlotsForLevel(hero.spellSlots, hero.class, level);
+  h.updatedAt = new Date().toISOString();
+  return h;
+}
+
+/** Level-1 picks applied to a fresh hero (Forge). Same checks; no level change. */
+export function applyFirstPicks(hero, plan, choices) {
+  const fake = { ...plan, steps: plan.steps };
+  for (const step of fake.steps) {
+    const why = checkChoice(step, choices[choiceKey(step.kind)]);
+    if (why) throw new Error(`${step.kind}: ${why}`);
+  }
+  const h = { ...hero, skills: { ...(hero.skills || {}) }, features: [...(hero.features || [])] };
+  for (const step of plan.steps) {
+    const c = choices[choiceKey(step.kind)];
+    if (step.kind === 'subclass') { h.subclass = c; h.features.push(`${optName(step, c)} (subclass)`); }
+    if (step.kind === 'fightingStyle') { h.fightingStyle = c; h.features.push(`Fighting Style: ${optName(step, c)}`); }
+    if (step.kind === 'expertise') for (const s of c) h.skills[s] = 'expertise';
+  }
+  return h;
+}
+
+/** Total XP needed for each level (index = level). */
+export const XP_FOR_LEVEL = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000,
+  140000, 165000, 195000, 225000, 265000, 305000, 355000];
+
+export function xpLevel(xp) {
+  let l = 1;
+  while (l < 20 && (xp || 0) >= XP_FOR_LEVEL[l + 1]) l++;
+  return l;
+}
+
+/**
+ * The highest level `uid`'s hero may reach. The DM's campaign record decides (levels for milestones, xp for
+ * experience); it never goes below the campaign's starting level or the hero's current level.
+ */
+export function allowedLevel(campaign, uid, hero, byXp) {
+  const floor = Math.max(campaign?.startingLevel || 1, hero?.level || 1);
+  const granted = byXp ? xpLevel(campaign?.xp?.[uid] ?? hero?.xp ?? 0) : (campaign?.levels?.[uid] || 0);
+  return Math.min(20, Math.max(floor, granted));
+}
+
+export function xpShare(total, playerIds) {
+  if (!playerIds?.length) return {};
+  const each = Math.floor((total || 0) / playerIds.length);
+  return Object.fromEntries(playerIds.map(id => [id, each]));
 }
