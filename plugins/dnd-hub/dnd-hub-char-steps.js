@@ -3,6 +3,7 @@ import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityM
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 import { armorClass } from './lk-rules5e.js';
+import { STARTING_KITS } from './dnd-hub-quick.js';
 import { CANTRIPS_KNOWN, spellLimitL1 as spellLimitFor, classSkillChoice as skillChoiceFor, draftScores as scoresFor } from './dnd-hub-draft-rules.js';
 
 // ── Race ──────────────────────────────────────────────────────────────────────
@@ -365,6 +366,7 @@ export function renderCCEquipment(el) {
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div class="btn btn-sm ${!CC.draft.useStartingGold?'btn-gold':'btn-ghost'}" onclick="CC.draft.useStartingGold=false;renderCCEquipment(document.getElementById('cc-content'))">Starting Equipment</div>
       <div class="btn btn-sm ${CC.draft.useStartingGold?'btn-gold':'btn-ghost'}" onclick="CC.draft.useStartingGold=true;renderCCEquipment(document.getElementById('cc-content'))">Starting Gold</div>
+      ${STARTING_KITS[CC.draft.class] ? `<div class="btn btn-sm btn-ghost" onclick="CC.draft.useStartingGold=false;CC.draft.equipment=[...(window.__lkKits[CC.draft.class]||[])];renderCCEquipment(document.getElementById('cc-content'))">Use the ${esc(CC.draft.class)} kit</div>` : ''}
     </div>
     ${!CC.draft.useStartingGold ? `
       <div style="font-size:11px;color:var(--dnd-muted);margin-bottom:10px">Selected: ${CC.draft.equipment.length} items</div>
