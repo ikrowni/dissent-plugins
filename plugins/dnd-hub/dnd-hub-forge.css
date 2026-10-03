@@ -1,0 +1,41 @@
+/* dnd-hub-forge.css — the Hero Forge (spec 2026-10-03 hero forge). Tokens only: --lk-*. */
+.forge{position:relative;height:100%;overflow:hidden;background:var(--lk-bg);color:var(--lk-text)}
+.forge-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.forge-ui{position:relative;height:100%;display:flex;flex-direction:column;gap:14px;padding:16px 22px;overflow-y:auto}
+.forge-top{display:flex;align-items:center;gap:10px}
+.forge-title{font-family:var(--lk-title);letter-spacing:.12em;color:var(--lk-gold);font-size:14px;text-transform:uppercase}
+.forge-quick{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.forge-quick button{flex:0 0 auto;max-width:220px;text-align:left;background:rgba(31,24,16,.75);border:1px solid var(--lk-line);border-radius:8px;padding:8px 10px;color:var(--lk-text);cursor:pointer}
+.forge-quick button:hover,.forge-quick button:focus-visible{border-color:var(--lk-gold)}
+.forge-quick b{display:block;font-size:12px}.forge-quick span{font-size:11px;color:var(--lk-muted)}
+.forge-stage{flex:1;min-height:320px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:center}
+.forge-art{position:relative;aspect-ratio:3/4;max-height:58vh;justify-self:center;width:100%;display:flex;align-items:center;justify-content:center;border:1px solid var(--lk-line);border-radius:10px;background:rgba(13,10,7,.55)}
+.forge-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px}
+.forge-art .seal{position:absolute;right:10px;bottom:10px}
+.forge-name{font-family:var(--lk-title);font-size:clamp(28px,4vw,46px);color:#f3e3b5;letter-spacing:.04em;margin:0}
+.forge-blurb{font-size:15px;color:var(--lk-text);margin:6px 0}
+.forge-lore{font-size:13px;line-height:1.6;color:var(--lk-muted);max-width:46ch}
+.forge-badges{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.forge-badges span{border:1px solid var(--lk-line);color:var(--lk-gold);font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(13,10,7,.6)}
+.forge-choose{margin-top:8px;padding:12px 18px;font-size:14px;letter-spacing:.06em}
+.forge-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:6px 0}
+.forge-row button{width:54px;height:54px;border-radius:50%;border:1px solid var(--lk-line);background:rgba(13,10,7,.7);color:var(--lk-gold-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s,border-color .2s,color .2s}
+.forge-row button[aria-pressed="true"]{border:2px solid var(--lk-gold);color:var(--lk-gold);transform:scale(1.12)}
+.forge-row button:focus-visible{outline:2px solid var(--lk-gold);outline-offset:3px}
+.forge-mute{margin-left:auto}
+.forge-slide{animation:forge-slide .45s cubic-bezier(.2,.8,.2,1)}
+.forge-slide.back{animation-name:forge-slide-back}
+@keyframes forge-slide{from{opacity:0;transform:translateX(40px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes forge-slide-back{from{opacity:0;transform:translateX(-40px) scale(.98)}to{opacity:1;transform:none}}
+.forge-flash{animation:forge-flash .6s ease-out}
+@keyframes forge-flash{0%{box-shadow:0 0 0 0 rgba(224,181,82,.9)}100%{box-shadow:0 0 0 40px rgba(224,181,82,0)}}
+.forge-sweep{animation:forge-sweep .5s ease-in forwards}
+@keyframes forge-sweep{to{opacity:0;transform:translateY(-24px)}}
+.forge-card{max-width:520px;margin:0 auto;border:1px solid var(--lk-gold);border-radius:12px;padding:22px;background:rgba(22,17,11,.85);position:relative}
+.forge-card .frame{position:absolute;inset:-1px;pointer-events:none}
+.forge-card .frame rect{stroke:var(--lk-gold);stroke-width:1.5;fill:none;stroke-dasharray:2000;stroke-dashoffset:2000;animation:forge-draw 1.6s ease-out forwards}
+@keyframes forge-draw{to{stroke-dashoffset:0}}
+.forge-card .emblems{display:flex;justify-content:center;gap:8px;color:var(--lk-gold)}
+.forge-stats{display:flex;gap:10px;justify-content:center;margin:14px 0}
+@media (max-width:760px){.forge-stage{grid-template-columns:1fr}.forge-art{max-height:34vh}}
+@media (prefers-reduced-motion:reduce){.forge-slide,.forge-flash,.forge-sweep,.forge-card .frame rect{animation:none}.forge-card .frame rect{stroke-dashoffset:0}}
