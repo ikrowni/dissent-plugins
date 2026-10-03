@@ -100,6 +100,10 @@
       "sha256": "ae12ec4dfa388039ec49ce1578bd86521fbff197a5a7d07980f17c41433751db"
     },
     {
+      "url": "lk-content-pack.js",
+      "sha256": "461dd108f936dc9d855dade178419223942601cbe9bef2872516708f11000da0"
+    },
+    {
       "url": "lk-icons.js",
       "sha256": "14927c281cc7860b3214e8d1ca1e2904cf00bddae590f3297c009804129253b2"
     },

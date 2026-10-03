@@ -47,7 +47,7 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "9750e58d2b57925452591a715a800fb75681b841d50d4c3975a3f2d7257c7db4"
+      "sha256": "5f5896ac9b729f7b2bacd41424c0852040916780f1eb38c19bed931e4cc5239c"
     },
     {
       "url": "dnd-master-initiative.js",
@@ -67,7 +67,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "e77a4b05942c520752da52058eb5c7b971198073c0871b68c870162168590274"
+      "sha256": "1c2642b0c2ee97e7a741464d3e3e5fcbe121c4aad911edb1b592e6c633f3f20e"
     },
     {
       "url": "dnd-master-maps.js",
@@ -84,6 +84,10 @@
     {
       "url": "dnd-master-players.js",
       "sha256": "365dd4dd8f5e126a066ee271e6719188aa74c7715308f1d85dbef3337cb0c8a8"
+    },
+    {
+      "url": "dnd-master-prepared.js",
+      "sha256": "b9cddfcdc973ceef0f46256be7a92484d2d76c1fb525b703a1b30dd3e0a65ecb"
     },
     {
       "url": "dnd-master-scenes.js",
@@ -136,6 +140,10 @@
     {
       "url": "lk-bus.js",
       "sha256": "ae12ec4dfa388039ec49ce1578bd86521fbff197a5a7d07980f17c41433751db"
+    },
+    {
+      "url": "lk-content-pack.js",
+      "sha256": "461dd108f936dc9d855dade178419223942601cbe9bef2872516708f11000da0"
     },
     {
       "url": "lk-icons.js",
