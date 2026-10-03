@@ -86,6 +86,11 @@ const VENDORED = [
     source: "lk-upload.js",
     targets: ["dnd-hub/lk-upload.js", "dnd-master/lk-upload.js", "dnd-player/lk-upload.js"],
   },
+  // Growing your hero — what each level gives, and applying the choices.
+  {
+    source: "lk-levelling.js",
+    targets: ["dnd-hub/lk-levelling.js", "dnd-master/lk-levelling.js", "dnd-player/lk-levelling.js"],
+  },
   // Party at a glance — the DM's rows and the players' strip (the Hub draws neither).
   {
     source: "lk-party.js",
