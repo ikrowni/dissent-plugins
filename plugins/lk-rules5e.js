@@ -248,6 +248,8 @@ export function characterSummary(c, eff = {}) {
     ac: eff.ac ?? c.ac ?? 10, dex: eff.dex ?? c.dex ?? 10, passivePerception: pp,
     conditions: [...(c.conditions || [])], dead: !!c.dead, stable: !!c.stable,
     portraitUrl: c.portraitUrl || '', portraitFileId: c.portraitFileId || '',
+    concentration: c.concentration?.spellName || null,
+    deathSaves: { successes: c.deathSaves?.successes || 0, failures: c.deathSaves?.failures || 0 },
   };
 }
 

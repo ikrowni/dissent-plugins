@@ -206,6 +206,15 @@ describe('derived numbers', () => {
     expect(conHpBonusOnIncrease(13, 14, 5)).toBe(5);
     expect(conHpBonusOnIncrease(14, 15, 5)).toBe(0);
   });
+  it('the party summary carries concentration and death saves', () => {
+    const s = characterSummary({ name: 'Ael', hp: 0, hpMax: 9, concentration: { spellName: 'Bless' },
+      deathSaves: { successes: 1, failures: 2 } });
+    expect(s.concentration).toBe('Bless');
+    expect(s.deathSaves).toEqual({ successes: 1, failures: 2 });
+    const fresh = characterSummary({ name: 'Bo' });
+    expect(fresh.concentration).toBe(null);
+    expect(fresh.deathSaves).toEqual({ successes: 0, failures: 0 });
+  });
   it('the party summary carries what the DM tools need', () => {
     const s = characterSummary({ name: 'Bree', race: 'halfling', class: 'rogue', level: 3, hp: 7, hpMax: 21, hpTemp: 2,
       ac: 14, dex: 16, wis: 12, skills: { Perception: 'proficient' }, conditions: ['Prone'], portraitUrl: 'p' }, { ac: 15 });
