@@ -81,6 +81,11 @@ const VENDORED = [
     source: "lk-table-rules.js",
     targets: ["dnd-hub/lk-table-rules.js", "dnd-master/lk-table-rules.js", "dnd-player/lk-table-rules.js"],
   },
+  // Party at a glance — the DM's rows and the players' strip (the Hub draws neither).
+  {
+    source: "lk-party.js",
+    targets: ["dnd-master/lk-party.js", "dnd-player/lk-party.js"],
+  },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",
