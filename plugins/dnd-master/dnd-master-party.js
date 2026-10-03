@@ -2,6 +2,7 @@
 // HTML come from lk-party.js; this file keeps the state and opens the existing player editor on a click.
 import { dmRows, dmPartyHtml } from './lk-party.js';
 import { isRepeat } from './lk-bus.js';
+import { levelWaiting, levellingByXp } from './dnd-master-levels.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null };
 
@@ -13,7 +14,7 @@ export function renderPartyPanel() {
   const c = _state.dmCampaign;
   if (!el || !c) return;
   el.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin-bottom:2px">PARTY</div>' +
-    dmPartyHtml(dmRows(c.characterSummaries || {}, c.members || []));
+    dmPartyHtml(dmRows(c.characterSummaries || {}, c.members || []), { levelButton: true, byXp: levellingByXp(), waiting: levelWaiting });
 }
 
 /** A hero's summary changed (party:update, handed over by the DM's Hub). A player can only update their own row. */

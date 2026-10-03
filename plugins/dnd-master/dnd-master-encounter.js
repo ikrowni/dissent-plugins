@@ -343,6 +343,7 @@ export async function launchEncounter() {
         order.push({
           id: genId(), name: m.name + (entry.count > 1 ? ' ' + i : ''),
           roll: rollDice(1, 20, initMod), type: 'monster', monsterId: m.id,
+          xp: CR_XP[m.cr] || 0, // shared out when the fight ends (experience mode)
           hp, hpMax: hp, ac: m.ac || 10, conditions: [], attacks,
           speed: parseInt(String(m.speed?.walk ?? m.speed ?? '30')) || 30,
         });

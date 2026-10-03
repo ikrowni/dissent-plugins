@@ -82,3 +82,15 @@ describe('HTML', () => {
     expect(playerStripHtml([])).toBe('');
   });
 });
+
+describe('dmPartyHtml level buttons', () => {
+  const sums = { u1: { name: 'Ann', class: 'fighter', level: 2, hp: 10, hpMax: 10 } };
+  it('shows no button unless asked', () => {
+    expect(dmPartyHtml(dmRows(sums, ['u1']))).not.toContain('levelUpHero');
+  });
+  it('shows Level up (milestone) or +XP (experience), and marks a waiting level', () => {
+    expect(dmPartyHtml(dmRows(sums, ['u1']), { levelButton: true, byXp: false })).toContain("levelUpHero('u1')");
+    expect(dmPartyHtml(dmRows(sums, ['u1']), { levelButton: true, byXp: true })).toContain("giveXpHero('u1')");
+    expect(dmPartyHtml(dmRows(sums, ['u1']), { levelButton: true, waiting: () => true })).toContain('level waiting');
+  });
+});

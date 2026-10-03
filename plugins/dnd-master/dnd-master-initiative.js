@@ -4,6 +4,7 @@ import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { withPlayerRoll, rollMissing } from './dnd-master-init-order.js';
+import { fightXp } from './dnd-master-levels.js';
 
 let currentInitiative = null;
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
@@ -155,6 +156,7 @@ export async function rerollInitiative() {
 export async function endEncounter() {
   if (!confirm('End encounter and clear initiative?')) return;
 
+  const finished = currentInitiative?.order || []; // for the fight's XP (experience mode)
   // Collect monster IDs before clearing so we can remove their map tokens
   const monsterIds = (currentInitiative?.order || [])
     .filter(c => c.type === 'monster')
@@ -175,6 +177,7 @@ export async function endEncounter() {
 
   if (_onEnd) _onEnd();
   renderInitiativeTracker();
+  fightXp(finished).catch(() => {});
 }
 
 async function _removeMonsterTokensFromMap(monsterIds) {

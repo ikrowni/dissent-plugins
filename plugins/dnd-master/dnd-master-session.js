@@ -5,6 +5,7 @@ import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
 import { esc, genId } from '../plugin-sdk.js';
 import { appendLogEntry } from './dnd-master-logs.js';
+import { levellingByXp } from './dnd-master-levels.js';
 import { defaultSceneId, defaultMusic, sessionMusic, recapTitle, newSession, currentSession, draftRecap } from './dnd-master-session-rules.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
@@ -22,6 +23,10 @@ export function renderSessionBar() {
     ? `<span style="flex:1;font-size:10px;color:var(--muted)">Session running since ${esc(new Date(open.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>` +
       '<button class="btn btn-ghost" onclick="openEndSession()">End session</button>'
     : '<button class="btn btn-gold" style="flex:1" onclick="openStartSession()">Start session</button>';
+  // Growing your hero: one button for the table's levelling rule.
+  el.innerHTML += levellingByXp()
+    ? '<button class="btn btn-ghost" onclick="giveXpParty()">Give XP</button>'
+    : '<button class="btn btn-ghost" onclick="levelUpParty()">Level up the party</button>';
 }
 
 function _window(inner) {

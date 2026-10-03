@@ -32,8 +32,9 @@ import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections
 import { icon } from './lk-icons.js';
 import { loadHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { isRepeat } from './lk-bus.js';
-import { setPartyState, applyPartyUpdate } from './dnd-master-party.js';
-import { setSessionState, openStartSession, startSessionNow, onSessionSceneChange, closeSessionWindow,
+import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
+import * as Levels from './dnd-master-levels.js';
+import { setSessionState, renderSessionBar, openStartSession, startSessionNow, onSessionSceneChange, closeSessionWindow,
   openEndSession, saveEndSession } from './dnd-master-session.js';
 
 let serverData = null, userId = null, dmCampaignId = null, dmCampaign = null;
@@ -148,6 +149,7 @@ async function onInit(data) {
   setEncounterState({ dmCampaign, dmCampaignId, serverData, srdMonsters, switchDMTab, userId });
   await loadEncounterDraft();
   setPlayersState({ dmCampaign, dmCampaignId });
+  Levels.setLevelsState({ dmCampaign, dmCampaignId, serverData, userId, onChange: () => { renderPartyPanel(); renderSessionBar(); } });
   setPartyState({ dmCampaign, dmCampaignId });
   setSessionState({ dmCampaign, dmCampaignId, serverData, userId });
   setLaunchCallback(() => appendLogEntry({ type: 'combat-start', message: 'Encounter launched \u2014 Round 1' }));
@@ -322,3 +324,9 @@ window.dmEditExhaustion    = dmEditExhaustion;
 window.dmEditNotes         = dmEditNotes;
 
 window.addEventListener('message', e => handleSDKMessage(e, onInit, onEvent));
+
+// Growing your hero (dnd-master-levels.js): the DM levels heroes up (milestone) or gives XP (experience).
+window.levelUpParty = () => Levels.levelUpParty();
+window.levelUpHero = uid => Levels.levelUpHeroes([uid]);
+window.giveXpParty = () => { const n = prompt('Experience for every hero:', '100'); if (n !== null) Levels.giveXp(Object.keys(dmCampaign?.characterSummaries || {}), n); };
+window.giveXpHero = uid => { const n = prompt('Experience for this hero:', '100'); if (n !== null) Levels.giveXp([uid], n); };

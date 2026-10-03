@@ -69,7 +69,9 @@ const chips = conds => conds.map(c =>
   `<span title="${escHtml(c)}" style="font-size:8px;font-weight:700;padding:1px 3px;border-radius:3px;background:var(--surface);border:1px solid #f59e0b;color:#f59e0b">${escHtml(String(c).slice(0, 3).toUpperCase())}</span>`).join('');
 
 /** The DM's panel. Each row opens the player editor (window.openPartyMember). */
-export function dmPartyHtml(rows) {
+// opts.levelButton: a per-row Level up (milestone) or +XP (experience, opts.byXp) button; opts.waiting(uid): a level is
+// waiting for that hero (growing-your-hero spec §1).
+export function dmPartyHtml(rows, opts = {}) {
   if (!rows.length) return '<div style="font-size:10px;color:var(--muted);padding:6px 2px">No heroes yet.</div>';
   return rows.map(r => {
     const pct = r.hpMax > 0 ? Math.max(0, Math.min(100, Math.round((r.hp / r.hpMax) * 100))) : 0;
@@ -88,6 +90,8 @@ export function dmPartyHtml(rows) {
           `<span>AC ${r.ac}</span><span>PP ${r.passivePerception}</span>${chips(r.conditions)}` +
           (r.statusText ? `<span style="color:${r.status === 'stable' ? '#22c55e' : '#ef4444'};font-weight:700">${escHtml(r.statusText)}</span>` : '') +
           (r.concentration ? `<span style="color:var(--gold,#d4af37)">Concentrating: ${escHtml(r.concentration)}</span>` : '') +
+          (opts.levelButton && opts.waiting?.(r.userId) ? '<span style="color:var(--gold,#d4af37);font-weight:700">level waiting</span>' : '') +
+          (opts.levelButton ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:1px 6px;font-size:9px" onclick="event.stopPropagation();${opts.byXp ? 'giveXpHero' : 'levelUpHero'}('${escHtml(r.userId)}')">${opts.byXp ? '+XP' : 'Level up'}</button>` : '') +
         '</div>' +
       '</div></div>';
   }).join('');
