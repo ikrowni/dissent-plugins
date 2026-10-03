@@ -189,3 +189,21 @@ describe('activeTokenId', () => {
     expect(activeTokenId(null)).toBe(null);
   });
 });
+
+import { viewCentre, panFor } from './dnd-hub-rules.js';
+
+describe('view sync', () => {
+  it('a centre round-trips through pan', () => {
+    const { cx, cy } = viewCentre(-300, -120, 1.5, 1600, 950);
+    const { panX, panY } = panFor(cx, cy, 1.5, 1600, 950);
+    expect([Math.round(panX), Math.round(panY)]).toEqual([-300, -120]);
+  });
+  it('windows of different sizes centre the same world point', () => {
+    const c = { cx: 640, cy: 410 };
+    for (const [w, h] of [[1280, 800], [1920, 1080]]) {
+      const p = panFor(c.cx, c.cy, 2, w, h);
+      const back = viewCentre(p.panX, p.panY, 2, w, h);
+      expect([Math.round(back.cx), Math.round(back.cy)]).toEqual([640, 410]);
+    }
+  });
+});

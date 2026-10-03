@@ -166,3 +166,13 @@ export function activeTokenId(init) {
   if (!c) return null;
   return c.type === 'player' ? `player_${c.userId}` : c.id;
 }
+
+/** The world point at the centre of a window (pan and zoom as on MAP). Sent at session start (map:view). */
+export function viewCentre(panX, panY, zoom, w, h) {
+  return { cx: (w / 2 - panX) / zoom, cy: (h / 2 - panY) / zoom };
+}
+
+/** The pan that puts world point (cx, cy) at the centre of a w×h window at `zoom`. */
+export function panFor(cx, cy, zoom, w, h) {
+  return { panX: w / 2 - cx * zoom, panY: h / 2 - cy * zoom };
+}
