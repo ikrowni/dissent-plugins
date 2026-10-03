@@ -3,15 +3,18 @@
 // ⚠️ SOURCE; vendored into dnd-hub, dnd-master and dnd-player (scripts/vendor-shared.mjs).
 // Spec: docs/superpowers/specs/2026-10-03-lanternkeep-flow-design.md §4 (projects repo).
 //
+// Turn lock is not a switch: during a fight a player's token moves only on its turn and only up to its speed,
+// always (fog safety, owner 2026-10-03; dnd-hub-movement.js). Old settings may still hold `turnLock`; it is ignored.
+//
 // 🔴 Every automation asks rule(settings, key), never settings[key]: a campaign made before a switch existed has
 // no value for it, and rule() gives it the Guided one.
 
 export const PRESET_ORDER = ['guided', 'classic', 'raw'];
 
 export const PRESETS = {
-  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: false, deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  turnLock: true,  hints: true  },
-  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, turnLock: false, hints: false },
-  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, turnLock: false, hints: false },
+  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: false, deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  hints: true  },
+  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, hints: false },
+  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, hints: false },
 };
 
 export const RULE_KEYS = Object.keys(PRESETS.guided);
@@ -26,7 +29,6 @@ export const RULE_INFO = {
   autoHit:               { group: 'Combat', label: 'Hit or miss',            desc: 'Compare attack rolls with the target\'s AC and say hit or miss' },
   autoDamage:            { group: 'Combat', label: 'Apply damage',           desc: 'After a hit, the damage roll comes off the target\'s HP' },
   playersRollInitiative: { group: 'Combat', label: 'Players roll initiative', desc: 'Each player rolls their own; the tracker waits for them' },
-  turnLock:              { group: 'Combat', label: 'Turn lock',              desc: 'During a fight, only the active creature\'s token can move' },
   deathSaves:            { group: 'Danger', label: 'Death save reminders',   desc: 'A hero at 0 HP is asked to roll a death save when their turn starts' },
   concentrationAutoRoll: { group: 'Danger', label: 'Roll concentration saves', desc: 'When a concentrating caster takes damage, roll the CON save for them' },
   trapSavesAuto:         { group: 'Danger', label: 'Roll trap saves',        desc: 'When a trap springs, roll the hero\'s saving throw for them' },

@@ -1,6 +1,7 @@
 // dnd-hub-ruler.js — measurement ruler, map ping animation, active-turn ring
 import { MAP, effectiveGs } from './dnd-hub-state.js?v=20260502p4';
 import { gridFeet } from './lk-rules5e.js';
+import { remainingFt } from './dnd-hub-turn-move.js';
 
 // ── Ruler ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ export function updateRuler(toX, toY) {
 
   let label = `${distFt}ft`;
   if (MAP.activeTurnTokenId && MAP.rulerStart) {
-    const remaining = Math.max(0, MAP.activeTurnTokenSpeed - MAP.turnMovedDistance - distFt);
+    const remaining = Math.max(0, remainingFt(MAP.activeTurnTokenId) - distFt);
     label += ` (${remaining}ft left)`;
   }
   if (outOfRange) label += ' ⚠ out of range';

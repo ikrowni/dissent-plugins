@@ -117,11 +117,11 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "31c543e677490e076261ed9e140345c9869dd735bce6abc7663e2e0e26984f9b"
+      "sha256": "da2370e59ebf8b401cecf52f585d7069f727bc7604fa7674b2b2e6a173f71863"
     },
     {
       "url": "lk-table-rules.js",
-      "sha256": "9c3d862cb39d5c383fff4c49e610aa68fbd63f9e745d85020197039f93521513"
+      "sha256": "4a8823184980f8809ee32e646d163f03684c5e496853417612af65f51e7be32d"
     }
   ]
 }

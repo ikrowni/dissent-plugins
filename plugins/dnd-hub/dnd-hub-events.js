@@ -2,16 +2,17 @@
 import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20260502p4';
 import { request, storageGet, storageSet, getIdentity, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261005m';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID } from './dnd-hub-tokens.js?v=20261003d';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp } from './dnd-hub-tokens.js?v=20261005m';
+import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
 import { loadSRD } from './dnd-hub-char.js?v=20261003p';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261002a';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261005m';
 import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261003d';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
@@ -23,8 +24,8 @@ import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { isRepeat, publishTo } from './lk-bus.js';
-import { acceptMove, activeTokenId, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261004a';
+import { acceptMove, viewCentre } from './dnd-hub-rules.js';
+import { setView } from './dnd-hub-canvas.js?v=20261005m';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -156,6 +157,19 @@ function applyPendingView() {
 }
 const _seenMoves = {};
 
+/** Put a token back where the DM's screen last accepted it, on every screen, and tell the DM. */
+function _sendBack(p) {
+  const tok = MAP.mapData?.tokens?.[p.tokenId];
+  if (!tok) return;
+  const turn = MAP.turnMove?.tokenId === p.tokenId ? MAP.turnMove : null;
+  realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: p.tokenId,
+    x: tok.x, y: tok.y, final: true, turnPath: turn?.path || null, turnKey: turn?.key || null,
+    fromUserId: userId, ...moveStamp() });
+  const spr = MAP.tokenSprites[p.tokenId];
+  if (spr) { spr.x = tok.x; spr.y = tok.y; }
+  moveToast(`${tok.name || 'A token'} moved ${turn ? 'past its speed' : 'out of turn'} — sent back.`);
+}
+
 export async function handleMapEvent(p) {
   if (!p.type) return;
   // The same event can arrive twice (its own channel and a sibling's); handle it once.
@@ -247,6 +261,13 @@ export async function handleMapEvent(p) {
           return;
         }
       }
+      // During a fight the DM's screen referees players' moves (fog safety; owner 2026-10-03).
+      if (MAP.isDM && p.fromUserId && !isDMEvent(p)) {
+        const verdict = refereeMove(p);
+        if (verdict === 'wait') return;
+        if (verdict === 'bounce') { _sendBack(p); return; }
+      }
+      if (p.turnPath && MAP.turnMove && p.turnKey === MAP.turnMove.key && p.tokenId === MAP.turnMove.tokenId) commitPath(p.turnPath);
       if (MAP.mapData.tokens?.[p.tokenId]) {
         MAP.mapData.tokens[p.tokenId].x = p.x;
         MAP.mapData.tokens[p.tokenId].y = p.y;
@@ -274,6 +295,8 @@ export async function handleMapEvent(p) {
         }
       }
       if (lightsMoved) { renderLights(); renderFog(); }
+      // The DM's screen put my token back: see from where it really is.
+      if (!MAP.isDM && p.tokenId === 'player_' + userId) { computeLocalPlayerLOS(); renderFog(); }
       // Phase 7: check trigger tiles on any token move — DM fires effects,
       // players check only their own token so the DM hub isn't required.
       if (MAP.isDM || p.tokenId === 'player_' + userId) {
@@ -415,17 +438,10 @@ export async function handleMapEvent(p) {
     case 'initiative:update': {
       if (p.campaignId !== MAP.campaignId) return;
       renderInitiativeHUD(p.initiative);
-      // Turn lock and per-turn movement follow the DM's tracker (they used to follow only "Set as Active Turn").
-      const active = activeTokenId(p.initiative);
-      if (active !== MAP.activeTurnTokenId) {
-        MAP.activeTurnTokenId = active;
-        MAP.turnMovedDistance = 0;
-        if (active) {
-          MAP.turnMovedDistances.set(active, 0);
-          MAP.activeTurnTokenSpeed = MAP.mapData?.tokens?.[active]?.speed || 30;
-        }
-        renderTokens();
-      }
+      if (serverData?.campaigns?.[p.campaignId]) serverData.campaigns[p.campaignId].initiative = p.initiative;
+      // Turn lock and this turn's path follow the DM's tracker (dnd-hub-turn-move.js).
+      syncTurn(p.initiative);
+      renderTokens();
       break;
     }
     case EV.DICE_PHYSICS_ROLL: {
@@ -479,11 +495,7 @@ export async function handleMapEvent(p) {
     }
     case 'token:turn-start': {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
-      MAP.activeTurnTokenId = p.tokenId;
-      MAP.turnMovedDistance = 0;
-      MAP.turnMovedDistances.set(p.tokenId, 0); // reset this token's per-turn distance
-      const tok = MAP.mapData.tokens?.[p.tokenId];
-      MAP.activeTurnTokenSpeed = tok?.speed || 30;
+      syncTurn({ ts: p.ts }, p.tokenId);
       renderTokens();
       break;
     }
@@ -752,16 +764,6 @@ export async function handleMapEvent(p) {
           renderTokens();
         }
       }
-      break;
-    }
-    case 'movement:overage': {
-      if (p.campaignId !== MAP.campaignId || !MAP.isDM) return;
-      // DM hub shows a warning when any token exceeds its movement speed
-      const t = document.createElement('div');
-      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
-      t.textContent = `⚠ ${p.tokenName} is attempting to move beyond their speed (${p.distanceMoved}ft of ${p.speed}ft).`;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 5000);
       break;
     }
     case 'trigger:pending': {

@@ -3,13 +3,13 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261004a';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261005m';
 import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003p';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261003b';
-import { setZoom } from './dnd-hub-canvas.js?v=20261004a';
+import { setZoom } from './dnd-hub-canvas.js?v=20261005m';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
@@ -19,7 +19,7 @@ import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-wal
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20260502p4';
+} from './dnd-hub-map-bg.js?v=20261005m';
 import { resetFog, renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20260502p4';
 import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20260502p4';
@@ -29,8 +29,8 @@ import {
   selectBackground, renderCCEquipment, toggleEquipItem, filterEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
 } from './dnd-hub-char-steps.js?v=20261003a';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261003d';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261005m';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261005m';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20260502p4';
 import { renderTriggers } from './dnd-hub-triggers.js?v=20261003d';

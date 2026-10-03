@@ -2,7 +2,7 @@
 import { MAP, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { request, requestWithTransfer, storageSet, realtimePublish, genId } from '../plugin-sdk.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261003d';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261005m';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';
@@ -11,7 +11,8 @@ import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261004a';
+import { setZoom } from './dnd-hub-canvas.js?v=20261005m';
+import { syncTurn } from './dnd-hub-turn-move.js';
 
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is
@@ -198,6 +199,8 @@ export async function loadMapData(campaignId) {
   await renderMapBackground();
   await ensureImageFrame();
   renderGrid();
+  // A reload mid-fight must keep the turn lock and this turn's path (they used to reset to "no fight").
+  syncTurn(c.initiative);
   renderTokens();
   if (!MAP.isDM) computeLocalPlayerLOS();
   renderFog();

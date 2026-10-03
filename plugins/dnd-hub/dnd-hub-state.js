@@ -43,7 +43,7 @@ export const MAP = {
   selectedTokens: new Set(),    // DM shift-click multi-select: Set of tokenIds
   activeTurnTokenId: null,      // tokenId of the combatant whose turn it is
   activeTurnTokenSpeed: 30,     // movement speed in feet for active turn token
-  turnMovedDistance: 0,         // feet moved by active turn token this turn
+  turnMove: null,               // this turn's walked path: { key, tokenId, path: [{cx,cy}] } (dnd-hub-turn-move.js)
   rulerActive: false,           // whether the measurement ruler is being shown
   rulerStart: null,             // { x, y } world coords of ruler anchor point
   // Phase 6 — Dynamic lighting
@@ -59,7 +59,6 @@ export const MAP = {
   templateDrawState: null,  // { type, color, originX, originY } while drawing
   // Phase 2 — Range warnings & movement tracking
   selectedAttack: null,          // { name, toHit, damageDice, rangeFt } — set when DM picks an attack
-  turnMovedDistances: new Map(), // tokenId → feet moved this turn (per-token, reset on turn-start)
   // Phase 3 — Loot contests (in-memory only; not persisted)
   lootContests: {},   // { [contestKey]: { tokenId, shopId, itemId, itemName, source, goldCost, interested: [] } }
 };

@@ -5,18 +5,20 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20260502p4';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
 import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
-import { renderTokens, moveStamp } from './dnd-hub-tokens.js?v=20261003d';
+import { renderTokens, moveStamp } from './dnd-hub-tokens.js?v=20261005m';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261002a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261003d';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261005m';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261005m';
 import { showPinDialog } from './dnd-hub-pins.js?v=20260502p4';
 import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20260502p4';
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20260502p4';
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261003d';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
-import { findDoorAt, nextDoorState, playerMayToggleDoor, snapToGrid, placeOwnTokenVerdict, newPlayerToken, panFor } from './dnd-hub-rules.js';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261005m';
+import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
+import { toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
+import { extendPath, placeVerdict } from './dnd-hub-movement.js';
 
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
@@ -36,12 +38,14 @@ export async function initPixiApp() {
 
   const layers = {
     bg: new PIXI.Container(), grid: new PIXI.Container(),
-    lights: new PIXI.Container(),
+    lights: new PIXI.Container(), trail: new PIXI.Container(),
     tokens: new PIXI.Container(), fog: new PIXI.Container(),
     walls: new PIXI.Container(), ui: new PIXI.Container(),
   };
   MAP.layers = layers;
-  app.stage.addChild(layers.bg, layers.grid, layers.lights, layers.tokens, layers.fog, layers.walls, layers.ui);
+  resetTrailGraphics();
+  // The turn's trail sits under the fog: a path through fog must not show anyone the rooms in it.
+  app.stage.addChild(layers.bg, layers.grid, layers.lights, layers.trail, layers.tokens, layers.fog, layers.walls, layers.ui);
   app.stage.eventMode = 'static';
   app.stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
 
@@ -504,6 +508,14 @@ export async function initPixiApp() {
   });
 
   // ── Place-token mode (player only) ────────────────────────────────────
+  // 🔴 Fog safety: this used to teleport an existing token to any clicked square, so a player could look
+  // into any room. Now it only puts a token on the map when there is none, only on ground the party
+  // has already seen, and never during a fight.
+  const placeRefusal = () => {
+    if (MAP.mapData?.tokens?.['player_' + userId]) return 'Your token is already on the map — drag it or use the arrow keys.';
+    if (MAP.activeTurnTokenId) return 'A fight is on — ask the DM to place your token.';
+    return null;
+  };
   window._togglePlaceTokenMode = () => {
     const btn = document.getElementById('btn-place-token');
     if (MAP.activeTool === 'place-token') {
@@ -511,6 +523,8 @@ export async function initPixiApp() {
       app.canvas.style.cursor = '';
       if (btn) { btn.style.background = ''; btn.style.color = ''; }
     } else {
+      const why = MAP.mapData && placeRefusal();
+      if (why) { moveToast(why); return; }
       MAP.activeTool = 'place-token';
       app.canvas.style.cursor = 'crosshair';
       if (btn) { btn.style.background = 'rgba(96,165,250,.2)'; btn.style.color = '#60a5fa'; }
@@ -522,29 +536,26 @@ export async function initPixiApp() {
     const rect = app.canvas.getBoundingClientRect();
     const wx = (e.clientX - rect.left - MAP.panX) / MAP.zoom;
     const wy = (e.clientY - rect.top  - MAP.panY) / MAP.zoom;
-    const gs = effectiveGs(MAP.mapData);
-    const ox = (MAP._bgOffset?.x ?? 0) + (MAP.mapData?.gridOffsetX ?? 0);
-    const oy = (MAP._bgOffset?.y ?? 0) + (MAP.mapData?.gridOffsetY ?? 0);
-    const snappedX = snapToGrid(wx, ox, gs, 1);
-    const snappedY = snapToGrid(wy, oy, gs, 1);
     const tokenId = 'player_' + userId;
+    const why = placeRefusal();
     const verdict = placeOwnTokenVerdict(MAP.mapData, userId);
-    if (verdict === 'removed-by-dm') {
+    if (why) {
+      moveToast(why);
+    } else if (verdict === 'removed-by-dm') {
       alert('The DM removed your token from this map. Ask them to place it again (👥 Party).');
-    } else if (verdict === 'move') {
-      MAP.mapData.tokens[tokenId].x = snappedX;
-      MAP.mapData.tokens[tokenId].y = snappedY;
-      serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
-      await saveHubDm( serverData);
-      await realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x: snappedX, y: snappedY, fromUserId: userId, ...moveStamp() });
-      renderTokens();
     } else {
       // Never placed on this map (the DM may not have opened it since this player
       // joined): the player places their own. They own this token, so this is theirs to write.
       const camp = serverData.campaigns[MAP.campaignId];
       const summary = camp.characterSummaries?.[userId];
       if (!summary) { alert('Create your character first.'); window._togglePlaceTokenMode(); return; }
-      const tok = newPlayerToken(userId, summary, (camp.members || []).indexOf(userId), snappedX, snappedY, TOKEN_COLORS.length);
+      let cell = toCell(wx, wy);
+      const where = placeVerdict(MAP.mapData.fogState, cell);
+      if (where === 'fogged') { moveToast('Place your token on ground the party has already seen.'); return; }
+      const idx = (camp.members || []).indexOf(userId);
+      if (where === 'nothing-revealed') cell = seedCell(MAP.mapData, Math.max(0, idx));
+      const { x, y } = toPoint(cell);
+      const tok = newPlayerToken(userId, summary, idx, x, y, TOKEN_COLORS.length);
       MAP.mapData.tokens = MAP.mapData.tokens || {};
       MAP.mapData.tokens[tokenId] = tok;
       MAP.mapData.seededPlayers = { ...(MAP.mapData.seededPlayers || {}), [userId]: true };
@@ -552,6 +563,7 @@ export async function initPixiApp() {
       await saveHubDm(serverData);
       await realtimePublish(EV.TOKENS_SPAWN, { type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId, mapId: MAP.mapId, tokens: [tok], fromUserId: userId });
       renderTokens();
+      computeLocalPlayerLOS(); renderFog();
     }
     // Exit placement mode after placing
     window._togglePlaceTokenMode();
@@ -639,13 +651,19 @@ export async function initPixiApp() {
   });
 }
 
+let _keysBound = false;
 export function initKeyboardHandlers() {
+  // 🔴 The map screen is rebuilt every time it opens, and this used to add another window listener each
+  // time: after opening the map three times, one arrow press moved the token three squares.
+  if (_keysBound) return;
+  _keysBound = true;
   window.addEventListener('keydown', async e => {
     if (e.key === 'Escape') { clearRuler(); destroyContextMenu(); return; }
     if (e.key === '?') { _showShortcutsModal(); return; }
     if (!MAP.mapData) return;
+    if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
 
-    // ── WASD / Arrow key token movement ──────────────────────────────────
+    // ── WASD / Arrow key token movement: one square per press ────────────
     const MOVE_KEYS = { w: [0,-1], s: [0,1], a: [-1,0], d: [1,0],
       ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0] };
     const dir = MOVE_KEYS[e.key];
@@ -656,33 +674,31 @@ export function initKeyboardHandlers() {
       const token = MAP.mapData.tokens?.[tokenId];
       if (!token) return;
       if (!MAP.isDM && token.userId !== userId) return;
-
       e.preventDefault();
+      if (token.locked && !MAP.isDM) return;
+      // Out of turn, or out of movement: the token stays put, so nothing new is seen (fog).
+      const why = !MAP.isDM && refusal(tokenId);
+      if (why) { if (!e.repeat) moveToast(why); return; }
+
       const gs = effectiveGs(MAP.mapData);
       const newX = token.x + dir[0] * gs;
       const newY = token.y + dir[1] * gs;
       if (wouldCrossWall(token.x, token.y, newX, newY)) return;
+      const to = toCell(newX, newY);
+      const turn = turnFor(tokenId);
+      let turnPath = null;
+      if (turn) {
+        const r = extendPath(turn.path, to, {
+          committed: turn.path.length, blocked: cellBlocked,
+          speedFt: modeFor(tokenId) === 'budget' ? speedFor(tokenId) : Infinity,
+        });
+        if (r.path.length === turn.path.length) { if (r.stopped === 'speed' && !e.repeat) moveToast(refusal(tokenId) || 'No movement left.'); return; }
+        turnPath = r.path;
+        commitPath(turnPath);
+      }
       const newFacing = Math.round(Math.atan2(dir[1], dir[0]) * 180 / Math.PI);
       token.facing = newFacing;
       token.x = newX; token.y = newY;
-
-      // Track per-token movement this turn and warn if speed exceeded
-      const movedSoFar = (MAP.turnMovedDistances.get(tokenId) || 0) + 5;
-      MAP.turnMovedDistances.set(tokenId, movedSoFar);
-      const tokenSpeed = token.speed || 30;
-      if (movedSoFar > tokenSpeed) {
-        // Show toast on this hub (player sees it directly)
-        const toastEl = document.createElement('div');
-        toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
-        toastEl.textContent = `Movement exceeds your speed for this turn (${movedSoFar}ft of ${tokenSpeed}ft used).`;
-        document.body.appendChild(toastEl);
-        setTimeout(() => toastEl.remove(), 4000);
-        // Notify all hubs so DM sees who is overmoving
-        realtimePublish(EV.MOVEMENT_OVERAGE, {
-          type: EV.MOVEMENT_OVERAGE, campaignId: MAP.campaignId,
-          tokenId, tokenName: token.name, distanceMoved: movedSoFar, speed: tokenSpeed, fromUserId: userId,
-        });
-      }
 
       const spr = MAP.tokenSprites[tokenId];
       if (spr) { spr.x = newX; spr.y = newY; }
@@ -691,11 +707,12 @@ export function initKeyboardHandlers() {
       saveHubDm( serverData);
 
       renderTokens(); // incremental — rebuilds only the changed token sprite
+      renderTrail();
 
       if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
       // Debounce the broadcast — keyboard auto-repeat fires ~10×/sec
-      MAP._wasdPendingMove = { tokenId, x: newX, y: newY, facing: newFacing };
+      MAP._wasdPendingMove = { tokenId, x: newX, y: newY, facing: newFacing, turnPath, turnKey: turn?.key ?? null };
       if (!MAP._wasdBroadcastTimer) {
         MAP._wasdBroadcastTimer = setTimeout(() => {
           MAP._wasdBroadcastTimer = null;
@@ -703,8 +720,9 @@ export function initKeyboardHandlers() {
           if (m) {
             MAP._wasdPendingMove = null;
             realtimePublish(EV.TOKEN_MOVE, {
-              type: EV.TOKEN_MOVE, campaignId: MAP.campaignId,
-              tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, fromUserId: userId, ...moveStamp(),
+              type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, final: true,
+              tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, turnPath: m.turnPath, turnKey: m.turnKey,
+              fromUserId: userId, ...moveStamp(),
             });
           }
         }, 80);

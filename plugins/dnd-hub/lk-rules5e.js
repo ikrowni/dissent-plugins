@@ -253,7 +253,7 @@ export function characterSummary(c, eff = {}) {
   return {
     name: c.name || 'Unknown', race: c.race || '', class: c.class || '', level: c.level || 1,
     hp: c.hp ?? 0, hpMax: eff.hpMax ?? c.hpMax ?? 0, hpTemp: c.hpTemp || 0,
-    ac: eff.ac ?? c.ac ?? 10, dex: eff.dex ?? c.dex ?? 10, passivePerception: pp,
+    ac: eff.ac ?? c.ac ?? 10, dex: eff.dex ?? c.dex ?? 10, passivePerception: pp, speed: c.speed || 30,
     conditions: [...(c.conditions || [])], dead: !!c.dead, stable: !!c.stable,
     portraitUrl: c.portraitUrl || '', portraitFileId: c.portraitFileId || '',
     concentration: c.concentration?.spellName || null,

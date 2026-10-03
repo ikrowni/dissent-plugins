@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20260502p4';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20260502p4';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261002a';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261005m';
 import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261003d';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261003d';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
@@ -20,6 +20,8 @@ import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
+import { toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
+import { extendPath } from './dnd-hub-movement.js';
 
 const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
 
@@ -86,7 +88,8 @@ export function renderTokens() {
       }
       return;
     }
-    const cacheKey = JSON.stringify(token);
+    // Whose turn it is changes how a token looks (dimmed out of turn) and whether it drags.
+    const cacheKey = JSON.stringify(token) + '|' + modeFor(token.id);
     const existing = MAP.tokenSprites[token.id];
     if (existing && _tokenDataCache.get(token.id) === cacheKey) {
       if (!existing.parent) layers.tokens.addChild(existing);
@@ -255,8 +258,8 @@ export function buildTokenSprite(token, gs) {
     container.addChild(lockBadge);
   }
 
-  // turnLock faded overlay — non-active player tokens can't move when turnLock is on
-  if (tableRule('turnLock') && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id) {
+  // Out of turn during a fight: dimmed. Always on (fog safety, owner 2026-10-03), not a Table rule.
+  if (MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id) {
     const overlay = new PIXI.Graphics();
     overlay.circle(0, 0, r).fill({ color: 0x000000, alpha: 0.45 });
     container.addChild(overlay);
@@ -299,17 +302,12 @@ function setupTokenDrag(container, token) {
     return;
   }
 
-  // turnLock: non-active combatants cannot drag during initiative
-  if (tableRule('turnLock') && MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id && !MAP.isDM) {
-    container.eventMode = 'static';
-    container.cursor = 'not-allowed';
-    return;
-  }
-
   container.eventMode = 'static';
-  container.cursor = 'grab';
+  container.cursor = modeFor(token.id) === 'locked' ? 'not-allowed' : 'grab';
   let dragging = false, lastPublish = 0;
   let lastValid = null; // last position on the token's side of every wall
+  // This turn's path while dragging (null outside the token's turn). Cells before `committed` are spent.
+  let dragPath = null, committed = 0, dragTurn = null;
 
   container.on('pointerdown', e => {
     if (MAP.activeTool !== 'select') return;
@@ -322,12 +320,15 @@ function setupTokenDrag(container, token) {
       return;
     }
     MAP.selectedToken = token.id;
-    dragging = true; container.cursor = 'grabbing'; e.stopPropagation();
+    e.stopPropagation();
+    // Out of turn, or no movement left: it does not move, so it reveals nothing (fog safety).
+    const why = !MAP.isDM && refusal(token.id);
+    if (why) { moveToast(why); return; }
+    dragging = true; container.cursor = 'grabbing';
     lastValid = { x: container.x, y: container.y };
-    // Auto-ruler for active-turn token
-    if (MAP.activeTurnTokenId === token.id) {
-      startRuler(token.x, token.y);
-    }
+    dragTurn = turnFor(token.id);
+    dragPath = dragTurn ? dragTurn.path.slice() : null;
+    committed = dragPath?.length || 0;
   });
 
   container.on('globalpointermove', e => {
@@ -336,17 +337,24 @@ function setupTokenDrag(container, token) {
     const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;
     // Stop at walls WHILE dragging. Everyone else watches this token move, so a token
     // that slid through a wall and only snapped back on drop looked like it went through.
-    const step = dragStep(lastValid || pos, pos,
+    let step = dragStep(lastValid || pos, pos,
       (x1, y1, x2, y2) => _crossesWallForSize(token, x1, y1, x2, y2, gs));
+    if (dragPath) {
+      // Walk the path square by square; on the token's own turn it stops where its speed runs out.
+      const budget = modeFor(token.id) === 'budget';
+      const cell = toCell(step.x, step.y);
+      dragPath = extendPath(dragPath, cell, { committed, blocked: cellBlocked,
+        speedFt: budget ? speedFor(token.id) : Infinity }).path;
+      const end = dragPath[dragPath.length - 1];
+      if (end.cx !== cell.cx || end.cy !== cell.cy) step = { ...toPoint(end) };
+      renderTrail(dragPath);
+    }
     lastValid = { x: step.x, y: step.y };
     container.x = step.x; container.y = step.y;
     const now = Date.now();
     if (now - lastPublish > 30) {
       lastPublish = now;
       realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: step.x, y: step.y, fromUserId: userId, ...moveStamp() });
-    }
-    if (MAP.activeTurnTokenId === token.id) {
-      updateRuler(step.x, step.y);
     }
   });
 
@@ -363,8 +371,10 @@ function setupTokenDrag(container, token) {
     const sKey  = MAP.mapData?.tokens?.[token.id]?.size || 'medium';
     const cells = SIZE_CELLS[sKey] || 1;
     // Large+ snap to grid corner; small/medium snap to cell center
-    const snappedX = snapToGrid(container.x, ox, gs, cells);
-    const snappedY = snapToGrid(container.y, oy, gs, cells);
+    let snappedX = snapToGrid(container.x, ox, gs, cells);
+    let snappedY = snapToGrid(container.y, oy, gs, cells);
+    // On its turn a token lands on the square its path ends in, never a neighbour of it.
+    if (dragPath && cells <= 1) ({ x: snappedX, y: snappedY } = toPoint(dragPath[dragPath.length - 1]));
 
     // Wall collision — revert to last saved position if move would cross a wall or locked door
     const savedX = MAP.mapData?.tokens?.[token.id]?.x ?? snappedX;
@@ -375,42 +385,17 @@ function setupTokenDrag(container, token) {
     const from = lastValid || { x: savedX, y: savedY };
     if (_crossesWallForSize(token, from.x, from.y, snappedX, snappedY, gs)) {
       container.x = savedX; container.y = savedY;
-      clearRuler();
+      if (dragTurn) renderTrail();
+      dragPath = null;
       // Tell everyone: they watched the live drag and must see it go back.
-      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, fromUserId: userId, ...moveStamp() });
+      realtimePublish(EV.TOKEN_MOVE, { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: savedX, y: savedY, final: true, fromUserId: userId, ...moveStamp() });
       return;
     }
 
     container.x = snappedX; container.y = snappedY;
-
-    // Accumulate moved distance for turn budget, then clear ruler
-    if (MAP.activeTurnTokenId === token.id && MAP.rulerStart) {
-      const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;
-      const dx = snappedX - MAP.rulerStart.x;
-      const dy = snappedY - MAP.rulerStart.y;
-      MAP.turnMovedDistance += Math.round(Math.sqrt(dx * dx + dy * dy) / gs * 5);
-    }
-    // Per-token overage tracking (all tokens, not just active turn)
-    {
-      const movedFt = Math.round(Math.hypot(snappedX - savedX, snappedY - savedY) / gs * 5);
-      if (movedFt > 0) {
-        const soFar = (MAP.turnMovedDistances.get(token.id) || 0) + movedFt;
-        MAP.turnMovedDistances.set(token.id, soFar);
-        const tokenSpeed = MAP.mapData?.tokens?.[token.id]?.speed || 30;
-        if (soFar > tokenSpeed) {
-          const toastEl = document.createElement('div');
-          toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.5)';
-          toastEl.textContent = `Movement exceeds your speed for this turn (${soFar}ft of ${tokenSpeed}ft used).`;
-          document.body.appendChild(toastEl);
-          setTimeout(() => toastEl.remove(), 4000);
-          realtimePublish(EV.MOVEMENT_OVERAGE, {
-            type: EV.MOVEMENT_OVERAGE, campaignId: MAP.campaignId,
-            tokenId: token.id, tokenName: token.name, distanceMoved: soFar, speed: tokenSpeed, fromUserId: userId,
-          });
-        }
-      }
-    }
-    clearRuler();
+    const turnPath = dragPath;
+    if (turnPath && dragTurn === MAP.turnMove) commitPath(turnPath);
+    dragPath = null;
 
     if (MAP.mapData?.tokens?.[token.id]) {
       // Update facing when token moves more than half a cell
@@ -428,7 +413,9 @@ function setupTokenDrag(container, token) {
     // Recompute local LOS after player moves their own token
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
-    const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY, facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, fromUserId: userId, ...moveStamp() };
+    const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY,
+      facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, final: true,
+      turnPath: turnPath || null, turnKey: turnPath ? dragTurn?.key : null, fromUserId: userId, ...moveStamp() };
     realtimePublish(EV.TOKEN_MOVE, movePayload);
     // My own sidebar sets zone-audio volume from where my token stands; it never heard this before.
     if (token.id === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, movePayload);
@@ -610,7 +597,7 @@ export function showContextMenu(token, cx, cy) {
       destroyContextMenu();
       await realtimePublish(EV.TOKEN_TURN_START, {
         type: EV.TOKEN_TURN_START, campaignId: MAP.campaignId,
-        tokenId: token.id, fromUserId: userId,
+        tokenId: token.id, fromUserId: userId, ts: Date.now(),
       });
     });
 

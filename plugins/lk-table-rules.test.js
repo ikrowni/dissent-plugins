@@ -9,7 +9,6 @@ const SPEC = {
   deathSaves:            { guided: true,  classic: true,  raw: false },
   concentrationAutoRoll: { guided: true,  classic: false, raw: false },
   trapSavesAuto:         { guided: true,  classic: false, raw: false },
-  turnLock:              { guided: true,  classic: false, raw: false },
   hints:                 { guided: true,  classic: false, raw: false },
 };
 
@@ -36,7 +35,7 @@ describe('rule', () => {
     expect(rule(null, 'hints')).toBe(true);
   });
   it('ignores a non-boolean value', () => {
-    expect(rule({ turnLock: 'yes' }, 'turnLock')).toBe(true);
+    expect(rule({ hints: 'yes' }, 'hints')).toBe(true);
   });
 });
 
@@ -50,10 +49,13 @@ describe('presetOf', () => {
   it('treats no settings as Guided', () => {
     expect(presetOf(undefined)).toBe('guided');
   });
-  it('shows the old default settings as custom (turn lock was off, concentration manual)', () => {
+  it('shows the old default settings as custom (concentration was manual)', () => {
     const old = { autoHit: true, autoDamage: true, turnLock: false, deathSaves: true, spatialRange: 60, concentrationAutoRoll: false };
     expect(presetOf(old)).toBe('custom');
-    expect(rule(old, 'turnLock')).toBe(false);
+  });
+  it('ignores the retired turn-lock switch (turn lock is always on in a fight now)', () => {
+    expect(RULE_KEYS).not.toContain('turnLock');
+    expect(presetOf({ ...PRESETS.guided, turnLock: false })).toBe('guided');
   });
 });
 
