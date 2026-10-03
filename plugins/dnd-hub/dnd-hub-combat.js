@@ -3,7 +3,8 @@ import { MAP, serverData, userId } from './dnd-hub-state.js?v=20260502p4';
 import { storageSet, realtimePublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
-import { attackOutcome } from './lk-rules5e.js';
+import { rule } from './lk-table-rules.js';
+import { attackVerdict } from './dnd-hub-rules.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
@@ -72,7 +73,8 @@ export function showConditionPicker(token, cx, cy) {
 
 export async function applyConditions(token, conditions, campaignId) {
   token.conditions = conditions;
-  if (MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
+  // Only the DM's screen keeps the map record.
+  if (MAP.isDM && MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
     serverData.campaigns[campaignId].maps[MAP.mapId] = MAP.mapData;
     await saveHubDm( serverData);
   }
@@ -101,70 +103,47 @@ export async function setTokenAC(token, campaignId) {
   });
 }
 
+const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
+
 // ── Auto Hit / Miss ───────────────────────────────────────────────────────────
 
+let _pendingHit = null; // { rollerId, hitIds, at }: the last attack judged on this screen that hit something
+
 /**
- * Hit or miss against the selected targets. `natural` is the d20 as rolled: a natural 20 always hits and
- * is a critical, a natural 1 always misses. The crit used to be read off the TOTAL (audit G1).
+ * The verdict for an attack rolled on THIS screen, against the targets selected here (audit G6), or null when the
+ * table does not judge attacks (`autoHit` off) or nothing is selected. It rides in the dice:roll event, so every
+ * screen shows this one verdict.
  */
-export function checkAutoHit(rollResult, natural) {
-  if (!MAP.mapData || !MAP.selectedTokens.size) return;
-  const targets = [...MAP.selectedTokens]
-    .map(id => MAP.mapData.tokens?.[id])
-    .filter(Boolean);
-  if (!targets.length) return;
-
-  const results = targets.map(t => {
-    const ac = t.ac ?? 10;
-    const { hit } = attackOutcome(natural, rollResult, ac);
-    return `${t.name}: ${hit ? '✅ HIT' : '❌ MISS'} (AC ${ac})`;
-  });
-
-  showCombatToast(`Roll ${rollResult} — ${results.join(' | ')}`);
-  if (natural === 20) showCombatToast('⚔️ CRITICAL HIT! Roll the damage dice twice.');
-  else if (natural === 1) showCombatToast('A natural 1 — a miss whatever the total.');
+export function judgeAttack(total, natural, rollerId) {
+  _pendingHit = null;
+  if (!tableRule('autoHit') || !MAP.mapData || !MAP.selectedTokens.size) return null;
+  const targets = [...MAP.selectedTokens].map(id => MAP.mapData.tokens?.[id]).filter(Boolean);
+  const v = attackVerdict(targets, natural, total);
+  if (v?.hitIds.length) _pendingHit = { rollerId, hitIds: v.hitIds, at: Date.now() };
+  return v;
 }
 
 // ── Auto Damage ───────────────────────────────────────────────────────────────
 
-export async function applyAutoDamage(damage, campaignId) {
-  if (!MAP.mapData || !MAP.selectedTokens.size) return;
-  const targets = [...MAP.selectedTokens]
-    .map(id => MAP.mapData.tokens?.[id])
-    .filter(Boolean);
-  if (!targets.length) return;
-
-  if (targets.length > 1) {
-    _massDamageModal(damage, targets, campaignId);
-  } else {
-    await _damageToken(targets[0], damage, campaignId);
-  }
+/**
+ * A damage roll right after a judged hit by the same roller comes off the targets that were hit, when the table
+ * applies damage (`autoDamage`). Only the DM's Hub may change HP, so a player's Hub asks it to (DAMAGE_REQUEST).
+ */
+export async function applyPendingDamage(rollerId, damage) {
+  const h = _pendingHit;
+  _pendingHit = null;
+  if (!h || h.rollerId !== rollerId || Date.now() - h.at > 60_000 || !tableRule('autoDamage')) return false;
+  if (MAP.isDM) await damageTokens(h.hitIds, damage, MAP.campaignId);
+  else await publishTo([], EV.DAMAGE_REQUEST, { campaignId: MAP.campaignId, tokenIds: h.hitIds, damage, fromUserId: userId });
+  return true;
 }
 
-function _massDamageModal(damage, targets, campaignId) {
-  const existing = document.getElementById('_mass-dmg-modal');
-  if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = '_mass-dmg-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9998';
-  modal.innerHTML =
-    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;min-width:240px;max-width:300px">' +
-      '<div style="font-size:13px;font-weight:700;color:var(--dnd-gold);margin-bottom:12px">Apply ' + damage + ' Damage</div>' +
-      targets.map(t =>
-        `<div style="font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)">${t.name} ` +
-        `(${t.hp}/${t.hpMax} HP) → ${Math.max(0, t.hp - damage)}</div>`
-      ).join('') +
-      '<div style="display:flex;gap:8px;margin-top:16px">' +
-        '<button id="_mass-cancel" class="btn btn-ghost" style="flex:1">Cancel</button>' +
-        '<button id="_mass-confirm" class="btn btn-red" style="flex:1">Apply All</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(modal);
-  document.getElementById('_mass-cancel').addEventListener('click', () => modal.remove());
-  document.getElementById('_mass-confirm').addEventListener('click', async () => {
-    modal.remove();
-    for (const t of targets) await _damageToken(t, damage, campaignId);
-  });
+/** The DM's Hub applies `damage` to each token (the damage request, the monster attack panel). */
+export async function damageTokens(tokenIds, damage, campaignId) {
+  for (const id of tokenIds) {
+    const t = MAP.mapData?.tokens?.[id];
+    if (t) await _damageToken(t, damage, campaignId);
+  }
 }
 
 async function _damageToken(token, damage, campaignId) {

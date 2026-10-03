@@ -12,7 +12,8 @@ import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20260502p4';
 import { loadSRD } from './dnd-hub-char.js?v=20261003a';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261002a';
-import { checkAutoHit } from './dnd-hub-combat.js?v=20261002a';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261003d';
+import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20260502p4';
 import { renderLights } from './dnd-hub-lights.js?v=20260502p4';
@@ -402,7 +403,7 @@ export async function handleMapEvent(p) {
       break;
     case EV.DICE_PHYSICS_ROLL: {
       // A player asked us to run a genuine physics roll and report back the result.
-      const { sides, count, mod = 0, label, expression, userId: rollerId, ts, advMode } = p;
+      const { sides, count, mod = 0, label, expression, userId: rollerId, ts, advMode, rollType = null } = p;
       const effectiveCount = advMode ? 2 : count;
       const rolls = await animateDiceFree(sides, effectiveCount);
       let usedRolls = rolls;
@@ -411,10 +412,13 @@ export async function handleMapEvent(p) {
         usedRolls = [chosen];
       }
       const total = usedRolls.reduce((a, b) => a + b, 0) + mod;
+      const natural = sides === 20 && usedRolls.length === 1 ? usedRolls[0] : null;
+      const verdict = rollType === 'attack' && natural != null ? judgeAttack(total, natural, rollerId) : null;
+      if (rollType === 'damage') await applyPendingDamage(rollerId, total);
       const payload = {
         type: EV.DICE_ROLL, userId: rollerId,
         expression: expression || `${count}d${sides}${mod >= 0 ? '+' : ''}${mod}`,
-        result: total, rolls, advMode, label, ts,
+        result: total, rolls, advMode, label, ts, rollType, verdict,
       };
       _ownPhysicsRollTs.add(ts);
       await realtimePublish(EV.DICE_ROLL, payload);
@@ -424,13 +428,12 @@ export async function handleMapEvent(p) {
     }
     case 'dice:roll': {
       showMapRollToast(p);
+      // One verdict, decided on the attacker's screen (judgeAttack), shown on every screen.
+      if (p.verdict?.text) showCombatToast(`Roll ${p.result} — ${p.verdict.text}`);
+      MAP.lastRoll = { ts: p.ts, userId: p.userId, label: p.label || '', rollType: p.rollType || null, verdict: p.verdict?.text || null };
       // Skip animation if this is our own physics-roll broadcast bouncing back
       if (_ownPhysicsRollTs.has(p.ts)) {
         _ownPhysicsRollTs.delete(p.ts);
-        if (p.rollType === 'attack' && MAP.campaignId && MAP.selectedTokens.size > 0) {
-          const settings = serverData?.campaigns?.[MAP.campaignId]?.settings;
-          if (settings?.autoHit) checkAutoHit(p.result, p.rolls?.[0]);
-        }
         break;
       }
       const parsed = parseDiceExpr(p.expression);
@@ -476,6 +479,12 @@ export async function handleMapEvent(p) {
     case 'token:death-save':
       // Hub shows death state via hp<=0 skull (buildTokenSprite); player sidebar handles the save UI.
       break;
+    case EV.DAMAGE_REQUEST: {
+      // A player's Hub judged a hit and rolled damage; only the DM's Hub changes HP, and only if the table applies damage.
+      if (p.campaignId !== MAP.campaignId || !MAP.isDM || !rule(serverData?.campaigns?.[p.campaignId]?.settings, 'autoDamage')) return;
+      await damageTokens(p.tokenIds || [], Math.max(0, Number(p.damage) || 0), p.campaignId);
+      break;
+    }
     case 'combat:settings': {
       if (p.campaignId !== MAP.campaignId || !serverData?.campaigns?.[p.campaignId]) return;
       serverData.campaigns[p.campaignId].settings = p.settings;

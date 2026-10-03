@@ -227,7 +227,7 @@ function setDiceRollLabel(label, forceMod) {
   document.getElementById('roll-label').textContent = label;
 }
 
-async function rollDice() {
+async function rollDice(rollType = null) {
   const sides  = parseInt(selectedDie.replace('d', ''), 10);
   const count  = Math.max(1, parseInt(document.getElementById('dice-count').value, 10) || 1);
   const mod    = parseInt(document.getElementById('dice-mod').value, 10) || 0;
@@ -244,7 +244,7 @@ async function rollDice() {
   _pendingPhysicsRollTs = ts;
   localPublish('dnd-hub', EV.DICE_PHYSICS_ROLL, {
     type: EV.DICE_PHYSICS_ROLL, sides, count, mod, label, expression,
-    advMode, userId: USER_ID, ts,
+    advMode, userId: USER_ID, ts, rollType,
   });
 
   // Fallback: if hub doesn't respond within 8 s (e.g. map not open), compute locally
@@ -830,7 +830,7 @@ function weaponAttack(equipIdx) {
   _pendingWeaponAttack = { item, weaponEffect, equipIdx };
 
   setDiceRollLabel(`${item.name} — Attack`, toHitMod);
-  rollDice();
+  rollDice('attack');
 }
 
 function weaponRollDamage() {
@@ -846,7 +846,7 @@ function weaponRollDamage() {
   document.getElementById('dice-count').value = parsed.count;
   document.getElementById('dice-mod').value = parsed.mod;
   document.getElementById('roll-label').textContent = `${item.name} — ${crit ? 'CRITICAL ' : ''}Damage (${weaponEffect.damageType})`;
-  rollDice();
+  rollDice('damage');
 }
 
 function removeInventoryItem(idx) {
