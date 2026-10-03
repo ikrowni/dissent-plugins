@@ -91,6 +91,7 @@ describe('placing your own token', () => {
 });
 
 import { fogAlpha } from './dnd-hub-rules.js';
+import { campaignRecord, seedCell } from './dnd-hub-rules.js';
 describe('fogAlpha', () => {
   it('players: unexplored is solid, explored is dimmed, visible is clear', () => {
     expect(fogAlpha('unexplored', false)).toBe(1);
@@ -101,5 +102,25 @@ describe('fogAlpha', () => {
     expect(fogAlpha('unexplored', true)).toBeLessThan(0.6);
     expect(fogAlpha('unexplored', true)).toBeGreaterThan(0);
     expect(fogAlpha('explored', true)).toBeLessThan(fogAlpha('unexplored', true));
+  });
+});
+
+describe('campaignRecord', () => {
+  it('fills every field a new campaign needs', () => {
+    const c = campaignRecord({ id: 'c1', name: 'N', dmUserId: 'u', dmDisplayName: 'Dee', now: '2026-10-03T00:00:00Z' });
+    expect(c).toMatchObject({ id: 'c1', name: 'N', description: '', dmUserId: 'u', visibility: 'open', autoAccept: true,
+      maxPlayers: 4, startingLevel: 1, members: [], maps: {}, encounters: {}, journals: {}, items: {}, scenes: {},
+      activeMapId: null, status: 'active' });
+    expect('settings' in c).toBe(false); // Table rules (piece 3) sets the preset
+  });
+});
+
+describe('seedCell', () => {
+  it('lines players up from the map start cell', () => {
+    expect(seedCell({ startCell: { cx: 2, cy: 11 } }, 0)).toEqual({ cx: 2, cy: 11 });
+    expect(seedCell({ startCell: { cx: 2, cy: 11 } }, 2)).toEqual({ cx: 4, cy: 11 });
+  });
+  it('without a start cell: the old place (2 + 2i, 3)', () => {
+    expect(seedCell({}, 1)).toEqual({ cx: 4, cy: 3 });
   });
 });

@@ -99,3 +99,24 @@ export function fogAlpha(state, isDM) {
   if (isDM) return state === 'explored' ? 0.2 : 0.45;
   return state === 'explored' ? 0.55 : 1;
 }
+/** A new campaign's record — one shape for "Start New Campaign" and the sample adventure. */
+export function campaignRecord({ id, name, description = '', dmUserId, dmDisplayName = 'Unknown DM',
+  visibility = 'open', maxPlayers = 4, startingLevel = 1, now = new Date().toISOString() }) {
+  return {
+    id, name, description, dmUserId, dmDisplayName,
+    visibility, autoAccept: visibility === 'open', maxPlayers, startingLevel,
+    currentLevel: startingLevel, members: [], joinRequests: [],
+    status: 'active', createdAt: now, updatedAt: now,
+    maps: {}, sessions: [], history: [], handouts: [],
+    storyRecap: '', xpSystem: 'milestone', partyXP: 0,
+    library: { monsters: {}, spells: {}, items: {}, subclasses: {} },
+    dmNotes: '', activeMapId: null, initiative: null, encounters: {},
+    journals: {}, items: {}, scenes: {},
+  };
+}
+
+/** Where the i-th player's token is first placed: along a row from the map's start cell. */
+export function seedCell(mapData, i) {
+  const s = mapData?.startCell;
+  return s ? { cx: s.cx + i, cy: s.cy } : { cx: 2 + i * 2, cy: 3 };
+}

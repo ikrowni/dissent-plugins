@@ -6,6 +6,7 @@ import { icon } from './lk-icons.js';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20260502p4';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261003a';
+import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-quick-screen.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';
 
@@ -280,17 +281,8 @@ export async function createCampaign() {
 
     const campaignId = genId();
     const now = new Date().toISOString();
-    const campaign = {
-      id: campaignId, name, description,
-      dmUserId: identity.id, dmDisplayName: identity.displayName || 'Unknown DM',
-      visibility, autoAccept, maxPlayers, startingLevel,
-      currentLevel: startingLevel, members: [], joinRequests: [],
-      status: 'active', createdAt: now, updatedAt: now,
-      maps: {}, sessions: [], history: [], handouts: [],
-      storyRecap: '', xpSystem: 'milestone', partyXP: 0,
-      library: { monsters: {}, spells: {}, items: {}, subclasses: {} },
-      dmNotes: '', activeMapId: null, initiative: null, encounters: {},
-    };
+    const campaign = campaignRecord({ id: campaignId, name, description, dmUserId: identity.id,
+      dmDisplayName: identity.displayName || 'Unknown DM', visibility, maxPlayers, startingLevel, now });
 
     if (!serverData) setServerData({ campaigns: {} });
     if (!serverData.campaigns) serverData.campaigns = {};

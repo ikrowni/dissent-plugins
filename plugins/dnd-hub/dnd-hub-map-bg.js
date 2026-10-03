@@ -2,7 +2,7 @@
 import { MAP, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { request, requestWithTransfer, storageSet, realtimePublish, genId } from '../plugin-sdk.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20260502p4';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261002a';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261003b';
 import { renderFog } from './dnd-hub-fog.js?v=20260502p4';
 import { renderWalls } from './dnd-hub-walls.js?v=20260502p4';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20260502p4';

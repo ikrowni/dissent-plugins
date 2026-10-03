@@ -9,7 +9,7 @@ import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurn
 import { COND_HEX, showConditionPicker, setTokenAC } from './dnd-hub-combat.js?v=20261002a';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261002a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
-import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken } from './dnd-hub-rules.js';
+import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
 import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
@@ -46,7 +46,7 @@ export function renderTokens() {
         const idx = (campaign.members || []).indexOf(uid);
         const tokenId = `player_${uid}`;
         mapData.tokens[tokenId] = newPlayerToken(uid, summary, idx,
-          ox + (2 + i * 2) * gs + gs / 2, oy + 3 * gs + gs / 2, TOKEN_COLORS.length);
+          ox + seedCell(mapData, i).cx * gs + gs / 2, oy + seedCell(mapData, i).cy * gs + gs / 2, TOKEN_COLORS.length);
         mapData.seededPlayers[uid] = true;
       });
       saveHubDm(serverData); // fire-and-forget
