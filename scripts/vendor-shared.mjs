@@ -76,6 +76,11 @@ const VENDORED = [
     source: "lk-content-pack.js",
     targets: ["dnd-hub/lk-content-pack.js", "dnd-master/lk-content-pack.js", "dnd-player/lk-content-pack.js"],
   },
+  // LanternKeep Table rules — the presets and what each switch means.
+  {
+    source: "lk-table-rules.js",
+    targets: ["dnd-hub/lk-table-rules.js", "dnd-master/lk-table-rules.js", "dnd-player/lk-table-rules.js"],
+  },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",
