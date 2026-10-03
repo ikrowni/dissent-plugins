@@ -1122,6 +1122,14 @@ async function onEvent(ev) {
     return;
   }
 
+  // The DM started the evening: the recap is now a page in the party journal.
+  if (p.type === EV.SESSION_START && p.campaignId === CAMPAIGN_ID) {
+    if (isRepeat(p)) return;
+    renderPartyJournal().catch(() => {});
+    _showPlayerToast('The session begins.');
+    return;
+  }
+
   // A companion's summary changed (their HP, conditions, death saves): redraw my strip.
   if (p.type === EV.PARTY_UPDATE && p.campaignId === CAMPAIGN_ID) {
     if (isRepeat(p) || p.fromUserId !== p.userId || p.userId === USER_ID || !p.summary) return;
