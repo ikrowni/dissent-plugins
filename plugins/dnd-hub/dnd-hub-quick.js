@@ -145,3 +145,10 @@ export function previewStats(srd, draft) {
   const weaponName = weaponId ? ((srd.equipment || []).find(e => e.id === weaponId)?.name || weaponId) : null;
   return { hp, ac, attack: w ? { name: weaponName, toHit: w.toHit, damage: w.damage, damageType: w.damageType } : null };
 }
+
+/** The reveal card's numbers for a saved hero (level-up). */
+export function previewStatsOfHero(h) {
+  const weapon = (h.equipment || []).find(e => e.type === 'weapon' && e.equipped);
+  const w = weapon ? weaponProfile({ id: weapon.id }, h) : null;
+  return { hp: h.hpMax, ac: h.ac, attack: w ? { name: weapon.name, toHit: w.toHit, damage: w.damage, damageType: w.damageType } : null };
+}

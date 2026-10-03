@@ -1,4 +1,5 @@
 // dnd-hub-main.js — entry point, wiring only. Zero logic.
+import { levelupPick, levelupRoll, levelupRollDie, levelupAbility, levelupBack, levelupNext, levelupContinue } from './dnd-hub-levelup.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
@@ -87,6 +88,8 @@ window.renderRaceDetails   = renderRaceDetails;
 window.selectClass         = selectClass;
 window.renderSubclassOptions = renderSubclassOptions;
 // Hero Forge (dnd-hub-forge.js)
+window.levelupPick = levelupPick; window.levelupRoll = levelupRoll; window.levelupRollDie = levelupRollDie;
+window.levelupAbility = levelupAbility; window.levelupBack = levelupBack; window.levelupNext = levelupNext; window.levelupContinue = levelupContinue;
 window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
 window.__lkKits = STARTING_KITS;
 window.startSampleAdventure = startSampleAdventure;
