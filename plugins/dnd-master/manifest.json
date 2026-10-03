@@ -35,7 +35,7 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "b8e7761bbd513b5fa344451218e5c1f0d8e53af4deca333b32893a06efd85a13"
+      "sha256": "7cde07067f00a5865e11a0e00a4d3b4ddb3fe9e470b870fe36b7f6fed36e9628"
     },
     {
       "url": "dnd-hub-shared-storage.js",
@@ -47,11 +47,15 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "5f5896ac9b729f7b2bacd41424c0852040916780f1eb38c19bed931e4cc5239c"
+      "sha256": "54280d713cc56524d077242504ab956b5c8d98d182c47ed81e199fb88f144a8e"
+    },
+    {
+      "url": "dnd-master-init-order.js",
+      "sha256": "475d734f07d14eec3715d742b2e3cd1d69840a5779a6aa44840a25bf2dc76b6f"
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "268c013aaee1a2909e72d8b5605cbea41cbba4f51370c94295f52a8861ba2aaf"
+      "sha256": "5356ada123ad408ae3f9050bd7e5831e9da1556ac374f763b73355807e686532"
     },
     {
       "url": "dnd-master-items.js",
@@ -67,7 +71,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "1c2642b0c2ee97e7a741464d3e3e5fcbe121c4aad911edb1b592e6c633f3f20e"
+      "sha256": "5955fc5fc22a03b4f949d5122e5000bf0e4968b577c0ebe34b7f53ba4063acb4"
     },
     {
       "url": "dnd-master-maps.js",
@@ -95,11 +99,11 @@
     },
     {
       "url": "dnd-master-sections.js",
-      "sha256": "1b58e082516a3b3d158951d6c91f188aa51fb32e8e8a87594df3bd329a977002"
+      "sha256": "a7a722e04449f34917e6fe0104747494bca8c3ae979fbe440377592380840a1d"
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "844ed03ab07355961b21688da0fb1d966d980c32a07ed9d7fa1ad2df3d670e8f"
+      "sha256": "017abaee979ccd75f33f2b53a84e95fa9e6705cd84ddbc4296bdd7971ca4e741"
     },
     {
       "url": "dnd-master-shops.js",
@@ -151,7 +155,11 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "8c498e79dfcd632fcf952e0efa501316a46bd0344cb2d3dcaede578c59c94cdb"
+      "sha256": "00e7cf1702a601d707046891374487174a7255b675f3474df82c61001eb10e28"
+    },
+    {
+      "url": "lk-table-rules.js",
+      "sha256": "9c3d862cb39d5c383fff4c49e610aa68fbd63f9e745d85020197039f93521513"
     }
   ]
 }

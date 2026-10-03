@@ -33,7 +33,7 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "b8e7761bbd513b5fa344451218e5c1f0d8e53af4deca333b32893a06efd85a13"
+      "sha256": "7cde07067f00a5865e11a0e00a4d3b4ddb3fe9e470b870fe36b7f6fed36e9628"
     },
     {
       "url": "dnd-hub-shared-storage.js",
@@ -41,7 +41,7 @@
     },
     {
       "url": "dnd-player-combat.js",
-      "sha256": "c307f2e3373f68ecba22f396ffa7380547fb7b0657a733caa296e0d6ef6e584a"
+      "sha256": "fe7582541d57004e916cb7aeb7d25039db90a01d82be4dbf2c05f61aee330eb6"
     },
     {
       "url": "dnd-player-levelup.js",
@@ -49,7 +49,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "7d174f5a6f4cdccf65270dd18435f2352b4c7506d2e85b998e193cf89f3fff46"
+      "sha256": "31e3e1c1a8d4e8ea727bbc05090155c20a6b98afc358723b4ec8d4b683f59c0d"
     },
     {
       "url": "dnd-player-resources.js",
@@ -66,6 +66,10 @@
     {
       "url": "dnd-player-styles.css",
       "sha256": "325da79fffe2d6179c86a9fa47b16ef757f2239227dbeb49e79fbf206f84eaaa"
+    },
+    {
+      "url": "dnd-player-table.js",
+      "sha256": "3af2c3dc26fdd85d84a42783fbef1228623be272acd20a3b5040471351065a0f"
     },
     {
       "url": "dnd-srd/classes.json",
@@ -109,7 +113,11 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "8c498e79dfcd632fcf952e0efa501316a46bd0344cb2d3dcaede578c59c94cdb"
+      "sha256": "00e7cf1702a601d707046891374487174a7255b675f3474df82c61001eb10e28"
+    },
+    {
+      "url": "lk-table-rules.js",
+      "sha256": "9c3d862cb39d5c383fff4c49e610aa68fbd63f9e745d85020197039f93521513"
     }
   ]
 }
