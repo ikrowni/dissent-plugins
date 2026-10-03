@@ -13,23 +13,40 @@ export function dripTimes(seconds, seed) {
   return [0, 1, 2].map(i => 0.3 + span * (i + 0.2 + 0.6 * r()) / 3);
 }
 
-/** One loop of mono samples in [-1, 1]: low wind with a slow swell, three drips, faded at both ends. */
+/**
+ * One loop of mono samples in [-1, 1], faded at both ends so the loop has no click.
+ * Wind = noise through a band-pass whose centre drifts slowly (the whistle) over a low rumble, with gentle,
+ * irregular gusts. A first version (one big swell of broadband noise, a falling 120 ms chirp) sounded like ocean
+ * waves and a bird (owner, 2026-10-03). Drip = a 40 ms RISING blip and a faint echo, like water in a stone room.
+ */
 export function ambienceSamples(sampleRate = 22050, seconds = 6, seed = 7) {
   const n = Math.floor(sampleRate * seconds);
   const out = new Float32Array(n);
   const r = rng(seed);
-  let lp = 0;
+  const TAU = 2 * Math.PI;
+  let rumble = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
   for (let i = 0; i < n; i++) {
-    lp += 0.02 * ((r() * 2 - 1) - lp);                       // low-passed noise: wind
-    const swell = 0.55 + 0.45 * Math.sin((2 * Math.PI * i) / n); // one gust per loop, seamless
-    out[i] = lp * swell * 2.5;
+    const ph = i / n;                                        // 0..1 across the loop; whole cycles keep it seamless
+    const noise = r() * 2 - 1;
+    rumble += 0.004 * (noise - rumble);                      // deep, slow rumble
+    // Band-pass (RBJ biquad) with a drifting centre: the whistle of wind through a gap.
+    const f = 380 + 140 * Math.sin(TAU * ph) + 60 * Math.sin(TAU * 3 * ph + 1.3);
+    const w0 = TAU * f / sampleRate, alpha = Math.sin(w0) / (2 * 2.2), a0 = 1 + alpha;
+    const y = (alpha * noise - alpha * x2 + 2 * Math.cos(w0) * y1 - (1 - alpha) * y2) / a0;
+    x2 = x1; x1 = noise; y2 = y1; y1 = y;
+    const gust = 0.8 + 0.12 * Math.sin(TAU * 2 * ph + 0.7) + 0.08 * Math.sin(TAU * 5 * ph + 2.1);
+    out[i] = (y * 0.55 + rumble * 4) * gust;
   }
   for (const at of dripTimes(seconds, seed)) {
-    const start = Math.floor(at * sampleRate);
-    const len = Math.floor(sampleRate * 0.12);
-    for (let k = 0; k < len && start + k < n; k++) {
-      const t = k / sampleRate;
-      out[start + k] += 0.2 * Math.sin(2 * Math.PI * (1400 - 2500 * t) * t) * Math.exp(-t * 45);
+    for (const [delay, level] of [[0, 0.16], [0.09, 0.05]]) {   // the drip and its echo
+      const start = Math.floor((at + delay) * sampleRate);
+      const len = Math.floor(sampleRate * 0.04);
+      let phase = 0;
+      for (let k = 0; k < len && start + k < n; k++) {
+        const t = k / sampleRate;
+        phase += TAU * (700 + 1100 * (t / 0.04)) / sampleRate;  // pitch rises: a drop, not a chirp
+        out[start + k] += level * Math.sin(phase) * Math.exp(-t * 110);
+      }
     }
   }
   const fade = Math.floor(sampleRate * 0.05);
