@@ -12,9 +12,9 @@
 export const PRESET_ORDER = ['guided', 'classic', 'raw'];
 
 export const PRESETS = {
-  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: false, deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  hints: true  },
-  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, hints: false },
-  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, hints: false },
+  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: false, deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  levelByXp: false, featsAllowed: true, hints: true  },
+  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
+  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
 };
 
 export const RULE_KEYS = Object.keys(PRESETS.guided);
@@ -32,6 +32,8 @@ export const RULE_INFO = {
   deathSaves:            { group: 'Danger', label: 'Death save reminders',   desc: 'A hero at 0 HP is asked to roll a death save when their turn starts' },
   concentrationAutoRoll: { group: 'Danger', label: 'Roll concentration saves', desc: 'When a concentrating caster takes damage, roll the CON save for them' },
   trapSavesAuto:         { group: 'Danger', label: 'Roll trap saves',        desc: 'When a trap springs, roll the hero\'s saving throw for them' },
+  levelByXp:             { group: 'Levelling', label: 'Level by experience points', desc: 'Off: the DM levels heroes up at story milestones. On: fights give XP and heroes level at the thresholds' },
+  featsAllowed:          { group: 'Levelling', label: 'Feats',                      desc: 'At an ability increase, a hero may take a feat instead' },
   hints:                 { group: 'Help',   label: 'Show DCs',               desc: 'Prompts name the save and its DC ("Roll a DEX save, DC 13")' },
 };
 

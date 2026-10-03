@@ -9,6 +9,8 @@ const SPEC = {
   deathSaves:            { guided: true,  classic: true,  raw: false },
   concentrationAutoRoll: { guided: true,  classic: false, raw: false },
   trapSavesAuto:         { guided: true,  classic: false, raw: false },
+  levelByXp:             { guided: false, classic: false, raw: false },
+  featsAllowed:          { guided: true,  classic: true,  raw: true  },
   hints:                 { guided: true,  classic: false, raw: false },
 };
 
