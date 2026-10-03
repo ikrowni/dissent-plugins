@@ -25,7 +25,7 @@
   "resources": [
     {
       "url": "dnd-campaign-merge.js",
-      "sha256": "59935074f5afe6d93fb2682c31174d05d3f74aebfd0404c8f4cdd94a5b6a166f"
+      "sha256": "b71ea929bd63162c0a0f7ad3a645c27ee774c8061eaca5fb052791ee4944e9e9"
     },
     {
       "url": "dnd-campaign-pick.js",
@@ -37,7 +37,7 @@
     },
     {
       "url": "dnd-hub-shared-storage.js",
-      "sha256": "ebd5aef2b3d0d09bb03a6abcd9bdf014dd29fda2b1d374d4b3f608f7b5dc98c3"
+      "sha256": "7633614c1fa924a5dca5d56ae8ab4e3234bb5bfa2f0c9ff4bf2d4c6d65c8d9fb"
     },
     {
       "url": "dnd-player-combat.js",
@@ -49,7 +49,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "465cb3247c9bd731777285c068e169ddc273d85bc5f950a08587aa5191245971"
+      "sha256": "ef7c18a5751d2368dd8525f7facfb7489a757bf23810bd22f6e970d84523e366"
     },
     {
       "url": "dnd-player-resources.js",
