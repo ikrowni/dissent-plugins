@@ -11,7 +11,7 @@ import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261003c';
+import { setZoom } from './dnd-hub-canvas.js?v=20261004a';
 
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is

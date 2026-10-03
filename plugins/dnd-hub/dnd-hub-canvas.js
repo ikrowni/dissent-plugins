@@ -16,7 +16,7 @@ import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './d
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { refreshGuide } from './dnd-hub-map-bg.js?v=20260502p4';
-import { findDoorAt, nextDoorState, playerMayToggleDoor, snapToGrid, placeOwnTokenVerdict, newPlayerToken } from './dnd-hub-rules.js';
+import { findDoorAt, nextDoorState, playerMayToggleDoor, snapToGrid, placeOwnTokenVerdict, newPlayerToken, panFor } from './dnd-hub-rules.js';
 
 export async function initPixiApp() {
   const wrap = document.getElementById('map-canvas-wrap');
@@ -835,6 +835,17 @@ window._placeTemplateAt = async (type, wx, wy) => {
   const { addTemplate } = await import('./dnd-hub-templates.js?v=20260502p4');
   await addTemplate(type, wx, wy, 10, 0, 10, 0xff4444, userId);
 };
+
+/** Centre world point (cx, cy) at zoom `z` in this window: the DM's view at session start (map:view). */
+export function setView(cx, cy, z) {
+  if (!MAP.app) return;
+  setZoom(z);
+  const { panX, panY } = panFor(cx, cy, MAP.zoom, MAP.app.screen.width, MAP.app.screen.height);
+  MAP.panX = panX; MAP.panY = panY;
+  MAP.app.stage.position.set(panX, panY);
+  renderGrid();
+  renderFog();
+}
 
 export function setZoom(z, focalX, focalY) {
   const newZ = Math.max(0.05, Math.min(4.0, parseFloat(z) || 1));

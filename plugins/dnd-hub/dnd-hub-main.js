@@ -3,13 +3,13 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20260502p4';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20260502p4';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261003h';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261004a';
 import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003p';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261003b';
-import { setZoom } from './dnd-hub-canvas.js?v=20261003c';
+import { setZoom } from './dnd-hub-canvas.js?v=20261004a';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,

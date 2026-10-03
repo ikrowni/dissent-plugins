@@ -23,7 +23,9 @@ import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20260502p4';
 import { renderTemplates } from './dnd-hub-templates.js?v=20260502p4';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20260502p4';
 import { isRepeat, publishTo } from './lk-bus.js';
-import { acceptMove, activeTokenId } from './dnd-hub-rules.js';
+import { acceptMove, activeTokenId, viewCentre } from './dnd-hub-rules.js';
+import { setView } from './dnd-hub-canvas.js?v=20261004a';
+import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
 // used to skip re-animating our own broadcast when it bounces back via realtime.
@@ -133,6 +135,7 @@ const PRIVILEGED_EVENTS = new Set([
   'token:turn-start','token:conditions','combat:settings',
   'scene:load','pins:update','audio:play','audio:zone-update',
   'shop:open','shop:volume','contest:roll',
+  'session:start','map:view',
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -143,6 +146,14 @@ function isDMEvent(p) {
 }
 
 let _hpSaveTimer = null;
+
+/** Apply the DM's view once this Hub has the right map and its session load is done (plan D3). */
+function applyPendingView() {
+  const v = MAP._pendingView;
+  if (!v || MAP._sessionLoading || v.mapId !== MAP.mapId || !MAP.mapData) return;
+  MAP._pendingView = null;
+  setView(v.cx, v.cy, v.zoom);
+}
 const _seenMoves = {};
 
 export async function handleMapEvent(p) {
@@ -220,6 +231,7 @@ export async function handleMapEvent(p) {
           mapSetCampaign?.dmUserId,
           mapSetCampaign?.settings?.spatialRange ?? 60,
         ).catch(() => {});
+        applyPendingView();
       }
       break;
     }
@@ -496,6 +508,39 @@ export async function handleMapEvent(p) {
       // A player's save goes on to the DM's sidebar log, the same way as their HP.
       if (MAP.isDM && p.campaignId === MAP.campaignId && !isDMEvent(p)) localPublish('dnd-master', EV.TOKEN_DEATH_SAVE, p);
       break;
+    case EV.SESSION_START: {
+      // The DM started the evening (spec §6): the scene (map, video, soundtrack) through the scene path, the music,
+      // and the "Last time…" card. Nothing is posted to chat.
+      if (p.campaignId !== MAP.campaignId) return;
+      const music = p.music || {};
+      MAP._sessionLoading = true;
+      try {
+        if (p.mapId || p.sceneId) {
+          await handleMapEvent({ type: 'scene:load', campaignId: p.campaignId, sceneId: p.sceneId, mapId: p.mapId,
+            videoFileId: p.videoFileId || null, soundtrackFileId: music.mode === 'scene' ? music.soundtrackFileId : null,
+            ambientVolume: music.volume, fromUserId: p.fromUserId });
+        }
+        if (music.mode !== 'scene' && MAP._soundtrackAudio) { MAP._soundtrackAudio.pause(); MAP._soundtrackAudio = null; }
+        if (music.mode === 'ambience') startAmbience(music.volume); else stopAmbience();
+        if (p.recap) showHandoutOverlay({ title: 'Last time…', content: p.recap });
+        MAP.session = { id: p.sessionId, startedAt: Date.now() };
+      } finally {
+        MAP._sessionLoading = false;
+      }
+      applyPendingView();
+      // Only the DM's Hub knows the DM's view (plan D2): send it as a world centre, so every window size sees the same place.
+      if (MAP.isDM && MAP.mapId && MAP.app) {
+        const { cx, cy } = viewCentre(MAP.panX, MAP.panY, MAP.zoom, MAP.app.screen.width, MAP.app.screen.height);
+        await publishTo([], EV.VIEW_SET, { campaignId: MAP.campaignId, mapId: MAP.mapId, cx, cy, zoom: MAP.zoom, fromUserId: userId });
+      }
+      break;
+    }
+    case EV.VIEW_SET: {
+      if (p.campaignId !== MAP.campaignId || MAP.isDM) return;
+      MAP._pendingView = { mapId: p.mapId, cx: Number(p.cx), cy: Number(p.cy), zoom: Number(p.zoom) || 1 };
+      applyPendingView();
+      break;
+    }
     case EV.PARTY_UPDATE: {
       // A hero's summary changed. The Hub's copy feeds passive Perception for traps and token names; the DM's Hub
       // hands it to the DM sidebar, which players cannot reach (no consent → 403).
@@ -566,7 +611,7 @@ export async function handleMapEvent(p) {
             aud.loop = true;
             aud.volume = Math.min(1, Math.max(0, p.ambientVolume ?? 0.5));
             aud.crossOrigin = 'anonymous';
-            aud.play().catch(() => {});
+            playWhenAllowed(() => aud.play()); // blocked until a gesture: retry on the first click
             MAP._soundtrackAudio = aud;
           }
         } catch { /* autoplay blocked or fetch failed — silent */ }
