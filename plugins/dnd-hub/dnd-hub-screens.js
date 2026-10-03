@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js?v=20260502p4';
 import { icon } from './lk-icons.js';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261003c';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20260502p4';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261003a';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261003p';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-quick-screen.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20260502p4';

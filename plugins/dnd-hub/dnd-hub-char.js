@@ -8,6 +8,7 @@ import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillP
   characterSummary, isWeaponId } from './lk-rules5e.js';
 import { draftScores } from './dnd-hub-char-steps.js?v=20261003a';
 import { validateDraft } from './dnd-hub-draft-rules.js';
+import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
 // Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
 // proficiencies ("All armor", "Shields", …) instead (audit A9).
@@ -211,6 +212,9 @@ export async function finishCharacterCreation() {
 
   const userData = await storageGetUser('characters') || {};
   userData[CC.campaignId] = character;
+  // Heroes of deleted campaigns filled this value to the 64 KB cap, and every save then failed (413). A new hero is
+  // rare, so always check against a fresh index read.
+  await pruneDeadHeroes(userData, CC.campaignId, null, () => storageGet('hub-index'));
   await storageSetUser('characters', userData);
   // The server mirror the DM reads — so the DM sees the sheet at once, not after the player's first save (audit E3).
   await storageSet(`player_sheet_${CC.campaignId}_${identity.id}`, character, 'server');

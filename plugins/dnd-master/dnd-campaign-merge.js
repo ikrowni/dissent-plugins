@@ -65,3 +65,30 @@ export function mergeCampaign(base, local, remote) {
   if (base === undefined) return local;
   return JSON.parse(JSON.stringify(mergeValue(base, local, remote)));
 }
+
+// ── A player's heroes, one per campaign, in one user-scope value ("characters") ─────────────────────────
+//
+// 🔴 Deleting a campaign never removed its hero, so the value only grew; at the node's 64 KB per-value cap every
+// save failed with 413 (charlie_qa reached 64,261 bytes, 33 heroes, 2026-10-03). Prune on save, but only against a
+// FRESH read of hub-index: a campaign leaves the index only through an explicit delete, while a failed read of
+// anything returns null and looks like "no data". The real fix is one key per hero (follow-up task).
+
+/** Hero ids (campaign ids) that `indexIds` does not explain; `keepId` (the campaign being saved) never counts. */
+export function staleCharacterIds(chars, indexIds, keepId) {
+  const known = new Set(indexIds || []);
+  return Object.keys(chars || {}).filter(id => id !== keepId && !known.has(id));
+}
+
+/**
+ * Drop, in place, heroes whose campaign no longer exists. `cachedIds` (the index this screen loaded, or null) only
+ * decides whether a fresh `readIndex()` is needed; the decision itself is made against the fresh read. Returns the
+ * ids dropped. An unreadable index drops nothing.
+ */
+export async function pruneDeadHeroes(chars, keepId, cachedIds, readIndex) {
+  if (!staleCharacterIds(chars, cachedIds, keepId).length) return [];
+  const idx = await Promise.resolve().then(readIndex).catch(() => null);
+  if (!Array.isArray(idx?.campaignIds)) return [];
+  const dead = staleCharacterIds(chars, idx.campaignIds, keepId);
+  for (const id of dead) delete chars[id];
+  return dead;
+}

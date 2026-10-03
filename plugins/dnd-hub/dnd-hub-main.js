@@ -7,7 +7,7 @@ import { onInit, onEvent } from './dnd-hub-events.js?v=20261003h';
 import { quickPickHero, quickPickRace, quickPickClass, quickBuildOwn, quickBack, quickStepByStep, quickPlay, quickChange } from './dnd-hub-quick-screen.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003a';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261003p';
 import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261003b';
 import { setZoom } from './dnd-hub-canvas.js?v=20261003c';
 import {

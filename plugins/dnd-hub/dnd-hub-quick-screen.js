@@ -3,7 +3,7 @@ import { SRD } from './dnd-hub-state.js?v=20260502p4';
 import { esc, storageSetUser } from '../plugin-sdk.js';
 import { icon } from './lk-icons.js';
 import { quickBuild, previewStats, READY_HEROES, RACE_BLURBS, CLASS_BLURBS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261003a';
+import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261003p';
 
 let _campaignId = null, _race = null, _class = null, _draft = null;
 

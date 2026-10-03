@@ -78,3 +78,43 @@ describe('mergeCampaign', () => {
     expect(JSON.stringify([base, local, remote])).toBe(snap);
   });
 });
+
+import { staleCharacterIds, pruneDeadHeroes } from './dnd-campaign-merge.js';
+
+describe('pruneDeadHeroes', () => {
+  const heroes = () => ({ live: { n: 1 }, gone1: { n: 2 }, gone2: { n: 3 }, current: { n: 4 } });
+  const index = ids => async () => ({ campaignIds: ids });
+
+  it('names the heroes whose campaign is not in the index, never the current one', () => {
+    expect(staleCharacterIds(heroes(), ['live'], 'current').sort()).toEqual(['gone1', 'gone2']);
+    expect(staleCharacterIds(heroes(), null, 'current').sort()).toEqual(['gone1', 'gone2', 'live']);
+  });
+
+  it('drops dead heroes against a fresh index read and keeps the rest', async () => {
+    const h = heroes();
+    expect((await pruneDeadHeroes(h, 'current', null, index(['live']))).sort()).toEqual(['gone1', 'gone2']);
+    expect(Object.keys(h).sort()).toEqual(['current', 'live']);
+  });
+
+  it('a cached index that already explains every hero skips the read', async () => {
+    let reads = 0;
+    const h = { live: {}, current: {} };
+    await pruneDeadHeroes(h, 'current', ['live', 'current'], async () => { reads++; return { campaignIds: [] }; });
+    expect(reads).toBe(0);
+    expect(Object.keys(h).sort()).toEqual(['current', 'live']);
+  });
+
+  it('trusts only the fresh read: a campaign missing from a stale cache but in the index is kept', async () => {
+    const h = { joinedInAnotherTab: {}, current: {} };
+    expect(await pruneDeadHeroes(h, 'current', [], index(['joinedInAnotherTab']))).toEqual([]);
+    expect(Object.keys(h).sort()).toEqual(['current', 'joinedInAnotherTab']);
+  });
+
+  it('an unreadable index prunes nothing (a failed read looks like "no data")', async () => {
+    for (const readIndex of [async () => null, async () => ({}), async () => { throw new Error('net'); }]) {
+      const h = heroes();
+      expect(await pruneDeadHeroes(h, 'current', null, readIndex)).toEqual([]);
+      expect(Object.keys(h).length).toBe(4);
+    }
+  });
+});

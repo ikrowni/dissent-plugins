@@ -18,7 +18,8 @@ import { setResourceState, renderResources, toggleResourcePip,
 import { startLevelUp as _startLevelUp, levelUpBack, levelUpNext, closeLevelUp,
          levelUpRollHP, levelUpTakeAverage, levelUpToggleSpell,
          levelUpASIMode, levelUpFeat } from './dnd-player-levelup.js';
-import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds } from './dnd-hub-shared-storage.js';
+import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
 import { isRepeat, publishTo } from './lk-bus.js';
@@ -161,6 +162,8 @@ async function saveChar() {
   CHAR.updatedAt = new Date().toISOString();
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
   userData[CAMPAIGN_ID] = CHAR;
+  // Heroes of deleted campaigns filled this value to the 64 KB cap, and every save then failed (413).
+  await pruneDeadHeroes(userData, CAMPAIGN_ID, cachedIndexIds(), () => storageGetCompanion('dnd-hub', 'hub-index', 'server'));
   await storageSetCompanion('dnd-hub', 'characters', 'user', userData);
   // Mirror to server scope so the DM can read and edit this sheet
   if (USER_ID && CAMPAIGN_ID) {

@@ -36,6 +36,8 @@ const _lastSeen = new Map();
 // `null` means we have not seen a valid index this session — which is NOT the
 // same as "there are no campaigns", and the save guard below treats it that way.
 let _indexIds = null;
+/** The campaign ids from the last hub-index read, or null (not read, or a pre-split server). */
+export const cachedIndexIds = () => (_indexIds ? [..._indexIds] : null);
 
 /** Reassemble dnd-hub's campaign blob from its shards. */
 export async function loadHubDmCompanion() {
