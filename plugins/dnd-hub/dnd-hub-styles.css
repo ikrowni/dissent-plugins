@@ -232,3 +232,10 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .lk-travel-notice{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:10000;padding:8px 16px;border-radius:8px;background:rgba(20,14,8,.94);border:1px solid rgba(224,181,82,.45);color:#ecdcb4;font:12px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.6)}
 .lk-handout-action{margin-bottom:-8px;background:rgba(111,184,216,.16);border-color:rgba(111,184,216,.55);color:#bfe3f2}
 .lk-handout-action:disabled{opacity:.6;cursor:default}
+/* The Dice panel (dnd-hub-dice-panel.js). */
+.lk-dice-panel{left:auto;right:10px;transform:none;width:330px}
+.lk-dice-presets button{display:inline-flex;align-items:center;gap:6px}
+.lk-dice-swatch{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1.5px solid;font:700 9px Georgia,serif}
+.lk-dice-panel input[type=color]{width:44px;height:24px;padding:0;border:1px solid var(--lk-line);border-radius:5px;background:none;cursor:pointer;margin-left:auto}
+.lk-dice-panel .lk-chips{margin-top:10px}
+.lk-dice-try{display:block;width:100%;margin-top:12px;padding:7px;border-radius:7px;border:1px solid rgba(224,181,82,.45);background:rgba(224,181,82,.12);color:var(--lk-gold);font:inherit;font-size:12px;font-weight:700;cursor:pointer}

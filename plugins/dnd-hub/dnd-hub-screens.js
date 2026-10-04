@@ -455,6 +455,7 @@ export async function renderCampaignView(campaignId, isDM) {
           <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <button class="map-tool-btn" id="btn-dice-look" onclick="toggleDicePanel()" title="Your dice: pick a skin or your own colours">${icon('dices')}Dice</button>
           <button class="map-tool-btn" id="btn-guides" onclick="toggleGuides()" title="Guides: short tips the first time something happens" aria-pressed="true">${icon('lantern')}Guide</button>
           <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out" aria-label="Zoom out">${icon('zoom-out')}</button>
           <span id="zoom-display" title="Press ? for keyboard shortcuts" style="font-size:10px;color:var(--dnd-muted);min-width:32px;text-align:center">100%</span>

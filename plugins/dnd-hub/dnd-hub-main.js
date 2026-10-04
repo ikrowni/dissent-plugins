@@ -7,20 +7,22 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261009a';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261013c';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261013c';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261013d';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { gearOpt, gearPick, gearBuy, gearShopTab, gearMode } from './dnd-hub-gear-view.js';
 import { setUndoAppliers, undoMap, redoMap, rebaseUndo, refreshUndoButtons } from './dnd-hub-undo.js';
 import { UNDO_APPLIERS } from './dnd-hub-undo-apply.js';
+import { toggleDicePanel, diceLookPreset, diceLookColor, diceLookFinish, diceLookTry } from './dnd-hub-dice-panel.js';
+import { loadMyLook } from './dnd-hub-dice-look.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261013c';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261013c';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261013d';
 import { setZoom } from './dnd-hub-canvas.js?v=20261013c';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261013c';
+} from './dnd-hub-screens.js?v=20261013d';
 import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261013c';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
@@ -62,6 +64,10 @@ setOnRemoteMerged(campaignId => {
 // Ctrl+Z for the DM's map tools: how each part is put back on every screen.
 setUndoAppliers(UNDO_APPLIERS);
 window.undoMap = undoMap; window.redoMap = redoMap;
+// Each player's dice skin (dnd-hub-dice-look.js): loaded once, sent with every roll.
+window.toggleDicePanel = toggleDicePanel; window.diceLookPreset = diceLookPreset; window.diceLookColor = diceLookColor;
+window.diceLookFinish = diceLookFinish; window.diceLookTry = diceLookTry;
+loadMyLook();
 
 // ── Window globals for inline onclick= handlers ──────────────────────────────
 window.showScreen          = showScreen;

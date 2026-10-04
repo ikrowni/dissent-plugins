@@ -23,10 +23,11 @@ import { loadSRD } from './dnd-hub-char.js?v=20261013c';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
 import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013c';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013c';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
+import { myLook } from './dnd-hub-dice-look.js';
 import { renderLights } from './dnd-hub-lights.js?v=20261013c';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013c';
 import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013c';
@@ -504,7 +505,7 @@ export async function handleMapEvent(p) {
       // A player asked us to run a genuine physics roll and report back the result.
       const { sides, count, mod = 0, label, expression, userId: rollerId, ts, advMode, rollType = null } = p;
       const effectiveCount = advMode ? 2 : count;
-      const rolls = await animateDiceFree(sides, effectiveCount);
+      const rolls = await animateDiceFree(sides, effectiveCount, myLook());
       let usedRolls = rolls;
       if (advMode) {
         const chosen = advMode === 'adv' ? Math.max(...rolls) : Math.min(...rolls);
@@ -518,6 +519,7 @@ export async function handleMapEvent(p) {
         type: EV.DICE_ROLL, userId: rollerId,
         expression: expression || `${count}d${sides}${mod >= 0 ? '+' : ''}${mod}`,
         result: total, rolls, advMode, label, ts, rollType, verdict,
+        look: myLook(), // the roller's dice skin: the table sees these dice in these colours
       };
       _ownPhysicsRollTs.add(ts);
       await realtimePublish(EV.DICE_ROLL, payload);
@@ -531,13 +533,13 @@ export async function handleMapEvent(p) {
       // A roll from my DM sidebar (it reaches only my screens): tell the table. Shown rolls go to every map with
       // their number; secret ones only as "the DM rolls behind the screen". The relay is marked, so it never loops.
       if (p.fromSidebar && !p.relay && MAP.isDM && p.campaignId === MAP.campaignId) {
-        if (p.shown) realtimePublish(EV.DICE_ROLL, { ...p, fromSidebar: false, relay: true, clientId: CLIENT_ID, fromUserId: userId }).catch(() => {});
+        if (p.shown) realtimePublish(EV.DICE_ROLL, { ...p, fromSidebar: false, relay: true, clientId: CLIENT_ID, fromUserId: userId, look: myLook() }).catch(() => {});
         else realtimePublish(EV.DICE_SECRET, { type: EV.DICE_SECRET, campaignId: MAP.campaignId, ts: p.ts, fromUserId: userId }).catch(() => {});
       }
       showMapRollToast(p);
       // One verdict, decided on the attacker's screen (judgeAttack), shown on every screen.
       if (p.verdict?.text) showCombatToast(`Roll ${p.result} — ${p.verdict.text}`);
-      MAP.lastRoll = { ts: p.ts, userId: p.userId, label: p.label || '', rollType: p.rollType || null, verdict: p.verdict?.text || null };
+      MAP.lastRoll = { ts: p.ts, userId: p.userId, label: p.label || '', rollType: p.rollType || null, verdict: p.verdict?.text || null, look: p.look || null };
       // Skip animation if this is our own physics-roll broadcast bouncing back
       if (_ownPhysicsRollTs.has(p.ts)) {
         _ownPhysicsRollTs.delete(p.ts);
@@ -546,7 +548,8 @@ export async function handleMapEvent(p) {
       const parsed = parseDiceExpr(p.expression);
       if (parsed && MAP.mapData) {
         const indiv = splitRolls(parsed.count, parsed.sides, p.result, parsed.mod);
-        animateDice(parsed.sides, indiv);
+        // The roller's skin as sent (dnd-hub-dice-look.js checks it before drawing); my own roll in mine.
+        animateDice(parsed.sides, indiv, p.look || (p.userId === userId ? myLook() : null));
       }
       // Someone else's attack is judged on THEIR screen, against the targets they selected; judging it
       // here against whatever this viewer had selected gave different verdicts on different screens (G6).
@@ -753,7 +756,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.isDM) return;
       const rolls = [];
       for (const c of (p.contestants || [])) {
-        const [r] = await animateDiceFree(20, 1);
+        const [r] = await animateDiceFree(20, 1, myLook());
         rolls.push({ userId: c.userId, name: c.name, roll: r });
       }
       // Resolve ties with additional rolls
@@ -761,7 +764,7 @@ export async function handleMapEvent(p) {
       let winners = rolls.filter(r => r.roll === maxRoll);
       while (winners.length > 1) {
         for (const w of winners) {
-          const [r] = await animateDiceFree(20, 1);
+          const [r] = await animateDiceFree(20, 1, myLook());
           w.roll = r; w.tieBreaker = true;
         }
         maxRoll = Math.max(...winners.map(r => r.roll));

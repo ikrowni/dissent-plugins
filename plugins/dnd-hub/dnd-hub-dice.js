@@ -1,6 +1,7 @@
 // dnd-hub-dice.js — Three.js + cannon-es with per-face textures, DSN-style camera
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { cleanLook, lookKey } from './dnd-hub-dice-look.js';
 
 const FLOOR_Y           = -2.5;
 const FIXED_STEP        = 1 / 60;
@@ -149,16 +150,16 @@ function ensureWalls() {
 // D4: each face has 3 different numbers — one at each vertex, rotated 120° toward that corner.
 // Canvas layout (flipY): apex vertex at bottom-centre (64,118); base at top (10,18)–(118,18).
 // n0 = apex (v0), n1 = top-right (v1), n2 = top-left (v2).
-function getD4FaceTexture(n0, n1, n2) {
-  const cacheKey = `d4_${n0}_${n1}_${n2}`;
+function getD4FaceTexture(n0, n1, n2, look) {
+  const cacheKey = `d4_${n0}_${n1}_${n2}_${lookKey(look)}`;
   if (_textureCache.has(cacheKey)) return _textureCache.get(cacheKey);
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0d0804';
+  ctx.fillStyle = look.body;
   ctx.fillRect(0, 0, S, S);
-  ctx.fillStyle = '#d4af37';
+  ctx.fillStyle = look.ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = 'bold 22px Georgia, serif';
@@ -178,16 +179,16 @@ function getD4FaceTexture(n0, n1, n2) {
   return tex;
 }
 
-function getNumberTexture(num, dieType) {
-  const cacheKey = `${num}_${dieType}`;
+function getNumberTexture(num, dieType, look) {
+  const cacheKey = `${num}_${dieType}_${lookKey(look)}`;
   if (_textureCache.has(cacheKey)) return _textureCache.get(cacheKey);
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0d0804';
+  ctx.fillStyle = look.body;
   ctx.fillRect(0, 0, S, S);
-  ctx.fillStyle = '#d4af37';
+  ctx.fillStyle = look.ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -203,7 +204,7 @@ function getNumberTexture(num, dieType) {
     const textY = (dieType === 6 || dieType === 10 || dieType === 12) ? S * 0.50 : S * 0.40;
     ctx.fillText(String(num), S / 2, textY);
     if (num === 6 || num === 9) {
-      ctx.strokeStyle = '#d4af37';
+      ctx.strokeStyle = look.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(S / 2 - 12, textY + 26);
@@ -508,7 +509,19 @@ const D4_VERTEX_DIRS = [
   new THREE.Vector3( 1, -1, -1).normalize(),
 ];
 
-function makeDieGroup(sides) {
+// How each finish catches the light (Phong): shininess, specular, and see-through for glass.
+function finishProps(look) {
+  switch (look.finish) {
+    case 'matte': return { shininess: 4, specular: new THREE.Color(0.04, 0.04, 0.04) };
+    case 'metal': return { shininess: 140, specular: new THREE.Color(look.ink) };
+    case 'glass': return { shininess: 110, specular: new THREE.Color(0.35, 0.35, 0.35), transparent: true, opacity: 0.82 };
+    default:      return { shininess: 80, specular: new THREE.Color(0.22, 0.13, 0.04) };
+  }
+}
+
+function makeDieGroup(sides, lookIn) {
+  const look = cleanLook(lookIn);
+  const finish = finishProps(look);
   const geo = makeRawGeometry(sides);
   const faceCount = applyFaceData(geo, sides);
   const mapping = getFaceMapping(sides);
@@ -529,31 +542,25 @@ function makeDieGroup(sides) {
       for (let f = 0; f < 4; f++) {
         const [vi0, vi1, vi2] = D4_FACE_VERTS[f];
         mats.push(new THREE.MeshPhongMaterial({
-          map: getD4FaceTexture(vertNum[vi0], vertNum[vi1], vertNum[vi2]),
-          shininess: 80,
-          specular: new THREE.Color(0.22, 0.13, 0.04),
+          map: getD4FaceTexture(vertNum[vi0], vertNum[vi1], vertNum[vi2], look), ...finish,
         }));
       }
     } else {
       for (let f = 0; f < faceCount; f++) {
         const num = mapping ? mapping[f] : f + 1;
         mats.push(new THREE.MeshPhongMaterial({
-          map: getNumberTexture(num, sides),
-          shininess: 80,
-          specular: new THREE.Color(0.22, 0.13, 0.04),
+          map: getNumberTexture(num, sides, look), ...finish,
         }));
       }
     }
     mesh = new THREE.Mesh(geo, mats);
   } else {
-    mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
-      color: 0x120c08, shininess: 80, specular: 0x553322,
-    }));
+    mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: new THREE.Color(look.body), ...finish }));
   }
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geo, 15),
-    new THREE.LineBasicMaterial({ color: 0xd4af37 }),
+    new THREE.LineBasicMaterial({ color: new THREE.Color(look.edge) }),
   );
   const group = new THREE.Group();
   group.add(mesh);
@@ -625,8 +632,8 @@ function getTopFaceValue(sides, cannonQuat) {
 }
 
 // ── Spawn ────────────────────────────────────────────────
-function spawnState(sides, result, { suppressLabel = false, labelResult = null, freeRoll = false, onSettled = null } = {}) {
-  const group = makeDieGroup(sides);
+function spawnState(sides, result, { suppressLabel = false, labelResult = null, freeRoll = false, onSettled = null, look = null } = {}) {
+  const group = makeDieGroup(sides, look);
   _scene.add(group);
 
   // Drop from above, scattered across the table (DSN style).
@@ -830,7 +837,8 @@ function startLoop() {
  * @param {number} count    - how many dice to throw
  * @returns {Promise<number[]>}
  */
-export function animateDiceFree(dieSides, count) {
+/** `look`: the roller's dice skin (dnd-hub-dice-look.js); none = the Lantern gold default. */
+export function animateDiceFree(dieSides, count, look = null) {
   return new Promise(resolve => {
     const overlay = document.getElementById('dice-overlay');
     if (!overlay) { resolve(Array.from({ length: count }, () => Math.ceil(Math.random() * dieSides))); return; }
@@ -846,7 +854,7 @@ export function animateDiceFree(dieSides, count) {
         const isLast = i === 4;
         setTimeout(() => {
           const die = spawnState(20, null, {
-            freeRoll: true,
+            freeRoll: true, look,
             suppressLabel: true,
             onSettled: value => {
               values.push(value);
@@ -877,7 +885,7 @@ export function animateDiceFree(dieSides, count) {
 
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
-        _activeDice.push(spawnState(dieSides, null, { freeRoll: true, onSettled }));
+        _activeDice.push(spawnState(dieSides, null, { freeRoll: true, onSettled, look }));
         startLoop();
       }, i * 180);
     }
@@ -890,8 +898,9 @@ export function animateDiceFree(dieSides, count) {
  * d100 spawns 5 d20 dice; the actual result is shown as a label on the last die.
  * @param {number}   dieSides - faces (4, 6, 8, 10, 12, 20, 100)
  * @param {number[]} results  - one result per die
+ * @param {object}   [look]   - the roller's dice skin, as sent in their roll (checked before it is drawn)
  */
-export function animateDice(dieSides, results) {
+export function animateDice(dieSides, results, look = null) {
   const overlay = document.getElementById('dice-overlay');
   if (!overlay) { console.warn('[dice] #dice-overlay not found'); return; }
   ensureScene(overlay);
@@ -904,7 +913,7 @@ export function animateDice(dieSides, results) {
       setTimeout(() => {
         _activeDice.push(spawnState(20, Math.ceil(Math.random() * 20), {
           suppressLabel: i < 4,
-          labelResult:   i === 4 ? d100result : null,
+          labelResult:   i === 4 ? d100result : null, look,
         }));
         startLoop();
       }, i * 200);
@@ -914,7 +923,7 @@ export function animateDice(dieSides, results) {
 
   results.forEach((result, i) => {
     setTimeout(() => {
-      _activeDice.push(spawnState(dieSides, result));
+      _activeDice.push(spawnState(dieSides, result, { look }));
       startLoop();
     }, i * 180);
   });
