@@ -173,7 +173,7 @@
     },
     {
       "url": "book/book-reader.js",
-      "sha256": "cd7b484d5e8121eb5e0dadf8dca28165b548d929e9ff1b1b3f2c9a38ef1e6a1b"
+      "sha256": "627a3538d882b6400384508a58d98950a71a6cd5fd5c8ee276278d8894279f40"
     },
     {
       "url": "book/book-scan.js",
@@ -221,7 +221,7 @@
     },
     {
       "url": "dnd-hub-canvas.js",
-      "sha256": "8ebc6849910137db6d04002e15bb6d933ddbc5e0e37e34a891a703750f11669d"
+      "sha256": "ad32dec058ee6d265f1b13d4d1bcd3447983b30a963457b2fd9f1d48e4d7aaa1"
     },
     {
       "url": "dnd-hub-char-format.js",
@@ -273,7 +273,7 @@
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "59fc58eaa610bbcc27523f5fa4bf2cd067faf858cd4927b6f7acab7d577a8375"
+      "sha256": "ffc7ac5f9fb53698169f9c39d010e76dc610dcaa4344ff026a24af7c31b18809"
     },
     {
       "url": "dnd-hub-fog.js",
@@ -353,11 +353,11 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "15d1a6331499d37a44602aeffbd5208e463dbd81e4c5ff65c23ec909d17c8b5a"
+      "sha256": "9de6282557ea910eea7eb2cca03803871c7be90302dd3941ea5237d1781d9c98"
     },
     {
       "url": "dnd-hub-map-bg.js",
-      "sha256": "8b52b80dcfaa1ee4d408b52436794074ca74997e901360c0152b5612bc52db20"
+      "sha256": "d96dea8bffca2b9af9f32b2a7e603ddbcf76c79f20db648b9bf960141b0df7da"
     },
     {
       "url": "dnd-hub-movement.js",
@@ -401,11 +401,11 @@
     },
     {
       "url": "dnd-hub-sample.js",
-      "sha256": "f52f35f5da4ce0f830804af5cab07b2bd9ef10558fafe0876e3f8c902ff98b05"
+      "sha256": "28066888f377e399c1d40acb201728850bfb144225d1dd601a443771b663f167"
     },
     {
       "url": "dnd-hub-screens.js",
-      "sha256": "8d32ee3f0961e4c26a1891e17fd9af1d5e57234462d5d8c1368e27df28554a58"
+      "sha256": "81063a29598cdd444e8d33ec35eb932fc4390cacb59501a075182fb4afec4aa3"
     },
     {
       "url": "dnd-hub-shop-scene.js",
@@ -437,7 +437,7 @@
     },
     {
       "url": "dnd-hub-tokens.js",
-      "sha256": "2fd8613bea22f948e32639dbb4d292125487bea801bfdaa61b21802929641f89"
+      "sha256": "9e7cba3cac42044a2202787848c9ebe48a41323641620999039474fc3467fdeb"
     },
     {
       "url": "dnd-hub-travel.js",

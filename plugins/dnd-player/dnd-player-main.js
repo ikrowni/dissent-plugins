@@ -399,6 +399,20 @@ async function recomputeZoneVolumes() {
   }
 }
 
+/** Taking damage while concentrating: a CON save, DC 10 or half the damage, whichever is higher (SRD). */
+function _concentrationCheck(dmg) {
+  if (!(dmg > 0)) return;
+  const dc = Math.max(10, Math.floor(dmg / 2));
+  if (tableRule('concentrationAutoRoll')) {
+    document.getElementById('dice-mod').value = Math.floor(((CHAR.con ?? 10) - 10) / 2);
+    document.getElementById('roll-label').textContent = `Concentration DC ${dc} CON Save`;
+    rollDice().catch?.(() => {});
+  } else {
+    _showPlayerToast(`Concentration check! ${tableRule('hints') ? `DC ${dc} ` : ''}CON save (${CHAR.concentration.spellName})`);
+  }
+  renderConcentration();
+}
+
 async function _takeTrap(p, d20) {
   const bonus = p.saveAbility ? saveBonus(CHAR, effectiveChar() || CHAR, p.saveAbility) : 0;
   const { damage, note } = trapResult(p, d20, bonus, tableRule('hints'));
@@ -407,6 +421,7 @@ async function _takeTrap(p, d20) {
   await saveChar();
   renderAll();
   _showPlayerToast(`🪤 Trap! ${damage} damage.${note}`);
+  if (CHAR.concentration && !CHAR.dead) _concentrationCheck(damage);
   announceHp('Trap');
 }
 
@@ -1113,35 +1128,10 @@ async function onEvent(ev) {
     return;
   }
 
-  // Own token's HP changed by DM — sync CHAR and re-render
-  if (p.type === 'hp:change' && USER_ID &&
-      (p.tokenId === 'player_' + USER_ID || p.userId === USER_ID)) {
-    if (CHAR && p.hp !== undefined) {
-      CHAR.hp = p.hp;
-      if (p.hpMax !== undefined) CHAR.hpMax = p.hpMax;
-      saveChar().catch(() => {});
-      renderMain();
-    }
-    // Concentration check on taking damage (async IIFE — fire and forget)
-    if (CHAR?.concentration) {
-      (async () => {
-        const srcStr = p.source || '';
-        const dmgMatch = srcStr.match(/(\d+)\s*damage/i);
-        const dmg = dmgMatch ? parseInt(dmgMatch[1], 10) : 0;
-        const dc  = Math.max(10, Math.floor(dmg / 2));
-        const autoRoll = tableRule('concentrationAutoRoll');
-        if (autoRoll && dmg > 0) {
-          document.getElementById('dice-mod').value = Math.floor(((CHAR.con ?? 10) - 10) / 2);
-          document.getElementById('roll-label').textContent = `Concentration DC ${dc} CON Save`;
-          await rollDice();
-        } else if (dmg > 0) {
-          _showPlayerToast(`Concentration check! ${tableRule('hints') ? `DC ${dc} ` : ''}CON save (${CHAR.concentration.spellName})`);
-        }
-      })();
-    }
-    renderConcentration();
-    return;
-  }
+  // My own HP announcements coming back (announceHp): the sheet already holds them. The DM's changes to my HP are
+  // handled further down, through the rules (temporary HP, 0 HP, death saves, massive damage). This block used to
+  // catch every HP change first and copy the bare number, so those rules never ran (rules playtest, 2026-10-04).
+  if (p.type === 'hp:change' && USER_ID && p.fromUserId === USER_ID) return;
 
   // DM triggered death saves (HP reached 0)
   if (p.type === 'token:death-save' && USER_ID && p.tokenId === 'player_' + USER_ID) {
@@ -1277,9 +1267,11 @@ async function onEvent(ev) {
     const base = { ...CHAR, hpMax: eff.hpMax };
     const next = p.damage ? applyDamage(base, p.damage, { crit: !!p.crit }) : p.heal ? applyHealing(base, p.heal)
       : setHp(base, p.hp ?? CHAR.hp);
+    const lost = (CHAR.hp || 0) + (CHAR.hpTemp || 0) - ((next.hp || 0) + (next.hpTemp || 0));
     Object.assign(CHAR, next, { hpMax: CHAR.hpMax });
     await saveChar();
     renderAll();
+    if (CHAR.concentration && !CHAR.dead) _concentrationCheck(p.damage || Math.max(0, lost));
     // The DM's map guessed the HP (it does not know temporary HP or death): when the rules came out differently,
     // the map is told the hero's real HP, or the token would show one number and the sheet another.
     if (p.hp != null && (CHAR.hp !== p.hp || CHAR.dead)) announceHp('rules');

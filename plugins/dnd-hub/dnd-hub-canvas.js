@@ -6,20 +6,20 @@ import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013e';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
 import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013e';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013g';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013h';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013g';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013h';
 import { showPinDialog } from './dnd-hub-pins.js?v=20261013c';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
 import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013e';
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013c';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013c';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013c';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013g';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013h';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
@@ -733,7 +733,9 @@ export function initKeyboardHandlers() {
       if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
       // Coalesce the broadcast: one message carries a burst of presses
-      MAP._wasdPendingMove = { tokenId, x: newX, y: newY, facing: newFacing, turnPath, turnKey: turn?.key ?? null };
+      // The squares walked since the last broadcast, for the DM's traps (a burst of presses is one message).
+      const walkedCells = [...(MAP._wasdPendingMove?.tokenId === tokenId ? MAP._wasdPendingMove.cells : []), triggerCell(newX, newY)];
+      MAP._wasdPendingMove = { tokenId, x: newX, y: newY, facing: newFacing, turnPath, turnKey: turn?.key ?? null, cells: walkedCells };
       if (!MAP._wasdBroadcastTimer) {
         MAP._wasdBroadcastTimer = setTimeout(() => {
           MAP._wasdBroadcastTimer = null;
@@ -746,6 +748,7 @@ export function initKeyboardHandlers() {
               fromUserId: userId, ...moveStamp(),
             });
             if (m.tokenId === `player_${userId}`) tellSheetWhereIAm(m); // sound zones follow the arrow keys too
+            if (MAP.isDM) checkTriggers(m.tokenId, m.cells || []).catch(() => {}); // the DM's own moves spring traps too
           }
         }, 300); // the node allows 5 publishes a second; held keys repeat ~30 a second
       }

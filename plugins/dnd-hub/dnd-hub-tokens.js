@@ -8,7 +8,7 @@ import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013e';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261009a';
 import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013g';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20261013c';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013c';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
 
@@ -54,7 +54,7 @@ import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
 import { clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
-import { extendPath } from './dnd-hub-movement.js';
+import { extendPath, cellsBetween } from './dnd-hub-movement.js';
 
 const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
 
@@ -441,6 +441,9 @@ function setupTokenDrag(container, token) {
       MAP.mapData.tokens[token.id].y = snappedY;
       serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
       saveHubDm( serverData);
+      // Traps spring on the DM's screen, which checks moves it RECEIVES; its own echo is dropped, so a token the DM
+      // moved (every monster, and heroes the DM moves) never set one off (rules playtest, 2026-10-04).
+      if (MAP.isDM) checkTriggers(token.id, cellsBetween(triggerCell(savedX, savedY), triggerCell(snappedX, snappedY))).catch(() => {});
     }
 
     // Recompute local LOS after player moves their own token
