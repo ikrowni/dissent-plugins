@@ -9,12 +9,19 @@ import { bookFileName, bookTitleFromFile, playerPart } from '../lk-book.js';
 
 const _cache = new Map(); // fileId → book
 
+/**
+ * A library entry from one row of files:list, or null for a file that is not a book. 🔴 The node names the field
+ * `filename` (and `size_bytes`); reading `name` listed no book at all (found by dnd-book-test.mjs, 2026-10-04).
+ */
+export function entryFromFile(f, place) {
+  const t = bookTitleFromFile(f?.filename ?? f?.name);
+  return t && { fileId: f.id, id: t.id, title: t.title, size: f.size_bytes ?? f.size ?? 0,
+    createdAt: f.created_at || f.createdAt || null, place };
+}
+
 const listOf = async place => {
   const files = await request('files:list', place === 'personal' ? { place } : {});
-  return (Array.isArray(files) ? files : files?.files || []).map(f => {
-    const t = bookTitleFromFile(f.name);
-    return t && { fileId: f.id, id: t.id, title: t.title, size: f.size || 0, createdAt: f.created_at || f.createdAt || null, place };
-  }).filter(Boolean);
+  return (Array.isArray(files) ? files : files?.files || []).map(f => entryFromFile(f, place)).filter(Boolean);
 };
 
 /** { books: [...], personalError } — personal and this server's books. Personal space may be switched off. */
