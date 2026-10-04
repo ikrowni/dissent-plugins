@@ -1,7 +1,7 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, setMonstersState,
+import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
@@ -300,6 +300,7 @@ window.deleteInstance      = deleteInstance;
 window.quickRoll           = quickRoll;
 window.quickRollExpr       = quickRollExpr;
 window.renderMonsterSearch = renderMonsterSearch;
+window.filterMonsterSearch = filterMonsterSearch;
 window.toggleSetting       = toggleSetting;
 window.pickPreset          = pickPreset;
 window.setSpatialRange     = setSpatialRange;

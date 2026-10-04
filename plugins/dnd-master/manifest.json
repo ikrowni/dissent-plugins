@@ -79,7 +79,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "e5abe3e7e0cd25d54038314fea2fda3847d0c269e9fa108092a3e243c47c7269"
+      "sha256": "7cd880d9de0d726ed6e2d3f9091587e80101f1c8a38d6acf0528729af4f265e2"
     },
     {
       "url": "dnd-master-maps.js",
@@ -87,7 +87,7 @@
     },
     {
       "url": "dnd-master-monsters.js",
-      "sha256": "59dc4320b460f32fd39c2bdc95b226f2515c1ba80baf9a79e197fced541e1f56"
+      "sha256": "8812a81d0d4353ecc0020cca1ceed3061c58234f614a4bcd1d47bf26f92d8e07"
     },
     {
       "url": "dnd-master-notes.js",

@@ -55,13 +55,17 @@ export function renderMonsterSearch(q) {
   if (!el) return;
   el.innerHTML =
     '<input class="search-input" id="mon-search" placeholder="Search monsters\u2026"' +
-    ' oninput="renderMonsterSearch(this.value)" value="' + esc(q) + '">' +
+    ' oninput="filterMonsterSearch(this.value)" value="' + esc(q) + '">' +
     '<div id="mon-list" style="margin-bottom:10px"></div>' +
     '<div id="mon-instances" style="margin-top:8px"></div>';
 
   _renderMonsterList(q);
   renderInstances();
 }
+
+// Typing redraws the list only: redrawing the whole tab replaced the box being typed in, so it lost focus after every
+// letter and held keys stopped repeating (owner report 2026-10-04).
+export function filterMonsterSearch(q) { _renderMonsterList(q || ''); }
 
 function _renderMonsterList(q) {
   const listEl = document.getElementById('mon-list');
