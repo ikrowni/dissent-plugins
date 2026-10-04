@@ -126,3 +126,20 @@
   .forge-stage .forge-name{color:#f3e3b5;background:none}
   .forge{transition:none}
 }
+/* Starting gear (dnd-hub-gear-view.js), in both creators. */
+.lk-gear-choice{margin:0 0 14px}
+.lk-gear-q{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--lk-gold);margin:0 0 6px}
+.lk-gear-list{font-size:13px;color:var(--lk-text);line-height:1.5}
+.lk-gear-sub{font-size:12px;color:var(--lk-muted);line-height:1.45;margin-top:4px}
+.lk-gear-pick{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--lk-muted)}
+.lk-gear-pick select{flex:1;max-width:260px;background:rgba(13,10,7,.7);border:1px solid var(--lk-line);border-radius:6px;color:var(--lk-text);padding:6px 8px;font:inherit}
+.lk-gear-purse{font-size:13px;color:var(--lk-muted);margin-bottom:8px}.lk-gear-purse b{font-size:20px;color:var(--lk-gold);margin-right:4px}
+.lk-gear-chip{display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;padding:3px 4px 3px 9px;border:1px solid var(--lk-line);border-radius:12px;font-size:12px}
+.lk-gear-chip button{background:none;border:none;color:var(--lk-muted);cursor:pointer;font-size:14px;line-height:1;padding:0 4px}
+.lk-gear-tabs{display:flex;gap:4px;margin-bottom:6px}
+.lk-gear-tabs button{flex:1;padding:6px;border-radius:6px;border:1px solid var(--lk-line);background:transparent;color:var(--lk-muted);font:inherit;font-size:12px;cursor:pointer}
+.lk-gear-tabs button.on{border-color:var(--lk-gold);color:var(--lk-gold)}
+.lk-gear-shop{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.lk-gear-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--lk-line);border-radius:6px;font-size:12px}
+.lk-gear-row>span{flex:1}.lk-gear-row>span small{display:block;color:var(--lk-muted);font-size:11px;margin-top:2px}
+.lk-gear-row>small{color:var(--lk-muted);min-width:44px;text-align:right}.lk-gear-row>b{color:var(--lk-gold)}

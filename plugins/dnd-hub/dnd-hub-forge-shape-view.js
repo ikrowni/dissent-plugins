@@ -71,8 +71,9 @@ export function shapeBody(kind, d, ctx) {
     case 'gear':
       return note('What you carry into your first adventure. Armour you take is worn and weapons are ready.')
         + `<div class="lvl-grid">
-          ${card('shapePick', 'gear:kit', `The ${ctx.cls.name}'s kit`, ctx.kit.join(', '), !d.useStartingGold)}
-          ${card('shapePick', 'gear:gold', `${ctx.gold} gold instead`, 'Start with no gear and buy your own from the DM\'s shops.', d.useStartingGold)}</div>`;
+          ${card('shapePick', 'gear:kit', `The ${ctx.cls.name}'s gear`, 'Your class\'s starting equipment, with a choice at each step.', !d.useStartingGold)}
+          ${card('shapePick', 'gear:gold', `${ctx.gold} gold instead`, 'Buy your own now; what you do not spend you keep.', d.useStartingGold)}</div>
+        <div style="margin-top:14px">${ctx.gearHtml || ''}</div>`;
     case 'spells': {
       const sp = ctx.spells, c = d.cantrips || [], s = d.spells || [];
       const desc = x => (x.desc || '').replace(/\s+/g, ' ').slice(0, 110) + ((x.desc || '').length > 110 ? '…' : '');

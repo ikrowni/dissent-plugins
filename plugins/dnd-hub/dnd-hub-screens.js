@@ -6,7 +6,7 @@ import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
 import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013a';
 import { loadMapData } from './dnd-hub-map-bg.js?v=20261013a';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261012a';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261013b';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';

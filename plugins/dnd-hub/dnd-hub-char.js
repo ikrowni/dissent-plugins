@@ -3,11 +3,12 @@ import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261009a
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261009a';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261013b';
+import { goldLeft } from './dnd-hub-gear-view.js';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261012a';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261009a';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261013b';
 import { validateDraft } from './dnd-hub-draft-rules.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
@@ -147,12 +148,15 @@ export async function finishCharacterCreation({ enter = true } = {}) {
   const maxHP = Math.max(1, hitDie + abilityMod(finalScores.con)) + (CC.draft.subrace === 'hill-dwarf' ? 1 : 0);
   const background = (SRD.backgrounds || []).find(b => b.id === CC.draft.background);
   // Starting kit: armour and shield worn, weapons in hand; named, so the inventory can show them.
-  const equipment = (CC.draft.equipment || []).map(id => {
+  // Counts come from the gear choice (2 handaxes, 20 arrows); background gear with no item is kept by name.
+  const qtyOf = CC.draft.equipmentQty || {};
+  const equipment = [...new Set(CC.draft.equipment || [])].map(id => {
     const it = (SRD.equipment || []).find(e => e.id === id);
     const kind = it?.category === 'Armor' ? 'armor' : it?.category === 'Weapon' || isWeaponId(id) ? 'weapon' : 'gear';
-    return { id, name: it?.name || id, type: kind, description: it?.desc || '', qty: 1, attuned: false,
+    return { id, name: it?.name || id, type: kind, description: it?.desc || '', qty: Math.max(1, Number(qtyOf[id]) || 1), attuned: false,
       equipped: kind !== 'gear' };
-  });
+  }).concat((CC.draft.gearNamed || []).map(name => ({ id: 'gear-' + String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name, type: 'gear', description: '', qty: 1, attuned: false, equipped: false })));
   let armorWorn = false;
   equipment.forEach(e => { if (e.type === 'armor' && e.id !== 'shield') { e.equipped = !armorWorn; armorWorn = true; } });
 
@@ -188,7 +192,7 @@ export async function finishCharacterCreation({ enter = true } = {}) {
     exhaustion: 0,
     inspiration: false,
     equipment,
-    gold: CC.draft.useStartingGold ? getStartingGold() : 0,
+    gold: CC.draft.useStartingGold ? goldLeft(CC.draft, SRD, getStartingGold()) : 0, // what the shop left
     silver: 0, copper: 0, platinum: 0, electrum: 0,
     fightingStyle: CC.draft.fightingStyle || null,
     invocations: [], metamagic: [], feats: [], pactBoon: null,

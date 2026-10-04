@@ -308,6 +308,16 @@ const WEAPONS = {
 };
 export const isWeaponId = id => !!WEAPONS[id];
 
+/**
+ * How the rules sort a weapon: `{ cat: 'simple'|'martial', ranged }`, or null for no weapon. Darts and nets are ranged
+ * weapons (the class equipment lists say "any simple melee weapon"); a net has no attack roll entry here.
+ */
+export function weaponKind(id) {
+  if (id === 'net') return { cat: 'martial', ranged: true };
+  const w = WEAPONS[id];
+  return w ? { cat: w.cat, ranged: w.props.includes('ranged') || id === 'dart' } : null;
+}
+
 const MARTIAL_CLASSES = ['barbarian', 'fighter', 'paladin', 'ranger'];
 const EXTRA_WEAPONS = {
   bard: ['crossbow-hand', 'longsword', 'rapier', 'shortsword'], rogue: ['crossbow-hand', 'longsword', 'rapier', 'shortsword'],

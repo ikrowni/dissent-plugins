@@ -7,18 +7,18 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261009a';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261012a';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261013a';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261013b';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
-import { STARTING_KITS } from './dnd-hub-quick.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261012a';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261013a';
+import { gearOpt, gearPick, gearBuy, gearShopTab, gearMode } from './dnd-hub-gear-view.js';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261013b';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261013b';
 import { setZoom } from './dnd-hub-canvas.js?v=20261013a';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261013a';
+} from './dnd-hub-screens.js?v=20261013b';
 import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261013a';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
@@ -30,9 +30,9 @@ import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261013a';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
-  selectBackground, renderCCEquipment, toggleEquipItem, filterEquipment, toggleSpell,
+  selectBackground, renderCCEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261009a';
+} from './dnd-hub-char-steps.js?v=20261013b';
 import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
 import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261013a';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261013a';
@@ -94,7 +94,6 @@ window.renderSubclassOptions = renderSubclassOptions;
 window.levelupPick = levelupPick; window.levelupRoll = levelupRoll; window.levelupRollDie = levelupRollDie;
 window.levelupAbility = levelupAbility; window.levelupBack = levelupBack; window.levelupNext = levelupNext; window.levelupContinue = levelupContinue;
 window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
-window.__lkKits = STARTING_KITS;
 window.toggleGuides = toggleGuides;
 window.toggleWeatherPanel = toggleWeatherPanel; window.setWeather = setWeather;
 // Books (book/book-screens.js, book/book-reader.js).
@@ -109,8 +108,8 @@ window.adjustPB            = adjustPB;
 window.rollAllAbilities    = rollAllAbilities;
 window.selectBackground    = selectBackground;
 window.renderCCEquipment   = renderCCEquipment;
-window.toggleEquipItem     = toggleEquipItem;
-window.filterEquipment     = filterEquipment;
+// Starting gear, in both creators (dnd-hub-gear-view.js).
+window.gearOpt = gearOpt; window.gearPick = gearPick; window.gearBuy = gearBuy; window.gearShopTab = gearShopTab; window.gearMode = gearMode;
 window.toggleSpell             = toggleSpell;
 window.triggerPortraitUpload   = triggerPortraitUpload;
 window.handlePortraitUpload    = handlePortraitUpload;

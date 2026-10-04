@@ -19,7 +19,7 @@ import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013a';
 import { renderFog } from './dnd-hub-fog.js?v=20261013a';
 import { renderWalls } from './dnd-hub-walls.js?v=20261013a';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
-import { loadSRD } from './dnd-hub-char.js?v=20261012a';
+import { loadSRD } from './dnd-hub-char.js?v=20261013b';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
 import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261012a';
 import { rule } from './lk-table-rules.js';

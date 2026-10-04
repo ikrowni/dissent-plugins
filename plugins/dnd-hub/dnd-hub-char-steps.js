@@ -3,7 +3,7 @@ import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityM
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 import { armorClass } from './lk-rules5e.js';
-import { STARTING_KITS } from './dnd-hub-quick.js';
+import { setGearTarget, gearStepHtml } from './dnd-hub-gear-view.js';
 import { CANTRIPS_KNOWN, spellLimitL1 as spellLimitFor, classSkillChoice as skillChoiceFor, draftScores as scoresFor } from './dnd-hub-draft-rules.js';
 
 import { guarded } from './lk-upload.js';
@@ -358,64 +358,16 @@ export function selectBackground(bgId) {
 }
 
 // ── Equipment ─────────────────────────────────────────────────────────────────
+// The class's choices or starting gold, shared with the Hero Forge (dnd-hub-gear-view.js).
 export function renderCCEquipment(el) {
-  const items = SRD.equipment || [];
-  el.innerHTML = `
-    <div style="font-size:13px;color:var(--dnd-muted);margin-bottom:14px">
-      Choose your starting equipment or take starting gold to buy your own.
-    </div>
-    <div style="display:flex;gap:10px;margin-bottom:14px">
-      <div class="btn btn-sm ${!CC.draft.useStartingGold?'btn-gold':'btn-ghost'}" onclick="CC.draft.useStartingGold=false;renderCCEquipment(document.getElementById('cc-content'))">Starting Equipment</div>
-      <div class="btn btn-sm ${CC.draft.useStartingGold?'btn-gold':'btn-ghost'}" onclick="CC.draft.useStartingGold=true;renderCCEquipment(document.getElementById('cc-content'))">Starting Gold</div>
-      ${STARTING_KITS[CC.draft.class] ? `<div class="btn btn-sm btn-ghost" onclick="CC.draft.useStartingGold=false;CC.draft.equipment=[...(window.__lkKits[CC.draft.class]||[])];renderCCEquipment(document.getElementById('cc-content'))">Use the ${esc(CC.draft.class)} kit</div>` : ''}
-    </div>
-    ${!CC.draft.useStartingGold ? `
-      <div style="font-size:11px;color:var(--dnd-muted);margin-bottom:10px">Selected: ${CC.draft.equipment.length} items</div>
-      <input type="text" id="cc-equip-search" placeholder="Search equipment…" oninput="filterEquipment()"
-        style="width:100%;background:var(--dnd-surface);border:1px solid var(--dnd-border);border-radius:8px;padding:8px 12px;color:var(--dnd-text);font-size:13px;outline:none;margin-bottom:10px">
-      <div id="cc-equip-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
-        ${renderEquipmentList(items.slice(0, 40))}
-      </div>
-    ` : `
-      <div style="padding:16px;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">🪙</div>
-        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Starting Gold</div>
-        <div style="font-size:12px;color:var(--dnd-muted);margin-bottom:14px">You'll start with gold based on your class.</div>
-        <div style="font-size:28px;font-weight:800;color:var(--dnd-gold)">${getStartingGold()} gp</div>
-      </div>
-    `}
-  `;
+  setGearTarget({ draft: () => CC.draft, srd: SRD, budgetGp: () => getStartingGold(), redraw: () => renderCCEquipment(document.getElementById('cc-content')) });
+  el.innerHTML = `<div style="font-size:13px;color:var(--dnd-muted);margin-bottom:14px">What you carry into your first adventure. Armour you take is worn and weapons are ready.</div>`
+    + gearStepHtml(CC.draft, SRD, getStartingGold());
 }
 
-export function renderEquipmentList(items) {
-  return items.map(item => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:${CC.draft.equipment.includes(item.id)?'rgba(212,175,55,.08)':'var(--dnd-surface)'};border:1px solid ${CC.draft.equipment.includes(item.id)?'var(--dnd-gold)':'var(--dnd-border)'};border-radius:6px;cursor:pointer;transition:all .15s" onclick="toggleEquipItem('${item.id}')">
-      <input type="checkbox" ${CC.draft.equipment.includes(item.id)?'checked':''} style="pointer-events:none">
-      <div style="flex:1">
-        <div style="font-size:12px;font-weight:600">${esc(item.name)}</div>
-        <div style="font-size:10px;color:var(--dnd-muted)">${item.cost || '—'} · ${item.weight ? item.weight+'lb' : '—'}${item.damage ? ` · ${item.damage}` : ''}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-export function toggleEquipItem(itemId) {
-  const idx = CC.draft.equipment.indexOf(itemId);
-  if (idx >= 0) CC.draft.equipment.splice(idx, 1);
-  else CC.draft.equipment.push(itemId);
-  renderCCEquipment(document.getElementById('cc-content'));
-}
-
-export function filterEquipment() {
-  const q = document.getElementById('cc-equip-search')?.value.toLowerCase() || '';
-  const items = (SRD.equipment || []).filter(e => e.name.toLowerCase().includes(q)).slice(0, 40);
-  const list = document.getElementById('cc-equip-list');
-  if (list) list.innerHTML = renderEquipmentList(items);
-}
-
-export function getStartingGold() {
+export function getStartingGold(cls = CC.draft.class) {
   const goldByClass = { barbarian:75,bard:125,cleric:125,druid:50,fighter:150,monk:12,paladin:150,ranger:150,rogue:100,sorcerer:75,warlock:100,wizard:100 };
-  return goldByClass[CC.draft.class] || 75;
+  return goldByClass[cls] || 75;
 }
 
 // ── Spells ────────────────────────────────────────────────────────────────────

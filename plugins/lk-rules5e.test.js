@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  abilityMod, profBonus, maxSlotsFor, normalizeSlots, withSlotsForLevel, isAsiLevel, hitDieFor,
+  abilityMod, profBonus, weaponKind, maxSlotsFor, normalizeSlots, withSlotsForLevel, isAsiLevel, hitDieFor,
   applyDamage, applyHealing, rollDeathSave, markDeathSave, attackOutcome, critDamageExpr,
   encounterMultiplier, adjustedEncounterXp, shortRestSpend, longRest, characterSummary,
   spellSaveDC, spellAttackBonus, conHpBonusOnIncrease, saveForHalf,
@@ -277,5 +277,16 @@ describe('saveForHalf', () => {
   });
   it('keeps full damage on a failed save', () => {
     expect(saveForHalf(7, 12, 13)).toEqual({ saved: false, damage: 7 });
+  });
+});
+
+describe('weaponKind', () => {
+  it('sorts weapons as the class equipment lists do', () => {
+    expect(weaponKind('greataxe')).toEqual({ cat: 'martial', ranged: false });
+    expect(weaponKind('dart')).toEqual({ cat: 'simple', ranged: true });
+    expect(weaponKind('crossbow-light')).toEqual({ cat: 'simple', ranged: true });
+    expect(weaponKind('handaxe')).toEqual({ cat: 'simple', ranged: false });
+    expect(weaponKind('net')).toEqual({ cat: 'martial', ranged: true });
+    expect(weaponKind('backpack')).toBe(null);
   });
 });

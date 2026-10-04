@@ -3,7 +3,7 @@
 import { SRD } from './dnd-hub-state.js?v=20261009a';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261012a';
+import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261013b';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -17,7 +17,9 @@ import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep,
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
 import { useCampaignSpells } from './book/book-spells-in-play.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261009a';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261013b';
+import { setGearTarget, gearChooserHtml, gearShopHtml } from './dnd-hub-gear-view.js';
+import { applyGear } from './dnd-hub-starting-gear.js';
 
 const ALL_SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
   'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'];
@@ -183,6 +185,12 @@ function renderShape(ui, race, cls) {
   const ctx = { srd: SRD, race: srdRace, cls, main: (CLASS_PRIORITY[_draft.class] || []).slice(0, 2),
     finals: draftScores(_draft, SRD.races), skills: skillStep(_draft, SRD), spells: spellStep(_draft, SRD),
     kit: kitNames({ equipment: STARTING_KITS[_draft.class] || _draft.equipment }, SRD), gold: getStartingGold(), allSkills: ALL_SKILLS };
+  if (kind === 'gear') {
+    // The class's choices, or the shop for starting gold (dnd-hub-gear-view.js); every pick redraws this step.
+    setGearTarget({ draft: () => _draft, srd: SRD, budgetGp: () => getStartingGold(_draft.class), redraw: render });
+    if (!_draft.useStartingGold) applyGear(_draft, SRD);
+    ctx.gearHtml = _draft.useStartingGold ? gearShopHtml(_draft, SRD, ctx.gold) : gearChooserHtml(_draft, SRD);
+  }
   ui.innerHTML = shapeHeader(_draft, race, cls, _s.shape, kinds.length, kind, _sound.muted())
     + `<div class="forge-slide ${_dir < 0 ? 'back' : ''}">${shapeBody(kind, _draft, ctx)}</div>`
     + shapeFooter(_shapeError, _s.shape === kinds.length - 1);
@@ -198,7 +206,7 @@ export function shapePick(kv) {
   else if (k === 'background') _draft.background = v;
   else if (k === 'gear') {
     _draft.useStartingGold = v === 'gold';
-    _draft.equipment = v === 'gold' ? [] : [...(STARTING_KITS[_draft.class] || [])];
+    applyGear(_draft, SRD);
   }
   _sound.whoosh(); reshape();
 }
