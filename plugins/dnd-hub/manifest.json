@@ -112,6 +112,38 @@
       "sha256": "c4561c86c0722de3ea9b32edba978f3bb7cd4c4ae6bd210cb62a9243e315d242"
     },
     {
+      "url": "book/book-fixtures.js",
+      "sha256": "621bfb03ad7c526569f9b28dc63604954baf187a673baa1ad04fc5adcaa8e60b"
+    },
+    {
+      "url": "book/book-items.js",
+      "sha256": "18d08173550ca1dc3e810ba5bb0af5cb547054ab10aa99f17d6a18daa05cde89"
+    },
+    {
+      "url": "book/book-layout.js",
+      "sha256": "bc705d25fb1ce1cc1dc3d8b1a45e17aea67f9d15053c92f135a088a1a6d6cc33"
+    },
+    {
+      "url": "book/book-monsters.js",
+      "sha256": "a72750dfb940abfc60cb1d499ddc2d4e6a2578f30b8c2cc70a3ed31b7c989c3f"
+    },
+    {
+      "url": "book/book-parse.js",
+      "sha256": "864cf7525bab6d82a013535c310f865218e4a5f23962569b17673c3338c9d446"
+    },
+    {
+      "url": "book/book-pdf.js",
+      "sha256": "6ae4f11799dd456091856a4c31dd8a015041726c32f21e9993536361a87a1d4e"
+    },
+    {
+      "url": "book/book-spells.js",
+      "sha256": "0211256a7ef64b4a331cc2d75b0ac48570921737f73317fbeeb26dc9c7d3573d"
+    },
+    {
+      "url": "book/book-story.js",
+      "sha256": "2781836b228dd7d0ad8fe4aaf045ea818aa433ab44ba00865211c0810f7f3db2"
+    },
+    {
       "url": "dnd-campaign-merge.js",
       "sha256": "b71ea929bd63162c0a0f7ad3a645c27ee774c8061eaca5fb052791ee4944e9e9"
     },
@@ -422,6 +454,18 @@
     {
       "url": "vendor/cannon-es.js",
       "sha256": "f0700cbd3a482954949b9d58c1b0f76dcc74767750297647a39d8c40dd63d37c"
+    },
+    {
+      "url": "vendor/pdfjs/LICENSE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "url": "vendor/pdfjs/pdf.min.mjs",
+      "sha256": "b0fc97331dc1fc03c4a381ebdd88f751a4d12de4ec97fa1faf18bb37721a4b5b"
+    },
+    {
+      "url": "vendor/pdfjs/pdf.worker.min.mjs",
+      "sha256": "52fadd5b81b6abd1eb665bab0c3749a8ad6a293fcb6ee9d9e0309f29d4f82619"
     },
     {
       "url": "vendor/pixi.min.js",
