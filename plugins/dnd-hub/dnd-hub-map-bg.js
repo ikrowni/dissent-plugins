@@ -3,17 +3,17 @@ import { MAP, serverData } from './dnd-hub-state.js?v=20261009a';
 import { request, requestWithTransfer, storageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261013a';
-import { renderFog } from './dnd-hub-fog.js?v=20261013a';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013a';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013c';
+import { renderFog } from './dnd-hub-fog.js?v=20261013c';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013c';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009g';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013a';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261012a';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013c';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261013a';
+import { setZoom } from './dnd-hub-canvas.js?v=20261013c';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';
@@ -272,7 +272,7 @@ export function toggleGridPanel() {
 
 export async function removeAllWalls() {
   if (!MAP.mapData) return;
-  if (!confirm('Remove all walls? This cannot be undone.')) return;
+  if (!confirm('Remove all walls? (Ctrl+Z puts them back.)')) return;
   MAP.mapData.walls = [];
   MAP.selectedWall = null;
   if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {
@@ -285,7 +285,7 @@ export async function removeAllWalls() {
 
 export async function removeAllDoors() {
   if (!MAP.mapData) return;
-  if (!confirm('Remove all doors? This cannot be undone.')) return;
+  if (!confirm('Remove all doors? (Ctrl+Z puts them back.)')) return;
   MAP.mapData.doors = {};
   MAP.selectedDoor = null;
   if (serverData?.campaigns?.[MAP.campaignId]?.maps?.[MAP.mapId]) {

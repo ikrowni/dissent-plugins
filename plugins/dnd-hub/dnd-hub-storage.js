@@ -16,6 +16,7 @@ import { storageGet, storageSet } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
 import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged } from './lk-campaign-index.js';
+import { noteSave } from './dnd-hub-undo.js';
 
 export const HUB_LEGACY_KEY = 'hub-dm';
 export const HUB_INDEX_KEY = 'hub-index';
@@ -169,6 +170,7 @@ export async function loadCampaign(data, id) {
 let _saving = null, _again = null, _againPromise = null;
 export function saveHubDm(data, opts = {}) {
   if (!data) return Promise.resolve();
+  noteSave(); // the DM's map tools: what this save changed becomes an undo step (dnd-hub-undo.js)
   if (_saving) {
     _again = { data, allowRemovals: !!(_again?.allowRemovals || opts.allowRemovals) };
     _againPromise ??= _saving.catch(() => {}).then(() => {

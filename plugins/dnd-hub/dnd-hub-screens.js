@@ -4,15 +4,15 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013a';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261013a';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261013b';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013c';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261013c';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261013c';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261012a';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261013c';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -443,6 +443,9 @@ export async function renderCampaignView(campaignId, isDM) {
             <button class="map-tool-btn" id="btn-tool-speaker" onclick="setTool('speaker')" title="Place a sound zone">${icon('volume-2')}Sound</button>
             <button class="map-tool-btn" id="btn-tool-trap"    onclick="setTool('trap')"    title="Place a trap or trigger">${icon('bomb')}Trap</button>
             <button class="map-tool-btn" id="btn-tool-template" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
+            <div class="map-tool-sep"></div>
+            <button class="map-tool-btn" id="btn-undo" onclick="undoMap()" disabled title="Undo the last change to walls, doors, lights, pins, sound, traps or fog (Ctrl+Z)">${icon('undo-2')}Undo</button>
+            <button class="map-tool-btn" id="btn-redo" onclick="redoMap()" disabled title="Redo (Ctrl+Y)">${icon('redo-2')}Redo</button>
           </div>
           <input type="file" id="map-file-input" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" style="display:none" onchange="handleMapUpload(this)">
           <input type="file" id="vtt-dd2vtt-input" accept=".dd2vtt,.json" style="display:none" onchange="onVTTFileSelected()">

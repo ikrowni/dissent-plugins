@@ -3,8 +3,9 @@ import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=202610
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeLitCells } from './dnd-hub-lights.js?v=20261013a';
+import { computeLitCells } from './dnd-hub-lights.js?v=20261013c';
 import { fogAlpha } from './dnd-hub-rules.js';
+import { fogBefore, fogAfter } from './dnd-hub-undo.js';
 
 export function renderFog() {
   const layers = MAP.layers;
@@ -209,8 +210,10 @@ export async function saveFogState() {
 }
 
 export async function resetFog() {
-  if (!confirm('Reset all fog to unexplored? This cannot be undone.')) return;
+  if (!confirm('Cover the whole map with fog again? (Ctrl+Z puts it back.)')) return;
+  fogBefore();
   MAP.mapData.fogState = {};
+  fogAfter();
   await storageSet(hubFogKey(MAP.campaignId, MAP.mapId), {});
   renderFog();
   await realtimePublish(EV.FOG_RESET, { type: EV.FOG_RESET, campaignId: MAP.campaignId, fromUserId: userId });

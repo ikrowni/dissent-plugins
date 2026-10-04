@@ -3,20 +3,21 @@ import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-st
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013a';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013c';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013a';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013a';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013a';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013c';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013c';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013c';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013a';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261013a';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013a';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261012a';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261012a';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013c';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261013c';
+import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013c';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013c';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013c';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261012a';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013a';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013c';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
@@ -196,11 +197,12 @@ export async function initPixiApp() {
     let brushDown = false;
     app.canvas.addEventListener('mousedown', e => {
       if (MAP.activeTool !== 'brush-reveal' && MAP.activeTool !== 'brush-hide') return;
-      brushDown = true; applyBrushAt(e);
+      brushDown = true; fogBefore(); applyBrushAt(e);
     });
     app.canvas.addEventListener('mousemove', e => { if (brushDown) applyBrushAt(e); });
-    app.canvas.addEventListener('mouseup',    () => { if (brushDown) { brushDown = false; saveFogState(); } });
-    app.canvas.addEventListener('mouseleave', () => { if (brushDown) { brushDown = false; saveFogState(); } });
+    // One stroke is one undo step.
+    app.canvas.addEventListener('mouseup',    () => { if (brushDown) { brushDown = false; fogAfter(); saveFogState(); } });
+    app.canvas.addEventListener('mouseleave', () => { if (brushDown) { brushDown = false; fogAfter(); saveFogState(); } });
 
     // ── Wall / door drawing ────────────────────────────────────────────────
     let drawStart = null, drawPreview = null;
@@ -666,6 +668,12 @@ export function initKeyboardHandlers() {
     // The map's keys only while the map is on screen (the hero forge uses ←/→ too).
     if (document.getElementById('screen-campaign')?.classList.contains('hidden')) return;
     if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    // Undo / redo the DM's map tools (dnd-hub-undo.js). Ctrl+Y or Ctrl+Shift+Z redoes; Cmd on a Mac.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && MAP.isDM) {
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) undoMap(); return; }
+      if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); if (!e.repeat) redoMap(); return; }
+    }
 
     // ── WASD / Arrow key token movement: one square per press ────────────
     const MOVE_KEYS = { w: [0,-1], s: [0,1], a: [-1,0], d: [1,0],
@@ -793,6 +801,7 @@ function _showShortcutsModal() {
   document.getElementById('kb-modal')?.remove();
   const SHORTCUTS = [
     ['W / A / S / D  or  ↑↓←→', 'Move selected token one cell'],
+    ['Ctrl+Z  /  Ctrl+Y',         'Undo / redo walls, doors, lights, pins, sound, traps and fog (DM only)'],
     ['Shift+Click token',         'Multi-select token (DM only)'],
     ['Alt+Click map',             'Ping location for all players'],
     ['Right-click token',         'Open token context menu'],

@@ -3,7 +3,7 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261012a';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { canTravel, travelFields, travelSummary } from './dnd-hub-pin-travel.js';
@@ -210,10 +210,10 @@ async function _placePin(worldX, worldY, edit) {
   const pin = { ...(edit || {}), id: edit?.id || genId(), cx: worldX, cy: worldY, label, note, journalId: journalId || null, visible, ...travel };
   const i = MAP.mapData.pins.findIndex(x => x.id === pin.id);
   if (i >= 0) MAP.mapData.pins[i] = pin; else MAP.mapData.pins.push(pin);
-  await _savePins();
+  await savePinsAndBroadcast();
 }
 
-async function _savePins() {
+export async function savePinsAndBroadcast() {
   const camp = serverData?.campaigns?.[MAP.campaignId];
   if (camp) {
     camp.maps[MAP.mapId] = MAP.mapData;
@@ -229,7 +229,7 @@ async function _savePins() {
 export async function deletePinById(id) {
   if (!MAP.mapData?.pins) return;
   MAP.mapData.pins = MAP.mapData.pins.filter(p => p.id !== id);
-  await _savePins();
+  await savePinsAndBroadcast();
 }
 
 // ── Player journal overlay ────────────────────────────────────────────────────
