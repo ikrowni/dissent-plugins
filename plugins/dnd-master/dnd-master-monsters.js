@@ -1,16 +1,23 @@
 // dnd-master-monsters.js — SRD monster viewer, stat blocks, combat instances
 import { mergeContent } from './lk-book.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261009a';
+import { EV } from './dnd-hub-event-types.js?v=20261011b';
 
 let SRD_MONSTERS = [];
 let expandedMonster = null;
 let monsterInstances = {};
 let _userId = null;
 
-export function setMonstersState({ userId }) {
+// The DM's rolls from this sidebar are secret unless the DM turns "Players see my rolls" on. Either way the DM's Hub
+// tells the table (a secret roll as "the DM rolls behind the screen", with no number): dnd-hub-events.js 'dice:roll'.
+let _campaignId = null, _shownRolls = false;
+export function setMonstersState({ userId, campaignId, shownRolls }) {
   _userId = userId;
+  if (campaignId !== undefined) _campaignId = campaignId;
+  if (shownRolls !== undefined) _shownRolls = !!shownRolls;
 }
+export const shownRolls = () => _shownRolls;
+const rollMarks = () => ({ fromSidebar: true, shown: _shownRolls, campaignId: _campaignId });
 
 export async function loadSRDMonsters() {
   try {
@@ -225,7 +232,7 @@ export async function quickRoll(source, label, n, d, mod, rollType) {
   if (mod === undefined) mod = 0;
   const result = rollDice(n, d, mod);
   const expr = n + 'd' + d + (mod !== 0 ? fmtMod(mod) : '');
-  const payload = { type: EV.DICE_ROLL, userId: _userId, source, expression: expr, result, label: source + ': ' + label, ts: Date.now() };
+  const payload = { type: EV.DICE_ROLL, userId: _userId, source, expression: expr, result, label: source + ': ' + label, ts: Date.now(), ...rollMarks() };
   if (rollType) payload.rollType = rollType;
   await realtimePublish(EV.DICE_ROLL, payload);
   localPublish('dnd-hub', EV.DICE_ROLL, payload);
@@ -236,7 +243,7 @@ export async function quickRollExpr(source, label, expr) {
   if (!m) return;
   const result = rollDice(parseInt(m[1]), parseInt(m[2]), parseInt(m[3] || '0'));
   console.log('[Roll] ' + source + ' \u2014 ' + label + ': ' + result + ' (' + expr + ')');
-  const exprPayload = { type: EV.DICE_ROLL, userId: _userId, source, expression: expr, result, label: source + ': ' + label, ts: Date.now() };
+  const exprPayload = { type: EV.DICE_ROLL, userId: _userId, source, expression: expr, result, label: source + ': ' + label, ts: Date.now(), ...rollMarks() };
   await realtimePublish(EV.DICE_ROLL, exprPayload);
   localPublish('dnd-hub', EV.DICE_ROLL, exprPayload);
 }

@@ -2,8 +2,8 @@
 import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261009a';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261009a';
-import { computeLitCells } from './dnd-hub-lights.js?v=20261010w';
+import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { computeLitCells } from './dnd-hub-lights.js?v=20261011b';
 import { fogAlpha } from './dnd-hub-rules.js';
 
 export function renderFog() {

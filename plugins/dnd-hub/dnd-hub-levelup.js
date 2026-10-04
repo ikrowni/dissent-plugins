@@ -11,7 +11,7 @@ import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
 import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
-import { saveHero } from './dnd-hub-char.js?v=20261009a';
+import { saveHero } from './dnd-hub-char.js?v=20261011b';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
 
 let S = null; // { campaignId, hero, plan, i, choices, error, onDone, fx, back }

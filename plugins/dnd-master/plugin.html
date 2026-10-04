@@ -19,6 +19,7 @@
     <div class="dm-head">
       <span class="lk-title dm-head-title">Dungeon Master</span>
       <span id="dm-campaign-name" class="dm-head-camp"></span>
+      <button id="dm-rolls-btn" class="dm-gear" onclick="toggleShownRolls()" title="Your rolls: secret (players only hear the dice)" aria-pressed="false" aria-label="Players see my rolls"></button>
       <button id="dm-settings-btn" class="dm-gear" onclick="switchDMTab('settings')" title="Table rules" aria-label="Table rules"></button>
     </div>
     <nav id="section-bar" aria-label="DM sections"></nav>
@@ -44,6 +45,6 @@
       <div id="tab-players"  class="hidden" style="display:flex;flex-direction:column;overflow:hidden;flex:1"></div>
     </div>
   </div>
-  <script type="module" src="dnd-master-main.js?v=20261009a"></script>
+  <script type="module" src="dnd-master-main.js?v=20261011b"></script>
 </body>
 </html>

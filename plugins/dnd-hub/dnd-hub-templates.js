@@ -2,7 +2,7 @@
 import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
 import { genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261009a';
+import { EV } from './dnd-hub-event-types.js?v=20261011b';
 
 // 6 preset colors (PIXI hex + CSS hex pairs)
 export const TEMPLATE_COLORS = [

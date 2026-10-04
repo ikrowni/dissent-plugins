@@ -1,29 +1,29 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
-import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261009a';
-import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, renderMonsterSearch, setMonstersState,
+import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
+import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261009a';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261011b';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261009a';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261011b';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261009a';
+  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261011b';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261009a';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261011b';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261009a';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261009a';
+import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261011b';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261011b';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -146,6 +146,7 @@ async function onInit(data) {
   document.getElementById('dm-app').classList.remove('hidden');
   document.getElementById('dm-campaign-name').textContent = myCampaign.name;
   document.getElementById('dm-settings-btn').innerHTML = icon('settings', { size: 16 });
+  document.getElementById('dm-rolls-btn').innerHTML = icon('dices', { size: 16 });
   renderNav();
 
   await loadSRDMonsters();
@@ -154,7 +155,8 @@ async function onInit(data) {
   const sharedState = { dmCampaign, dmCampaignId, serverData, userId };
   setInitiativeSharedState(sharedState);
   setInitiativeState(dmCampaign.initiative || null);
-  setMonstersState({ userId });
+  setMonstersState({ userId, campaignId: dmCampaignId, shownRolls: !!(await storageGet('rolls-shown', 'user').catch(() => false)) });
+  syncRollsButton();
   setSettingsState(sharedState);
   setMapsState(sharedState);
   setActorsState(sharedState);
@@ -369,3 +371,18 @@ window.levelUpHero = uid => Levels.levelUpHeroes([uid]);
 window.giveXpParty = () => { const n = prompt('Experience for every hero:', '100'); if (n !== null) Levels.giveXp(Object.keys(dmCampaign?.characterSummaries || {}), n); };
 window.giveXpHero = uid => { const n = prompt('Experience for this hero:', '100'); if (n !== null) Levels.giveXp([uid], n); };
 window.addHomebrewSubclass = addHomebrewSubclass; window.addHomebrewFeat = addHomebrewFeat; window.deleteHomebrew = deleteHomebrew;
+
+// "Players see my rolls": off = secret (the table only hears the dice). Remembered per DM.
+function syncRollsButton() {
+  const b = document.getElementById('dm-rolls-btn');
+  if (!b) return;
+  const on = shownRolls();
+  b.setAttribute('aria-pressed', String(on));
+  b.classList.toggle('active', on);
+  b.title = on ? 'Your rolls: everyone sees them' : 'Your rolls: secret (players only hear the dice)';
+}
+window.toggleShownRolls = async () => {
+  setMonstersState({ userId, shownRolls: !shownRolls() });
+  syncRollsButton();
+  try { await storageSet('rolls-shown', shownRolls(), 'user'); } catch { /* remembered for this session */ }
+};

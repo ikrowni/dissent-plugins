@@ -2,7 +2,7 @@
 import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261009a';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261009a';
+import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261009a';
 import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
