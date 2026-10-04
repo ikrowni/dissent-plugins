@@ -6,9 +6,13 @@
 // the sheet (two frames) never undo each other. `guide(trigger)` shows that trigger's tip if it is due.
 import { tipFor, markSeen, guidesDefault } from './lk-guides.js';
 
-let _io = null, _g = null, _loading = null, _loadedAt = 0, _queue = [], _open = null;
+let _io = null, _g = null, _loading = null, _loadedAt = 0, _queue = [], _open = null, _pendingOn = null;
 
-export function initGuides(io) { _io = io; _g = null; _loading = null; }
+/** Connect storage. A setGuidesOn made before this (the frame was still starting) is saved now, not lost. */
+export function initGuides(io) {
+  _io = io; _g = null; _loading = null;
+  if (_pendingOn !== null) { const on = _pendingOn; _pendingOn = null; setGuidesOn(on); }
+}
 
 // Re-read when older than 15 s: the Hub and the sheet are two frames, and either may have switched guides off.
 async function state() {
@@ -34,6 +38,7 @@ export async function guidesOn() { return (await state()).on !== false; }
 
 /** Turn guides on (every tip starts over) or off. */
 export async function setGuidesOn(on) {
+  if (!_io) { _pendingOn = on; _g = on ? { on: true, seen: [] } : { on: false, seen: [] }; _loadedAt = Date.now(); if (!on) close(); return; }
   await state();
   _g = on ? { on: true, seen: [] } : { ..._g, on: false };
   _loadedAt = Date.now();
