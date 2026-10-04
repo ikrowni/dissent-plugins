@@ -8,7 +8,7 @@ import { icon } from '../lk-icons.js';
 import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm } from '../dnd-hub-storage.js?v=20261012a';
 import { EV } from '../dnd-hub-event-types.js?v=20261011b';
-import { campaignBooks, listBooks, attachBook, loadBookImage } from './book-library.js';
+import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261012a';
 import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261012a';
 import { guarded } from '../lk-upload.js';
@@ -102,7 +102,7 @@ const picLabel = p => (p.page ? `page ${p.page}` : [p.group, p.title].filter(Boo
 function picturesView(b) {
   // The book's own pictures first, then each set (folder) under its name: a 40-card deck stays together.
   const pics = [...(b.images || [])].sort((x, y) => (x.page ? 0 : 1) - (y.page ? 0 : 1) || String(x.group || '').localeCompare(String(y.group || '')));
-  queueMicrotask(() => pics.forEach(p => loadThumb(p.fileId)));
+  queueMicrotask(() => pics.forEach(p => loadThumb(p)));
   let lastSet = null;
   const setHead = p => {
     const set = p.page ? null : (p.group || 'Pictures');
@@ -112,42 +112,43 @@ function picturesView(b) {
   };
   return `<p class="bk-help">A map becomes the table's map for everyone; art pops up on the players' screens.</p>
     <div class="bk-grid small">${pics.map(p => `${setHead(p)}<div class="bk-pic kept">
-      <div class="bk-pic-img" data-pic="${esc(p.fileId)}">${_thumbs.has(p.fileId) ? `<img src="${_thumbs.get(p.fileId)}" alt="${esc(p.title)}">` : '<span>…</span>'}</div>
+      <div class="bk-pic-img" data-pic="${esc(p.id)}">${_thumbs.get(p.id) ? `<img src="${_thumbs.get(p.id)}" alt="${esc(p.title)}">` : '<span>…</span>'}</div>
       <div class="bk-pic-foot"><span>${p.kind === 'map' ? 'Map' : 'Art'} · ${esc(picLabel(p))}</span></div>
       <div class="bk-pic-actions">
-        <button class="btn btn-gold btn-sm" onclick="bookUseMap('${esc(p.fileId)}')">Use as the map</button>
-        <button class="btn btn-ghost btn-sm" onclick="bookShowPicture('${esc(p.fileId)}')">Show the players</button></div>
+        <button class="btn btn-gold btn-sm" onclick="bookUseMap('${esc(p.id)}')">Use as the map</button>
+        <button class="btn btn-ghost btn-sm" onclick="bookShowPicture('${esc(p.id)}')">Show the players</button></div>
     </div>`).join('') || '<div class="bk-empty">This book has no pictures.</div>'}</div>`;
 }
-async function loadThumb(fileId) {
-  if (_thumbs.has(fileId)) return;
-  _thumbs.set(fileId, null);
+// Pictures are known by their own id: several can share one file (a pack, book-picture-pack.js).
+async function loadThumb(p) {
+  if (_thumbs.has(p.id)) return;
+  _thumbs.set(p.id, null);
   try {
-    const buf = await loadBookImage(fileId);
-    _thumbs.set(fileId, URL.createObjectURL(new Blob([buf], { type: 'image/webp' })));
-    const box = document.querySelector(`#book-panel [data-pic="${CSS.escape(fileId)}"]`);
-    if (box) box.innerHTML = `<img src="${_thumbs.get(fileId)}" alt="">`;
-  } catch { _thumbs.delete(fileId); }
+    const buf = await loadBookPicture(p);
+    _thumbs.set(p.id, URL.createObjectURL(new Blob([buf], { type: 'image/webp' })));
+    const box = document.querySelector(`#book-panel [data-pic="${CSS.escape(p.id)}"]`);
+    if (box) box.innerHTML = `<img src="${_thumbs.get(p.id)}" alt="">`;
+  } catch { _thumbs.delete(p.id); }
 }
-const picOf = fileId => R?.books?.[R.book]?.images?.find(p => p.fileId === fileId);
+const picOf = id => R?.books?.[R.book]?.images?.find(p => p.id === id);
 
 /** A book picture becomes the campaign's map, on every screen (a campaign copy: players cannot read the book). */
-export async function bookUseMap(fileId) {
-  const p = picOf(fileId);
+export async function bookUseMap(picId) {
+  const p = picOf(picId);
   if (!p || !confirm(`Make "${p.title}" the map for everyone? The current map stays in your maps.`)) return;
   try {
-    const buf = await loadBookImage(fileId);
+    const buf = await loadBookPicture(p);
     await addMapFromBuffer(buf, `${R.books[R.book].title} - ${picLabel(p)}`, 'image/webp');
     document.getElementById('book-panel')?.remove(); R = null;
   } catch (e) { if (!e?.shown) alert(`The map could not be made (${e?.message || e}).`); }
 }
 
 /** Show a book picture to the players: a campaign copy, popped up over their map (and the DM's). */
-export async function bookShowPicture(fileId) {
-  const c = camp(), p = picOf(fileId);
+export async function bookShowPicture(picId) {
+  const c = camp(), p = picOf(picId);
   if (!c || !p) return;
   try {
-    const data = await loadBookImage(fileId);
+    const data = await loadBookPicture(p);
     const res = await guarded(requestWithTransfer)('files:upload', { data, name: `${p.title}.webp`, mime: 'image/webp',
       attachContext: `campaign:${c.id}` }, [data], 120000);
     const title = p.page ? `${R.books[R.book].title}, page ${p.page}` : (p.title || R.books[R.book].title);

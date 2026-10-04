@@ -4,7 +4,8 @@
 // A campaign using a book gets a copy of the player part (spells, items) as an ordinary campaign file; the library
 // file's id is DM-only (campaign.bookFiles, secret in lk-secrets.js).
 import { request, requestWithTransfer } from '../../plugin-sdk.js';
-import { guarded } from '../lk-upload.js';
+import { guarded, uploadFile } from '../lk-upload.js';
+import { packText, unpack, isRateLimited } from './book-picture-pack.js';
 import { bookFileName, bookTitleFromFile, playerPart } from '../lk-book.js';
 
 const _cache = new Map(); // fileId → book
@@ -38,10 +39,7 @@ const json = obj => new TextEncoder().encode(JSON.stringify(obj)).buffer;
 /** Save a book privately. `place`: 'personal' | 'server'. Returns the file id. Shows the storage advice on failure. */
 export async function saveBook(book, place) {
   const data = json(book);
-  const res = await guarded(requestWithTransfer)('files:upload', {
-    data, name: bookFileName(book), mime: 'application/json', attachContext: `library:${book.id}`,
-    ...(place === 'personal' ? { place: 'personal' } : { private: true }),
-  }, [data], 180000);
+  const res = await upload({ name: bookFileName(book), mime: 'application/json', attachContext: `library:${book.id}`, ...where(place) }, data);
   _cache.set(res.id, book);
   return res.id;
 }
@@ -55,28 +53,81 @@ export async function loadBook(fileId) {
   return book;
 }
 
-/** Delete a book and its pictures. A picture that will not delete is left for the storage screen. */
+// 🔴 The node takes 20 plugin-file uploads (and deletes: the same limit) a minute per person. Every upload and
+// delete of a book's files goes through `paced`: at most PER_MINUTE in any minute, and when the node refuses anyway
+// (another screen used some), wait and try again rather than fail the whole save (book-picture-pack.js).
+const PER_MINUTE = 16;
+const _recent = [];
+async function paced(op, onWait = () => {}) {
+  for (let attempt = 0; ; attempt++) {
+    const now = Date.now();
+    while (_recent.length && now - _recent[0] > 60_000) _recent.shift();
+    if (_recent.length >= PER_MINUTE) {
+      const wait = 60_000 - (now - _recent[0]) + 250;
+      onWait(Math.ceil(wait / 1000));
+      await new Promise(r => setTimeout(r, wait));
+      continue;
+    }
+    _recent.push(Date.now());
+    try { return await op(); } catch (e) {
+      if (!isRateLimited(e) || attempt >= 5) throw e;
+      onWait(30);
+      await new Promise(r => setTimeout(r, 30_000));
+    }
+  }
+}
+
+/** Delete a book and its pictures (each picture file once: a pack holds many). One that will not delete is left. */
 export async function deleteBook(fileId) {
   const book = await loadBook(fileId).catch(() => null);
-  await request('files:delete', { fileId });
-  for (const img of book?.images || []) await request('files:delete', { fileId: img.fileId }).catch(() => {});
+  await paced(() => request('files:delete', { fileId }));
+  for (const id of new Set((book?.images || []).map(i => i.fileId))) await paced(() => request('files:delete', { fileId: id })).catch(() => {});
   _cache.delete(fileId);
 }
 
-/** Save one picture of a book (book-pdf.js; a WebP blob) privately, beside the book. Returns the file id. */
-export async function saveBookImage(book, img, place) {
+/** Delete files a failed save had already uploaded, paced (it runs on; nothing waits for it). */
+export function deleteFiles(ids) {
+  (async () => { for (const id of new Set(ids)) await paced(() => request('files:delete', { fileId: id })).catch(() => {}); })();
+}
+
+const picName = (book, tail) => `LanternKeep book picture - ${bookFileName(book).replace(/^LanternKeep book - /, '').replace(/\.json$/, '')} ${tail}`;
+const where = place => (place === 'personal' ? { place: 'personal' } : { private: true });
+// An upload, paced, with the node's storage message shown when it is not a rate limit (lk-upload.js).
+const upload = (params, data, onWait) => uploadFile(() => paced(() => requestWithTransfer('files:upload', { ...params, data }, [data], 180000), onWait));
+
+/** Save one picture of a book (a WebP blob) privately, beside the book. Returns the file id. */
+export async function saveBookImage(book, img, place, onWait) {
   const data = await img.blob.arrayBuffer();
-  const res = await guarded(requestWithTransfer)('files:upload', {
-    data, name: `LanternKeep book picture - ${bookFileName(book).replace(/^LanternKeep book - /, '').replace(/\.json$/, '')} ${img.id}.webp`,
-    mime: 'image/webp', attachContext: `library:${book.id}`, ...(place === 'personal' ? { place: 'personal' } : { private: true }),
-  }, [data], 180000);
+  const res = await upload({ name: picName(book, `${img.id}.webp`), mime: 'image/webp', attachContext: `library:${book.id}`, ...where(place) }, data, onWait);
   return res.id;
 }
 
-/** A book picture's bytes (private: only the DM can read it). */
+/** Save several small pictures as ONE pack file (book-picture-pack.js). Returns the file id. */
+export async function saveBookPack(book, imgs, place, n, onWait) {
+  const items = [];
+  for (const img of imgs) items.push({ id: img.id, bytes: new Uint8Array(await img.blob.arrayBuffer()) });
+  const data = new TextEncoder().encode(packText(items)).buffer;
+  const res = await upload({ name: picName(book, `pack-${n}.json`), mime: 'application/json', attachContext: `library:${book.id}`, ...where(place) }, data, onWait);
+  return res.id;
+}
+
+/** A book picture's file bytes (private: only the DM can read it). */
 export async function loadBookImage(fileId) {
   const r = await request('files:loadArrayBuffer', { fileId }, 120000);
   return r.buffer;
+}
+
+const _packs = new Map(); // pack file id → Promise<{ picture id → bytes }>
+/** One picture's bytes, whether it is a file of its own or one of a pack (`pic.packed`). */
+export async function loadBookPicture(pic) {
+  if (!pic.packed) return loadBookImage(pic.fileId);
+  if (!_packs.has(pic.fileId)) {
+    _packs.set(pic.fileId, loadBookImage(pic.fileId).then(b => unpack(new TextDecoder().decode(b))));
+    _packs.get(pic.fileId).catch(() => _packs.delete(pic.fileId));
+  }
+  const bytes = (await _packs.get(pic.fileId))[pic.id];
+  if (!bytes) throw new Error('that picture is missing from its pack');
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }
 
 /** Campaigns (of `campaigns`) that use the book `bookId`. */

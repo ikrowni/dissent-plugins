@@ -141,7 +141,7 @@
     },
     {
       "url": "book/book-library.js",
-      "sha256": "2f044c0ba2175258edf65f5521c0bab7aef5577aee3c69c129c7ee0cc995a89e"
+      "sha256": "7c00a51da9e5e2c6e8e5695f1fb923fc389de6efad11c841f861bfbb43d5d40e"
     },
     {
       "url": "book/book-merge.js",
@@ -168,8 +168,12 @@
       "sha256": "4f7a3409e7395aa814135e1c4417bf43da17d56d3a7946f8018e1c39bdeb440f"
     },
     {
+      "url": "book/book-picture-pack.js",
+      "sha256": "64ebb5e4fb172cdb5f7b9324d3fad62a215b9d429df1131c8c89be5b484b733b"
+    },
+    {
       "url": "book/book-reader.js",
-      "sha256": "bfb83c289fb4d9f09d504a6d08815241452dfca7a82ae6b424d0fc276f6036e3"
+      "sha256": "cc97617d446d1ed1a469c41751c24c456206aac6c10f747bb2c62511adfcc197"
     },
     {
       "url": "book/book-scan.js",
@@ -177,7 +181,7 @@
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "8ac98fcb0178fa4c95c35f1c23cfad3855bf99cc963d5debe7b8cdf25787082f"
+      "sha256": "607c52c2785dceb73c7fffd255c02db7e5c1d93653e48307b6f39112a3c597e5"
     },
     {
       "url": "book/book-spells-in-play.js",

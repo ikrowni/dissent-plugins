@@ -9,7 +9,8 @@ import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261012a';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { filesFromDrop } from './book-drop.js';
-import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook, loadBook, saveBookImage, loadBookImage } from './book-library.js';
+import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBook, loadBook, saveBookImage, saveBookPack, loadBookPicture } from './book-library.js';
+import { planPictureFiles } from './book-picture-pack.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -137,7 +138,7 @@ export async function bookExport(fileId) {
     const book = await loadBook(fileId);
     S.notice = book.images?.length ? `Packing ${book.images.length} pictures…` : ''; render();
     const pictures = {};
-    for (const img of book.images || []) pictures[img.id] = bufToB64(await loadBookImage(img.fileId));
+    for (const img of book.images || []) pictures[img.id] = bufToB64(await loadBookPicture(img));
     const data = new TextEncoder().encode(toPack(book, pictures)).buffer;
     if (data.byteLength > 50 * 1024 * 1024) { S.notice = 'This book is too big to save as one copy (over 50 MB with its pictures).'; render(); return; }
     S.notice = ''; render();
@@ -303,12 +304,24 @@ export async function bookSave() {
   const book = makeBook({ title, parsed: S.parsed, keep, id: newId() });
   const pics = (S.parsed.images || []).filter(e => S.keep.images?.has(e.id));
   const saved = [];
+  const meta = (e, fileId, packed) => ({ id: e.id, fileId, page: e.page, width: e.width, height: e.height, kind: e.kind, title: e.name,
+    ...(e.group ? { group: e.group } : {}), ...(packed ? { packed: true } : {}) });
+  const fileIds = [];
   try {
-    // Pictures first (each its own private file), then the book that lists them.
-    for (const [i, e] of pics.entries()) {
-      btn.textContent = `Saving picture ${i + 1} of ${pics.length}…`;
-      const fileId = await saveBookImage(book, e, S.place);
-      saved.push({ id: e.id, fileId, page: e.page, width: e.width, height: e.height, kind: e.kind, title: e.name, ...(e.group ? { group: e.group } : {}) });
+    // Pictures first, then the book that lists them. Big ones (maps) a file each; small ones (a card deck) packed
+    // together (book-picture-pack.js), so a deck is one upload, not forty against the node's 20 a minute.
+    const plan = planPictureFiles(pics.map(e => ({ ...e, size: e.blob.size })));
+    let done = 0, packs = 0;
+    const onWait = s => { btn.textContent = `Saved ${done} of ${pics.length} pictures. The server takes 20 files a minute: going on in ${s} s…`; };
+    for (const step of plan) {
+      btn.textContent = `Saving pictures: ${done} of ${pics.length}…`;
+      if (step.single) {
+        const fileId = await saveBookImage(book, step.single, S.place, onWait);
+        fileIds.push(fileId); saved.push(meta(step.single, fileId, false)); done++;
+      } else {
+        const fileId = await saveBookPack(book, step.pack, S.place, ++packs, onWait);
+        fileIds.push(fileId); for (const e of step.pack) saved.push(meta(e, fileId, true)); done += step.pack.length;
+      }
     }
     book.images = saved;
     btn.textContent = 'Saving the book…';
@@ -316,7 +329,7 @@ export async function bookSave() {
     S = { mode: 'saved', book, fileId, place: S.place };
     render();
   } catch (e) {
-    for (const x of saved) request('files:delete', { fileId: x.fileId }).catch(() => {}); // no half-saved book
+    deleteFiles(fileIds); // no half-saved book (paced: deletes count against the same limit)
     btn.disabled = false; btn.textContent = 'Save';
     if (!e?.shown) err.textContent = `The book could not be saved (${e?.message || e}).`;
     else err.textContent = S.place === 'personal' ? 'Try saving to this server instead.' : 'Free some space in Settings → Storage, or save to your personal library.';
