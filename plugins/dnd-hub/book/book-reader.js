@@ -2,13 +2,16 @@
 // share a section with the players (it becomes a shared journal page and pops up over their map), add a book
 // monster to the encounter (the DM sidebar's builder), add a book item to the campaign's items. Also sends the
 // campaign's book monsters to the DM sidebar, which cannot read the Hub's library itself.
-import { esc, localPublish } from '../../plugin-sdk.js';
+import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
 import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm } from '../dnd-hub-storage.js?v=20261006s';
 import { EV } from '../dnd-hub-event-types.js?v=20261009a';
-import { campaignBooks, listBooks, attachBook } from './book-library.js';
+import { campaignBooks, listBooks, attachBook, loadBookImage } from './book-library.js';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261010w';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261010w';
+import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 
 let R = null; // { books, book, tab, section, monster, q, library }
@@ -54,11 +57,11 @@ function draw() {
     return;
   }
   const b = R.books[R.book] || R.books[0];
-  const tabs = [['story', 'Story', b.story.length], ['monsters', 'Monsters', b.monsters.length], ['items', 'Items', b.items.length]];
+  const tabs = [['story', 'Story', b.story.length], ['images', 'Maps & art', (b.images || []).length], ['monsters', 'Monsters', b.monsters.length], ['items', 'Items', b.items.length]];
   el.innerHTML = head + `
     ${R.books.length > 1 ? `<div class="bk-books">${R.books.map((x, i) => `<button aria-pressed="${i === R.book}" onclick="bookPanelBook(${i})">${esc(x.title)}</button>`).join('')}</div>` : `<div class="bk-panel-title">${esc(b.title)}</div>`}
     <div class="bk-tabs small">${tabs.map(([k, l, n]) => `<button aria-selected="${R.tab === k}" ${n ? '' : 'disabled'} onclick="bookPanelTab('${k}')">${l} <span>${n}</span></button>`).join('')}</div>
-    <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
+    <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'images' ? picturesView(b) : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
 }
 
 function storyView(b) {
@@ -90,6 +93,57 @@ function listView(list, kind) {
            <button class="btn btn-gold btn-sm" onclick="bookAddMonster('${esc(e.id)}')">Add to the encounter</button>`
         : `<p>${esc(e.desc.slice(0, 600)).replace(/\n/, '<br>')}</p>
            <button class="btn btn-gold btn-sm" onclick="bookAddItem('${esc(e.id)}')">${camp()?.items?.[e.id] ? 'In your items ✓' : 'Add to your items'}</button>`}</div>` : ''}</div>`).join('')}</div>`;
+}
+
+// ── Maps & art ───────────────────────────────────────────────────────────────────────────────────────────────
+const _thumbs = new Map(); // picture file id → object URL (this session)
+function picturesView(b) {
+  const pics = b.images || [];
+  queueMicrotask(() => pics.forEach(p => loadThumb(p.fileId)));
+  return `<p class="bk-help">A map becomes the table's map for everyone; art pops up on the players' screens.</p>
+    <div class="bk-grid small">${pics.map(p => `<div class="bk-pic kept">
+      <div class="bk-pic-img" data-pic="${esc(p.fileId)}">${_thumbs.has(p.fileId) ? `<img src="${_thumbs.get(p.fileId)}" alt="${esc(p.title)}">` : '<span>…</span>'}</div>
+      <div class="bk-pic-foot"><span>${p.kind === 'map' ? 'Map' : 'Art'} · page ${p.page}</span></div>
+      <div class="bk-pic-actions">
+        <button class="btn btn-gold btn-sm" onclick="bookUseMap('${esc(p.fileId)}')">Use as the map</button>
+        <button class="btn btn-ghost btn-sm" onclick="bookShowPicture('${esc(p.fileId)}')">Show the players</button></div>
+    </div>`).join('') || '<div class="bk-empty">This book has no pictures.</div>'}</div>`;
+}
+async function loadThumb(fileId) {
+  if (_thumbs.has(fileId)) return;
+  _thumbs.set(fileId, null);
+  try {
+    const buf = await loadBookImage(fileId);
+    _thumbs.set(fileId, URL.createObjectURL(new Blob([buf], { type: 'image/webp' })));
+    const box = document.querySelector(`#book-panel [data-pic="${CSS.escape(fileId)}"]`);
+    if (box) box.innerHTML = `<img src="${_thumbs.get(fileId)}" alt="">`;
+  } catch { _thumbs.delete(fileId); }
+}
+const picOf = fileId => R?.books?.[R.book]?.images?.find(p => p.fileId === fileId);
+
+/** A book picture becomes the campaign's map, on every screen (a campaign copy: players cannot read the book). */
+export async function bookUseMap(fileId) {
+  const p = picOf(fileId);
+  if (!p || !confirm(`Make "${p.title}" the map for everyone? The current map stays in your maps.`)) return;
+  try {
+    const buf = await loadBookImage(fileId);
+    await addMapFromBuffer(buf, `${R.books[R.book].title} - page ${p.page}`, 'image/webp');
+    document.getElementById('book-panel')?.remove(); R = null;
+  } catch (e) { if (!e?.shown) alert(`The map could not be made (${e?.message || e}).`); }
+}
+
+/** Show a book picture to the players: a campaign copy, popped up over their map (and the DM's). */
+export async function bookShowPicture(fileId) {
+  const c = camp(), p = picOf(fileId);
+  if (!c || !p) return;
+  try {
+    const data = await loadBookImage(fileId);
+    const res = await guarded(requestWithTransfer)('files:upload', { data, name: `${p.title}.webp`, mime: 'image/webp',
+      attachContext: `campaign:${c.id}` }, [data], 120000);
+    const title = `${R.books[R.book].title}, page ${p.page}`;
+    await realtimePublish(EV.HANDOUT_PUSH, { type: EV.HANDOUT_PUSH, campaignId: c.id, title, content: '', imageFileId: res.id, fromUserId: userId });
+    showHandoutOverlay({ title, content: '', imageFileId: res.id });
+  } catch (e) { if (!e?.shown) alert(`The picture could not be shown (${e?.message || e}).`); }
 }
 
 export function bookPanelTab(t) { R.tab = t; R.q = ''; draw(); }

@@ -78,3 +78,15 @@ describe('.lkpack', () => {
   });
   it('names the file after the book', () => expect(packFileName({ title: 'Part 1/2: Fog' })).toBe('Part 1 2 Fog.lkpack'));
 });
+
+describe('.lkpack pictures', () => {
+  it('inlines the pictures given, and they come back for the review (without the old file ids)', () => {
+    const book = { ...makeBook({ title: 'Maps', parsed, id: 'b2' }), images: [
+      { id: 'p2-1', fileId: 'f-secret', page: 2, width: 1600, height: 1200, kind: 'map', title: 'Page 2 picture' },
+      { id: 'p3-1', fileId: 'f-other', page: 3, width: 900, height: 1200, kind: 'art', title: 'Page 3 picture' }] };
+    const text = toPack(book, { 'p2-1': 'QUJD' });
+    expect(text).not.toContain('f-secret');
+    const back = fromPack(text);
+    expect(back.parsed.images).toEqual([{ id: 'p2-1', page: 2, width: 1600, height: 1200, kind: 'map', name: 'Page 2 picture', dataB64: 'QUJD' }]);
+  });
+});

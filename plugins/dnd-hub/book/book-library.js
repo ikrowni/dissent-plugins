@@ -55,9 +55,28 @@ export async function loadBook(fileId) {
   return book;
 }
 
+/** Delete a book and its pictures. A picture that will not delete is left for the storage screen. */
 export async function deleteBook(fileId) {
+  const book = await loadBook(fileId).catch(() => null);
   await request('files:delete', { fileId });
+  for (const img of book?.images || []) await request('files:delete', { fileId: img.fileId }).catch(() => {});
   _cache.delete(fileId);
+}
+
+/** Save one picture of a book (book-pdf.js; a WebP blob) privately, beside the book. Returns the file id. */
+export async function saveBookImage(book, img, place) {
+  const data = await img.blob.arrayBuffer();
+  const res = await guarded(requestWithTransfer)('files:upload', {
+    data, name: `LanternKeep book picture - ${bookFileName(book).replace(/^LanternKeep book - /, '').replace(/\.json$/, '')} ${img.id}.webp`,
+    mime: 'image/webp', attachContext: `library:${book.id}`, ...(place === 'personal' ? { place: 'personal' } : { private: true }),
+  }, [data], 180000);
+  return res.id;
+}
+
+/** A book picture's bytes (private: only the DM can read it). */
+export async function loadBookImage(fileId) {
+  const r = await request('files:loadArrayBuffer', { fileId }, 120000);
+  return r.buffer;
 }
 
 /** Campaigns (of `campaigns`) that use the book `bookId`. */

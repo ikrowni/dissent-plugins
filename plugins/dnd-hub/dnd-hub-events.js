@@ -7,25 +7,25 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261009a';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261009g';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261010w';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261009a';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261010w';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261009a';
-import { renderFog } from './dnd-hub-fog.js?v=20261009a';
-import { renderWalls } from './dnd-hub-walls.js?v=20261009a';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261010w';
+import { renderFog } from './dnd-hub-fog.js?v=20261010w';
+import { renderWalls } from './dnd-hub-walls.js?v=20261010w';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
 import { loadSRD } from './dnd-hub-char.js?v=20261009a';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
 import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261009a';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261009a';
-import { renderLights } from './dnd-hub-lights.js?v=20261009a';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261010w';
+import { renderLights } from './dnd-hub-lights.js?v=20261010w';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261009a';
 import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261009a';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
@@ -33,7 +33,7 @@ import { renderTemplates } from './dnd-hub-templates.js?v=20261009a';
 import { saveHubDm, loadHubDm, setSecretsUser } from './dnd-hub-storage.js?v=20261006s';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261009g';
+import { setView } from './dnd-hub-canvas.js?v=20261010w';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -758,7 +758,7 @@ export async function handleMapEvent(p) {
     }
     case 'handout:push': {
       if (p.campaignId !== MAP.campaignId || MAP.isDM) return;
-      showHandoutOverlay({ title: p.title, content: p.content });
+      showHandoutOverlay({ title: p.title, content: p.content, imageFileId: p.imageFileId });
       setTimeout(() => guide('player:handout'), 1500);
       break;
     }

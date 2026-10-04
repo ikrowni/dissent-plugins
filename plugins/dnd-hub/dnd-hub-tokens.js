@@ -3,9 +3,9 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261009a';
-import { renderFog } from './dnd-hub-fog.js?v=20261009a';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261009a';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261009a';
+import { renderFog } from './dnd-hub-fog.js?v=20261010w';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261010w';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261010w';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261009a';
 import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261009a';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261009a';

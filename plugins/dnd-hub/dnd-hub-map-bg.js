@@ -3,17 +3,17 @@ import { MAP, serverData } from './dnd-hub-state.js?v=20261009a';
 import { request, requestWithTransfer, storageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261009a';
-import { renderFog } from './dnd-hub-fog.js?v=20261009a';
-import { renderWalls } from './dnd-hub-walls.js?v=20261009a';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261010w';
+import { renderFog } from './dnd-hub-fog.js?v=20261010w';
+import { renderWalls } from './dnd-hub-walls.js?v=20261010w';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009g';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261009a';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261010w';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261009g';
+import { setZoom } from './dnd-hub-canvas.js?v=20261010w';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';
@@ -319,54 +319,59 @@ export async function handleMapUpload(input) {
   input.value = '';
   const btn = document.getElementById('btn-upload-map');
   if (btn) { btn.textContent = '⏳ Uploading…'; btn.disabled = true; }
-
   try {
-    const buf = await file.arrayBuffer();
-    // attachContext ties the file to this campaign so it is reclaimed when the
-    // campaign is deleted, and is never treated as an abandoned upload by the
-    // node's 7-day sweep. See the plugin-storage spec §7.
-    const uploadResult = await guarded(requestWithTransfer)('files:upload', {
-      name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf,
-      attachContext: `campaign:${MAP.campaignId}`,
-    }, [buf], 120000);
-
-    const fileId = uploadResult?.id;
-    if (!fileId) throw new Error('Upload response missing file id');
-    const url = uploadResult?.url;
-    if (!url) throw new Error('Upload response missing url');
-
-    const mapId = genId();
-    const mapEntry = {
-      id: mapId, fileId,
-      name: file.name.replace(/\.[^.]+$/, ''),
-      mime: file.type || 'image/png',
-      gridSize: null, coordFrame: 'image', gridType: 'square', gridEnabled: true,
-      gridOffsetX: 0, gridOffsetY: 0,
-      gridColor: '#ffffff', gridAlpha: 0.08,
-      walls: [], doors: {}, lights: [], audioZones: [], triggers: [], tokens: {}, fogState: {},
-    };
-
-    if (!serverData.campaigns[MAP.campaignId].maps) serverData.campaigns[MAP.campaignId].maps = {};
-    serverData.campaigns[MAP.campaignId].maps[mapId] = mapEntry;
-    serverData.campaigns[MAP.campaignId].activeMapId = mapId;
-    serverData.campaigns[MAP.campaignId].updatedAt = new Date().toISOString();
-    await saveHubDm( serverData);
-
-    MAP.mapId = mapId;
-    MAP.mapData = mapEntry;
-
-    await realtimePublish('map:set', { type: 'map:set', campaignId: MAP.campaignId, mapId, fileId, signedUrl: url });
-
-    await renderMapBackground();
-    renderGrid();
-    renderTokens();
-    renderFog();
-    refreshGuide();
+    await addMapFromBuffer(await file.arrayBuffer(), file.name.replace(/\.[^.]+$/, ''), file.type || 'image/png');
   } catch (err) {
     if (!err?.shown) alert('Upload failed: ' + err.message);
   } finally {
     if (btn) { btn.innerHTML = icon('map') + 'Map'; btn.disabled = false; }
   }
+}
+
+/**
+ * A new map from an image's bytes, made the campaign's active map on every screen. The Map button uses it, and so
+ * does the Book panel's "Use as the map" (a picture from an imported book). Throws (shown) on a refused upload.
+ */
+export async function addMapFromBuffer(buf, name, mime) {
+  // attachContext ties the file to this campaign so it is reclaimed when the
+  // campaign is deleted, and is never treated as an abandoned upload by the
+  // node's 7-day sweep. See the plugin-storage spec §7.
+  const uploadResult = await guarded(requestWithTransfer)('files:upload', {
+    name: `${name}.${(mime.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, mime, size: buf.byteLength, dmOnly: false, data: buf,
+    attachContext: `campaign:${MAP.campaignId}`,
+  }, [buf], 120000);
+
+  const fileId = uploadResult?.id;
+  if (!fileId) throw new Error('Upload response missing file id');
+  const url = uploadResult?.url;
+  if (!url) throw new Error('Upload response missing url');
+
+  const mapId = genId();
+  const mapEntry = {
+    id: mapId, fileId, name, mime,
+    gridSize: null, coordFrame: 'image', gridType: 'square', gridEnabled: true,
+    gridOffsetX: 0, gridOffsetY: 0,
+    gridColor: '#ffffff', gridAlpha: 0.08,
+    walls: [], doors: {}, lights: [], audioZones: [], triggers: [], tokens: {}, fogState: {},
+  };
+
+  if (!serverData.campaigns[MAP.campaignId].maps) serverData.campaigns[MAP.campaignId].maps = {};
+  serverData.campaigns[MAP.campaignId].maps[mapId] = mapEntry;
+  serverData.campaigns[MAP.campaignId].activeMapId = mapId;
+  serverData.campaigns[MAP.campaignId].updatedAt = new Date().toISOString();
+  await saveHubDm( serverData);
+
+  MAP.mapId = mapId;
+  MAP.mapData = mapEntry;
+
+  await realtimePublish('map:set', { type: 'map:set', campaignId: MAP.campaignId, mapId, fileId, signedUrl: url });
+
+  await renderMapBackground();
+  renderGrid();
+  renderTokens();
+  renderFog();
+  refreshGuide();
+  return mapId;
 }
 
 // ── UniversalVTT (Dungeon Alchemist) import ───────────────────────────────────

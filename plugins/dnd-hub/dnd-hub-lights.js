@@ -3,8 +3,8 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261009a';
-import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20261009a';
-import { wallPx } from './dnd-hub-walls.js?v=20261009a';
+import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20261010w';
+import { wallPx } from './dnd-hub-walls.js?v=20261010w';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';

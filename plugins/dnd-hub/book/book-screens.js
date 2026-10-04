@@ -2,16 +2,16 @@
 // Drawn in #screen-library. Owner, 2026-10-04: "The import campaign feature needs to be finished up and easy to work
 // with": one drop zone, a progress bar with Cancel, then a review where the sure finds are already ticked and one
 // click saves; the unsure ones say why.
-import { esc, saveToDevice } from '../../plugin-sdk.js';
+import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
 import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261006s';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readPdf, ScanError } from './book-pdf.js';
 import { parseBook } from './book-parse.js';
-import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook, loadBook } from './book-library.js';
+import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook, loadBook, saveBookImage, loadBookImage } from './book-library.js';
 
-const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story']];
+const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
 const root = () => document.getElementById('screen-library');
 const myCampaigns = () => Object.values(serverData?.campaigns || {}).filter(c => c.dmUserId === userId);
@@ -85,8 +85,10 @@ export async function bookPickFile(file) {
     S.phase = 'Finding monsters, spells, items and story…'; updateProgress();
     await new Promise(r => setTimeout(r, 30));
     const parsed = parseBook(doc.lines);
+    // Pictures: decorations were left behind by book-pdf.js, so every one offered starts ticked.
+    parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, url: URL.createObjectURL(img.blob) }));
     const keep = {};
-    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || e.confidence === 'sure').map(e => e.id));
+    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || k === 'images' || e.confidence === 'sure').map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
       title: (doc.title || file.name.replace(/\.pdf$/i, '')).trim().slice(0, 80), place: 'personal', pages: doc.pages,
       personalError: null };
@@ -102,6 +104,10 @@ export async function bookPickFile(file) {
 async function openPack(file) {
   try {
     const { parsed, title } = fromPack(await file.text());
+    parsed.images = (parsed.images || []).map(({ dataB64, ...i }) => {
+      const blob = b64ToBlob(dataB64, 'image/webp');
+      return { ...i, blob, url: URL.createObjectURL(blob) };
+    });
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
@@ -118,7 +124,12 @@ async function openPack(file) {
 export async function bookExport(fileId) {
   try {
     const book = await loadBook(fileId);
-    const data = new TextEncoder().encode(toPack(book)).buffer;
+    S.notice = book.images?.length ? `Packing ${book.images.length} pictures…` : ''; render();
+    const pictures = {};
+    for (const img of book.images || []) pictures[img.id] = bufToB64(await loadBookImage(img.fileId));
+    const data = new TextEncoder().encode(toPack(book, pictures)).buffer;
+    if (data.byteLength > 50 * 1024 * 1024) { S.notice = 'This book is too big to save as one copy (over 50 MB with its pictures).'; render(); return; }
+    S.notice = ''; render();
     await saveToDevice(data, packFileName(book), 'application/json');
   } catch (e) {
     const m = String(e?.message || e);
@@ -149,6 +160,7 @@ function meta(k, e) {
   if (k === 'monsters') return `CR ${crText(e.cr)} · ${e.size || ''} ${e.type || ''}${e.hp ? ` · ${e.hp} HP` : ''}`;
   if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
   if (k === 'items') return `${e.category}, ${String(e.rarity || '').toLowerCase()}`;
+  if (k === 'images') return `${e.kind === 'map' ? 'Map' : 'Art'} · page ${e.page}`;
   return `${e.chapter && e.chapter !== e.title ? `${e.chapter} · ` : ''}${wordCount(e.html)} words${e.readAloud?.length ? ` · ${e.readAloud.length} read-aloud` : ''}`;
 }
 const crText = cr => cr == null ? '?' : cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr);
@@ -181,14 +193,14 @@ function reviewView() {
       <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('sure')">Keep the sure ones</button>
       <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('all')">Keep all</button>
       <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('none')">Keep none</button></div>
-    <div class="bk-rows" id="bk-rows">${shown.slice(0, 400).map(e => `<div class="bk-row ${keep.has(e.id) ? 'kept' : ''} ${S.open === e.id ? 'open' : ''}">
+    ${k === 'images' ? imageGrid(shown, keep) : `<div class="bk-rows" id="bk-rows">${shown.slice(0, 400).map(e => `<div class="bk-row ${keep.has(e.id) ? 'kept' : ''} ${S.open === e.id ? 'open' : ''}">
         <label class="bk-row-head"><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
           <b>${esc(e.name || e.title)}</b><span>${esc(meta(k, e))}</span>
           ${e.confidence === 'unsure' ? `<em title="${esc(e.problems.join(', '))}">⚠ ${esc(e.problems.join(', '))}</em>` : ''}
           <button class="bk-peek" onclick="event.preventDefault();bookPeek('${esc(e.id)}')" aria-expanded="${S.open === e.id}">${S.open === e.id ? 'Hide' : 'Look'}</button></label>
         ${S.open === e.id ? `<div class="bk-preview">${preview(k, e)}</div>` : ''}</div>`).join('')}
       ${shown.length > 400 ? `<div class="bk-empty">${shown.length - 400} more: search to find them.</div>` : ''}
-      ${!shown.length ? '<div class="bk-empty">Nothing here.</div>' : ''}</div>
+      ${!shown.length ? '<div class="bk-empty">Nothing here.</div>' : ''}</div>`}
     <div class="bk-save">
       <label>Book name <input id="bk-title" value="${esc(S.title)}" maxlength="80" oninput="bookTitle(this.value)"></label>
       <fieldset><legend>Save to</legend>
@@ -198,6 +210,18 @@ function reviewView() {
       <div class="bk-error" role="alert" id="bk-error"></div></div>`;
 }
 
+// Maps & art: a grid of thumbnails; each picture is kept or not, and is a map or art (the DM decides).
+function imageGrid(list, keep) {
+  return `<p class="bk-help">Pictures found in the book. A <b>map</b> can become the table's map in one click; <b>art</b> can be shown to the players.</p>
+    <div class="bk-grid">${list.map(e => `<div class="bk-pic ${keep.has(e.id) ? 'kept' : ''}">
+      <label><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
+        <img src="${esc(e.url)}" alt="${esc(e.name)}" loading="lazy"></label>
+      <div class="bk-pic-foot"><span>Page ${e.page} · ${e.width}×${e.height}</span>
+        <div class="bk-seg" role="group" aria-label="Map or art">${['map', 'art'].map(kind => `<button aria-pressed="${e.kind === kind}" onclick="bookPicKind('${esc(e.id)}','${kind}')">${kind === 'map' ? 'Map' : 'Art'}</button>`).join('')}</div></div>
+    </div>`).join('')}</div>`;
+}
+export function bookPicKind(id, kind) { const e = S.parsed.images.find(x => x.id === id); if (e) { e.kind = kind; render(); } }
+
 export function bookTab(k) { S.tab = k; S.open = null; S.filter = ''; render(); }
 export function bookFilter(v) {
   S.filter = v; const pos = document.querySelector('.bk-tools input')?.selectionStart; render();
@@ -206,7 +230,7 @@ export function bookFilter(v) {
 export function bookKeep(id, on) { const set = S.keep[S.tab]; on ? set.add(id) : set.delete(id); renderKeepCounts(); }
 export function bookKeepAll(mode) {
   const list = S.parsed[S.tab];
-  S.keep[S.tab] = new Set(mode === 'none' ? [] : list.filter(e => mode === 'all' || S.tab === 'story' || e.confidence === 'sure').map(e => e.id));
+  S.keep[S.tab] = new Set(mode === 'none' ? [] : list.filter(e => mode === 'all' || S.tab === 'story' || S.tab === 'images' || e.confidence === 'sure').map(e => e.id));
   render();
 }
 export function bookPeek(id) { S.open = S.open === id ? null : id; render(); }
@@ -229,11 +253,22 @@ export async function bookSave() {
   btn.disabled = true; btn.textContent = 'Saving…';
   const keep = Object.fromEntries(KINDS.map(([k]) => [k, [...S.keep[k]]]));
   const book = makeBook({ title, parsed: S.parsed, keep, id: newId() });
+  const pics = (S.parsed.images || []).filter(e => S.keep.images?.has(e.id));
+  const saved = [];
   try {
+    // Pictures first (each its own private file), then the book that lists them.
+    for (const [i, e] of pics.entries()) {
+      btn.textContent = `Saving picture ${i + 1} of ${pics.length}…`;
+      const fileId = await saveBookImage(book, e, S.place);
+      saved.push({ id: e.id, fileId, page: e.page, width: e.width, height: e.height, kind: e.kind, title: e.name });
+    }
+    book.images = saved;
+    btn.textContent = 'Saving the book…';
     const fileId = await saveBook(book, S.place);
     S = { mode: 'saved', book, fileId, place: S.place };
     render();
   } catch (e) {
+    for (const x of saved) request('files:delete', { fileId: x.fileId }).catch(() => {}); // no half-saved book
     btn.disabled = false; btn.textContent = 'Save';
     if (!e?.shown) err.textContent = `The book could not be saved (${e?.message || e}).`;
     else err.textContent = S.place === 'personal' ? 'Try saving to this server instead.' : 'Free some space in Settings → Storage, or save to your personal library.';
@@ -245,8 +280,8 @@ function savedView() {
   return `<div class="bk-saved">
     <div class="bk-saved-seal">${icon('book-open', { size: 46 })}</div>
     <div class="lk-title" style="font-size:20px">${esc(b.title)} is in your library</div>
-    <p>${[['monsters', 'monsters'], ['spells', 'spells'], ['items', 'magic items'], ['story', 'story sections']]
-      .filter(([k]) => b[k].length).map(([k, w]) => `${b[k].length} ${w}`).join(' · ')}</p>
+    <p>${[['monsters', 'monsters'], ['spells', 'spells'], ['items', 'magic items'], ['story', 'story sections'], ['images', 'maps and pictures']]
+      .filter(([k]) => (b[k] || []).length).map(([k, w]) => `${b[k].length} ${w}`).join(' · ')}</p>
     ${myCampaigns().length ? `<div class="section-label">Use it in a campaign</div>
       <div class="bk-camps">${myCampaigns().map(c => `<button class="btn btn-ghost" onclick="bookAttach('${esc(S.fileId)}','${esc(c.id)}', true)">${esc(c.name)}</button>`).join('')}</div>` : ''}
     <button class="btn btn-gold" onclick="showLibrary()">Back to your library</button></div>`;
@@ -269,4 +304,17 @@ export async function bookDelete(fileId, bookId) {
   if (!confirm(users.length ? `Delete this book? ${users.join(', ')} use${users.length === 1 ? 's' : ''} it: their players keep the spells and items, but you lose the monsters and story.` : 'Delete this book from your library?')) return;
   try { await deleteBook(fileId); } catch (e) { alert(`It could not be deleted (${e?.message || e}).`); }
   showLibrary();
+}
+
+function bufToB64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function b64ToBlob(b64, type) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
 }

@@ -77,9 +77,10 @@ export async function loadPlayerParts(camp, request) {
 // ── .lkpack: a whole book in one file, for backups and for moving a book (owner, 2026-10-04) ───────────────────
 export const PACK_KIND = 'lanternkeep-book';
 
-/** The .lkpack text for a book. */
-export function toPack(book) {
-  return JSON.stringify({ kind: PACK_KIND, formatVersion: BOOK_FORMAT, exportedAt: new Date().toISOString(), book });
+/** The .lkpack text for a book. `pictures`: picture id → base64 bytes, inlined so the copy is whole. */
+export function toPack(book, pictures = {}) {
+  const images = (book.images || []).filter(i => pictures[i.id]).map(({ fileId, ...i }) => ({ ...i, data: pictures[i.id] }));
+  return JSON.stringify({ kind: PACK_KIND, formatVersion: BOOK_FORMAT, exportedAt: new Date().toISOString(), book: { ...book, images } });
 }
 
 /**
@@ -93,8 +94,12 @@ export function fromPack(text) {
   if (j.formatVersion > BOOK_FORMAT) throw new Error('That book was saved by a newer LanternKeep. Update and try again.');
   const ok = e => e && typeof e === 'object' && typeof e.id === 'string' && typeof (e.name ?? e.title) === 'string';
   const list = k => (Array.isArray(j.book[k]) ? j.book[k] : []).filter(ok).map(e => ({ ...e }));
+  const images = (Array.isArray(j.book.images) ? j.book.images : [])
+    .filter(i => i && typeof i.id === 'string' && typeof i.data === 'string' && i.data.length)
+    .map(i => ({ id: i.id, page: +i.page || 0, width: +i.width || 0, height: +i.height || 0,
+      kind: i.kind === 'map' ? 'map' : 'art', name: String(i.title || `Page ${i.page} picture`), dataB64: i.data }));
   return { title: String(j.book.title || 'Imported book').slice(0, 80),
-    parsed: { monsters: list('monsters'), spells: list('spells'), items: list('items'), story: list('story') } };
+    parsed: { monsters: list('monsters'), spells: list('spells'), items: list('items'), story: list('story'), images } };
 }
 
 /** A file name for a book's .lkpack. */

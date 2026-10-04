@@ -1,6 +1,6 @@
 // dnd-hub-pins.js — map pin placement, rendering, and journal overlay
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
-import { storageSet, genId, esc } from '../plugin-sdk.js';
+import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261009a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
@@ -169,16 +169,33 @@ export async function deletePinById(id) {
 
 // ── Player journal overlay ────────────────────────────────────────────────────
 
-export function showHandoutOverlay({ title, content }) {
+/**
+ * A page the DM shared, over the map: its title, its text, and (a picture from a book, or any image the DM showed)
+ * its picture, loaded from the campaign's copy. Esc or Dismiss closes it.
+ */
+export function showHandoutOverlay({ title, content, imageFileId }) {
   document.getElementById('handout-overlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'handout-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
+  overlay.className = 'lk-handout';
   overlay.innerHTML =
-    '<div style="background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:360px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
-      '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">' + esc(title) + '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;white-space:pre-wrap">' + esc(content) + '</div>' +
-      '<button onclick="document.getElementById(\'handout-overlay\').remove()" style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer">Dismiss</button>' +
+    `<div class="lk-handout-card${imageFileId ? ' has-pic' : ''}" role="dialog" aria-label="${esc(title)}">` +
+      `<div class="lk-handout-title">${esc(title)}</div>` +
+      (imageFileId ? '<div class="lk-handout-pic"><div class="lk-handout-wait">Unrolling…</div></div>' : '') +
+      (content ? `<div class="lk-handout-text">${esc(content)}</div>` : '') +
+      '<button class="lk-handout-close">Dismiss</button>' +
     '</div>';
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  overlay.querySelector('.lk-handout-close').onclick = close;
+  overlay.onclick = e => { if (e.target === overlay) close(); };
+  document.addEventListener('keydown', onKey);
   document.body.appendChild(overlay);
+  if (imageFileId) {
+    request('files:loadArrayBuffer', { fileId: imageFileId }, 60000).then(r => {
+      const url = URL.createObjectURL(new Blob([r.buffer], { type: r.mime || 'image/webp' }));
+      const box = overlay.querySelector('.lk-handout-pic');
+      if (box) box.innerHTML = `<img src="${url}" alt="${esc(title)}">`;
+    }).catch(() => { const w = overlay.querySelector('.lk-handout-wait'); if (w) w.textContent = 'The picture could not be loaded.'; });
+  }
 }
