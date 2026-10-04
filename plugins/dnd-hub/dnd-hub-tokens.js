@@ -7,7 +7,7 @@ import { renderFog } from './dnd-hub-fog.js?v=20261013e';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013e';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261009a';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013c';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013g';
 import { showTriggerToast } from './dnd-hub-triggers.js?v=20261013c';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
@@ -48,8 +48,9 @@ async function _sendFinal(payload, tries) {
   await new Promise(r => setTimeout(r, 1500 * (tries + 1)));
   if (_finalSeq[payload.tokenId] === payload.seq) return _sendFinal(payload, tries + 1);
 }
-import { attackOutcome, critDamageExpr, gridFeet } from './lk-rules5e.js';
+import { attackOutcome, critDamageExpr, gridFeet, parseHpEntry } from './lk-rules5e.js';
 import { publishTo, isRepeat } from './lk-bus.js';
+import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
 import { clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
@@ -449,8 +450,8 @@ function setupTokenDrag(container, token) {
       facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, final: true,
       turnPath: turnPath || null, turnKey: turnPath ? dragTurn?.key : null, fromUserId: userId, ...moveStamp() };
     publishMove(movePayload);
-    // My own sidebar sets zone-audio volume from where my token stands; it never heard this before.
-    if (token.id === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, movePayload);
+    // My own sidebar sets zone-audio volume from where my token stands (in squares: dnd-hub-zone-pos.js).
+    if (token.id === `player_${userId}`) tellSheetWhereIAm(movePayload);
   };
 
   container.on('pointerup', finishDrag);
@@ -541,7 +542,7 @@ function _showMonsterAttackPanel(token, panelX, panelY) {
     panel.remove();
     _showAttackToast(token.name, a.name, d20, total, a.toHit, dmg, out.crit, judge ? { name: target.name, ac: target.ac ?? 10, hit: out.hit } : null);
     if (judge && out.hit && dmg > 0 && tableRule('autoDamage')) {
-      damageTokens([target.id], dmg, MAP.campaignId).catch(e => console.error('[dnd-hub] auto damage', e));
+      damageTokens([target.id], dmg, MAP.campaignId, { crit: out.crit }).catch(e => console.error('[dnd-hub] auto damage', e));
     }
   };
 
@@ -597,20 +598,21 @@ export function showContextMenu(token, cx, cy) {
 
     _addItem(menu, '❤️ Edit HP', async () => {
       destroyContextMenu();
-      const input = prompt(`HP for ${token.name} (current: ${token.hp}/${token.hpMax}):`);
+      // A number sets HP; -7 deals 7 damage, +5 heals 5 (for a hero, their sheet applies an amount through the
+      // rules: temporary HP, 0 HP, death saves, massive damage).
+      const input = prompt(`HP for ${token.name} (now ${token.hp}/${token.hpMax}). Type a number to set it, -7 to deal 7 damage, +5 to heal 5:`);
       if (input === null) return;
-      const [hpStr, maxStr] = input.split('/');
-      const hp    = parseInt(hpStr.trim());
-      const hpMax = maxStr ? parseInt(maxStr.trim()) : token.hpMax;
-      if (isNaN(hp)) return;
-      token.hp = hp;
-      if (!isNaN(hpMax)) token.hpMax = hpMax;
+      const e = parseHpEntry(input);
+      if (!e) return;
+      if (e.hpMax) token.hpMax = e.hpMax;
+      const amount = e.damage ? { damage: e.damage } : e.heal ? { heal: e.heal } : {};
+      token.hp = e.damage ? Math.max(0, token.hp - e.damage) : e.heal ? Math.min(token.hpMax, token.hp + e.heal) : Math.max(0, e.hp);
       if (MAP.mapData && serverData?.campaigns?.[MAP.campaignId]?.maps) {
         serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
         await saveHubDm( serverData);
       }
       await publishTo(['master', 'player'], EV.HP_CHANGE, {
-        campaignId: MAP.campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, fromUserId: userId,
+        campaignId: MAP.campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, ...amount, fromUserId: userId,
       });
       renderTokens();
     });

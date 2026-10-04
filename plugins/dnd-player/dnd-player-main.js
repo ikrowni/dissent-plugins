@@ -22,7 +22,8 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { loadPlayerParts } from './lk-book.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
-import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
+import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod, setHp } from './lk-rules5e.js';
+import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
@@ -99,7 +100,7 @@ let _handoutOpen = false;
 let _broadcastAudio = null;
 // Phase 7 — Audio zones
 let _audioZones = [];
-let _myTokenPos  = null;  // { x, y } in world coords (from token:move events)
+let _myTokenPos  = null;  // { x, y } my token's place in SQUARES, as zones are stored (my Hub sends it: dnd-hub-zone-pos.js)
 const _zoneAudioEls = {};  // zoneId → Audio element
 
 // Phase 3 — Shop tab
@@ -370,13 +371,7 @@ async function handleAudioPlay(p) {
 async function recomputeZoneVolumes() {
   for (const zone of _audioZones) {
     if (!zone.fileId) continue;
-    let vol = 0;
-    if (_myTokenPos) {
-      const dx   = _myTokenPos.x - zone.x;
-      const dy   = _myTokenPos.y - zone.y;
-      const dist = Math.hypot(dx, dy);
-      vol = dist >= zone.radius ? 0 : Math.max(0, (zone.maxVolume || 1) * (1 - dist / zone.radius));
-    }
+    const vol = zoneVolume(zone, _myTokenPos);
     if (!_zoneAudioEls[zone.id]) {
       try {
         const res = await request('files:getUrl', { fileId: zone.fileId });
@@ -1253,7 +1248,9 @@ async function onEvent(ev) {
 
   if (p.type === EV.TOKEN_MOVE && p.campaignId === CAMPAIGN_ID && USER_ID &&
       p.tokenId === 'player_' + USER_ID) {
-    _myTokenPos = { x: p.x, y: p.y };
+    // Only a place in squares counts: an older Hub sent pixels, which no zone can be compared with.
+    if (!p.cell) return;
+    _myTokenPos = { x: p.cell.x, y: p.cell.y };
     recomputeZoneVolumes().catch(() => {});
     return;
   }
@@ -1272,16 +1269,20 @@ async function onEvent(ev) {
   }
 
   // HP changed by the DM (initiative tracker, map) for MY token: apply it to the sheet, which is where a
-  // hero's HP lives. Damage and healing amounts go through the rules; a plain value is the DM's word.
+  // hero's HP lives. Damage and healing amounts go through the rules (a critical hit at 0 HP is two failures); a plain
+  // value is the DM's word, with what reaching 0 or leaving it means (setHp).
   if (p.type === EV.HP_CHANGE && p.tokenId === 'player_' + USER_ID && p.fromUserId !== USER_ID && CHAR) {
     if (isRepeat(p)) return;
     const eff = computeEffectiveStats(CHAR);
     const base = { ...CHAR, hpMax: eff.hpMax };
-    const next = p.damage ? applyDamage(base, p.damage) : p.heal ? applyHealing(base, p.heal)
-      : { ...base, hp: Math.max(0, Math.min(eff.hpMax, p.hp ?? CHAR.hp)) };
+    const next = p.damage ? applyDamage(base, p.damage, { crit: !!p.crit }) : p.heal ? applyHealing(base, p.heal)
+      : setHp(base, p.hp ?? CHAR.hp);
     Object.assign(CHAR, next, { hpMax: CHAR.hpMax });
     await saveChar();
     renderAll();
+    // The DM's map guessed the HP (it does not know temporary HP or death): when the rules came out differently,
+    // the map is told the hero's real HP, or the token would show one number and the sheet another.
+    if (p.hp != null && (CHAR.hp !== p.hp || CHAR.dead)) announceHp('rules');
     return;
   }
 
@@ -1304,8 +1305,13 @@ async function onEvent(ev) {
       SERVER_DATA = await loadHubDmCompanion() || SERVER_DATA || { campaigns: {} };
       const item = _resolveItemFromLibrary(p.itemId);
       if (item) {
-        _addItemToChar(item, 1, p.goldCost || 0);
-        // Clear the pending reward so onInit doesn't add it again as a duplicate
+        // Gold spent since the interest was declared: the hero cannot pay, so nothing changes hands, and the DM is
+        // told (players cannot publish to the DM sidebar: my Hub → the DM's Hub → their sidebar, as for interest).
+        if (!_addItemToChar(item, 1, p.goldCost || 0)) {
+          publishTo(['hub'], 'loot:declined', { campaignId: CAMPAIGN_ID, itemId: p.itemId, itemName: item.name,
+            goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '' }).catch(() => {});
+        }
+        // Clear the pending reward so onInit doesn't add it again as a duplicate (or try a sale that failed again)
         const pr = SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.pendingRewards?.[USER_ID];
         if (pr?.length) {
           const i = pr.findIndex(r => r.itemId === p.itemId);

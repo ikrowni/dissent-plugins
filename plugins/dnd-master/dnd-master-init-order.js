@@ -32,3 +32,24 @@ export function rollMissing(init, rollFor) {
   if (!init?.active) return init;
   return settle(init, init.order.map(c => (c.roll == null ? { ...c, roll: rollFor(c) } : c)));
 }
+
+/** A monster at 0 HP is defeated: it takes no turns. Heroes always do (at 0 they make death saves). */
+export const isDefeated = c => c?.type === 'monster' && (c.hp ?? 1) <= 0;
+
+/**
+ * The next turn from `index` going `dir` (+1 / -1), skipping defeated monsters: `{ index, wrapped }`, wrapped = a
+ * new round began. If everyone left is defeated it simply steps on.
+ */
+export function nextTurn(order, index, dir = 1) {
+  const len = order?.length || 0;
+  if (!len) return { index: 0, wrapped: false };
+  let i = index || 0, wrapped = false;
+  for (let n = 0; n < len; n++) {
+    const next = (i + dir + len) % len;
+    if (dir > 0 && next <= i) wrapped = true;
+    i = next;
+    if (!isDefeated(order[i])) return { index: i, wrapped };
+  }
+  const step = ((index || 0) + dir + len) % len;
+  return { index: step, wrapped: dir > 0 && step === 0 };
+}

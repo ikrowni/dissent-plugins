@@ -4,7 +4,8 @@ import { publicPayload } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { withPlayerRoll, rollMissing } from './dnd-master-init-order.js';
+import { withPlayerRoll, rollMissing, nextTurn, isDefeated } from './dnd-master-init-order.js';
+import { getSRDMonsters } from './dnd-master-monsters.js';
 import { fightXp } from './dnd-master-levels.js';
 
 let currentInitiative = null;
@@ -32,13 +33,14 @@ function renderInitRow(c, i, isCurrent) {
     ? '<span style="font-size:9px;color:#f59e0b;margin-left:4px">' + c.conditions.slice(0, 2).join(', ') + '</span>'
     : '';
   const selBg = isSelected ? 'background:rgba(212,175,55,.12);outline:1px solid rgba(212,175,55,.4);' : '';
+  const down = isDefeated(c); // skipped by Next turn; HP above 0 brings it back
   return '<div class="init-row' + (isCurrent ? ' current' : '') + '"' +
-    ' onclick="toggleInitRow(' + i + ',event)"' +
-    ' style="cursor:pointer;border-radius:4px;' + selBg + '">' +
+    ' onclick="toggleInitRow(' + i + ',event)"' + (down ? ' title="Defeated: its turns are skipped"' : '') +
+    ' style="cursor:pointer;border-radius:4px;' + selBg + (down ? 'opacity:.45;' : '') + '">' +
     '<div class="init-dot" style="background:' + dotColor + '"></div>' +
     '<div style="font-weight:700;font-size:11px;min-width:14px;color:var(--muted)">' + (c.roll == null ? '…' : c.roll) + '</div>' +
     '<div style="flex:1;min-width:0">' +
-      '<div style="' + nameStyle + '">' + esc(c.name) + conds + '</div>' +
+      '<div style="' + nameStyle + (down ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + conds + '</div>' +
       '<div style="display:flex;align-items:center;gap:4px;margin-top:2px">' +
         '<div style="font-size:9px;color:var(--muted)">AC ' + c.ac + '</div>' +
         '<div style="flex:1;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">' +
@@ -123,9 +125,11 @@ export function renderInitiativeTracker() {
 export async function moveInitiative(dir) {
   if (!currentInitiative || !currentInitiative.order || !currentInitiative.order.length) return;
   if (currentInitiative.waiting) return;
-  const len = currentInitiative.order.length;
-  currentInitiative.currentIndex = (currentInitiative.currentIndex + dir + len) % len;
-  if (dir > 0 && currentInitiative.currentIndex === 0) currentInitiative.round++;
+  // A monster at 0 HP is defeated (SRD: most monsters die at 0) and takes no more turns; heroes at 0 still get
+  // theirs (death saves). The row stays in the list, so the DM can bring it back by giving it HP.
+  const { index, wrapped } = nextTurn(currentInitiative.order, currentInitiative.currentIndex, dir);
+  currentInitiative.currentIndex = index;
+  if (wrapped) currentInitiative.round++;
   await saveAndBroadcastInit();
   renderInitiativeTracker();
 }
@@ -144,9 +148,26 @@ export async function updateHP(idx, val) {
     tokenId: tokenIdOf(combatant), hp: combatant.hp, hpMax: combatant.hpMax, fromUserId: _state.userId });
 }
 
+/**
+ * HP changed somewhere else (the map's Edit HP, an attack's damage, a hero's sheet): the tracker row follows, so a
+ * monster killed on the map is shown defeated and loses its turns. It used to keep its old HP.
+ */
+export async function syncRowHp(tokenId, hp, hpMax) {
+  const c = currentInitiative?.active && currentInitiative.order?.find(r => tokenIdOf(r) === tokenId);
+  if (!c || hp == null || (c.hp === hp && (hpMax == null || c.hpMax === hpMax))) return;
+  c.hp = Math.max(0, Number(hp) || 0);
+  if (hpMax != null) c.hpMax = Number(hpMax) || c.hpMax;
+  await saveAndBroadcastInit();
+  renderInitiativeTracker();
+}
+
 export async function rerollInitiative() {
   if (!currentInitiative || !currentInitiative.order) return;
-  currentInitiative.order.forEach(c => { c.roll = rollDice(1, 20, 0); });
+  // Initiative is a Dexterity check (SRD): d20 + DEX. The reroll used to roll a bare d20 for everyone.
+  const chars = _state.serverData?.campaigns?.[_state.dmCampaignId]?.characterSummaries || {};
+  const srd = getSRDMonsters();
+  const modOf = c => c.initMod ?? Math.floor((((c.type === 'player' ? chars[c.userId]?.dex : srd.find(m => m.id === c.monsterId)?.dex) ?? 10) - 10) / 2);
+  currentInitiative.order.forEach(c => { c.roll = rollDice(1, 20, modOf(c)); });
   currentInitiative.order.sort((a, b) => b.roll - a.roll);
   currentInitiative.currentIndex = 0;
   currentInitiative.waiting = false; // every row has a roll now

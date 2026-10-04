@@ -47,7 +47,7 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "13476583b76f2606b6947a96484a83a084d7179ac52f789e604d58d3b8204463"
+      "sha256": "684c6cea6b94d5765a4e87b0aecca89ae33909a4fc0102b57b9386b2e34619fa"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -55,11 +55,11 @@
     },
     {
       "url": "dnd-master-init-order.js",
-      "sha256": "475d734f07d14eec3715d742b2e3cd1d69840a5779a6aa44840a25bf2dc76b6f"
+      "sha256": "14761311d5116c2f7a48c56ce9d22c51bdbf369c0f870f1f6db9c70d227bf6d1"
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "16b18aaa08b038454712c58feb855f8562b67ef7fd826c291bb6fdaac5aa66db"
+      "sha256": "079d6e4f425ad44771cff613dc85efe371f2e6decece0e4f1bd7d676c73cb157"
     },
     {
       "url": "dnd-master-items.js",
@@ -79,7 +79,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "0d3dc286d6cf6ba083164275cb8c7c54be9220d8bc77b111f134fd173b004e36"
+      "sha256": "54c2a5065293a1155da933eb2da057c92c39a240274a67ba02ab053e75409543"
     },
     {
       "url": "dnd-master-maps.js",
@@ -195,7 +195,7 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "b8f877f1ab87b229f2974e1a012be29122790877d471f2c9f25638acd9e8e6ec"
+      "sha256": "5776fafada2910fb4718c65520b8b32fc3c2db97c15cc2957ea6a5c1852fac56"
     },
     {
       "url": "lk-sealed.js",

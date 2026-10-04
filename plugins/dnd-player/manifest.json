@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "0ba5bc966f0ee31a8814830467e5f71334589bbddff542a55727a575cb7f6d52"
+      "sha256": "c64db3d598fd3d38b4d46b424c4e1fae1d0d953db7e00b6d84309ede3ae7309f"
     },
     {
       "url": "dnd-player-resources.js",
@@ -66,6 +66,10 @@
     {
       "url": "dnd-player-table.js",
       "sha256": "3af2c3dc26fdd85d84a42783fbef1228623be272acd20a3b5040471351065a0f"
+    },
+    {
+      "url": "dnd-player-zones.js",
+      "sha256": "80effa1bae71ce8e9bcde17159443cd61e03cf1f84c7e1400e543583c9d682d1"
     },
     {
       "url": "dnd-srd/classes.json",
@@ -133,7 +137,7 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "b8f877f1ab87b229f2974e1a012be29122790877d471f2c9f25638acd9e8e6ec"
+      "sha256": "5776fafada2910fb4718c65520b8b32fc3c2db97c15cc2957ea6a5c1852fac56"
     },
     {
       "url": "lk-sealed.js",

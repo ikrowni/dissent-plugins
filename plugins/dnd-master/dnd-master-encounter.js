@@ -352,7 +352,7 @@ export async function launchEncounter() {
       const c = chars[uid];
       if (!c) return;
       const initMod = abilityMod(c.dex || 10);
-      order.push({ id: 'player_' + uid, name: c.name, roll: playersRoll ? null : rollDice(1, 20, initMod), type: 'player', userId: uid, hp: c.hp || 10, hpMax: c.hpMax || 10, ac: c.ac || 10, conditions: [] });
+      order.push({ id: 'player_' + uid, name: c.name, roll: playersRoll ? null : rollDice(1, 20, initMod), initMod, type: 'player', userId: uid, hp: c.hp || 10, hpMax: c.hpMax || 10, ac: c.ac || 10, conditions: [] });
     });
 
     encounterCreatures.forEach(entry => {
@@ -365,7 +365,7 @@ export async function launchEncounter() {
         const hp = rollDice(parts[0], parts[1], parts[2]) || m.hp;
         order.push({
           id: genId(), name: m.name + (entry.count > 1 ? ' ' + i : ''),
-          roll: rollDice(1, 20, initMod), type: 'monster', monsterId: m.id,
+          roll: rollDice(1, 20, initMod), initMod, type: 'monster', monsterId: m.id,
           xp: CR_XP[m.cr] || 0, // shared out when the fight ends (experience mode)
           hp, hpMax: hp, ac: m.ac || 10, conditions: [], attacks,
           speed: parseInt(String(m.speed?.walk ?? m.speed ?? '30')) || 30,

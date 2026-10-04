@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  abilityMod, profBonus, weaponKind, maxSlotsFor, normalizeSlots, withSlotsForLevel, isAsiLevel, hitDieFor,
+  abilityMod, profBonus, weaponKind, setHp, parseHpEntry, maxSlotsFor, normalizeSlots, withSlotsForLevel, isAsiLevel, hitDieFor,
   applyDamage, applyHealing, rollDeathSave, markDeathSave, attackOutcome, critDamageExpr,
   encounterMultiplier, adjustedEncounterXp, shortRestSpend, longRest, characterSummary,
   spellSaveDC, spellAttackBonus, conHpBonusOnIncrease, saveForHalf,
@@ -288,5 +288,41 @@ describe('weaponKind', () => {
     expect(weaponKind('handaxe')).toEqual({ cat: 'simple', ranged: false });
     expect(weaponKind('net')).toEqual({ cat: 'martial', ranged: true });
     expect(weaponKind('backpack')).toBe(null);
+  });
+});
+
+describe('setHp (the DM sets a number)', () => {
+  const hero = { hp: 10, hpMax: 12, hpTemp: 5, conditions: [], deathSaves: { successes: 1, failures: 2 } };
+  it('keeps the number and does not spend temporary HP', () => {
+    expect(setHp(hero, 4)).toMatchObject({ hp: 4, hpTemp: 5 });
+  });
+  it('to 0: unconscious, fresh death saves', () => {
+    const r = setHp(hero, 0);
+    expect(r.hp).toBe(0);
+    expect(r.conditions).toContain('Unconscious');
+    expect(r.deathSaves).toEqual({ successes: 0, failures: 0 });
+  });
+  it('from 0 back up: awake, fresh death saves', () => {
+    const down = { ...hero, hp: 0, conditions: ['Unconscious', 'Prone'], deathSaves: { successes: 2, failures: 1 } };
+    const r = setHp(down, 3);
+    expect(r.hp).toBe(3);
+    expect(r.conditions).toEqual(['Prone']);
+    expect(r.deathSaves).toEqual({ successes: 0, failures: 0 });
+  });
+  it('clamps to 0..max, and the dead stay dead', () => {
+    expect(setHp(hero, 99).hp).toBe(12);
+    expect(setHp(hero, -4).hp).toBe(0);
+    expect(setHp({ ...hero, dead: true, hp: 0 }, 5).hp).toBe(0);
+  });
+});
+
+describe('parseHpEntry', () => {
+  it('reads damage, healing and a number', () => {
+    expect(parseHpEntry('-7')).toEqual({ damage: 7 });
+    expect(parseHpEntry(' +5 ')).toEqual({ heal: 5 });
+    expect(parseHpEntry('12')).toEqual({ hp: 12 });
+    expect(parseHpEntry('12/20')).toEqual({ hp: 12, hpMax: 20 });
+    expect(parseHpEntry('lots')).toBe(null);
+    expect(parseHpEntry('')).toBe(null);
   });
 });

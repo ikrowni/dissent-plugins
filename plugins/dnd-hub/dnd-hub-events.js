@@ -7,10 +7,10 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013e';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013g';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013e';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013g';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
@@ -21,12 +21,13 @@ import { renderWalls } from './dnd-hub-walls.js?v=20261013e';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
 import { loadSRD } from './dnd-hub-char.js?v=20261013c';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013c';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013g';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013c';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
+import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
 import { renderLights } from './dnd-hub-lights.js?v=20261013e';
@@ -37,7 +38,7 @@ import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013c';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013e';
+import { setView } from './dnd-hub-canvas.js?v=20261013g';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -290,7 +291,7 @@ export async function handleMapEvent(p) {
     }
     case 'token:move': {
       if (!acceptMove(_seenMoves, p, CLIENT_ID)) return; // my own echo, or older than a move already applied (O6)
-      if (p.tokenId === `player_${userId}`) localPublish('dnd-player', EV.TOKEN_MOVE, p); // zone audio in my sidebar
+      if (p.tokenId === `player_${userId}`) tellSheetWhereIAm(p); // zone audio in my sidebar, in squares
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       // Players can only move their own token — but allow moves originating from the DM
       if (p.fromUserId && !MAP.isDM && p.tokenId !== 'player_' + p.fromUserId) {
@@ -650,7 +651,7 @@ export async function handleMapEvent(p) {
     case EV.DAMAGE_REQUEST: {
       // A player's Hub judged a hit and rolled damage; only the DM's Hub changes HP, and only if the table applies damage.
       if (p.campaignId !== MAP.campaignId || !MAP.isDM || !rule(serverData?.campaigns?.[p.campaignId]?.settings, 'autoDamage')) return;
-      await damageTokens(p.tokenIds || [], Math.max(0, Number(p.damage) || 0), p.campaignId);
+      await damageTokens(p.tokenIds || [], Math.max(0, Number(p.damage) || 0), p.campaignId, { crit: !!p.crit });
       break;
     }
     case 'combat:settings': {
@@ -811,6 +812,7 @@ export async function handleMapEvent(p) {
     }
     case 'audio:zone-update': {
       localPublish('dnd-player', EV.AUDIO_ZONE_UPDATE, p); // my sidebar plays the zones
+      tellSheetWhereIAm(); // …from where I stand now, not from my next move
       if (p.campaignId !== MAP.campaignId || p.mapId !== MAP.mapId || !MAP.mapData) return;
       MAP.mapData.audioZones = p.audioZones || [];
       renderAudioZones();
@@ -892,6 +894,10 @@ export async function handleMapEvent(p) {
       }
       break;
     }
+    case 'loot:declined':
+      // A hero who won an item could not pay for it any more (dnd-player-main.js): the DM's sidebar logs it.
+      if (MAP.isDM && p.campaignId === MAP.campaignId) localPublish('dnd-master', 'loot:declined', p);
+      break;
     case EV.LOOT_INTEREST: {
       if (p.campaignId !== MAP.campaignId) break;
       const c = MAP.lootContests[p.contestKey] || {

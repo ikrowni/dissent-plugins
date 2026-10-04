@@ -120,7 +120,7 @@ export function judgeAttack(total, natural, rollerId) {
   if (!tableRule('autoHit') || !MAP.mapData || !MAP.selectedTokens.size) return null;
   const targets = [...MAP.selectedTokens].map(id => MAP.mapData.tokens?.[id]).filter(Boolean);
   const v = attackVerdict(targets, natural, total);
-  if (v?.hitIds.length) _pendingHit = { rollerId, hitIds: v.hitIds, at: Date.now() };
+  if (v?.hitIds.length) _pendingHit = { rollerId, hitIds: v.hitIds, crit: !!v.crit, at: Date.now() };
   return v;
 }
 
@@ -134,20 +134,23 @@ export async function applyPendingDamage(rollerId, damage) {
   const h = _pendingHit;
   _pendingHit = null;
   if (!h || h.rollerId !== rollerId || Date.now() - h.at > 60_000 || !tableRule('autoDamage')) return false;
-  if (MAP.isDM) await damageTokens(h.hitIds, damage, MAP.campaignId);
-  else await publishTo([], EV.DAMAGE_REQUEST, { campaignId: MAP.campaignId, tokenIds: h.hitIds, damage, fromUserId: userId });
+  if (MAP.isDM) await damageTokens(h.hitIds, damage, MAP.campaignId, { crit: h.crit });
+  else await publishTo([], EV.DAMAGE_REQUEST, { campaignId: MAP.campaignId, tokenIds: h.hitIds, damage, crit: h.crit, fromUserId: userId });
   return true;
 }
 
-/** The DM's Hub applies `damage` to each token (the damage request, the monster attack panel). */
-export async function damageTokens(tokenIds, damage, campaignId) {
+/**
+ * The DM's Hub applies `damage` to each token (the damage request, the monster attack panel). `crit`: it was a
+ * critical hit, which a hero already at 0 HP counts as two death-save failures (their sheet applies it).
+ */
+export async function damageTokens(tokenIds, damage, campaignId, { crit = false } = {}) {
   for (const id of tokenIds) {
     const t = MAP.mapData?.tokens?.[id];
-    if (t) await _damageToken(t, damage, campaignId);
+    if (t) await _damageToken(t, damage, campaignId, crit);
   }
 }
 
-async function _damageToken(token, damage, campaignId) {
+async function _damageToken(token, damage, campaignId, crit = false) {
   const prev = token.hp;
   token.hp = Math.max(0, token.hp - damage);
   if (MAP.mapData && serverData?.campaigns?.[campaignId]?.maps) {
@@ -156,7 +159,7 @@ async function _damageToken(token, damage, campaignId) {
   }
   // The DM sidebar and the player's sheet hear it too; a player's sheet applies the damage itself.
   await publishTo(['master', 'player'], EV.HP_CHANGE, {
-    campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, damage, fromUserId: userId,
+    campaignId, tokenId: token.id, hp: token.hp, hpMax: token.hpMax, damage, ...(crit ? { crit: true } : {}), fromUserId: userId,
   });
   if (prev > 0 && token.hp === 0) await triggerDeathSave(token.id, campaignId);
 }

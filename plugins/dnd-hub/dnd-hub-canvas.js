@@ -6,19 +6,20 @@ import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013e';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
 import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013e';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013e';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013g';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013e';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013g';
 import { showPinDialog } from './dnd-hub-pins.js?v=20261013c';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
+import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
 import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013e';
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013c';
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013c';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013e';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013g';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
@@ -744,6 +745,7 @@ export function initKeyboardHandlers() {
               tokenId: m.tokenId, x: m.x, y: m.y, facing: m.facing, turnPath: m.turnPath, turnKey: m.turnKey,
               fromUserId: userId, ...moveStamp(),
             });
+            if (m.tokenId === `player_${userId}`) tellSheetWhereIAm(m); // sound zones follow the arrow keys too
           }
         }, 300); // the node allows 5 publishes a second; held keys repeat ~30 a second
       }

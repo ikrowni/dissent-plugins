@@ -132,6 +132,33 @@ export function applyHealing(state, amount) {
   return { ...state, hp, stable: false, deathSaves: freshSaves(), conditions: without(state.conditions, 'Unconscious') };
 }
 
+/**
+ * The DM sets a hero's HP to a number (the tracker's HP box, the map's Edit HP). The number is the DM's word, so
+ * temporary HP are not spent; what crossing 0 means still applies: down to 0 is unconscious with fresh death saves,
+ * back above 0 wakes them (SRD "Dropping to 0 Hit Points"). It used to set the number alone: a hero at 0 stayed awake.
+ */
+export function setHp(state, hp) {
+  if (state.dead) return { ...state };
+  const next = Math.max(0, Math.min(state.hpMax || 0, Math.floor(Number(hp) || 0)));
+  const was = state.hp || 0;
+  if (next <= 0 && was > 0) {
+    return { ...state, hp: 0, stable: false, deathSaves: freshSaves(), conditions: withCond(state.conditions, 'Unconscious') };
+  }
+  if (next > 0 && was <= 0) {
+    return { ...state, hp: next, stable: false, deathSaves: freshSaves(), conditions: without(state.conditions, 'Unconscious') };
+  }
+  return { ...state, hp: next };
+}
+
+/** "-7" → { damage: 7 }, "+5" → { heal: 5 }, "12" → { hp: 12 }, "12/20" → { hp: 12, hpMax: 20 }; null if unreadable. */
+export function parseHpEntry(text) {
+  const t = String(text ?? '').replace(/\s+/g, '');
+  let m = t.match(/^-(\d+)$/); if (m) return { damage: Number(m[1]) };
+  m = t.match(/^\+(\d+)$/); if (m) return { heal: Number(m[1]) };
+  m = t.match(/^(\d+)(?:\/(\d+))?$/); if (m) return { hp: Number(m[1]), ...(m[2] ? { hpMax: Number(m[2]) } : {}) };
+  return null;
+}
+
 /** A rolled death save (d20 = the die). */
 export function rollDeathSave(state, d20) {
   if (state.dead || state.stable || (state.hp || 0) > 0) return { ...state };

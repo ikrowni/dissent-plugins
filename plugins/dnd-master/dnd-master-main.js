@@ -6,10 +6,10 @@ import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261011b';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261013b';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
-  toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative } from './dnd-master-initiative.js';
+  toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
 import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261011b';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
@@ -24,7 +24,7 @@ import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJour
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
 import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261011b';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261011b';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261013b';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -248,6 +248,7 @@ function onEvent(ev) {
     return;
   }
   if (p.type === 'hp:change' && p.campaignId === dmCampaignId) {
+    syncRowHp(p.tokenId, p.hp, p.hpMax).catch(() => {});
     let hpMsg = (p.name || 'Token') + ' HP \u2192 ' + p.hp + '/' + p.hpMax;
     if (p.source) hpMsg += ' (' + p.source + ')';
     appendLogEntry({ type: 'hp-change', message: hpMsg });
@@ -256,6 +257,10 @@ function onEvent(ev) {
     // A player's sheet sends the tallies (and, for a roll, a message); it never sent `success`.
     const tally = p.successes !== undefined ? ' death saves: ' + p.successes + ' success, ' + (p.failures || 0) + ' failure' : ' death save';
     appendLogEntry({ type: 'death-save', message: p.message || ((p.name || 'Token') + tally) });
+  }
+  if (p.type === 'loot:declined' && p.campaignId === dmCampaignId) {
+    appendLogEntry({ type: 'loot', message: `${p.name || 'A player'} could not pay ${p.goldCost} gp for ${p.itemName}: not taken` }).catch(() => {});
+    return;
   }
   if (p.type === 'loot:interest' && p.campaignId === dmCampaignId) {
     handleLootInterest(p);
