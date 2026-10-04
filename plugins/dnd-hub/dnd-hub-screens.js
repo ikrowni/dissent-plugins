@@ -540,8 +540,9 @@ export async function renderCampaignView(campaignId, isDM) {
 /** The toolbar's Guide button: guides on (every tip starts over) or off. */
 export async function toggleGuides() {
   const on = !(await guidesOn());
-  await setGuidesOn(on);
+  // The button shows the click at once; the choice is saved after (a network write that can take seconds).
   document.getElementById('btn-guides')?.setAttribute('aria-pressed', String(on));
+  await setGuidesOn(on);
   if (on) guide(MAP.isDM ? 'dm:table' : 'player:table');
 }
 /** Reflect the person's choice on the button once the campaign view is drawn. */
