@@ -97,7 +97,8 @@ export function fromPack(text) {
   const images = (Array.isArray(j.book.images) ? j.book.images : [])
     .filter(i => i && typeof i.id === 'string' && typeof i.data === 'string' && i.data.length)
     .map(i => ({ id: i.id, page: +i.page || 0, width: +i.width || 0, height: +i.height || 0,
-      kind: i.kind === 'map' ? 'map' : 'art', name: String(i.title || `Page ${i.page} picture`), dataB64: i.data }));
+      kind: i.kind === 'map' ? 'map' : 'art', name: String(i.title || `Page ${i.page} picture`), dataB64: i.data,
+      ...(typeof i.group === 'string' && i.group ? { group: i.group.slice(0, 80) } : {}) }));
   return { title: String(j.book.title || 'Imported book').slice(0, 80),
     parsed: { monsters: list('monsters'), spells: list('spells'), items: list('items'), story: list('story'), images } };
 }

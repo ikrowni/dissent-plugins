@@ -112,12 +112,24 @@
       "sha256": "c4561c86c0722de3ea9b32edba978f3bb7cd4c4ae6bd210cb62a9243e315d242"
     },
     {
+      "url": "book/book-bundle.js",
+      "sha256": "cb8d82d1ba7f08ea4ff66f009296061e971824d4d9661b8069840e0bae960ff0"
+    },
+    {
+      "url": "book/book-drop.js",
+      "sha256": "2e81f84296f32ec479ef9dfccaeb0b8a0314bb04657e8e37e366becc12059d86"
+    },
+    {
       "url": "book/book-fixtures.js",
       "sha256": "621bfb03ad7c526569f9b28dc63604954baf187a673baa1ad04fc5adcaa8e60b"
     },
     {
       "url": "book/book-images.js",
       "sha256": "236fd6d4f8678d4a2354622062ad9d4c2baf467b99544f973a24005620378033"
+    },
+    {
+      "url": "book/book-import.js",
+      "sha256": "7f419c37eee86fc4382b317355f5db7c35b872d6b3e0409213dec30ae71514cb"
     },
     {
       "url": "book/book-items.js",
@@ -145,7 +157,7 @@
     },
     {
       "url": "book/book-ocr.js",
-      "sha256": "4ee9904900713d0be87ce69b8fc316c2c9bdf4414701faf0c444f8707ddc3fd2"
+      "sha256": "7948d4c810bbae9d29c8f7b77523c0d2587155ad3c936ce9c377b21b55e6c142"
     },
     {
       "url": "book/book-parse.js",
@@ -153,11 +165,11 @@
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "be6aa4cb0a5ac9958aef14fd6775c3e1cc3816e52e5c11cb279b5b5c7c303f01"
+      "sha256": "ad1351427d0d0bd580f19620db234243913a11b61aad1a5c591656ca916abd8a"
     },
     {
       "url": "book/book-reader.js",
-      "sha256": "930a9b5e9497ea3c7289b5c8744218922bcd070bd378f3b8ca7a19df50e84dac"
+      "sha256": "bfb83c289fb4d9f09d504a6d08815241452dfca7a82ae6b424d0fc276f6036e3"
     },
     {
       "url": "book/book-scan.js",
@@ -165,7 +177,7 @@
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "0db02c34ed7d8c448cd4e3b13b68532987d653743a11dc1663c33326c1481a69"
+      "sha256": "8ac98fcb0178fa4c95c35f1c23cfad3855bf99cc963d5debe7b8cdf25787082f"
     },
     {
       "url": "book/book-spells-in-play.js",
@@ -180,8 +192,12 @@
       "sha256": "1ea99990248fec2a4612f0e7d283ce1b4268a59f3589e569b7d613bd072cbdcc"
     },
     {
+      "url": "book/book-zip.js",
+      "sha256": "6025f5f786064c874080666829f6fdc982c9ad4facdce0e3fbaf7ea852fa5aa0"
+    },
+    {
       "url": "book/book.css",
-      "sha256": "0ecdfd480a5e8eaf4f0326ba110b548efdf5aef7767469dfaad7211b23262296"
+      "sha256": "6f2c9d54c19e713e359f8bc18d4d92b71f97088f81d0e022982d3e271a373db2"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -321,7 +337,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "c88b5138f6d338fdf0bd3212510487a92c9c43715eb0124c54505e32c5410346"
+      "sha256": "2ec3329cc6210e4ec26ad755379f111f5b7cdf4b331e215c62e328f240353016"
     },
     {
       "url": "dnd-hub-map-bg.js",
@@ -465,7 +481,7 @@
     },
     {
       "url": "lk-book.js",
-      "sha256": "71285621432c519b73443924c9a71770153c1f111760901d470e8ef6c83b7736"
+      "sha256": "d87be66256f2f2de01621838b7bc6aeb6e7ee76eac2e65db4acf0c31ab79ba55"
     },
     {
       "url": "lk-bus.js",

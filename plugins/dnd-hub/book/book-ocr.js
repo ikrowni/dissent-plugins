@@ -9,7 +9,7 @@
 //   - The mirror serves .wasm and .gz as text/plain (an allowlist, on purpose): they are fetched as bytes and
 //     compiled from bytes, never streamed by type.
 // pdf.js needs its own decoders for a scan's page pictures (JPEG 2000 and JBIG2): vendor/pdfjs/wasm/.
-import { pdfjs } from './book-pdf.js';
+import { pdfjs, openPdf } from './book-pdf.js';
 import { pagesToRead, tsvToLines, replacePages, blackAndWhite } from './book-ocr-lines.js';
 
 const SCALE = 3; // pixels per PDF point, about 216 dpi: at 144 dpi a stat block's score row misread ("1432) 173)")
@@ -49,10 +49,9 @@ async function engine() {
  * `lines` (from a scan's own text layer) with the stat-block pages read again. `onProgress(done, total)`;
  * `signal` stops between pages. Returns { lines, pages } (pages = how many were read again).
  */
-export async function readScannedPages(buffer, lines, { onProgress, signal } = {}) {
+export async function readScannedPages(source, lines, { onProgress, signal } = {}) {
   const lib = await pdfjs();
-  const doc = await lib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false, verbosity: 0,
-    wasmUrl: url('./vendor/pdfjs/wasm/') }).promise;
+  const doc = await openPdf(lib, source, { wasmUrl: url('./vendor/pdfjs/wasm/') });
   try {
     const pages = pagesToRead(lines, doc.numPages);
     if (!pages.length) return { lines, pages: 0 };

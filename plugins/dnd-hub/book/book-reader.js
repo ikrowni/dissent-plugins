@@ -97,13 +97,23 @@ function listView(list, kind) {
 
 // ── Maps & art ───────────────────────────────────────────────────────────────────────────────────────────────
 const _thumbs = new Map(); // picture file id → object URL (this session)
+// A picture from a PDF is known by its page; a loose one (a card deck, a handout folder) by its set and name.
+const picLabel = p => (p.page ? `page ${p.page}` : [p.group, p.title].filter(Boolean).join(' · ') || 'picture');
 function picturesView(b) {
-  const pics = b.images || [];
+  // The book's own pictures first, then each set (folder) under its name: a 40-card deck stays together.
+  const pics = [...(b.images || [])].sort((x, y) => (x.page ? 0 : 1) - (y.page ? 0 : 1) || String(x.group || '').localeCompare(String(y.group || '')));
   queueMicrotask(() => pics.forEach(p => loadThumb(p.fileId)));
+  let lastSet = null;
+  const setHead = p => {
+    const set = p.page ? null : (p.group || 'Pictures');
+    if (set === lastSet) return '';
+    lastSet = set;
+    return set ? `<div class="bk-set-head">${esc(set)}</div>` : '';
+  };
   return `<p class="bk-help">A map becomes the table's map for everyone; art pops up on the players' screens.</p>
-    <div class="bk-grid small">${pics.map(p => `<div class="bk-pic kept">
+    <div class="bk-grid small">${pics.map(p => `${setHead(p)}<div class="bk-pic kept">
       <div class="bk-pic-img" data-pic="${esc(p.fileId)}">${_thumbs.has(p.fileId) ? `<img src="${_thumbs.get(p.fileId)}" alt="${esc(p.title)}">` : '<span>…</span>'}</div>
-      <div class="bk-pic-foot"><span>${p.kind === 'map' ? 'Map' : 'Art'} · page ${p.page}</span></div>
+      <div class="bk-pic-foot"><span>${p.kind === 'map' ? 'Map' : 'Art'} · ${esc(picLabel(p))}</span></div>
       <div class="bk-pic-actions">
         <button class="btn btn-gold btn-sm" onclick="bookUseMap('${esc(p.fileId)}')">Use as the map</button>
         <button class="btn btn-ghost btn-sm" onclick="bookShowPicture('${esc(p.fileId)}')">Show the players</button></div>
@@ -127,7 +137,7 @@ export async function bookUseMap(fileId) {
   if (!p || !confirm(`Make "${p.title}" the map for everyone? The current map stays in your maps.`)) return;
   try {
     const buf = await loadBookImage(fileId);
-    await addMapFromBuffer(buf, `${R.books[R.book].title} - page ${p.page}`, 'image/webp');
+    await addMapFromBuffer(buf, `${R.books[R.book].title} - ${picLabel(p)}`, 'image/webp');
     document.getElementById('book-panel')?.remove(); R = null;
   } catch (e) { if (!e?.shown) alert(`The map could not be made (${e?.message || e}).`); }
 }
@@ -140,7 +150,7 @@ export async function bookShowPicture(fileId) {
     const data = await loadBookImage(fileId);
     const res = await guarded(requestWithTransfer)('files:upload', { data, name: `${p.title}.webp`, mime: 'image/webp',
       attachContext: `campaign:${c.id}` }, [data], 120000);
-    const title = `${R.books[R.book].title}, page ${p.page}`;
+    const title = p.page ? `${R.books[R.book].title}, page ${p.page}` : (p.title || R.books[R.book].title);
     await realtimePublish(EV.HANDOUT_PUSH, { type: EV.HANDOUT_PUSH, campaignId: c.id, title, content: '', imageFileId: res.id, fromUserId: userId });
     showHandoutOverlay({ title, content: '', imageFileId: res.id });
   } catch (e) { if (!e?.shown) alert(`The picture could not be shown (${e?.message || e}).`); }

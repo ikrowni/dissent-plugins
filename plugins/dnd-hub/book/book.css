@@ -133,3 +133,9 @@
 .bk-edit-name{flex-direction:row;gap:8px;margin-bottom:6px}
 .bk-edit-name input{width:min(22em,100%);text-align:left}
 .bk-scan{border:1px solid var(--lk-line);border-radius:8px;padding:8px 10px}
+
+/* Import: a folder can be chosen too; a bundle's notes in the review */
+.bk-folder{display:block;text-align:center;margin:-6px 0 12px;font-size:12px;color:var(--lk-muted);cursor:pointer}
+.bk-folder u{color:var(--lk-gold)}
+.bk-notes{font-size:12px}
+.bk-set-head{grid-column:1/-1;font-family:var(--lk-title-font, inherit);color:var(--lk-gold);font-size:13px;letter-spacing:.06em;margin:8px 0 2px}

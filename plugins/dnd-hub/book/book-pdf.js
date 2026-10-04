@@ -17,6 +17,23 @@ export async function pdfjs() {
   return _pdfjs;
 }
 
+/**
+ * Open a PDF from a File/Blob, or from bytes. A Blob is read through a range transport: pdf.js asks for the byte
+ * ranges it needs and they are cut from the file with slice(), so a map pack of hundreds of MB is never loaded whole
+ * (reading one into an ArrayBuffer is what failed). `wasmUrl`: pdf.js's own image decoders (JPEG 2000, JBIG2).
+ */
+export async function openPdf(lib, source, { wasmUrl } = {}) {
+  const opts = { isEvalSupported: false, verbosity: 0, ...(wasmUrl ? { wasmUrl } : {}) };
+  if (!(source instanceof Blob)) return lib.getDocument({ ...opts, data: new Uint8Array(source) }).promise;
+  const first = new Uint8Array(await source.slice(0, Math.min(source.size, 1 << 20)).arrayBuffer());
+  const transport = new lib.PDFDataRangeTransport(source.size, first);
+  transport.requestDataRange = (begin, end) => {
+    source.slice(begin, end).arrayBuffer().then(b => transport.onDataRange(begin, new Uint8Array(b)), () => {});
+  };
+  return lib.getDocument({ ...opts, range: transport, length: source.size, disableAutoFetch: true, disableStream: true,
+    rangeChunkSize: 1 << 20 }).promise;
+}
+
 export class ScanError extends Error {
   constructor() { super('This PDF has no text in it (a scan, or pictures of pages). Book import can only read PDFs with real text.'); }
 }
@@ -25,9 +42,9 @@ export class ScanError extends Error {
  * The book's lines. `onProgress(page, pages)` after each page; `signal` (AbortSignal) stops between pages.
  * Throws ScanError when the PDF has (almost) no text layer.
  */
-export async function readPdf(buffer, { onProgress, signal, images: wantImages = true } = {}) {
+export async function readPdf(source, { onProgress, signal, images: wantImages = true } = {}) {
   const lib = await pdfjs();
-  const doc = await lib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false, verbosity: 0 }).promise;
+  const doc = await openPdf(lib, source);
   const lines = [], images = [], seen = new Set();
   let chars = 0;
   try {
