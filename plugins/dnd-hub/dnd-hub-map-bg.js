@@ -6,14 +6,14 @@ import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
 import { renderTokens } from './dnd-hub-tokens.js?v=20261009a';
 import { renderFog } from './dnd-hub-fog.js?v=20261009a';
 import { renderWalls } from './dnd-hub-walls.js?v=20261009a';
-import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009a';
+import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009g';
 import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261009a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261009a';
+import { setZoom } from './dnd-hub-canvas.js?v=20261009g';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';

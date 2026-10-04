@@ -1,5 +1,6 @@
 // dnd-player-sheet.js — character sheet rendering + HP/action functions
 import { esc, realtimePublish } from '../plugin-sdk.js';
+import { guide } from './lk-guide-ui.js';
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { allowedLevel } from './lk-levelling.js';
@@ -216,6 +217,7 @@ export function renderMain() {
   document.getElementById('exhaustion-level').textContent = _char.exhaustion || 0;
   const dsSection = document.getElementById('death-saves-section');
   dsSection.style.display = (_char.hp <= 0) ? 'block' : 'none';
+  if (_char.hp <= 0 && !_char.dead) guide('sheet:down');
   if (_char.hp <= 0) renderDeathSaves();
   const dsState = document.getElementById('death-save-state');
   if (dsState) {
@@ -232,6 +234,7 @@ export function renderMain() {
     const camp = _getCampaign();
     const ready = (_char.level || 1) < allowedLevel(camp, _userId, _char, rule(camp?.settings, 'levelByXp'));
     levelBanner.style.display = ready ? 'block' : 'none';
+    if (ready) guide('sheet:levelup');
   }
 
   // XP progress bar

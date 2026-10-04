@@ -1,6 +1,7 @@
 // dnd-hub-initiative.js — initiative HUD and roll toast
 import { MAP, serverData } from './dnd-hub-state.js?v=20261009a';
 import { esc } from '../plugin-sdk.js';
+import { guide } from './lk-guide-ui.js';
 
 export function renderInitiativeHUD(initiative) {
   const init = initiative ?? serverData?.campaigns?.[MAP.campaignId]?.initiative;
@@ -12,6 +13,7 @@ export function renderInitiativeHUD(initiative) {
     return;
   }
   el.style.display = 'block';
+  if (!MAP.isDM) guide('player:fight');
   const cur = init.currentIndex ?? 0;
   el.innerHTML = `
     <div style="font-size:10px;font-weight:700;color:var(--dnd-gold);margin-bottom:5px;letter-spacing:.04em">

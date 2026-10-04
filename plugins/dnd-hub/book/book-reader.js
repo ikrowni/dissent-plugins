@@ -9,6 +9,7 @@ import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm } from '../dnd-hub-storage.js?v=20261006s';
 import { EV } from '../dnd-hub-event-types.js?v=20261009a';
 import { campaignBooks, listBooks, attachBook } from './book-library.js';
+import { guide } from '../lk-guide-ui.js';
 
 let R = null; // { books, book, tab, section, monster, q, library }
 const camp = () => serverData?.campaigns?.[MAP.campaignId];
@@ -33,6 +34,7 @@ export async function toggleBookPanel() {
   if (!R.books.length) R.library = await listBooks().catch(() => ({ books: [] }));
   R.section = R.books[0]?.story?.[0]?.id || null;
   draw();
+  if (R.books.length) setTimeout(() => guide('dm:book'), 400);
 }
 
 const shared = sid => Object.values(camp()?.journals || {}).some(j => j.source?.section === sid);

@@ -96,6 +96,9 @@ const VENDORED = [
     source: "lk-book.js",
     targets: ["dnd-hub/lk-book.js", "dnd-master/lk-book.js", "dnd-player/lk-book.js"],
   },
+  // Guides for new players: the tips, and the card that shows them.
+  { source: "lk-guides.js", targets: ["dnd-hub/lk-guides.js", "dnd-player/lk-guides.js"] },
+  { source: "lk-guide-ui.js", targets: ["dnd-hub/lk-guide-ui.js", "dnd-player/lk-guide-ui.js"] },
   // Uploads — one helper that shows the node's "where to get storage" message.
   {
     source: "lk-upload.js",

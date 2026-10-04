@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "e9d4242674fe77ca092024f80748c1dffdfd4bb5cc366035b79705bb175fc30c"
+      "sha256": "6119f3f0d9c138a2639ff24b9b6da52b826ae68f286c8bfc379645d51f64dfd0"
     },
     {
       "url": "dnd-player-resources.js",
@@ -53,7 +53,7 @@
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "7c14ec52e8a89f9dd0ed4c678235657c2ba9cd44c20c5c84f2c6f1d4fa1e771f"
+      "sha256": "44c34fdbdf8d2f43633ecd416ed82cbcfc1b9716de941bd0cb68a63959b165d9"
     },
     {
       "url": "dnd-player-spells.js",
@@ -61,7 +61,7 @@
     },
     {
       "url": "dnd-player-styles.css",
-      "sha256": "325da79fffe2d6179c86a9fa47b16ef757f2239227dbeb49e79fbf206f84eaaa"
+      "sha256": "e7a67b1b9e221292f773ecf1cbd9dee53e973332cac686fdaf14f498f7e27346"
     },
     {
       "url": "dnd-player-table.js",
@@ -106,6 +106,14 @@
     {
       "url": "lk-content-pack.js",
       "sha256": "461dd108f936dc9d855dade178419223942601cbe9bef2872516708f11000da0"
+    },
+    {
+      "url": "lk-guide-ui.js",
+      "sha256": "1d3cd11887692c3bf1518a6deb449639709bddde6c0cb2a1ad5e89c28dd0f396"
+    },
+    {
+      "url": "lk-guides.js",
+      "sha256": "8bff137cb7a0f86d2a4ae54b0eecf1f3a02fe3652f907861d6254b4e42d274da"
     },
     {
       "url": "lk-icons.js",

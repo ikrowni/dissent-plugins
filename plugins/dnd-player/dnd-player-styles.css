@@ -80,3 +80,4 @@ option{background:#100808;color:var(--text)}
 
 .lk-note{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;margin:0 16px;padding:16px;background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:10px;font-size:12px;color:var(--lk-muted);line-height:1.5}
 .lk-note b{font-size:13px;font-weight:600}
+.sheet-edit[aria-pressed="true"]#sheet-guides{color:var(--lk-gold)}

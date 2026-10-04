@@ -17,6 +17,8 @@ import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds, setSecretsUser } from './dnd-hub-shared-storage.js';
 import { sealedHtml } from './lk-sealed.js';
+import { initGuides, guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
+import { GUIDES_KEY } from './lk-guides.js';
 import { loadPlayerParts } from './lk-book.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
@@ -206,7 +208,7 @@ function switchTab(name) {
   const pane = document.getElementById('tab-' + name);
   if (pane) pane.classList.add('active');
   if (name === 'combat') renderCombat(_initiativeActive);
-  if (name === 'spells') loadSRDSpells().then(() => renderSpells());
+  if (name === 'spells') { loadSRDSpells().then(() => renderSpells()); guide('sheet:spells'); }
   if (name === 'resources') renderResources();
   if (name === 'main') renderConcentration();
   if (name === 'notes') renderPartyJournal().catch(() => {});
@@ -591,6 +593,7 @@ async function onInit(data) {
   const identity = await getIdentity();
   USER_ID = identity?.id ?? null;
   setSecretsUser(USER_ID);
+  initGuides({ get: () => storageGetCompanion('dnd-hub', GUIDES_KEY, 'user'), set: v => storageSetCompanion('dnd-hub', GUIDES_KEY, 'user', v) });
   // Ask the Hub what it shows (it may have loaded first, and its announcement gone before this frame listened).
   if (!_hubAsked) {
     _hubAsked = true;
@@ -647,6 +650,7 @@ async function onInit(data) {
     return;
   }
   _lastCampaignId = CAMPAIGN_ID;
+  setTimeout(() => { guide('sheet:open'); syncSheetGuides(); }, 1500);
   // The campaign's books add spells (their player part; the DM's monsters and story never come here).
   loadPlayerParts(SERVER_DATA?.campaigns?.[CAMPAIGN_ID], request).then(parts => { setBookParts(parts); if (parts.length) loadSRDSpells(); });
   document.getElementById('loading').style.display = 'none';
@@ -1503,3 +1507,12 @@ for (const buffered of (window.__dndPlayerQueue || [])) {
   handleSDKMessage(buffered, onInit, onEvent);
 }
 window.__dndPlayerQueue = [];
+
+// The sheet's lantern button: guides on (every tip starts over) or off (lk-guides.js; shared with the Hub).
+async function syncSheetGuides() { document.getElementById('sheet-guides')?.setAttribute('aria-pressed', String(await guidesOn())); }
+window.toggleSheetGuides = async () => {
+  const on = !(await guidesOn());
+  await setGuidesOn(on);
+  syncSheetGuides();
+  if (on) guide('sheet:open');
+};

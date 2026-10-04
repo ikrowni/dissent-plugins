@@ -17,6 +17,7 @@
         <div class="lk-title" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="char-name">—</div>
         <div style="font-size:10px;color:var(--muted)" id="char-subtitle">—</div>
       </div>
+      <button onclick="toggleSheetGuides()" class="sheet-edit" id="sheet-guides" title="Guides: short tips the first time something happens" aria-label="Guides" aria-pressed="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M12 3v2M8 8h8l-1 11H9z"/><path d="M7 8l1-3h8l1 3"/><path d="M12 11c1.2 1.4 1.2 2.8 0 4.2-1.2-1.4-1.2-2.8 0-4.2z" fill="currentColor"/></svg></button>
       <button onclick="openCharEdit()" class="sheet-edit" title="Edit character" aria-label="Edit character"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
     </div>
     <div class="tab-bar">
@@ -73,7 +74,7 @@
   });
   </script>
   <script type="module">
-    import('./dnd-player-main.js?v=20261009a')
+    import('./dnd-player-main.js?v=20261009g')
       .catch(err => window.__dndPlayerFail('Could not load the sheet module:', err && (err.stack || err.message) || err));
   </script>
 </body>

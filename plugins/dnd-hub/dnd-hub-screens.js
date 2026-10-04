@@ -4,12 +4,13 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261009a';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261009a';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261009a';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261009g';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261009g';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261009a';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
+import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
@@ -353,6 +354,7 @@ export async function enterCampaignAsDM(campaignId) {
   await renderCampaignView(campaignId, true);
   showScreen('campaign');
   announceCampaign(campaignId, 'dm');
+  syncGuidesButton(); setTimeout(() => guide('dm:table'), 1800);
 }
 
 export async function enterCampaignAsPlayer(campaignId) {
@@ -367,6 +369,7 @@ export async function enterCampaignAsPlayer(campaignId) {
   await renderCampaignView(campaignId, false);
   showScreen('campaign');
   announceCampaign(campaignId, 'player');
+  syncGuidesButton(); setTimeout(() => guide('player:table'), 1800);
 }
 
 export async function renderCampaignView(campaignId, isDM) {
@@ -442,6 +445,7 @@ export async function renderCampaignView(campaignId, isDM) {
           <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <button class="map-tool-btn" id="btn-guides" onclick="toggleGuides()" title="Guides: short tips the first time something happens" aria-pressed="true">${icon('lantern')}Guide</button>
           <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out" aria-label="Zoom out">${icon('zoom-out')}</button>
           <span id="zoom-display" title="Press ? for keyboard shortcuts" style="font-size:10px;color:var(--dnd-muted);min-width:32px;text-align:center">100%</span>
           <button class="map-tool-btn" onclick="setZoom(MAP.zoom + 0.25)" title="Zoom in" aria-label="Zoom in">${icon('zoom-in')}</button>
@@ -523,4 +527,16 @@ export async function renderCampaignView(campaignId, isDM) {
   await initPixiApp();
   initKeyboardHandlers();
   await loadMapData(campaignId);
+}
+
+/** The toolbar's Guide button: guides on (every tip starts over) or off. */
+export async function toggleGuides() {
+  const on = !(await guidesOn());
+  await setGuidesOn(on);
+  document.getElementById('btn-guides')?.setAttribute('aria-pressed', String(on));
+  if (on) guide(MAP.isDM ? 'dm:table' : 'player:table');
+}
+/** Reflect the person's choice on the button once the campaign view is drawn. */
+export async function syncGuidesButton() {
+  document.getElementById('btn-guides')?.setAttribute('aria-pressed', String(await guidesOn()));
 }

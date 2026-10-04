@@ -204,3 +204,4 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .campaign-row:nth-child(n+5),.available-card:nth-child(n+5){animation-delay:.24s}
 .campaign-row:hover,.available-card:hover{transform:translateX(3px);box-shadow:-3px 0 0 var(--lk-gold),0 8px 22px rgba(0,0,0,.4)}
 @media (prefers-reduced-motion:reduce){.campaign-row,.available-card{animation:none!important}}
+.map-tool-btn[aria-pressed="true"]#btn-guides{color:var(--lk-gold);border-color:color-mix(in srgb,var(--lk-gold) 50%,transparent)}

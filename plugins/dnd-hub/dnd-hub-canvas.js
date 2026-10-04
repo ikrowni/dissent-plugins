@@ -16,7 +16,7 @@ import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContex
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261009a';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261009a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261009a';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261009g';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
