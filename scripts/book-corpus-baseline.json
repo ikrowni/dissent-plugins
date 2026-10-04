@@ -1,0 +1,112 @@
+{
+  "SRD_CC_v5.1.pdf": {
+    "counts": {
+      "monsters": 319,
+      "sureMonsters": 314,
+      "spells": 319,
+      "sureSpells": 319,
+      "items": 237,
+      "story": 106
+    },
+    "source": "https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf (CC-BY-4.0)"
+  },
+  "black-flag.pdf": {
+    "counts": {
+      "monsters": 353,
+      "sureMonsters": 352,
+      "spells": 316,
+      "sureSpells": 316,
+      "items": 204,
+      "story": 14
+    },
+    "source": "https://koboldpress.com/wp-content/uploads/2024/05/Black-Flag-Roleplaying.pdf (ORC)"
+  },
+  "curse-of-strahd.pdf": {
+    "counts": {
+      "monsters": 13,
+      "sureMonsters": 0,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 4,
+      "story": 193
+    },
+    "source": "the owner's own scanned copy (never shared); the OCR path is checked in the browser, not here"
+  },
+  "death-house.pdf": {
+    "counts": {
+      "monsters": 0,
+      "sureMonsters": 0,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 0,
+      "story": 51
+    },
+    "source": "https://media.wizards.com/2016/downloads/DND/Curse%20of%20Strahd%20Introductory%20Adventure.pdf (free from WotC)"
+  },
+  "free5e-characters-codex.pdf": {
+    "counts": {
+      "monsters": 0,
+      "sureMonsters": 0,
+      "spells": 324,
+      "sureSpells": 324,
+      "items": 0,
+      "story": 13
+    },
+    "source": "https://github.com/wyrmworkspublishing/free5e/releases (CC-BY-4.0)"
+  },
+  "frozen-offerings.pdf": {
+    "counts": {
+      "monsters": 4,
+      "sureMonsters": 3,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 0,
+      "story": 82
+    },
+    "source": "https://media.wizards.com/2020/dnd/dragon/34/dra34_FrozenOfferings.pdf (free from WotC)"
+  },
+  "iron-route.pdf": {
+    "counts": {
+      "monsters": 21,
+      "sureMonsters": 21,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 0,
+      "story": 40
+    },
+    "source": "https://media.wizards.com/2014/downloads/dnd/DDEX19_OutlawsIronRoute.pdf (free from WotC)"
+  },
+  "srd-5.2.1-it.pdf": {
+    "counts": {
+      "monsters": 0,
+      "sureMonsters": 0,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 0,
+      "story": 252
+    },
+    "source": "https://media.dndbeyond.com/compendium-images/srd/5.2/IT_SRD_CC_v5.2.1.pdf (CC-BY-4.0; Italian: must not crash)"
+  },
+  "srd-5.2.1.pdf": {
+    "counts": {
+      "monsters": 336,
+      "sureMonsters": 329,
+      "spells": 339,
+      "sureSpells": 339,
+      "items": 257,
+      "story": 71
+    },
+    "source": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf (CC-BY-4.0)"
+  },
+  "test-adventure-images.pdf": {
+    "counts": {
+      "monsters": 0,
+      "sureMonsters": 0,
+      "spells": 0,
+      "sureSpells": 0,
+      "items": 0,
+      "story": 2
+    },
+    "source": "hand-made test PDF (pictures)"
+  }
+}

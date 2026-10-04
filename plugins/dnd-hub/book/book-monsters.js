@@ -7,22 +7,48 @@ import { isScanned, isScanAc, scanBlockHead, isScanHeading, scoresFitHp, scanNam
   sectionHeading } from './book-scan.js';
 
 const SIZE_RE = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+([a-z][a-z ]*?)(?:\s*\(([^)]+)\))?\s*,\s*([a-z][a-z0-9 ()%,.-]*)$/i;
+// 2014 labels, then the 2024 ones (SRD 5.2): "Resistances", "Vulnerabilities", one "Immunities" line for damage
+// and conditions ("Poison; Poisoned"), "Gear", and "CR 1/4 (XP 50; PB +2)" for the challenge.
 const LABELS = ['Saving Throws', 'Skills', 'Damage Vulnerabilities', 'Damage Resistances', 'Damage Immunities',
-  'Condition Immunities', 'Senses', 'Languages', 'Challenge'];
-const SECTIONS = { 'Actions': 'actions', 'Reactions': 'reactions', 'Legendary Actions': 'legendary_actions', 'Bonus Actions': 'bonus_actions' };
+  'Condition Immunities', 'Senses', 'Languages', 'Challenge',
+  'Resistances', 'Vulnerabilities', 'Immunities', 'Gear', 'CR'];
+const AC_RE = /^(?:Armor Class|AC)\s+(\d+)(?:\s*\(([^)]+)\))?/;     // 2014 "Armor Class 15 (…)", 2024 "AC 15 Initiative +2 (12)"
+const HP_RE = /^(?:Hit Points|HP)\s+(\d+)(?:\s*\(([^)]+)\))?/;
+const SCORES_2024 = /\b(Str|Dex|Con|Int|Wis|Cha)\s*(\d+)\s+([+−–-]\d+)\s+([+−–-]?\d+)/gi; // score, modifier, save
+// "Traits" heads the traits in 2024 books (SRD 5.2); taken for a chapter heading, it ended every block there.
+const SECTIONS = { 'Traits': 'special_abilities', 'Actions': 'actions', 'Reactions': 'reactions', 'Legendary Actions': 'legendary_actions', 'Bonus Actions': 'bonus_actions' };
 const ABIL = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-const BLOCK_HEADING = 11.5; // a line this tall ends a block (a new name, a chapter heading)
+/**
+ * How tall a line must be to be a heading in this book: 11.5 pt for the usual ~10 pt body text, and more in a book set
+ * larger (Free5e's body is 12 pt: a fixed 11.5 ended every spell at its first line). Body = the size most text is in.
+ */
+export function headingSize(lines) {
+  const n = {};
+  for (const l of lines) { const k = (+l.size).toFixed(1); n[k] = (n[k] || 0) + (l.text || '').length; }
+  const body = +(Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 10);
+  return Math.max(11.5, body + 1.5);
+}
 
 export const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
   .replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const num = s => Number(String(s).replace(/[−–]/g, '-').replace(/,/g, ''));
 
+// Black Flag / Tales of the Valiant: "Aboleth CR 10" then "Large Aberration" (no alignment) and the Armor Class.
+const BF_NAME = /^(.{2,50}?)\s+CR\s+([\d/]+)$/;
+const BF_SIZE = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+([A-Za-z]+(?: [A-Za-z]+)?)(?:\s*\(([^)]+)\))?$/;
+function bfHead(lines, i) {
+  const n = (lines[i]?.text || '').match(BF_NAME), z = (lines[i + 1]?.text || '').match(BF_SIZE);
+  if (!n || !z || !lines.slice(i + 2, i + 4).some(l => AC_RE.test(l.text))) return null;
+  return { name: n[1].trim(), cr: n[2], size: z[1], type: z[2], subtype: z[3] || null };
+}
+
 /** True where line `i` starts a stat block (its size line follows, and an Armor Class soon after). */
 export function isBlockStart(lines, i) {
+  if (bfHead(lines, i)) return true;
   const size = sizeLine(lines, i + 1);
   if (!size) return false;
   if (lines[i].text.length > 60 || /[.:]$/.test(lines[i].text)) return false;
-  return lines.slice(i + 1 + size.used, i + 4 + size.used).some(l => /^Armor Class\b/.test(l.text));
+  return lines.slice(i + 1 + size.used, i + 4 + size.used).some(l => AC_RE.test(l.text));
 }
 
 /** The "Size type (subtype), alignment" line at `i`, which may wrap onto a second line: { match, used }. */
@@ -36,7 +62,7 @@ function sizeLine(lines, i) {
     if (both) return { match: both, used: 2 };
   }
   if (m) return { match: m, used: 1 };
-  if (b && !/^Armor Class\b/.test(b.text) && /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s/.test(a.text) && b.text.length < 40) {
+  if (b && !AC_RE.test(b.text) && /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s/.test(a.text) && b.text.length < 40) {
     m = `${a.text} ${b.text}`.match(SIZE_RE);
     if (m) return { match: m, used: 2 };
   }
@@ -46,6 +72,7 @@ function sizeLine(lines, i) {
 /** Every stat block in `lines`. A scanned book (book-scan.js) is read by text patterns instead. */
 export function findMonsters(lines) {
   if (isScanned(lines)) return findScanned(lines);
+  const BLOCK_HEADING = headingSize(lines); // a line this tall ends a block (a new name, a chapter heading)
   const out = [];
   for (let i = 0; i < lines.length; i++) {
     if (!isBlockStart(lines, i)) continue;
@@ -113,12 +140,14 @@ export const joinText = (a, b) => (!a ? b : !a.endsWith('-') ? `${a} ${b}`
 // `scan` ({ nameAt, sizeAt }, book-scan.js) = a scanned book: name and size from those lines when read, entries
 // by text pattern, ability scores only when plausible, and never "sure".
 function readBlock(lines, start, last, scan = null) {
-  let name, size, type, subtype, alignment, first;
+  let name, size, type, subtype, alignment, first, bf = null;
   if (scan) {
     name = scan.nameAt >= 0 ? scanName(lines[scan.nameAt].text) : null;
     const sz = scan.sizeAt >= 0 ? scanSize(lines[scan.sizeAt].text) : null;
     ({ size = null, type = null, subtype = null, alignment = '' } = sz || {});
     first = Math.max(scan.nameAt, scan.sizeAt, start - 1) + 1;
+  } else if ((bf = bfHead(lines, start))) {
+    ({ name, size, type, subtype } = bf); alignment = ''; first = start + 2;
   } else {
     name = lines[start].text.trim();
     const sl = sizeLine(lines, start + 1);
@@ -145,13 +174,34 @@ function readBlock(lines, start, last, scan = null) {
     // together), so this block ends there rather than taking its numbers.
     if (scan && ((m.ac != null && /^Armor Class\s*\d/.test(t)) || (m.hp != null && /^Hit Points\s*\d/.test(t))
       || (m.cr != null && /^Challenge\s*[\d/]/.test(t)) || (scored && isScoreHeader(t)))) break;
-    if ((mm = t.match(/^Armor Class\s+(\d+)(?:\s*\(([^)]+)\))?/))) { m.ac = +mm[1]; m.ac_type = mm[2] || null; continue; }
-    if ((mm = t.match(/^Hit Points\s+(\d+)(?:\s*\(([^)]+)\))?/))) { m.hp = +mm[1]; m.hp_dice = mm[2] ? mm[2].replace(/\s+/g, '').replace(/[−–]/g, '-') : null; continue; }
+    // The first one only: an action's wrapped text can start "AC 10, 5 hit points" (the ettercap's webbing).
+    if (m.ac == null && (mm = t.match(AC_RE))) { m.ac = +mm[1]; m.ac_type = mm[2] || null; continue; }
+    if (m.hp == null && (mm = t.match(HP_RE))) { m.hp = +mm[1]; m.hp_dice = mm[2] ? mm[2].replace(/\s+/g, '').replace(/[−–]/g, '-') : null; continue; }
     if ((mm = t.match(/^Speed\s+(.+)/))) { m.speed = speedOf(mm[1]); continue; }
     if (scan && isScoreHeader(t)) {
       scored = true;
       const nums = scanScores(lines.slice(i + 1, Math.min(last, i + 2) + 1).map(l => l.text)) || [];
       ABIL.forEach((a, k) => { m[a] = nums[k] ?? null; });
+      continue;
+    }
+    // 2024: "Str 8 −1 −1 Dex 15 +2 +2 Con 10 +0 +0" on two lines; a save above the modifier is a proficiency.
+    if (!scan && /^Str\s*\d+\s+[+−–-]\d/i.test(t)) {
+      for (const k of [i, i + 1]) for (const x of (lines[k]?.text || '').matchAll(SCORES_2024)) {
+        const a = x[1].toLowerCase(), mod = num(x[3]), save = num(x[4]);
+        m[a] = +x[2];
+        if (save !== mod && !m.saving_throws.some(s => s.ability === a)) m.saving_throws.push({ ability: a, bonus: save });
+      }
+      if (/^Int\s*\d/i.test(lines[i + 1]?.text || '')) i++;
+      continue;
+    }
+    // Black Flag gives modifiers only ("+5 −1 +6 +8 +6 +4"): a score is 10 + twice its modifier.
+    if (bf && /^STR\s+DEX\s+CON\s+INT\s+WIS\s+CHA$/.test(t) && /^([+−–-]\d+\s*){6}$/.test((lines[i + 1]?.text || '').trim())) {
+      lines[i + 1].text.trim().split(/\s+/).forEach((x, k) => { m[ABIL[k]] = 10 + 2 * num(x); });
+      i++;
+      continue;
+    }
+    if (bf && (mm = t.match(/^(Resistant|Immune|Vulnerable)\s+(.+)/))) {
+      fields[mm[1]] = mm[2].split('|')[0].trim(); // "Resistant acid | Aberrant Resilience": the part after | is a trait's name
       continue;
     }
     if (/^STR\s+DEX\s+CON\s+INT\s+WIS\s+CHA$/.test(t)) {
@@ -167,7 +217,7 @@ function readBlock(lines, start, last, scan = null) {
     if (lab && !m.cr) { label = lab; fields[lab] = t.slice(lab.length).trim(); continue; }
     const sec = sectionHeading(t, SECTIONS);
     if (sec) { close(); label = null; section = sec; intro = section === 'legendary_actions'; if (!m[section]) m[section] = []; continue; }
-    if (label && !entryAt(i) && label !== 'Challenge') { fields[label] = joinText(fields[label], t); continue; }
+    if (label && !entryAt(i) && label !== 'Challenge' && label !== 'CR') { fields[label] = joinText(fields[label], t); continue; }
     label = null;
     const e = entryAt(i);
     // A scan, after the actions: an entry in another column, or the "Ideal." of a roleplaying sidebar, is not this
@@ -182,23 +232,29 @@ function readBlock(lines, start, last, scan = null) {
   }
   close();
 
-  for (const a of m.actions) a.attack_bonus = (a.desc.match(/([+−–-]\d+)\s+to hit/) || [])[1] != null ? num(a.desc.match(/([+−–-]\d+)\s+to hit/)[1]) : null;
+  // 2014 "+4 to hit", 2024 "Melee Attack Roll: +4".
+  for (const a of m.actions) { const hit = a.desc.match(/([+−–-]\d+)\s+to hit/) || a.desc.match(/Attack Roll:\s*([+−–-]\d+)/); a.attack_bonus = hit ? num(hit[1]) : null; }
   const list = s => (s || '').split(/;\s*|,\s*(?![^;]*\bfrom\b)/).map(x => x.trim().replace(/^and\s+/, '')).filter(Boolean);
-  m.saving_throws = (fields['Saving Throws'] || '').split(/,\s*/).map(s => s.match(/^(\w{3})\w*\s+([+−–-]\d+)/)).filter(Boolean)
+  m.saving_throws = m.saving_throws.length ? m.saving_throws : (fields['Saving Throws'] || '').split(/,\s*/).map(s => s.match(/^(\w{3})\w*\s+([+−–-]\d+)/)).filter(Boolean)
     .map(x => ({ ability: x[1].toLowerCase(), bonus: num(x[2]) }));
   m.skills = (fields['Skills'] || '').split(/,\s*/).map(s => s.match(/^(.+?)\s+([+−–-]\d+)$/)).filter(Boolean)
     .map(x => ({ name: x[1], bonus: num(x[2]) }));
-  m.damage_resistances = list(fields['Damage Resistances']);
-  m.damage_immunities = list(fields['Damage Immunities']);
-  m.damage_vulnerabilities = list(fields['Damage Vulnerabilities']);
-  m.condition_immunities = list(fields['Condition Immunities']).map(cap);
-  for (const s of (fields['Senses'] || '').split(/,\s*/)) {
+  // 2024 puts damage and conditions on one "Immunities" line, split by a semicolon: "Poison; Poisoned".
+  const [imm24, cond24] = (fields['Immunities'] || '').split(/;\s*/);
+  const [immBf, condBf] = (fields['Immune'] || '').split(/;\s*/);
+  m.damage_resistances = list(fields['Damage Resistances'] || fields['Resistances'] || fields['Resistant']);
+  m.damage_immunities = list(fields['Damage Immunities'] || imm24 || immBf);
+  m.damage_vulnerabilities = list(fields['Damage Vulnerabilities'] || fields['Vulnerabilities'] || fields['Vulnerable']);
+  m.condition_immunities = list(fields['Condition Immunities'] || cond24 || condBf).map(cap);
+  for (const s of (fields['Senses'] || '').split(/[,;]\s*/)) {
     const pp = s.match(/^passive Perception\s+(\d+)/i);
     const sv = s.match(/^([a-z]+)\s+(.+)$/i);
     if (pp) m.senses.passive_perception = +pp[1]; else if (sv) m.senses[sv[1].toLowerCase()] = sv[2];
   }
   m.languages = /^[—–-]$/.test((fields['Languages'] || '').trim()) ? '' : (fields['Languages'] || '');
-  const ch = (fields['Challenge'] || '').match(/^([\d/]+)\s*\(([\d,]+)\s*XP\)/);
+  const ch = (fields['Challenge'] || '').match(/^([\d/]+)\s*\(([\d,]+)\s*XP\)/)
+    || (fields['CR'] || '').match(/^([\d/]+)\s*\((?:XP\s*)?([\d,]+)/); // 2024: "CR 1/4 (XP 50; PB +2)"; one says "(700 XP; …)"
+  if (!ch && bf) { const c = bf.cr; m.cr = c.includes('/') ? num(c.split('/')[0]) / num(c.split('/')[1]) : num(c); }
   if (ch) { m.cr = ch[1].includes('/') ? num(ch[1].split('/')[0]) / num(ch[1].split('/')[1]) : num(ch[1]); m.xp = num(ch[2]); }
 
   if (scan && m.con != null && !scoresFitHp(m.con, m.hp_dice)) for (const a of ABIL) m[a] = null;

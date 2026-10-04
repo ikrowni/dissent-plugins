@@ -23,8 +23,16 @@ export function findStory(lines, { scanned = false } = {}) {
   const bodySize = mostCommonSize(lines);
   const body = bodyFont(lines.filter(l => Math.abs(l.size - bodySize) < 0.5));
   const isHeading = scanned ? isScanHeading : l => l.size > bodySize + 0.9 && l.text.length <= 90;
-  const sizes = [...new Set(lines.filter(isHeading).map(l => +l.size.toFixed(1)))].sort((a, b) => b - a);
+  // Heading sizes, biggest first, leaving out sizes used once that are bigger than any repeated one: a cover title ("DEATH HOUSE",
+  // 63 pt) is not the chapter level, and taking it for one flattened a whole adventure into two sections.
+  const count = {};
+  for (const l of lines) if (isHeading(l)) { const k = +l.size.toFixed(1); count[k] = (count[k] || 0) + 1; }
+  const all = Object.keys(count).map(Number).sort((a, b) => b - a);
+  const topRepeated = all.find(k => count[k] > 1);
+  const sizes = topRepeated == null ? all : all.filter(k => k <= topRepeated); // only once-used sizes ABOVE all others
   const chapterSize = sizes[0], sectionSize = sizes[1];
+  // A keyed area ("12. Master Suite", "23A. Empty Crypt") is always a section of its own: what a DM looks up.
+  const isArea = t => /^\d{1,3}[A-Z]?\.\s+[A-Z]/.test(t) && t.length <= 60;
   const level = l => (!scanned ? (+l.size.toFixed(1) === chapterSize ? 'chapter' : +l.size.toFixed(1) === sectionSize ? 'section' : 'sub')
     : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
   const boxed = l => !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && l.runs[0].font !== body;
@@ -66,6 +74,7 @@ export function findStory(lines, { scanned = false } = {}) {
         chapter = whole; unfinished = null;
         continue;
       }
+      if (lv !== 'chapter' && isArea(t)) { open(t, l.page); continue; }
       if (lv === 'chapter') {
         chapter = t; open(t, l.page);
         unfinished = scanned ? { at: n, sec: cur, count: out.length } : null;

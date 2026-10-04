@@ -121,7 +121,7 @@
     },
     {
       "url": "book/book-items.js",
-      "sha256": "18d08173550ca1dc3e810ba5bb0af5cb547054ab10aa99f17d6a18daa05cde89"
+      "sha256": "884ee14c8cb5cac89d68ae51267b15e5e5f99d42f1f83ddc78dcdca20a5f358d"
     },
     {
       "url": "book/book-layout.js",
@@ -137,7 +137,7 @@
     },
     {
       "url": "book/book-monsters.js",
-      "sha256": "c32613bbbe7ad214e6bc71867a84d8ff4287c119b0c1650c2b7d11bf26eaa82c"
+      "sha256": "eff578fda5d1c4f4fc2767915619a5a4fbc52537ac83032d50f510016e6c7e02"
     },
     {
       "url": "book/book-ocr-lines.js",
@@ -173,11 +173,11 @@
     },
     {
       "url": "book/book-spells.js",
-      "sha256": "0211256a7ef64b4a331cc2d75b0ac48570921737f73317fbeeb26dc9c7d3573d"
+      "sha256": "28a08a0806b1f079449200bbbe4b2a10794ed03cb829fef1da4a8f2d0d33914f"
     },
     {
       "url": "book/book-story.js",
-      "sha256": "cc5ba87c7cdeeed489dca6ea2e3239751021c27683c50b7e4e3127ee5dff840a"
+      "sha256": "1ea99990248fec2a4612f0e7d283ce1b4268a59f3589e569b7d613bd072cbdcc"
     },
     {
       "url": "book/book.css",

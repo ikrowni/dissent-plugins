@@ -2,18 +2,27 @@
 // An item starts at a name line followed by "Wondrous item, rare (requires attunement …)"; the attunement note may
 // wrap onto the next line. Its text runs to the next item or a bigger heading. `desc` starts with the type line, as
 // the SRD's does.
-import { slug, joinText } from './book-monsters.js';
+import { slug, joinText, headingSize } from './book-monsters.js';
 
 const TYPE_RE = /^(armor|weapon|wondrous item|ring|rod|staff|wand|potion|scroll)\b((?:\s*\([^)]*\))?[^,(]*),\s*(common|uncommon|rare|very rare|legendary|artifact|rarity varies)\b(.*)$/i;
-const HEADING = 11.5;
 const title = s => s.replace(/\b\w/g, c => c.toUpperCase());
 
+// The type line, which may wrap after its comma: "Weapon (Glaive, Greatsword, Longsword, or Scimitar)," +
+// "Legendary (Requires Attunement)" (SRD 5.2's Vorpal Sword). { text, used } or null.
+function typeAt(lines, i) {
+  const a = lines[i]?.text.trim() || '', b = lines[i + 1]?.text.trim() || '';
+  if (TYPE_RE.test(a)) return { text: a, used: 1 };
+  if (/,$/.test(a) && TYPE_RE.test(`${a} ${b}`)) return { text: `${a} ${b}`, used: 2 };
+  return null;
+}
+
 export function isItemStart(lines, i) {
-  return !!lines[i + 1] && TYPE_RE.test(lines[i + 1].text) && lines[i].text.length <= 60 && !/[.:,]$/.test(lines[i].text)
+  return !!lines[i + 1] && !!typeAt(lines, i + 1) && lines[i].text.length <= 60 && !/[.:,]$/.test(lines[i].text)
     && lines[i].size > (lines[i + 1].size || 0);
 }
 
 export function findItems(lines) {
+  const HEADING = headingSize(lines);
   const out = [];
   for (let i = 0; i < lines.length; i++) {
     if (!isItemStart(lines, i)) continue;
@@ -27,7 +36,8 @@ export function findItems(lines) {
 
 function readItem(lines, start, last) {
   const name = lines[start].text.trim();
-  let typeLine = lines[start + 1].text.trim(), k = start + 2;
+  const ty = typeAt(lines, start + 1);
+  let typeLine = ty.text, k = start + 1 + ty.used;
   // "(requires attunement by a" + "cleric or paladin)": an open bracket continues onto the next line.
   while (k <= last && (typeLine.match(/\(/g) || []).length > (typeLine.match(/\)/g) || []).length) typeLine = `${typeLine} ${lines[k++].text.trim()}`;
   const m = typeLine.match(TYPE_RE);
