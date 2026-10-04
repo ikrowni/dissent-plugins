@@ -41,7 +41,7 @@ import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
 import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261013e';
 import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261013c';
 import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261013c';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261013c';
+import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013c';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
          clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261011b';
@@ -140,6 +140,8 @@ window.renderLights           = renderLights;
 window.saveLightsAndBroadcast = saveLightsAndBroadcast;
 window.renderAudioZones       = renderAudioZones;
 window.saveZonesAndBroadcast  = saveZonesAndBroadcast;
+window.saveTriggersAndBroadcast = saveTriggersAndBroadcast; // scripts/playtest/dnd-rules-test.mjs places traps through it
+window.renderTokens = renderTokens;
 window.renderTriggers         = renderTriggers;
 window.updateSpatialAudio     = updateSpatialAudio;
 window.showTemplatePicker     = showTemplatePicker;

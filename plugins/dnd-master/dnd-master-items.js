@@ -227,6 +227,9 @@ export function onItemImgSelected() {
   }
 }
 
+/** The open interests and roll-offs, for the playtests (read only). */
+export const lootContests = () => JSON.parse(JSON.stringify(_lootContests));
+
 export function handleLootInterest(p) {
   const c = _lootContests[p.contestKey] || {
     tokenId:  p.tokenId,

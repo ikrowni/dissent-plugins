@@ -15,7 +15,7 @@ import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, del
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel } from './dnd-master-items.js?v=20261011b';
+  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel, lootContests } from './dnd-master-items.js?v=20261013a';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
@@ -291,6 +291,10 @@ window.openPartyMember = async uid => {
 };
 // Read-only, for the playtest (like window.MAP on the Hub).
 window.__dmInitiative = () => getInitiativeState();
+// Read-only views for the playtests (scripts/playtest/dnd-rules-test.mjs).
+window.__dmItems = () => Object.values(dmCampaign?.items || {});
+window.__dmShops = () => Object.values(dmCampaign?.shops || {});
+window.__lootContests = () => lootContests();
 window.updateHP            = updateHP;
 window.toggleInitRow       = toggleInitRow;
 window.applyMassHP         = applyMassHP;

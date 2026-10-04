@@ -1461,6 +1461,9 @@ window.weaponRollDamage    = weaponRollDamage;
 window.rollInitiativeNow   = rollInitiativeNow;
 window.useConsumable       = useConsumable;
 window.__announceHp        = announceHp;
+// What each sound zone is doing on this screen, for the playtests (read only).
+window.__zoneVolumes = () => Object.fromEntries(Object.entries(_zoneAudioEls).map(([id, a]) => [id, Math.round(a.volume * 1000) / 1000]));
+window.__zonePlaying = () => Object.fromEntries(Object.entries(_zoneAudioEls).map(([id, a]) => [id, !a.paused]));
 
 // Wrap doShortRest / doLongRest to also restore class resources
 const _origShortRest = doShortRest;
