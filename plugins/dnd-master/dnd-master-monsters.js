@@ -2,6 +2,7 @@
 import { mergeContent } from './lk-book.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { applyFilter, filterBarHtml, getFilter, onFilterChange, typesIn, moreLine } from './dnd-master-monster-filter.js';
 
 let SRD_MONSTERS = [];
 let expandedMonster = null;
@@ -50,27 +51,41 @@ function parseHPDice(expr) {
 }
 
 export function renderMonsterSearch(q) {
-  if (q === undefined) q = '';
+  const f = getFilter('mon');
+  if (q !== undefined) f.q = q;
   const el = document.getElementById('tab-monsters');
   if (!el) return;
   el.innerHTML =
     '<input class="search-input" id="mon-search" placeholder="Search monsters\u2026"' +
-    ' oninput="filterMonsterSearch(this.value)" value="' + esc(q) + '">' +
+    ' oninput="filterMonsterSearch(this.value)" value="' + esc(f.q) + '">' +
+    '<div id="mon-filters"></div>' +
     '<div id="mon-list" style="margin-bottom:10px"></div>' +
     '<div id="mon-instances" style="margin-top:8px"></div>';
-
-  _renderMonsterList(q);
+  onFilterChange('mon', () => { _renderMonsterFilters(); _renderMonsterList(); });
+  _renderMonsterFilters();
+  _renderMonsterList();
   renderInstances();
 }
 
 // Typing redraws the list only: redrawing the whole tab replaced the box being typed in, so it lost focus after every
 // letter and held keys stopped repeating (owner report 2026-10-04).
-export function filterMonsterSearch(q) { _renderMonsterList(q || ''); }
+export function filterMonsterSearch(q) { getFilter('mon').q = q || ''; _renderMonsterList(); }
 
-function _renderMonsterList(q) {
+/** The monsters changed (a book's arrived): the filter bar and the list, never the search box. */
+export function refreshMonsterSearch() { _renderMonsterFilters(); _renderMonsterList(); }
+
+function _renderMonsterFilters() {
+  const el = document.getElementById('mon-filters');
+  if (!el) return;
+  const all = getSRDMonsters();
+  el.innerHTML = filterBarHtml('mon', getFilter('mon'), typesIn(all), { hasBook: all.some(m => m.source?.title) });
+}
+
+function _renderMonsterList() {
   const listEl = document.getElementById('mon-list');
   if (!listEl) return;
-  const matches = getSRDMonsters().filter(m => !q || m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1).slice(0, 40);
+  const found = applyFilter(getSRDMonsters(), getFilter('mon'));
+  const matches = found.slice(0, 40);
   if (!matches.length) {
     listEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px">No monsters found</div>';
     return;
@@ -86,7 +101,7 @@ function _renderMonsterList(q) {
       '</div>';
     const statblock = isExpanded ? _buildStatblockHtml(m) : '';
     return row + statblock;
-  }).join('');
+  }).join('') + moreLine(matches.length, found.length);
 }
 
 export function expandMonster(id) {
@@ -97,8 +112,7 @@ export function expandMonster(id) {
     if (!m) return;
     expandedMonster = m;
   }
-  const q = document.getElementById('mon-search')?.value || '';
-  _renderMonsterList(q);
+  _renderMonsterList();
   renderInstances();
 }
 

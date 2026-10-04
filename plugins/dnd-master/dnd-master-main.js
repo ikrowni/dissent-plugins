@@ -1,9 +1,10 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, setMonstersState,
+import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
+import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
-import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, addMonsterToEncounter, loadPreparedEncounter,
+import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
   toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261011b';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
@@ -207,7 +208,9 @@ function onEvent(ev) {
     setBookMonsters(p.monsters, p.campaignId);
     if (p.campaignId !== dmCampaignId) return;
     setEncounterState({ dmCampaign, dmCampaignId, serverData, srdMonsters: getSRDMonsters(), switchDMTab, userId });
-    if (document.getElementById('enc-monster-list')) filterMonsters(document.getElementById('enc-search')?.value || '');
+    // New book monsters can bring new types: the filter bars are drawn again (never the search boxes).
+    if (document.getElementById('enc-monster-list')) refreshEncounterMonsters();
+    if (document.getElementById('mon-list')) refreshMonsterSearch();
     return;
   }
   if (p.type === 'initiative:update' && p.campaignId === dmCampaignId) {
@@ -301,6 +304,8 @@ window.quickRoll           = quickRoll;
 window.quickRollExpr       = quickRollExpr;
 window.renderMonsterSearch = renderMonsterSearch;
 window.filterMonsterSearch = filterMonsterSearch;
+window.monsterFilterSet = monsterFilterSet;
+window.monsterFilterClear = monsterFilterClear;
 window.toggleSetting       = toggleSetting;
 window.pickPreset          = pickPreset;
 window.setSpatialRange     = setSpatialRange;

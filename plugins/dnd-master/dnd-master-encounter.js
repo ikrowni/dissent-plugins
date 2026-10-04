@@ -10,6 +10,7 @@ import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage
 import { rule } from './lk-table-rules.js';
 import { startInitiative } from './dnd-master-init-order.js';
 import { publishTo } from './lk-bus.js';
+import { applyFilter, filterBarHtml, getFilter, onFilterChange, typesIn, moreLine } from './dnd-master-monster-filter.js';
 
 let encounterCreatures = [];
 let _preparedSpawn = null; // cells for the loaded prepared encounter (content packs)
@@ -95,7 +96,8 @@ export function renderEncounterBuilder() {
         '<div style="height:10px"></div>'
       : '') +
     '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.05em">ENCOUNTER BUILDER</div>' +
-    '<input class="search-input" id="enc-search" placeholder="Search monsters\u2026" oninput="filterMonsters(this.value)">' +
+    '<input class="search-input" id="enc-search" placeholder="Search monsters\u2026" oninput="filterMonsters(this.value)" value="' + esc(getFilter('enc').q) + '">' +
+    '<div id="enc-filters"></div>' +
     '<div id="enc-monster-list" style="height:' + _encMonsterListH + 'px;overflow-y:auto;margin-bottom:0"></div>' +
     '<div id="enc-divider" style="height:10px;cursor:row-resize;display:flex;align-items:center;justify-content:center;margin:2px 0" title="Drag to resize">' +
       '<div style="width:36px;height:3px;background:rgba(255,255,255,.18);border-radius:2px"></div>' +
@@ -109,7 +111,9 @@ export function renderEncounterBuilder() {
       '<button class="btn btn-ghost" onclick="clearEncounter()" style="flex:1">Clear</button>' +
       '<button class="btn btn-gold" onclick="launchEncounter()" style="flex:2" id="btn-launch">&#x2694;&#xFE0F; Launch Encounter</button>' +
     '</div>';
-  filterMonsters('');
+  onFilterChange('enc', () => { _renderEncFilters(); filterMonsters(); });
+  _renderEncFilters();
+  filterMonsters();
   _wireEncDivider();
 }
 
@@ -135,18 +139,35 @@ function _wireEncDivider() {
   });
 }
 
-export function filterMonsters(q) {
-  const list = document.getElementById('enc-monster-list');
-  if (!list) return;
-  const lq = q ? q.toLowerCase() : '';
+// The SRD and book monsters plus the DM's own NPCs and creatures.
+function _encPool() {
   const customAsMonsters = Object.values(_state.dmCampaign?.customActors || {}).map(a => ({
     id: 'custom_' + a.id,
     name: a.name, type: a.type, cr: a.cr, hp: a.hp, ac: a.ac,
     dex: a.dex || 10, hp_dice: String(a.hp),
     _isCustom: true,
   }));
-  const pool    = [..._state.srdMonsters, ...customAsMonsters];
-  const matches = pool.filter(m => !lq || m.name.toLowerCase().indexOf(lq) !== -1).slice(0, 40);
+  return [..._state.srdMonsters, ...customAsMonsters];
+}
+
+function _renderEncFilters() {
+  const el = document.getElementById('enc-filters');
+  if (!el) return;
+  const pool = _encPool();
+  el.innerHTML = filterBarHtml('enc', getFilter('enc'), typesIn(pool),
+    { hasCustom: pool.some(m => m._isCustom), hasBook: pool.some(m => m.source?.title) });
+}
+
+/** The monsters changed (a book's arrived): the filter bar and the list, never the search box. */
+export function refreshEncounterMonsters() { _renderEncFilters(); filterMonsters(); }
+
+/** Draws the list again; `q` is what was typed (omitted: keep the current search). Never redraws the search box. */
+export function filterMonsters(q) {
+  const list = document.getElementById('enc-monster-list');
+  if (!list) return;
+  if (q !== undefined) getFilter('enc').q = q || '';
+  const found   = applyFilter(_encPool(), getFilter('enc'));
+  const matches = found.slice(0, 40);
   if (!matches.length) { list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px">No monsters found</div>'; return; }
   list.innerHTML = matches.map(m =>
     '<div class="monster-row" onclick="addMonsterToEncounter(\'' + m.id + '\')">' +
@@ -159,7 +180,7 @@ export function filterMonsters(q) {
       ) +
       '<span style="font-size:9px;color:var(--muted)">' + m.hp + 'hp</span>' +
     '</div>'
-  ).join('');
+  ).join('') + moreLine(matches.length, found.length);
 }
 
 export function addMonsterToEncounter(monsterId) {
