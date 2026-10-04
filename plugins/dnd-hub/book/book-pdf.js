@@ -86,13 +86,25 @@ async function pageImages(lib, page, pageNo, seen) {
     if (typeof arg === 'string') { if (seen.has(`name:${pageNo}:${arg}`)) continue; seen.add(`name:${pageNo}:${arg}`); }
     const img = typeof arg === 'object' ? arg : await objectOf(page, arg);
     if (!img || !isWorthOffering(img.width, img.height)) continue;
-    const fp = fingerprint(img);
+    const fp = fingerprint(img.data ? img : await bitmapPrint(img));
     if (seen.has(fp)) continue;
     seen.add(fp);
     const blob = await encode(img).catch(() => null);
     if (blob) out.push({ id: `p${pageNo}-${out.length + 1}`, page: pageNo, width: img.width, height: img.height, kind: guessKind(img.width, img.height), blob });
   }
   return out;
+}
+
+/**
+ * A picture the browser decoded itself (img.bitmap, no img.data) is fingerprinted from a 32×32 copy of its pixels.
+ * Fingerprinting it by its size alone made every map of a maps pack (all one size) "the same picture": 1 of 24 kept.
+ */
+async function bitmapPrint(img) {
+  try {
+    const c = new OffscreenCanvas(32, 32), ctx = c.getContext('2d');
+    ctx.drawImage(img.bitmap, 0, 0, 32, 32);
+    return { width: img.width, height: img.height, data: ctx.getImageData(0, 0, 32, 32).data };
+  } catch { return { width: img.width, height: img.height, data: new Uint8Array([Math.random() * 255]) }; } // unknown: never a duplicate
 }
 
 function objectOf(page, name) {

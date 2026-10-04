@@ -28,3 +28,13 @@ describe('book images', () => {
     expect(fingerprint(a)).not.toBe(fingerprint({ ...a, data: new Uint8ClampedArray([9, 2, 3, 4, 5, 6]) }));
   });
 });
+
+describe('fingerprints tell same-size pictures apart by their pixels', () => {
+  it('two maps of one size, different pixels → different prints; the same picture twice → the same', async () => {
+    const { fingerprint } = await import('./book-images.js');
+    const a = { width: 6000, height: 4500, data: new Uint8ClampedArray(4096).map((_, i) => i % 251) };
+    const b = { width: 6000, height: 4500, data: new Uint8ClampedArray(4096).map((_, i) => (i * 7) % 253) };
+    expect(fingerprint(a)).not.toBe(fingerprint(b));
+    expect(fingerprint(a)).toBe(fingerprint({ ...a, data: a.data.slice() }));
+  });
+});

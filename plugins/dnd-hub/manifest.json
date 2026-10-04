@@ -125,7 +125,7 @@
     },
     {
       "url": "book/book-images.js",
-      "sha256": "236fd6d4f8678d4a2354622062ad9d4c2baf467b99544f973a24005620378033"
+      "sha256": "0799ea06e8c3c27e26cf7b400d564f13af29cf6d35d59944e54e75e46a8106dd"
     },
     {
       "url": "book/book-import.js",
@@ -165,7 +165,7 @@
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "ad1351427d0d0bd580f19620db234243913a11b61aad1a5c591656ca916abd8a"
+      "sha256": "4f7a3409e7395aa814135e1c4417bf43da17d56d3a7946f8018e1c39bdeb440f"
     },
     {
       "url": "book/book-reader.js",

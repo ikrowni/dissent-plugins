@@ -40,7 +40,10 @@ export function rgbaFrom(img) {
   return null;
 }
 
-/** A cheap fingerprint, so a picture printed on several pages is offered once. */
+/**
+ * A cheap fingerprint, so a picture printed on several pages is offered once. Needs the pixels (`data`): book-pdf.js
+ * passes a small copy for a picture the browser decoded, since size alone does not tell two maps apart.
+ */
 export function fingerprint(img) {
   const d = img?.data;
   if (!d) return `${img?.width}x${img?.height}`;
