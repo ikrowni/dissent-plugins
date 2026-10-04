@@ -3,7 +3,7 @@
 import { SRD } from './dnd-hub-state.js?v=20261009a';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261013c';
+import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261013l';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';

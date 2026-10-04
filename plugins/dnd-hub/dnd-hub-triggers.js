@@ -4,7 +4,7 @@ import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013l';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';

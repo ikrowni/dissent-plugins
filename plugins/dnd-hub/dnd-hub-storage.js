@@ -263,7 +263,10 @@ async function _writeCampaign(id, base, localNow) {
     return merged;
   }
   let { sec: remoteSec, ok } = await readSecret(id, remotePub || localNow);
-  if (!ok) _secretUnreadable.add(id);
+  // A failed read guards THIS write only. It used to mark the campaign unreadable for the rest of the session, so one
+  // refused read (the node's per-minute limit) silently stopped every later save of the DM's secrets — traps, hidden
+  // monsters, notes, scenes (rules playtest, 2026-10-04). A good read lifts it.
+  if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
   const blind = _secretUnreadable.has(id);
   // Unreadable: treat the stored secrets as this screen's own, so the merge neither deletes nor writes them.
   if (blind) remoteSec = splitCampaign(localNow).sec;

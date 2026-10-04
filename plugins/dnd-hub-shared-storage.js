@@ -183,7 +183,8 @@ async function writeCampaign(id, base, local) {
     return merged;
   }
   let { sec: remoteSec, ok } = await readSecret(id, remotePub || local);
-  if (!ok) _secretUnreadable.add(id);
+  // A failed read guards THIS write only; a good read lifts it (it used to stop the DM's secrets saving all session).
+  if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
   const blind = _secretUnreadable.has(id);
   if (blind) remoteSec = splitCampaign(local).sec;
   const remote = remotePub ? joinCampaign(remotePub, remoteSec) : null;

@@ -165,6 +165,23 @@ describe('DM secrets stay with the DM (lk-secrets.js)', () => {
     expect(store.get('user:dm-camp-c')).toBe(kept);
     expect(pub().maps.m.tokens.b.x).toBe(3);
   });
+
+  it('one failed read does not stop the session saving secrets: the next good read lets a trap change through', async () => {
+    seed(secretCamp());
+    mod.setSecretsUser('dm');
+    await mod.loadHubDm();
+    await flush(); await flush();
+    vi.resetModules(); mod = await import('./dnd-hub-storage.js'); mod.setSecretsUser('dm');
+    failReads.add('user:dm-camp-c');
+    const data = await mod.loadHubDm();
+    data.campaigns.c.maps.m.tokens.b.x = 3;
+    await mod.saveHubDm(data);            // blind: secrets left alone
+    failReads.clear();                    // the next read works
+    data.campaigns.c.maps.m.triggers.push({ id: 'pit', disabled: true });
+    await mod.saveHubDm(data);
+    expect(sec().maps.m.triggers).toEqual([{ id: 't' }, { id: 'pit', disabled: true }]);
+    expect(sec().dmNotes).toBe('twist'); // nothing it did not know about is lost
+  });
 });
 
 describe('secret records are read only for the open campaign', () => {
