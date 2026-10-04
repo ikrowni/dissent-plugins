@@ -6,7 +6,7 @@ import { saveHubDm } from './dnd-hub-storage.js?v=20261012a';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { compileMap, validatePack } from './lk-content-pack.js';
 import { packFileId } from './dnd-hub-pack-map.js';
-import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261012b';
+import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261013a';
 
 const html = parts => (parts || []).map(p => p).join('\n\n');
 

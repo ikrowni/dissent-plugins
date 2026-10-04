@@ -7,25 +7,26 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261012a';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013a';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261012a';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013a';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261012a';
-import { renderFog } from './dnd-hub-fog.js?v=20261012a';
-import { renderWalls } from './dnd-hub-walls.js?v=20261012a';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013a';
+import { renderFog } from './dnd-hub-fog.js?v=20261013a';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013a';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
 import { loadSRD } from './dnd-hub-char.js?v=20261012a';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
 import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261012a';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261012a';
-import { renderLights } from './dnd-hub-lights.js?v=20261012a';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013a';
+import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
+import { renderLights } from './dnd-hub-lights.js?v=20261013a';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261012a';
 import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261012a';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
@@ -33,7 +34,7 @@ import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261012a';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261012a';
+import { setView } from './dnd-hub-canvas.js?v=20261013a';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -156,6 +157,8 @@ export function onEvent(ev) {
   if (payload.clientId === CLIENT_ID && OWN_ECHO_IGNORED.has(payload.type)) return;
   handleMapEvent(payload).catch(e => console.error('[dnd-hub] event handler error:', e));
 }
+
+setSceneApplier(handleMapEvent); // travel pins load a scene on this screen the way a network scene:load does
 
 const OWN_ECHO_IGNORED = new Set(['map:weather', 'map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update']);
 
@@ -660,8 +663,12 @@ export async function handleMapEvent(p) {
       }
       break;
     }
+    case PIN_TRAVEL:
+      await handleTravelRequest(p); // the DM's Hub checks the pin's permission; every other screen ignores it
+      break;
     case 'scene:load': {
       if (p.campaignId !== MAP.campaignId) return;
+      noteSceneLoaded();
       // Reset shop state so fog and audio restore when a scene takes over
       MAP._shopFogHidden = false; stopShopScene();
       MAP._activeShopId = null;

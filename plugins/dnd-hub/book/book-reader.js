@@ -9,8 +9,8 @@ import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm } from '../dnd-hub-storage.js?v=20261012a';
 import { EV } from '../dnd-hub-event-types.js?v=20261011b';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261012a';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261012a';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261013a';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261013a';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 

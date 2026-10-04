@@ -228,3 +228,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .lk-handout-text{margin-top:12px;font-family:var(--lk-title);font-size:14.5px;line-height:1.7;color:#ecdcb4;white-space:pre-wrap}
 .lk-handout-close{display:block;margin:16px auto 0;padding:8px 26px;border-radius:8px;border:1px solid rgba(224,181,82,.45);background:rgba(224,181,82,.12);color:var(--lk-gold);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.lk-handout,.lk-handout-card{animation:none}}
+/* Travel pins: what the DM or a player is told when a travel did not happen (dnd-hub-travel.js). */
+.lk-travel-notice{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:10000;padding:8px 16px;border-radius:8px;background:rgba(20,14,8,.94);border:1px solid rgba(224,181,82,.45);color:#ecdcb4;font:12px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+.lk-handout-action{margin-bottom:-8px;background:rgba(111,184,216,.16);border-color:rgba(111,184,216,.55);color:#bfe3f2}
+.lk-handout-action:disabled{opacity:.6;cursor:default}
