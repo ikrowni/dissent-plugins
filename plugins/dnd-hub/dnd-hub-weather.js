@@ -59,7 +59,7 @@ function draw(dt) {
     if (step(p, kind, dt, W, H)) Object.assign(p, spawn(kind, W, H, Math.random, true));
     const c = `rgba(${k.colour},${p.a.toFixed(3)})`;
     if (k.shape === 'streak') {
-      ctx.strokeStyle = c; ctx.lineWidth = 1;
+      ctx.strokeStyle = c; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * p.size / p.vy, p.y - p.size); ctx.stroke();
     } else if (k.shape === 'cloud') {
       const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);

@@ -389,11 +389,11 @@
     },
     {
       "url": "dnd-hub-weather-model.js",
-      "sha256": "c91fab77e13faab868414bf5caf557f8efc55ce3b8b3788d9c7fec63db60a835"
+      "sha256": "808334c9e49c82ae7a2fad51bbd9cc624bfca52918a741b518a5421bc2115ceb"
     },
     {
       "url": "dnd-hub-weather.js",
-      "sha256": "31f02936f5b081d8e95cdeb1dd7ba1771cf2e335ebd8ee0ff0f8d66000327e1b"
+      "sha256": "241b77d6f2cc29e5be8596657147319940133c9004ecc92bf3bc16ee478dd2dc"
     },
     {
       "url": "dnd-srd/backgrounds.json",
