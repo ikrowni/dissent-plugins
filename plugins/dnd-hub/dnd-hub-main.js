@@ -6,7 +6,7 @@ import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261009a';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261006s';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261009g';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261009r';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';

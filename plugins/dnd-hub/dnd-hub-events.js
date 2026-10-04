@@ -2,6 +2,7 @@
 import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261009a';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
+import { floatHp } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
@@ -450,7 +451,9 @@ export async function handleMapEvent(p) {
         t.id === p.tokenId || `player_${t.userId}` === p.tokenId
       );
       if (tokenObj) {
+        const hpBefore = tokenObj.hp;
         tokenObj.hp = p.hp;
+        floatHp(tokenObj.id, hpBefore, p.hp);
         tokenObj.hpMax = p.hpMax;
         // The DM's Hub keeps the map's copy, so the token's HP survives a reload (audit N3).
         if (MAP.isDM && serverData?.campaigns?.[MAP.campaignId]?.maps && MAP.mapId) {
@@ -789,7 +792,9 @@ export async function handleMapEvent(p) {
       if (p.action === 'trap' && p.damage != null && p.tokenId && MAP.mapData?.tokens && !String(p.tokenId).startsWith('player_')) {
         const tok = MAP.mapData.tokens[p.tokenId];
         if (tok) {
+          const trapBefore = tok.hp;
           tok.hp = Math.max(0, (tok.hp || 0) - p.damage);
+          floatHp(p.tokenId, trapBefore, tok.hp);
           if (MAP.isDM) {
             serverData.campaigns[MAP.campaignId].maps[MAP.mapId] = MAP.mapData;
             saveHubDm( serverData);

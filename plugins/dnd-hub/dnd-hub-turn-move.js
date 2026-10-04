@@ -7,6 +7,7 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261
 import { wouldCrossWall } from './dnd-hub-walls.js?v=20261009a';
 import { activeTokenId } from './dnd-hub-rules.js';
 import { guide } from './lk-guide-ui.js';
+import { turnChanged } from './dnd-hub-fx-combat.js';
 import { cellAt, cellCentre, turnKey, moveMode, pathFeet, speedOf, checkReportedPath } from './dnd-hub-movement.js';
 
 const STORE = id => `lk-turnmove:${id}`;
@@ -71,6 +72,7 @@ export function syncTurn(init, manualTokenId = null) {
   }
   MAP.activeTurnTokenSpeed = active ? speedFor(active) : 30;
   if (active && active === `player_${userId}` && !MAP.isDM) guide('player:turn');
+  turnChanged(active || null);
   renderTrail();
 }
 
