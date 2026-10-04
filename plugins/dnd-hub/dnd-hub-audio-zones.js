@@ -60,6 +60,8 @@ export function renderAudioZones() {
 // ── Persistence + broadcast ───────────────────────────────────────────────────
 
 export async function saveZonesAndBroadcast() {
+  const camp = serverData?.campaigns?.[MAP.campaignId];
+  if (camp?.maps && MAP.mapId && MAP.mapData) camp.maps[MAP.mapId] = MAP.mapData; // the open map, as other tools do
   await saveHubDm( serverData);
   await realtimePublish(EV.AUDIO_ZONE_UPDATE, { clientId: CLIENT_ID,
     campaignId: MAP.campaignId,

@@ -92,6 +92,10 @@ export function renderTriggers() {
 // ── Persistence ────────────────────────────────────────────────────────────────
 
 export async function saveTriggersAndBroadcast() {
+  // The open map into the campaign first, as every other tool does: when the two had come apart (a merge swapped
+  // one of them), a trap's change — a one-shot trap spent — was never written, and came back armed (rules playtest).
+  const camp = serverData?.campaigns?.[MAP.campaignId];
+  if (camp?.maps && MAP.mapId && MAP.mapData) camp.maps[MAP.mapId] = MAP.mapData;
   await saveHubDm( serverData);
   renderTriggers();
 }
