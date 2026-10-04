@@ -162,8 +162,12 @@ function scheduleSummarySync() {
   }, 2000);
 }
 
+let _shopGold = null; // the gold the open shop was last drawn with
 async function saveChar() {
   CHAR.updatedAt = new Date().toISOString();
+  // The open shop says what the hero can afford: when the gold changes (a purchase, the DM's gift, a sheet edit) it
+  // is drawn again. It used to keep "Not enough gold" from when the shop opened (rules playtest, 2026-10-04).
+  if (_activeShopId && (CHAR.gold || 0) !== _shopGold) _renderShopTab(_activeShopItems || []);
   const userData = await storageGetCompanion('dnd-hub', 'characters', 'user') || {};
   userData[CAMPAIGN_ID] = CHAR;
   // Heroes of deleted campaigns filled this value to the 64 KB cap, and every save then failed (413).
@@ -776,6 +780,7 @@ function _renderShopTab(shopItems) {
   const el = document.getElementById('tab-shop');
   if (!el) return;
   const gold = CHAR?.gold || 0;
+  _shopGold = gold;
   const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   const itemCards = shopItems.length === 0
