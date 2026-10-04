@@ -132,16 +132,28 @@
       "sha256": "2f044c0ba2175258edf65f5521c0bab7aef5577aee3c69c129c7ee0cc995a89e"
     },
     {
+      "url": "book/book-merge.js",
+      "sha256": "2400c15bb570406043ccbc805e47605e5566094fb5ee453cbb917c8387e35a48"
+    },
+    {
       "url": "book/book-monsters.js",
-      "sha256": "906ab14923c45fba755e434bf0e7618f2d4a65e4b60747392bd352ce866b4be8"
+      "sha256": "c32613bbbe7ad214e6bc71867a84d8ff4287c119b0c1650c2b7d11bf26eaa82c"
+    },
+    {
+      "url": "book/book-ocr-lines.js",
+      "sha256": "208bdad6431f1c569a4bab19b738c600fe47c5f20ba143c94568094a9522844f"
+    },
+    {
+      "url": "book/book-ocr.js",
+      "sha256": "4ee9904900713d0be87ce69b8fc316c2c9bdf4414701faf0c444f8707ddc3fd2"
     },
     {
       "url": "book/book-parse.js",
-      "sha256": "9f70b5747335ea4af041f1ae4fb92b50e5a005e0f0215319595e11e0bafa11f2"
+      "sha256": "c48ffab6438ae7de98d0698a2a42b89b95b5f67c3d24741390d7c771e6da3883"
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "af8bbe9474d9295d93cedea4dac11964ce16456ed7041cde2b9e24b1ec959c46"
+      "sha256": "be6aa4cb0a5ac9958aef14fd6775c3e1cc3816e52e5c11cb279b5b5c7c303f01"
     },
     {
       "url": "book/book-reader.js",
@@ -149,11 +161,11 @@
     },
     {
       "url": "book/book-scan.js",
-      "sha256": "0fb20fdd11a3967ca7ed43c9cc2bfb61cfe1d8c4f2c7de86b4526bed809a4cf1"
+      "sha256": "251abd2dfde45222547187efc874094760705aa65e48acecfb5b28061c87fcc8"
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "a9dc8fd3f84a7a70281916d90c72aca037930b0f6d4425e0d4ce189109bd3eed"
+      "sha256": "0db02c34ed7d8c448cd4e3b13b68532987d653743a11dc1663c33326c1481a69"
     },
     {
       "url": "book/book-spells-in-play.js",
@@ -524,8 +536,52 @@
       "sha256": "52fadd5b81b6abd1eb665bab0c3749a8ad6a293fcb6ee9d9e0309f29d4f82619"
     },
     {
+      "url": "vendor/pdfjs/wasm/LICENSE_JBIG2",
+      "sha256": "9e66b7f1b934a28b37f3bc4dac97915de1674271e79a0a88182a18ed9731b4d1"
+    },
+    {
+      "url": "vendor/pdfjs/wasm/LICENSE_OPENJPEG",
+      "sha256": "a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6"
+    },
+    {
+      "url": "vendor/pdfjs/wasm/LICENSE_PDFJS_JBIG2",
+      "sha256": "aad3cce09842e00e9e11ad5e8fef8cc02fbc3a3768fe2f007443b9cee37aaee5"
+    },
+    {
+      "url": "vendor/pdfjs/wasm/LICENSE_PDFJS_OPENJPEG",
+      "sha256": "717fc62da03292dbb4dd0c8280bd4ce7bb8550dcf31d772bc93455fb50313425"
+    },
+    {
+      "url": "vendor/pdfjs/wasm/jbig2.wasm",
+      "sha256": "e6bee67724a7b5436fe8162638e3708cfc8d52b6342db69a49715e30ff27cfdc"
+    },
+    {
+      "url": "vendor/pdfjs/wasm/openjpeg.wasm",
+      "sha256": "004a0e62db930ba9ff2a22212f4554d0bb57a0635a8287caf70f98117cee14ba"
+    },
+    {
       "url": "vendor/pixi.min.js",
       "sha256": "83b2d7edf27bb77460f5f5f5e25cd73c91b77a53f44c80ac63096d6c0b5cfda7"
+    },
+    {
+      "url": "vendor/tesseract/LICENSE",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+    },
+    {
+      "url": "vendor/tesseract/eng.traineddata.gz.1",
+      "sha256": "cfda9a1db0a92b433867455117af05230fc866e1a8382f9abe08bc156f719819"
+    },
+    {
+      "url": "vendor/tesseract/eng.traineddata.gz.2",
+      "sha256": "d92e25165eea7d4249208fe5cefa1e95a588b594966480404902e1ca510883f8"
+    },
+    {
+      "url": "vendor/tesseract/tesseract-core-simd-lstm.js",
+      "sha256": "be3504705d7111d1d1f3f7f9dff326c26d334031ede36e31c4d3cf883027e982"
+    },
+    {
+      "url": "vendor/tesseract/tesseract-core-simd-lstm.wasm.gz",
+      "sha256": "b26b5031aa74bf2c9d53b4d370f1435b043baa6957c2d57a746a336ca18048f1"
     },
     {
       "url": "vendor/three.module.min.js",

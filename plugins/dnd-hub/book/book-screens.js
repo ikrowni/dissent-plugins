@@ -9,6 +9,8 @@ import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261012a';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readPdf, ScanError } from './book-pdf.js';
 import { parseBook } from './book-parse.js';
+import { isScanned } from './book-scan.js';
+import { readScannedPages } from './book-ocr.js';
 import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook, loadBook, saveBookImage, loadBookImage } from './book-library.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story'], ['images', 'Maps & art']];
@@ -81,10 +83,27 @@ export async function bookPickFile(file) {
   render();
   try {
     const buf = await file.arrayBuffer();
-    const doc = await readPdf(buf, { signal: ctrl.signal, onProgress: (p, n) => { S.page = p; S.pages = n; S.phase = ''; updateProgress(); } });
+    // A copy for the first read: pdf.js may take over the bytes it is given, and a scan is opened again for OCR.
+    const doc = await readPdf(buf.slice(0), { signal: ctrl.signal, onProgress: (p, n) => { S.page = p; S.pages = n; S.phase = ''; updateProgress(); } });
+    // A scan (book-scan.js): its stat-block pages are read again with our own OCR (book-ocr.js), a few seconds a
+    // page. If that cannot run, the scan's own text is used, and the review says so.
+    let lines = doc.lines, ocr = null;
+    if (isScanned(lines)) {
+      try {
+        S.phase = 'This book is a scan: getting our reader ready…'; S.page = 0; updateProgress();
+        const r = await readScannedPages(buf, lines, { signal: ctrl.signal, onProgress: (n, m) => {
+          S.page = n; S.pages = m; S.phase = `This book is a scan: reading its stat-block pages again, ${n} of ${m}…`; updateProgress();
+        } });
+        lines = r.lines; ocr = { pages: r.pages };
+      } catch (e) {
+        if (e?.name === 'AbortError') throw e;
+        ocr = { error: String(e?.message || e) };
+      }
+    }
     S.phase = 'Finding monsters, spells, items and story…'; updateProgress();
     await new Promise(r => setTimeout(r, 30));
-    const parsed = parseBook(doc.lines);
+    const parsed = parseBook(lines, { scanLines: ocr?.pages ? doc.lines : null });
+    parsed.ocr = ocr;
     // Pictures: decorations were left behind by book-pdf.js, so every one offered starts ticked.
     parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, url: URL.createObjectURL(img.blob) }));
     const keep = {};
@@ -193,8 +212,10 @@ function reviewView() {
     <p class="bk-help">Everything below was found in the book. The ones we're sure of are already ticked. Click one to
       check it against what we read. Untick anything you don't want; ⚠ marks the ones to look at.</p>
     ${S.parsed.scanned ? `<p class="bk-help bk-scan">⚠ <b>This book is a scanned copy.</b> Its pages are pictures, and the words were
-      read from them by a machine, with mistakes. Nothing is ticked: check each find against the page, fix a name or a
-      number under <i>Look</i>, and leave out anything that came out garbled.</p>` : ''}
+      read from them by a machine, with mistakes.${S.parsed.ocr?.pages ? ` We read its ${S.parsed.ocr.pages} stat-block pages again with our own reader.`
+        : S.parsed.ocr?.error ? ` Our own reader could not run (${esc(S.parsed.ocr.error)}), so this is the scan's own text.` : ''}
+      Nothing is ticked: check each find against the page, fix a name or a number under <i>Look</i>, and leave out
+      anything that came out garbled.</p>` : ''}
     <div class="bk-tabs" role="tablist">${KINDS.map(([kk, label]) => `<button role="tab" aria-selected="${kk === k}" onclick="bookTab('${kk}')"
       ${S.parsed[kk].length ? '' : 'disabled'}>${label} <span>${S.keep[kk].size}/${S.parsed[kk].length}</span></button>`).join('')}</div>
     <div class="bk-tools">

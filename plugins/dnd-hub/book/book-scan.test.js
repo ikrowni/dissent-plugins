@@ -47,6 +47,7 @@ describe('scanned books', () => {
     expect(scanName('ELDA D"AVENIR | Be ~ ACTIONS')).toBe('Elda D’Avenir');
     expect(scanName("STRAHD'S GOALS")).toBe("Strahd's Goals");
     expect(scanName('is wa')).toBeNull();
+    expect(scanName('APPENDIX D')).toBeNull();
     expect(scanName('Armor Class 15')).toBeNull();
   });
   it('reads a size line with junk around it', () => {

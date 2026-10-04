@@ -8,7 +8,7 @@ import { pageLines } from './book-layout.js';
 import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint } from './book-images.js';
 
 let _pdfjs = null;
-async function pdfjs() {
+export async function pdfjs() {
   if (_pdfjs) return _pdfjs;
   const base = new URL('./vendor/pdfjs/', document.baseURI).href;
   await import(base + 'pdf.worker.min.mjs');

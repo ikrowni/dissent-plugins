@@ -40,7 +40,8 @@ const SMALL = new Set(['of', 'the', 'a', 'an', 'and', 'to', 'in', 'on', 'with', 
 export function scanName(text) {
   // "|" is the OCR's mark of two columns run together: the name is the part before it.
   const t = clean(String(text).split('|')[0]).replace(/(\w)"(\w)/g, '$1’$2');
-  if (!t || /\d/.test(t) || SIZE_SCAN.test(t) || /^(Armor Class|Hit Points|Speed)\b/i.test(t)) return null;
+  // Not a stat line, and not a chapter or the page's running footer ("APPENDIX D | MONSTERS AND NPCS").
+  if (!t || /\d/.test(t) || SIZE_SCAN.test(t) || /^(Armor Class|Hit Points|Speed|Appendix|Chapter)\b/i.test(t)) return null;
   const words = t.split(/\s+/).map(w => w.replace(/[^A-Za-z'’,-]/g, '').replace(/^,+/, '')).filter(Boolean);
   while (words.length > 1 && /^[a-z'’,-]+$/.test(words[words.length - 1])) words.pop();
   words[words.length - 1] = words[words.length - 1].replace(/,+$/, '');

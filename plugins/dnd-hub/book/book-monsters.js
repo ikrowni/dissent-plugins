@@ -135,7 +135,7 @@ function readBlock(lines, start, last, scan = null) {
   const fields = {};
   const body = bodyFont(lines.slice(first, last + 1));
   const entryAt = k => (scan ? textEntry(lines[k].text) : entryStart(lines[k], body));
-  let i = first, label = null, section = 'special_abilities', entry = null, intro = false, entryX = null, scored = false;
+  let i = first, label = null, section = 'special_abilities', entry = null, intro = false, entryX = null, scored = false, actionsX = null;
   const close = () => { if (entry) m[section].push(entry); entry = null; };
 
   for (; i <= last; i++) {
@@ -170,7 +170,11 @@ function readBlock(lines, start, last, scan = null) {
     if (label && !entryAt(i) && label !== 'Challenge') { fields[label] = joinText(fields[label], t); continue; }
     label = null;
     const e = entryAt(i);
-    if (e) { close(); intro = false; entry = { name: e.name, desc: e.rest }; entryX = lines[i].x; continue; }
+    // A scan, after the actions: an entry in another column, or the "Ideal." of a roleplaying sidebar, is not this
+    // creature's (NPC pages put a "<Name>'s Traits" box and more story right after the block).
+    if (e && scan && section === 'actions' && m.actions.length + (entry ? 1 : 0) > 0
+      && (/^(Ideal|Bond|Flaw)$/.test(e.name) || Math.abs((lines[i].x ?? entryX) - (actionsX ?? entryX)) > 60)) break;
+    if (e) { close(); intro = false; entry = { name: e.name, desc: e.rest }; entryX = lines[i].x; if (section === 'actions') actionsX ??= entryX; continue; }
     // In a scan, a line in another column is not this entry's text (a story sidebar beside the block).
     if (entry && scan && Math.abs((lines[i].x ?? entryX) - entryX) > 60) { close(); continue; }
     if (entry) entry.desc = joinText(entry.desc, t);
@@ -198,16 +202,24 @@ function readBlock(lines, start, last, scan = null) {
   if (ch) { m.cr = ch[1].includes('/') ? num(ch[1].split('/')[0]) / num(ch[1].split('/')[1]) : num(ch[1]); m.xp = num(ch[2]); }
 
   if (scan && m.con != null && !scoresFitHp(m.con, m.hp_dice)) for (const a of ABIL) m[a] = null;
-  if (scan) problems.push('read from a scan');
-  if (scan && !name) problems.push('name not read');
-  if (scan && name && scan.far) problems.push('check the name');
-  if (scan && !m.size) problems.push('size not read');
+  const out = { ...m, lines: [start, last], page: lines[start].page };
+  if (scan) { out.scan = true; out.unnamed = !name; out.farName = !!(name && scan.far); }
+  return withProblems(out);
+}
+
+/** A monster's `problems` and `confidence`, from its fields (again after two readings of a scan are merged). */
+export function withProblems(m) {
+  const problems = [];
+  if (m.scan) problems.push('read from a scan');
+  if (m.scan && m.unnamed) problems.push('name not read');
+  if (m.scan && m.farName) problems.push('check the name');
+  if (m.scan && !m.size) problems.push('size not read');
   if (m.ac == null) problems.push('no armour class');
   if (m.hp == null) problems.push('no hit points');
   if (ABIL.some(a => m[a] == null)) problems.push('ability scores not read');
   if (m.cr == null) problems.push('no challenge rating');
   if (!m.actions.length) problems.push('no actions');
-  return { ...m, confidence: problems.length ? 'unsure' : 'sure', problems, lines: [start, last] };
+  return { ...m, confidence: problems.length ? 'unsure' : 'sure', problems };
 }
 
 function speedOf(s) {
