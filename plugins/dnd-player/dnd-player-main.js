@@ -7,7 +7,7 @@ import { setCampaignGetter, setSheetState, setInventoryImageUrls, renderAll, ren
   rollAbilityCheck, rollSkillCheck, debounceSaveNotes,
   toggleFeatureExpand, saveFeatureDesc,
   computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem } from './dnd-player-sheet.js';
-import { setSpellState, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
+import { setSpellState, setBookParts, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
          castSpell, setConcentration, clearConcentration } from './dnd-player-spells.js';
 import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData, setNeedsInitiativeRoll } from './dnd-player-combat.js';
 import { rule } from './lk-table-rules.js';
@@ -17,6 +17,7 @@ import { setResourceState, renderResources, toggleResourcePip,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds, setSecretsUser } from './dnd-hub-shared-storage.js';
 import { sealedHtml } from './lk-sealed.js';
+import { loadPlayerParts } from './lk-book.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod } from './lk-rules5e.js';
@@ -646,6 +647,8 @@ async function onInit(data) {
     return;
   }
   _lastCampaignId = CAMPAIGN_ID;
+  // The campaign's books add spells (their player part; the DM's monsters and story never come here).
+  loadPlayerParts(SERVER_DATA?.campaigns?.[CAMPAIGN_ID], request).then(parts => { setBookParts(parts); if (parts.length) loadSRDSpells(); });
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 

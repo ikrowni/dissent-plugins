@@ -91,6 +91,11 @@ const VENDORED = [
     source: "lk-sealed.js",
     targets: ["dnd-master/lk-sealed.js", "dnd-player/lk-sealed.js"],
   },
+  // Books (imported PDFs): the book format, the player part, merging into the rules lists.
+  {
+    source: "lk-book.js",
+    targets: ["dnd-hub/lk-book.js", "dnd-master/lk-book.js", "dnd-player/lk-book.js"],
+  },
   // Uploads — one helper that shows the node's "where to get storage" message.
   {
     source: "lk-upload.js",

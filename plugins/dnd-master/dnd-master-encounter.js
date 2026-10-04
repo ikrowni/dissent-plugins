@@ -1,7 +1,7 @@
 // dnd-master-encounter.js — encounter builder: monster list, roster, XP budget, launch
 import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js?v=20261009a';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
 import { adjustedEncounterXp } from './lk-rules5e.js';
@@ -154,6 +154,7 @@ export function filterMonsters(q) {
       '<span style="font-size:11px;font-weight:600;flex:1">' + esc(m.name) + '</span>' +
       (m._isCustom
         ? '<span style="font-size:9px;color:var(--gold)">custom</span>'
+        : m.source?.title ? '<span style="font-size:9px;color:var(--gold)" title="' + esc(m.source.title) + '">book</span>'
         : '<span style="font-size:9px;color:var(--muted)">' + esc(m.type) + '</span>'
       ) +
       '<span style="font-size:9px;color:var(--muted)">' + m.hp + 'hp</span>' +

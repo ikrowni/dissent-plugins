@@ -1,43 +1,45 @@
 // dnd-hub-main.js — entry point, wiring only. Zero logic.
 import { levelupPick, levelupRoll, levelupRollDie, levelupAbility, levelupBack, levelupNext, levelupContinue } from './dnd-hub-levelup.js';
+import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete } from './book/book-screens.js';
+import { toggleBookPanel, bookPanelTab, bookPanelBook, bookPanelSection, bookPanelFilter, bookPanelOpen, bookShareSection, bookAddMonster, bookAddItem, bookUseHere } from './book/book-reader.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
-import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261007v';
+import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261009a';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261006s';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261007v';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261009a';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261007v';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261008b';
-import { setZoom } from './dnd-hub-canvas.js?v=20261007v';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261009a';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261009a';
+import { setZoom } from './dnd-hub-canvas.js?v=20261009a';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261008b';
-import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261007v';
+} from './dnd-hub-screens.js?v=20261009a';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261009a';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20261007v';
-import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261007v';
-import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261007v';
-import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261007v';
+} from './dnd-hub-map-bg.js?v=20261009a';
+import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261009a';
+import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261009a';
+import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261009a';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
   selectBackground, renderCCEquipment, toggleEquipItem, filterEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261007v';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261007v';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261007v';
-import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261007v';
-import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261007v';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261007v';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261007v';
+} from './dnd-hub-char-steps.js?v=20261009a';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261009a';
+import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261009a';
+import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261009a';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261009a';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
-         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261007v';
+         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261009a';
 
 // Render static lobby screen HTML (all other screens render on navigate)
 renderLobbyScreen();
@@ -92,6 +94,8 @@ window.levelupPick = levelupPick; window.levelupRoll = levelupRoll; window.level
 window.levelupAbility = levelupAbility; window.levelupBack = levelupBack; window.levelupNext = levelupNext; window.levelupContinue = levelupContinue;
 window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
 window.__lkKits = STARTING_KITS;
+// Books (book/book-screens.js, book/book-reader.js).
+window.showLibrary = showLibrary; window.bookPickFile = bookPickFile; window.bookCancel = bookCancel; window.bookTab = bookTab; window.bookFilter = bookFilter; window.bookKeep = bookKeep; window.bookKeepAll = bookKeepAll; window.bookPeek = bookPeek; window.bookTitle = bookTitle; window.bookPlace = bookPlace; window.bookSave = bookSave; window.bookAttach = bookAttach; window.bookDelete = bookDelete; window.toggleBookPanel = toggleBookPanel; window.bookPanelTab = bookPanelTab; window.bookPanelBook = bookPanelBook; window.bookPanelSection = bookPanelSection; window.bookPanelFilter = bookPanelFilter; window.bookPanelOpen = bookPanelOpen; window.bookShareSection = bookShareSection; window.bookAddMonster = bookAddMonster; window.bookAddItem = bookAddItem; window.bookUseHere = bookUseHere;
 // The Hero Forge's guided steps (dnd-hub-forge-shape*.js).
 window.shapePick = shapePick; window.shapeScore = shapeScore; window.shapeScores = shapeScores; window.shapeHalfElf = shapeHalfElf; window.shapeSkill = shapeSkill; window.shapeExtraSkill = shapeExtraSkill; window.shapeCantrip = shapeCantrip; window.shapeSpell = shapeSpell; window.shapeText = shapeText; window.shapeNewName = shapeNewName; window.shapeNext = shapeNext; window.shapeBack = shapeBack; window.shapeFinish = shapeFinish; window.forgeShowQuick = forgeShowQuick;
 window.startSampleAdventure = startSampleAdventure;

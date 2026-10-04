@@ -1,6 +1,7 @@
 // dnd-master-monsters.js — SRD monster viewer, stat blocks, combat instances
+import { mergeContent } from './lk-book.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js';
+import { EV } from './dnd-hub-event-types.js?v=20261009a';
 
 let SRD_MONSTERS = [];
 let expandedMonster = null;
@@ -20,7 +21,12 @@ export async function loadSRDMonsters() {
   } catch (err) { SRD_MONSTERS = []; }
 }
 
-export function getSRDMonsters() { return SRD_MONSTERS; }
+// Monsters from the books the open campaign uses (sent by the DM's Hub, which holds the library: a plugin's personal
+// files are reachable by that plugin only). A book monster with an SRD id replaces it.
+let BOOK_MONSTERS = [], BOOK_CAMPAIGN = null;
+export function setBookMonsters(list, campaignId) { BOOK_MONSTERS = Array.isArray(list) ? list : []; BOOK_CAMPAIGN = campaignId || null; }
+export const bookMonstersCampaign = () => BOOK_CAMPAIGN;
+export function getSRDMonsters() { return mergeContent(SRD_MONSTERS, BOOK_MONSTERS.length ? [{ monsters: BOOK_MONSTERS }] : [], 'monsters'); }
 
 // XP tables — exported so encounter.js can import them
 export const XP_THRESHOLDS = [null,[25,50,75,100],[50,100,150,200],[75,150,225,400],[125,250,375,500],[250,500,750,1100],[300,600,900,1400],[350,750,1100,1700],[450,900,1400,2100],[550,1100,1600,2400],[600,1200,1900,2800],[800,1600,2400,3600],[1000,2000,3000,4500],[1100,2200,3300,5100],[1250,2500,3800,5700],[1400,2800,4300,6400],[1600,3200,4800,7200],[2000,3900,5900,8800],[2100,4200,6300,9500],[2400,4900,7300,10900],[2800,5700,8500,12700]];
@@ -53,7 +59,7 @@ export function renderMonsterSearch(q) {
 function _renderMonsterList(q) {
   const listEl = document.getElementById('mon-list');
   if (!listEl) return;
-  const matches = SRD_MONSTERS.filter(m => !q || m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1).slice(0, 40);
+  const matches = getSRDMonsters().filter(m => !q || m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1).slice(0, 40);
   if (!matches.length) {
     listEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px">No monsters found</div>';
     return;
@@ -76,7 +82,7 @@ export function expandMonster(id) {
   if (expandedMonster?.id === id) {
     expandedMonster = null;
   } else {
-    const m = SRD_MONSTERS.find(x => x.id === id);
+    const m = getSRDMonsters().find(x => x.id === id);
     if (!m) return;
     expandedMonster = m;
   }
@@ -167,7 +173,7 @@ function _buildStatblockHtml(m) {
 }
 
 export function addInstance(monsterId) {
-  const m = SRD_MONSTERS.find(x => x.id === monsterId);
+  const m = getSRDMonsters().find(x => x.id === monsterId);
   if (!m) return;
   const existing = Object.values(monsterInstances).filter(i => i.monster.id === monsterId);
   const parts = parseHPDice(m.hp_dice || String(m.hp));

@@ -1,16 +1,17 @@
 // dnd-hub-levelup.js — the level-up scene (spec 2026-10-03 growing your hero §1), in the map area, built from the
 // Hero Forge's pieces. Nothing is saved until the last step; several waiting levels run one after another.
-import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261007v';
+import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261009a';
 import { loadHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { storageGetUser } from '../plugin-sdk.js';
 import { rule } from './lk-table-rules.js';
 import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './lk-levelling.js';
 import { raceView, classView } from './lk-hero-data.js';
+import { useCampaignSpells } from './book/book-spells-in-play.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
 import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
-import { saveHero } from './dnd-hub-char.js?v=20261007v';
+import { saveHero } from './dnd-hub-char.js?v=20261009a';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
 
 let S = null; // { campaignId, hero, plan, i, choices, error, onDone, fx, back }
@@ -32,6 +33,7 @@ export async function openLevelUp(campaignId, onDone = null) {
   if (fresh && camp) for (const k of ['library', 'levels', 'xp', 'settings', 'startingLevel']) if (k in fresh) camp[k] = fresh[k];
   const hero = (await storageGetUser('characters') || {})[campaignId];
   if (!hero || !camp) return false;
+  await useCampaignSpells(camp).catch(() => {}); // the campaign's books add spells to the choices
   if ((hero.level || 1) >= allowedLevel(camp, userId, hero, rule(camp.settings, 'levelByXp'))) { onDone?.(); return false; }
   const plan = levelPlan(hero, levelCtx(campaignId));
   if (!plan) { onDone?.(); return false; }

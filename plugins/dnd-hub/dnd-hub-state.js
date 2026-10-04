@@ -136,7 +136,7 @@ export function fmtMod(mod) { return mod >= 0 ? `+${mod}` : `${mod}`; }
 // Screen changes cross-fade (owner, 2026-10-03: "cool transitions when moving from screen to screen"): the old screen
 // drifts back and dims while the new one rises out of a soft blur, and a band of lantern light sweeps across. The old
 // screen stays visible (not clickable) for the length of its exit, then is hidden. Reduced motion: an instant swap.
-const SCREENS = ['loading', 'lobby', 'dm-portal', 'join', 'cam-wizard', 'char-creator', 'campaign'];
+const SCREENS = ['loading', 'lobby', 'dm-portal', 'join', 'cam-wizard', 'char-creator', 'campaign', 'library'];
 const _leaving = new Map(); // element → timer
 export function showScreen(name) {
   const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;

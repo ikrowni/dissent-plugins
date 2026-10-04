@@ -35,7 +35,7 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "aab9044ed86e2dffd1f5aac4063f1c358bbe4ff75205326ff36e47704188723f"
+      "sha256": "ffe0ae0858490bdf67750e35448c6e951971eb4bc4b1aff1740d38a3ca667bd5"
     },
     {
       "url": "dnd-hub-shared-storage.js",
@@ -47,7 +47,7 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "6b021d0185cf5acf270a8b46c572fe355db73e738e3b5806da4d1fbcc9f40acb"
+      "sha256": "1a0a474125fc0b7094efff4777938f8a41c6bc1e0d08655c498f626b54d95f4d"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -59,19 +59,19 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "a08477a50302524cfe613bd0b7b3cc8acd9f219ba708ce109aefa496fcfc3da4"
+      "sha256": "3e4b3f875ebb2a27b6e840dc3083f3cc649b320e1717b4621f18f265f81af940"
     },
     {
       "url": "dnd-master-items.js",
-      "sha256": "af23602b64a90ee0782aaca76bbb512cb66ac7f1a10b0a97558718554c6dc5f4"
+      "sha256": "02ee6a29c9640b8db07f179e5c6d864db10df45cc6cb4c0628a464a6c933c09f"
     },
     {
       "url": "dnd-master-journals.js",
-      "sha256": "04dea93173143f222c4f4cf5c6999e264967d0bdadab2eaf13334a23e64ddca3"
+      "sha256": "324e2702eb11cba2bd2e4cbfb17f4ce943216ef9106ab10675de952ccb75829b"
     },
     {
       "url": "dnd-master-levels.js",
-      "sha256": "3d0d098d9c0a6960f2caf80fba4226ced80e1bd646af84be62ad8e33970a69e0"
+      "sha256": "38efe557bc87663255c35357b276f239a8d0c543bbddbc4216a658caa28dd968"
     },
     {
       "url": "dnd-master-logs.js",
@@ -79,15 +79,15 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "fa6803ddfbd83a5b8b2a1628ead05aa3f52c8a35c252181b75dddc6bbf7b25df"
+      "sha256": "ad3554765f79776c19f4ca3f0c1570cf3d00723b9c5d279dab88ea372d35c27d"
     },
     {
       "url": "dnd-master-maps.js",
-      "sha256": "20b8939f6ecd7ad48aa84b32497f1c9b01477a0c30f78c6c621e9b6edb04a437"
+      "sha256": "f58885a1426cdc77299bd43452e3184f44162972ca3b21f4debae03d945400fe"
     },
     {
       "url": "dnd-master-monsters.js",
-      "sha256": "41e42e34e58e29c16d2408ae5c7f2af786886f052a326c4ee6725a471318b71c"
+      "sha256": "bc79762bb0815337a490a72aeafc95cb51af5b1a72fbac59450741dff0c68c14"
     },
     {
       "url": "dnd-master-notes.js",
@@ -107,7 +107,7 @@
     },
     {
       "url": "dnd-master-scenes.js",
-      "sha256": "81bf7e7b869b8af5631d5d60c2d39beea97bbd95f24b083c4edbe1337f7c48af"
+      "sha256": "e5fa889f7dc0c2d55479edd02a00d44c7785beb374075f3ed1155a855f388eb7"
     },
     {
       "url": "dnd-master-sections.js",
@@ -119,19 +119,19 @@
     },
     {
       "url": "dnd-master-session.js",
-      "sha256": "d9f1e8cd0ce9d6db049d393091f0dbfb939830bc177a709a1fff9c9b4a101719"
+      "sha256": "8ade9ce7e3eaa3811b6c3262cb7a95acea48885810684427fa429aceb968623a"
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "017abaee979ccd75f33f2b53a84e95fa9e6705cd84ddbc4296bdd7971ca4e741"
+      "sha256": "fbb55cb51dea26b143436dddb0bcb036e4aa102f2d330549f136ebfa241dfaaa"
     },
     {
       "url": "dnd-master-shops.js",
-      "sha256": "62a524ceb11d2187f9465b7f6d06b7e451537b59a25460e76c782ecdb313b371"
+      "sha256": "8dd138aeb9cf62b660fdec926ce733e948420ca61c171082a147c167013421d5"
     },
     {
       "url": "dnd-master-sounds.js",
-      "sha256": "443ce571aeba90ea1d384c4ff8ac285d332d0b85b77af044495f720a99c4093f"
+      "sha256": "c0df0bbd482c5a8bd4d49cf0ddea8cc1357cb1cfd2bac6e56391636eb190d41b"
     },
     {
       "url": "dnd-master-styles.css",
@@ -160,6 +160,10 @@
     {
       "url": "lanternkeep-theme.css",
       "sha256": "b6a241f84961daf8bf59256885b3abe5c1b90881f9c2f3aa004b1337f210ebc9"
+    },
+    {
+      "url": "lk-book.js",
+      "sha256": "e8a79d68302211c56059f4af2b5687c11a9554ac80156409716fb7e1743509f6"
     },
     {
       "url": "lk-bus.js",
@@ -191,7 +195,7 @@
     },
     {
       "url": "lk-secrets.js",
-      "sha256": "7479cdb5e098fb1126611c1c04021aa7d28b9bf151f26ec6dda8b1dd490e7d40"
+      "sha256": "192feb6691500c215aa7dad3bd2a7f837628d65f0aeab29a40446ed0b35cad03"
     },
     {
       "url": "lk-table-rules.js",

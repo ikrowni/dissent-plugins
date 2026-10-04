@@ -1,0 +1,240 @@
+// book-screens.js — Your library, Import a book, and its Review (plan 2026-10-04 book import, stage C).
+// Drawn in #screen-library. Owner, 2026-10-04: "The import campaign feature needs to be finished up and easy to work
+// with": one drop zone, a progress bar with Cancel, then a review where the sure finds are already ticked and one
+// click saves; the unsure ones say why.
+import { esc } from '../../plugin-sdk.js';
+import { icon } from '../lk-icons.js';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261009a';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261006s';
+import { makeBook } from '../lk-book.js';
+import { readPdf, ScanError } from './book-pdf.js';
+import { parseBook } from './book-parse.js';
+import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook } from './book-library.js';
+
+const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story']];
+let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
+const root = () => document.getElementById('screen-library');
+const myCampaigns = () => Object.values(serverData?.campaigns || {}).filter(c => c.dmUserId === userId);
+const fmtSize = n => n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`;
+const newId = () => `bk${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+export async function showLibrary() {
+  S = { mode: 'list', books: null, personalError: null, notice: '' };
+  window.showScreen('library');
+  render();
+  await refreshList();
+}
+
+async function refreshList() {
+  try { Object.assign(S, await listBooks()); } catch (e) { S.books = []; S.notice = `Your library could not be read (${e?.message || e}).`; }
+  if (S.mode === 'list') render();
+}
+
+function render() {
+  const el = root();
+  if (!el || !S) return;
+  el.innerHTML = `<div class="bk">${S.mode === 'list' ? listView() : S.mode === 'reading' ? readingView()
+    : S.mode === 'review' ? reviewView() : savedView()}</div>`;
+}
+
+// ── The library ───────────────────────────────────────────────────────────────────────────────────────────
+function listView() {
+  const used = id => campaignsUsing(serverData?.campaigns, id).map(c => c.name);
+  return `<div class="screen-header">
+      <button class="screen-back" onclick="showDMPortal()" aria-label="Back">${icon('arrow-left')}</button>
+      <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Your library</div></div>
+    <label class="bk-drop" id="bk-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+      ondrop="event.preventDefault();this.classList.remove('over');bookPickFile(event.dataTransfer.files[0])">
+      <input type="file" accept="application/pdf,.pdf" onchange="bookPickFile(this.files[0])" hidden>
+      <div class="bk-drop-icon">${icon('book-open', { size: 34 })}</div>
+      <b>Import a book</b>
+      <span>Drop an adventure or rules PDF here, or click to choose one. Its monsters, spells, magic items and story
+        become usable at your table.</span>
+      <small>Only import books you own. The PDF stays on your computer; only what you keep is saved, and only you can read it.</small>
+    </label>
+    ${S.notice ? `<div class="bk-notice">${esc(S.notice)}</div>` : ''}
+    <div class="section-label">Your books</div>
+    ${S.books == null ? '<div class="bk-empty">Opening your library…</div>'
+      : !S.books.length ? '<div class="bk-empty">No books yet. Import one above.</div>'
+      : `<div class="bk-list">${S.books.map(b => `<div class="bk-book">
+          <div class="bk-spine" style="--h:${hue(b.title)}"></div>
+          <div class="bk-book-info"><b>${esc(b.title)}</b>
+            <span>${b.place === 'personal' ? 'Personal: on every server' : 'This server only'} · ${fmtSize(b.size)}
+              ${used(b.id).length ? ` · used by ${used(b.id).map(esc).join(', ')}` : ''}</span></div>
+          <div class="bk-book-actions">
+            ${myCampaigns().length ? `<select onchange="if(this.value)bookAttach('${esc(b.fileId)}',this.value)" aria-label="Use in a campaign">
+              <option value="">Use in a campaign…</option>${myCampaigns().filter(c => !used(b.id).includes(c.name))
+                .map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="bookDelete('${esc(b.fileId)}','${esc(b.id)}')" aria-label="Delete ${esc(b.title)}">${icon('trash-2', { size: 14 })}</button>
+          </div></div>`).join('')}</div>`}
+    ${S.personalError ? `<div class="bk-notice">Your personal library is not available on this server (${esc(S.personalError)}). Books saved to this server still work.</div>` : ''}`;
+}
+const hue = s => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+
+export async function bookPickFile(file) {
+  if (!file) return;
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { S.notice = 'That is not a PDF.'; render(); return; }
+  const ctrl = new AbortController();
+  S = { mode: 'reading', file: file.name, page: 0, pages: 0, ctrl, phase: 'Opening the book…' };
+  render();
+  try {
+    const buf = await file.arrayBuffer();
+    const doc = await readPdf(buf, { signal: ctrl.signal, onProgress: (p, n) => { S.page = p; S.pages = n; S.phase = ''; updateProgress(); } });
+    S.phase = 'Finding monsters, spells, items and story…'; updateProgress();
+    await new Promise(r => setTimeout(r, 30));
+    const parsed = parseBook(doc.lines);
+    const keep = {};
+    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || e.confidence === 'sure').map(e => e.id));
+    S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
+      title: (doc.title || file.name.replace(/\.pdf$/i, '')).trim().slice(0, 80), place: 'personal', pages: doc.pages,
+      personalError: null };
+    render();
+    listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
+  } catch (e) {
+    const msg = e?.name === 'AbortError' ? '' : e instanceof ScanError ? e.message : `That PDF could not be read (${e?.message || e}).`;
+    S = { mode: 'list', books: null, notice: msg };
+    render(); refreshList();
+  }
+}
+function readingView() {
+  const pct = S.pages ? Math.round(100 * S.page / S.pages) : 0;
+  return `<div class="bk-reading">
+    <div class="bk-reading-book">${icon('book-open', { size: 54 })}</div>
+    <div class="lk-title" style="font-size:18px">Reading ${esc(S.file)}</div>
+    <div class="bk-bar"><span id="bk-bar" style="width:${pct}%"></span></div>
+    <div id="bk-phase" class="bk-phase">${S.phase || `Page ${S.page} of ${S.pages}`}</div>
+    <button class="btn btn-ghost btn-sm" onclick="bookCancel()">Cancel</button></div>`;
+}
+function updateProgress() {
+  const bar = document.getElementById('bk-bar'), ph = document.getElementById('bk-phase');
+  if (bar && S.pages) bar.style.width = `${Math.round(100 * S.page / S.pages)}%`;
+  if (ph) ph.textContent = S.phase || `Page ${S.page} of ${S.pages}`;
+}
+export function bookCancel() { S?.ctrl?.abort(); }
+
+// ── Review ────────────────────────────────────────────────────────────────────────────────────────────────
+function meta(k, e) {
+  if (k === 'monsters') return `CR ${crText(e.cr)} · ${e.size || ''} ${e.type || ''}${e.hp ? ` · ${e.hp} HP` : ''}`;
+  if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
+  if (k === 'items') return `${e.category}, ${String(e.rarity || '').toLowerCase()}`;
+  return `${e.chapter && e.chapter !== e.title ? `${e.chapter} · ` : ''}${wordCount(e.html)} words${e.readAloud?.length ? ` · ${e.readAloud.length} read-aloud` : ''}`;
+}
+const crText = cr => cr == null ? '?' : cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr);
+const wordCount = html => String(html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+
+function preview(k, e) {
+  if (k === 'monsters') return `<div class="bk-stat">${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(a => `<span><b>${a.toUpperCase()}</b>${e[a] ?? '?'}</span>`).join('')}</div>
+    <p><b>AC</b> ${e.ac ?? '?'}${e.ac_type ? ` (${esc(e.ac_type)})` : ''} · <b>HP</b> ${e.hp ?? '?'}${e.hp_dice ? ` (${esc(e.hp_dice)})` : ''} · <b>Speed</b> ${esc(Object.entries(e.speed || {}).filter(([, v]) => v !== true).map(([k2, v]) => k2 === 'walk' ? v : `${k2} ${v}`).join(', '))}</p>
+    ${[...(e.special_abilities || []), ...(e.actions || [])].slice(0, 6).map(a => `<p><b><i>${esc(a.name)}.</i></b> ${esc(a.desc.slice(0, 220))}${a.desc.length > 220 ? '…' : ''}</p>`).join('')}`;
+  if (k === 'spells') return `<p><b>Casting time</b> ${esc(e.casting_time)} · <b>Range</b> ${esc(e.range)} · <b>Duration</b> ${esc(e.duration)}${e.classes?.length ? ` · ${esc(e.classes.join(', '))}` : ''}</p><p>${esc(e.desc.slice(0, 600))}${e.desc.length > 600 ? '…' : ''}</p>`;
+  if (k === 'items') return `<p>${esc(e.desc.slice(0, 700)).replace(/\n/, '<br>')}${e.desc.length > 700 ? '…' : ''}</p>`;
+  return `<div class="bk-story">${e.html}</div>`; // generated by book-story.js: escaped text in <p>/<h4>/<blockquote>
+}
+
+function reviewView() {
+  const k = S.tab, list = S.parsed[k], keep = S.keep[k];
+  const q = S.filter.toLowerCase();
+  const shown = list.filter(e => !q || (e.name || e.title || '').toLowerCase().includes(q));
+  const total = KINDS.reduce((n, [kk]) => n + S.keep[kk].size, 0);
+  return `<div class="screen-header">
+      <button class="screen-back" onclick="showLibrary()" aria-label="Back">${icon('arrow-left')}</button>
+      <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Review the book</div>
+      <span style="margin-left:auto;color:var(--lk-muted);font-size:12px">${S.pages} pages read</span></div>
+    <p class="bk-help">Everything below was found in the book. The ones we're sure of are already ticked. Click one to
+      check it against what we read. Untick anything you don't want; ⚠ marks the ones to look at.</p>
+    <div class="bk-tabs" role="tablist">${KINDS.map(([kk, label]) => `<button role="tab" aria-selected="${kk === k}" onclick="bookTab('${kk}')"
+      ${S.parsed[kk].length ? '' : 'disabled'}>${label} <span>${S.keep[kk].size}/${S.parsed[kk].length}</span></button>`).join('')}</div>
+    <div class="bk-tools">
+      <input type="search" placeholder="Search ${KINDS.find(x => x[0] === k)[1].toLowerCase()}…" value="${esc(S.filter)}" oninput="bookFilter(this.value)" aria-label="Search">
+      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('sure')">Keep the sure ones</button>
+      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('all')">Keep all</button>
+      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('none')">Keep none</button></div>
+    <div class="bk-rows" id="bk-rows">${shown.slice(0, 400).map(e => `<div class="bk-row ${keep.has(e.id) ? 'kept' : ''} ${S.open === e.id ? 'open' : ''}">
+        <label class="bk-row-head"><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
+          <b>${esc(e.name || e.title)}</b><span>${esc(meta(k, e))}</span>
+          ${e.confidence === 'unsure' ? `<em title="${esc(e.problems.join(', '))}">⚠ ${esc(e.problems.join(', '))}</em>` : ''}
+          <button class="bk-peek" onclick="event.preventDefault();bookPeek('${esc(e.id)}')" aria-expanded="${S.open === e.id}">${S.open === e.id ? 'Hide' : 'Look'}</button></label>
+        ${S.open === e.id ? `<div class="bk-preview">${preview(k, e)}</div>` : ''}</div>`).join('')}
+      ${shown.length > 400 ? `<div class="bk-empty">${shown.length - 400} more: search to find them.</div>` : ''}
+      ${!shown.length ? '<div class="bk-empty">Nothing here.</div>' : ''}</div>
+    <div class="bk-save">
+      <label>Book name <input id="bk-title" value="${esc(S.title)}" maxlength="80" oninput="bookTitle(this.value)"></label>
+      <fieldset><legend>Save to</legend>
+        <label><input type="radio" name="bk-place" value="personal" ${S.place === 'personal' ? 'checked' : ''} ${S.personalError ? 'disabled' : ''} onchange="bookPlace('personal')"> Your personal library <small>(every server you play on)</small></label>
+        <label><input type="radio" name="bk-place" value="server" ${S.place === 'server' ? 'checked' : ''} onchange="bookPlace('server')"> This server <small>(only you can read it)</small></label></fieldset>
+      <button class="btn btn-gold" id="bk-save" onclick="bookSave()" ${total ? '' : 'disabled'}>Save ${total} thing${total === 1 ? '' : 's'}</button>
+      <div class="bk-error" role="alert" id="bk-error"></div></div>`;
+}
+
+export function bookTab(k) { S.tab = k; S.open = null; S.filter = ''; render(); }
+export function bookFilter(v) {
+  S.filter = v; const pos = document.querySelector('.bk-tools input')?.selectionStart; render();
+  const inp = document.querySelector('.bk-tools input'); inp?.focus(); inp?.setSelectionRange(pos, pos);
+}
+export function bookKeep(id, on) { const set = S.keep[S.tab]; on ? set.add(id) : set.delete(id); renderKeepCounts(); }
+export function bookKeepAll(mode) {
+  const list = S.parsed[S.tab];
+  S.keep[S.tab] = new Set(mode === 'none' ? [] : list.filter(e => mode === 'all' || S.tab === 'story' || e.confidence === 'sure').map(e => e.id));
+  render();
+}
+export function bookPeek(id) { S.open = S.open === id ? null : id; render(); }
+export function bookTitle(v) { S.title = v; }
+export function bookPlace(p) { S.place = p; }
+// Ticking a box re-counts without redrawing the list (the list keeps its scroll and focus).
+function renderKeepCounts() {
+  const tabs = document.querySelectorAll('.bk-tabs button span');
+  KINDS.forEach(([k], i) => { if (tabs[i]) tabs[i].textContent = `${S.keep[k].size}/${S.parsed[k].length}`; });
+  const total = KINDS.reduce((n, [k]) => n + S.keep[k].size, 0);
+  const b = document.getElementById('bk-save');
+  if (b) { b.textContent = `Save ${total} thing${total === 1 ? '' : 's'}`; b.disabled = !total; }
+  document.querySelectorAll('.bk-row').forEach(row => { const c = row.querySelector('input'); row.classList.toggle('kept', !!c?.checked); });
+}
+
+export async function bookSave() {
+  const btn = document.getElementById('bk-save'), err = document.getElementById('bk-error');
+  const title = S.title.trim();
+  if (!title) { err.textContent = 'Give the book a name.'; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const keep = Object.fromEntries(KINDS.map(([k]) => [k, [...S.keep[k]]]));
+  const book = makeBook({ title, parsed: S.parsed, keep, id: newId() });
+  try {
+    const fileId = await saveBook(book, S.place);
+    S = { mode: 'saved', book, fileId, place: S.place };
+    render();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Save';
+    if (!e?.shown) err.textContent = `The book could not be saved (${e?.message || e}).`;
+    else err.textContent = S.place === 'personal' ? 'Try saving to this server instead.' : 'Free some space in Settings → Storage, or save to your personal library.';
+  }
+}
+
+function savedView() {
+  const b = S.book;
+  return `<div class="bk-saved">
+    <div class="bk-saved-seal">${icon('book-open', { size: 46 })}</div>
+    <div class="lk-title" style="font-size:20px">${esc(b.title)} is in your library</div>
+    <p>${[['monsters', 'monsters'], ['spells', 'spells'], ['items', 'magic items'], ['story', 'story sections']]
+      .filter(([k]) => b[k].length).map(([k, w]) => `${b[k].length} ${w}`).join(' · ')}</p>
+    ${myCampaigns().length ? `<div class="section-label">Use it in a campaign</div>
+      <div class="bk-camps">${myCampaigns().map(c => `<button class="btn btn-ghost" onclick="bookAttach('${esc(S.fileId)}','${esc(c.id)}', true)">${esc(c.name)}</button>`).join('')}</div>` : ''}
+    <button class="btn btn-gold" onclick="showLibrary()">Back to your library</button></div>`;
+}
+
+export async function bookAttach(fileId, campaignId, thenEnter = false) {
+  const fresh = await loadHubDm().catch(() => null);
+  if (fresh?.campaigns) setServerData(fresh);
+  const camp = serverData?.campaigns?.[campaignId];
+  if (!camp) return;
+  try {
+    await attachBook(camp, { fileId });
+    await saveHubDm(serverData);
+  } catch (e) { if (!e?.shown) alert(`The book could not be added (${e?.message || e}).`); return; }
+  if (thenEnter) window.enterCampaignAsDM(campaignId); else showLibrary();
+}
+
+export async function bookDelete(fileId, bookId) {
+  const users = campaignsUsing(serverData?.campaigns, bookId).map(c => c.name);
+  if (!confirm(users.length ? `Delete this book? ${users.join(', ')} use${users.length === 1 ? 's' : ''} it: their players keep the spells and items, but you lose the monsters and story.` : 'Delete this book from your library?')) return;
+  try { await deleteBook(fileId); } catch (e) { alert(`It could not be deleted (${e?.message || e}).`); }
+  showLibrary();
+}

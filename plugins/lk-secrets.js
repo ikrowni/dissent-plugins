@@ -8,7 +8,8 @@
 // part goes to the DM's own USER-scope `dm-camp-<id>`. Spec: docs/superpowers/specs/2026-10-03-lanternkeep-dm-secrets-design.md
 // Pure: no storage, no DOM.
 
-const TOP_SECRET = ['dmNotes', 'encounters', 'scenes'];
+// bookFiles: the DM's library file per attached book (private; players get only the player part's copy).
+const TOP_SECRET = ['dmNotes', 'encounters', 'scenes', 'bookFiles'];
 const clone = v => JSON.parse(JSON.stringify(v));
 const isSharedJournal = j => j?.visibility === 'player';
 const isSharedPin = p => p?.visible === 'all';

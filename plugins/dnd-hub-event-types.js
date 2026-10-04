@@ -4,7 +4,9 @@
 export const EV = {
   // Hub → its own sidebars (localPublish): the campaign the Hub is now showing.
   CAMPAIGN_ACTIVE:    'campaign:active',
-  CAMPAIGN_QUERY:     'campaign:query',   // a sidebar asks the Hub which campaign is open (it answers with CAMPAIGN_ACTIVE)
+  CAMPAIGN_QUERY:     'campaign:query',
+  BOOK_MONSTERS:      'book:monsters',
+  BOOK_ADD_MONSTER:   'book:add-monster', // DM's Hub (Book panel) → DM sidebar: put this book monster in the encounter   // DM's Hub → DM sidebar (same screen): the open campaign's book monsters   // a sidebar asks the Hub which campaign is open (it answers with CAMPAIGN_ACTIVE)
 
   // Map
   MAP_SET:            'map:set',

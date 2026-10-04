@@ -1,14 +1,15 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261007v';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261009a';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261007k';
+import { EV } from './dnd-hub-event-types.js?v=20261009a';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261007v';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261007v';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261007v';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261009a';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261009a';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261009a';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
+import { sendBookMonsters } from './book/book-reader.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
@@ -51,6 +52,14 @@ export function renderDMPortalFrame() {
       <div class="new-campaign-text">
         <strong>Start the sample adventure</strong>
         <span>The Dark Lighthouse — one evening, ready to play, for 3–5 level-1 heroes</span>
+      </div>
+      <span style="margin-left:auto;color:var(--dnd-gold);font-size:18px">→</span>
+    </div>
+    <div class="new-campaign-btn" id="btn-library" onclick="showLibrary()" style="margin-top:8px">
+      <div class="new-campaign-icon">${icon('book-open', { size: 20 })}</div>
+      <div class="new-campaign-text">
+        <strong>Your library</strong>
+        <span>Import an adventure or rules PDF: its monsters, spells, items and story, at your table</span>
       </div>
       <span style="margin-left:auto;color:var(--dnd-gold);font-size:18px">→</span>
     </div>
@@ -331,7 +340,10 @@ function announceCampaign(campaignId, role) {
 /** What the Hub shows right now, told to the sidebars (on every screen change, and when a sidebar asks). */
 export function announceCurrent() {
   if (_screen === 'loading') return; // not decided yet: the next screen change announces
-  if (_screen === 'campaign' && MAP.campaignId) announceCampaign(MAP.campaignId, MAP.isDM ? 'dm' : 'player');
+  if (_screen === 'campaign' && MAP.campaignId) {
+    announceCampaign(MAP.campaignId, MAP.isDM ? 'dm' : 'player');
+    if (MAP.isDM) sendBookMonsters(MAP.campaignId).catch(() => {});
+  }
   else announceCampaign(null);
 }
 document.addEventListener('lk:screen', e => { _screen = e.detail; announceCurrent(); });
@@ -402,6 +414,7 @@ export async function renderCampaignView(campaignId, isDM) {
         ${isDM ? `
           <button class="map-tool-btn" id="btn-upload-map" onclick="triggerMapUpload()" title="Upload a map image">${icon('map')}Map</button>
           <button class="map-tool-btn" id="btn-party" onclick="placePartyTokens()" title="Place any missing party tokens">${icon('users')}Party</button>
+          <button class="map-tool-btn" id="btn-book" onclick="toggleBookPanel()" title="The campaign's book: read and share the story, use its monsters and items">${icon('book-open')}Book</button>
           <button class="map-tool-btn" id="btn-vtt-import" onclick="toggleVTTPanel()" title="Import a Universal VTT map (Dungeondraft, Dungeon Alchemist…)">${icon('file-input')}Import</button>
           <button class="map-tool-btn" id="btn-edit-mode" onclick="toggleEditMode()" title="Edit the map: walls, doors, fog, lights, pins">${icon('pencil')}Edit</button>
           <button class="map-tool-btn" id="btn-fog-toggle" onclick="toggleDMFog()" title="Show or hide fog on your screen">${icon('cloud-fog')}Fog</button>

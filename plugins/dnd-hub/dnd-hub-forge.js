@@ -1,9 +1,9 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20261007v';
+import { SRD } from './dnd-hub-state.js?v=20261009a';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261007v';
+import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261009a';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -12,11 +12,12 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20261007v';
+import { serverData, CC } from './dnd-hub-state.js?v=20261009a';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261007v';
+import { useCampaignSpells } from './book/book-spells-in-play.js';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261009a';
 
 const ALL_SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
   'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'];
@@ -38,6 +39,8 @@ function draftHero(d) {
 const open = () => !root()?.classList.contains('hidden') && !!root()?.querySelector('.forge');
 
 export function showQuickCharacter(campaignId) {
+  // The campaign's books add spells to the spell step (re-drawn if they arrive while it is open).
+  useCampaignSpells(serverData?.campaigns?.[campaignId]).then(() => { if (_s?.scene === 'shape') render(); }).catch(() => {});
   _campaignId = campaignId; _draft = null; _showQuick = false; _shapeError = '';
   _s = initForge((SRD.races || []).length, (SRD.classes || []).length);
   window.showScreen('char-creator');

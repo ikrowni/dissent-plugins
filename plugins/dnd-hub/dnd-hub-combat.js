@@ -1,8 +1,8 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261007v';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261009a';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261007k';
+import { EV } from './dnd-hub-event-types.js?v=20261009a';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
 import { rule } from './lk-table-rules.js';
 import { attackVerdict } from './dnd-hub-rules.js';

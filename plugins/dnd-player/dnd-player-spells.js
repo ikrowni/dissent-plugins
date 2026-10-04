@@ -1,4 +1,5 @@
 // dnd-player-spells.js — spell list, slots, SRD data
+import { mergeContent } from './lk-book.js';
 import { esc } from '../plugin-sdk.js';
 import { spellSaveDC, spellAttackBonus } from './lk-rules5e.js';
 
@@ -8,14 +9,21 @@ let _saveChar = null;
 
 export function setSpellState(char, saveCharFn) { _char = char; _saveChar = saveCharFn; }
 
+// The SRD's spells plus those of the campaign's books (lk-book.js; their player part, read by dnd-player-main.js).
+let _srdBase = null, _bookParts = [];
 export async function loadSRDSpells() {
   if (_srdSpells) return _srdSpells;
-  try {
-    const r = await fetch(new URL('./dnd-srd/spells.json', document.baseURI).href);
-    _srdSpells = await r.json();
-  } catch { _srdSpells = []; }
+  if (!_srdBase) {
+    try {
+      const r = await fetch(new URL('./dnd-srd/spells.json', document.baseURI).href);
+      _srdBase = await r.json();
+    } catch { _srdBase = []; }
+  }
+  _srdSpells = mergeContent(_srdBase, _bookParts, 'spells');
   return _srdSpells;
 }
+/** The open campaign's book parts; the spell list is rebuilt with them next time it is read. */
+export function setBookParts(parts) { _bookParts = parts || []; _srdSpells = null; }
 
 function findSpell(id) {
   return (_srdSpells || []).find(s => s.id === id) || null;
