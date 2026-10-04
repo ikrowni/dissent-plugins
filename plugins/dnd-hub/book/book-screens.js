@@ -157,7 +157,7 @@ export function bookCancel() { S?.ctrl?.abort(); }
 
 // ── Review ────────────────────────────────────────────────────────────────────────────────────────────────
 function meta(k, e) {
-  if (k === 'monsters') return `CR ${crText(e.cr)} · ${e.size || ''} ${e.type || ''}${e.hp ? ` · ${e.hp} HP` : ''}`;
+  if (k === 'monsters') return [`CR ${crText(e.cr)}`, [e.size, e.type].filter(Boolean).join(' '), e.hp ? `${e.hp} HP` : ''].filter(Boolean).join(' · ');
   if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
   if (k === 'items') return `${e.category}, ${String(e.rarity || '').toLowerCase()}`;
   if (k === 'images') return `${e.kind === 'map' ? 'Map' : 'Art'} · page ${e.page}`;
