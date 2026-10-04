@@ -2,6 +2,7 @@
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
+import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { rule } from './lk-table-rules.js';
@@ -133,7 +134,7 @@ export async function fireTrigger(trigger, tokenId) {
   const type = trigger.type || 'message';
 
   if (type === 'message') {
-    await realtimePublish(EV.TRIGGER_FIRED, {
+    await publishTo([], EV.TRIGGER_FIRED, {
       type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
@@ -151,7 +152,7 @@ export async function fireTrigger(trigger, tokenId) {
     const summary = tok?.userId ? camp?.characterSummaries?.[tok.userId] : null;
     const name = tok?.name || 'Someone';
     if (trigger.spotDC && summary && (summary.passivePerception || 0) >= trigger.spotDC) {
-      await realtimePublish(EV.TRIGGER_FIRED, {
+      await publishTo([], EV.TRIGGER_FIRED, {
       type: EV.TRIGGER_FIRED, fromUserId: userId,
         campaignId: MAP.campaignId, triggerId: trigger.id, tokenId, action: 'trap-spotted',
         message: `${name} spots a trap here (passive Perception ${summary.passivePerception}).`,
@@ -162,7 +163,7 @@ export async function fireTrigger(trigger, tokenId) {
     const hints = rule(serverData?.campaigns?.[MAP.campaignId]?.settings, 'hints');
     const save = trigger.saveAbility && trigger.saveDC
       ? ` ${trigger.saveAbility.toUpperCase()} save${hints ? ` DC ${trigger.saveDC}` : ''} for half.` : '';
-    await realtimePublish(EV.TRIGGER_FIRED, {
+    await publishTo([], EV.TRIGGER_FIRED, {
       type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
@@ -176,7 +177,7 @@ export async function fireTrigger(trigger, tokenId) {
   }
 
   if (type === 'teleport' && trigger.destCx != null) {
-    await realtimePublish(EV.TRIGGER_FIRED, {
+    await publishTo([], EV.TRIGGER_FIRED, {
       type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
@@ -188,7 +189,7 @@ export async function fireTrigger(trigger, tokenId) {
   }
 
   if (type === 'sound' && trigger.fileId) {
-    await realtimePublish(EV.TRIGGER_FIRED, {
+    await publishTo([], EV.TRIGGER_FIRED, {
       type: EV.TRIGGER_FIRED, fromUserId: userId,
       campaignId: MAP.campaignId,
       triggerId: trigger.id,
