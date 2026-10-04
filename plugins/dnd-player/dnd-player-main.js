@@ -1314,6 +1314,9 @@ async function onEvent(ev) {
         _resolveInventoryImages().then(() => renderAll()).catch(() => {});
       }
     }
+    // The sale is settled for everyone who wanted it: the shop shows its buttons again (and the gold left), so a
+    // second one can be bought. They stayed on "✓ Interested" until the shop was reopened (rules playtest).
+    if (p.shopId && p.shopId === _activeShopId) _renderShopTab(_activeShopItems || []);
     return;
   }
 }
