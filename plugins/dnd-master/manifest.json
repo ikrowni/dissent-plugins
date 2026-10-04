@@ -47,7 +47,7 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "684c6cea6b94d5765a4e87b0aecca89ae33909a4fc0102b57b9386b2e34619fa"
+      "sha256": "299166e2da762842aa458132258f4cc1a4ebc230fa83fc1f853b79374f0d81d4"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -79,7 +79,7 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "54c2a5065293a1155da933eb2da057c92c39a240274a67ba02ab053e75409543"
+      "sha256": "eba0253bc3872e4ee0a6b073f748cab418280f6ae905d4909d9b19796b9365e4"
     },
     {
       "url": "dnd-master-maps.js",

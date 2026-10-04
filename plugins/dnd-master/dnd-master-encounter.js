@@ -395,13 +395,29 @@ export async function launchEncounter() {
   }
 }
 
+// A read that fails (the node allows each user so many a minute) used to drop the fight's monsters without a word:
+// the tracker had them, the map never did (rules playtest, 2026-10-04). Try again, then the sidebar's own copy.
+async function _campaignWithMap(dmCampaignId) {
+  for (let i = 0; i < 3; i++) {
+    const d = await loadHubDmCompanion().catch(() => null);
+    const c = d?.campaigns?.[dmCampaignId];
+    if (c?.activeMapId && c.maps?.[c.activeMapId]) return d;
+    await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+  }
+  const own = _state.serverData;
+  const c = own?.campaigns?.[dmCampaignId];
+  return c?.activeMapId && c.maps?.[c.activeMapId] ? own : null;
+}
+
 async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId = {}, spawnCells = null) {
   try {
-    const freshData = await loadHubDmCompanion();
-    if (!freshData) return;
+    const freshData = await _campaignWithMap(dmCampaignId);
+    if (!freshData) {
+      if (order.some(c => c.type === 'monster')) alert('The monsters could not be placed on the map (no map is open, or the server was busy). Open a map, then press the 🗺️ button in the tracker (Spawn monster tokens).');
+      return;
+    }
     const campaign = freshData.campaigns?.[dmCampaignId];
     const activeMapId = campaign?.activeMapId;
-    if (!activeMapId || !campaign?.maps?.[activeMapId]) return;
 
     const mapData = campaign.maps[activeMapId];
     const bgOffX = mapData.bgOffsetX ?? 0;
@@ -434,11 +450,13 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
     }
     if (!newTokens.length) return;
 
-    await saveHubDmCompanion(freshData);
+    // The maps first (the DM's Hub keeps the map and saves it too), then the stored copy: a refused save no longer
+    // keeps the monsters off every screen.
     const spawnPayload = { type: EV.TOKENS_SPAWN, campaignId: dmCampaignId, mapId: activeMapId, tokens: newTokens, fromUserId: userId };
     localPublish('dnd-hub', EV.TOKENS_SPAWN, spawnPayload);
     realtimePublishCompanion('dnd-hub', EV.TOKENS_SPAWN, publicPayload(EV.TOKENS_SPAWN, spawnPayload)); // hidden ones travel as stubs (lk-secrets.js)
-  } catch { /* ignore spawn failure \u2014 no active map or storage unavailable */ }
+    await saveHubDmCompanion(freshData);
+  } catch (e) { console.warn('[dnd-master] placing the monsters', e); }
 }
 
 export async function removeMonsterTokensFromMap(monsterIds, dmCampaignId, userId) {
