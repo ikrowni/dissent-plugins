@@ -9,13 +9,13 @@ import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, fo
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261007v';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261007v';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign } from './dnd-hub-screens.js?v=20261008b';
 import { setZoom } from './dnd-hub-canvas.js?v=20261007v';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261007v';
+} from './dnd-hub-screens.js?v=20261008b';
 import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261007v';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,

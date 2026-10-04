@@ -123,7 +123,13 @@ export function renderCampaignWizardFrame() {
 
 // ── Navigation helpers ────────────────────────────────────────────────────────
 export function showDMPortal() { renderDMPortalFrame(); renderDMPortal(); showScreen('dm-portal'); }
-export function showJoinScreen() { renderJoinFrame(); renderJoinScreen(); showScreen('join'); }
+// Read the campaigns afresh: the copy in memory is as old as this Hub's last event about an unknown campaign, so a
+// campaign created since (and whose announcement this screen missed) was not listed.
+export async function showJoinScreen() {
+  renderJoinFrame(); renderJoinScreen(); showScreen('join');
+  const fresh = await loadHubDm().catch(() => null);
+  if (fresh?.campaigns) { setServerData(fresh); renderJoinScreen(); }
+}
 export function showCampaignWizard() { renderCampaignWizardFrame(); showScreen('cam-wizard'); }
 
 // ── DM Portal ─────────────────────────────────────────────────────────────────
