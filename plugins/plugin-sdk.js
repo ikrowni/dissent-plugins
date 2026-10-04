@@ -305,6 +305,14 @@ export async function removeFriendLink(id) { return request('links.remove', { id
 export async function matchFriends(game, run) { return request('friends.match', { game, ...(run ? { run } : {}) }); }
 export async function setAutoFriendLinks(enabled) { return request('friends.setAuto', { enabled: enabled === true }); }
 
+/**
+ * Hand the person a file to keep (files:saveToDevice). Dissent asks in its own dialog every time; resolves
+ * { saved, name } on Save, rejects with 'cancelled' on Cancel. At most 50 MB. Older hosts reject (unknown action).
+ */
+export function saveToDevice(data, name, mime = 'application/octet-stream') {
+  return requestWithTransfer('files:saveToDevice', { data, name, mime }, [], 120000);
+}
+
 export async function storageGetCompanion(registryId, key, scope = 'server') {
   try { const r = await request('storage:get-companion', { registryId, key, scope }); return r?.value ?? null; } catch { return null; }
 }

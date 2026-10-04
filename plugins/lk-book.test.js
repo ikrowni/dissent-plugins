@@ -1,6 +1,6 @@
 // plugins/lk-book.test.js
 import { describe, it, expect } from 'vitest';
-import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile } from './lk-book.js';
+import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName } from './lk-book.js';
 
 const parsed = {
   monsters: [{ id: 'mudling', name: 'Mudling', confidence: 'sure', problems: [], lines: [0, 9], hp: 9 }],
@@ -57,4 +57,24 @@ describe('file names', () => {
     expect(bookTitleFromFile(n)).toEqual({ id: 'b1', title: 'The Drowned Bell Part 1 2' });
     expect(bookTitleFromFile('map.png')).toBeNull();
   });
+});
+
+describe('.lkpack', () => {
+  const book = makeBook({ title: 'The Drowned Bell', parsed, id: 'b1' });
+  it('round-trips a book into the review screen\'s shape', () => {
+    const back = fromPack(toPack(book));
+    expect(back.title).toBe('The Drowned Bell');
+    expect(back.parsed.monsters.map(m => m.id)).toEqual(['mudling']);
+    expect(back.parsed.story.map(s => s.id)).toEqual(['ch1']);
+  });
+  it('refuses what is not a book, or from a newer format, in words a person can act on', () => {
+    expect(() => fromPack('not json')).toThrow(/could not be read/);
+    expect(() => fromPack(JSON.stringify({ kind: 'other' }))).toThrow(/not a LanternKeep book/);
+    expect(() => fromPack(JSON.stringify({ kind: 'lanternkeep-book', formatVersion: 99, book: {} }))).toThrow(/newer/);
+  });
+  it('drops entries without an id and a name', () => {
+    const p = fromPack(JSON.stringify({ kind: 'lanternkeep-book', formatVersion: 1, book: { title: 'T', spells: [{ id: 'a', name: 'A' }, { name: 'no id' }, 'x'] } }));
+    expect(p.parsed.spells.map(s => s.id)).toEqual(['a']);
+  });
+  it('names the file after the book', () => expect(packFileName({ title: 'Part 1/2: Fog' })).toBe('Part 1 2 Fog.lkpack'));
 });

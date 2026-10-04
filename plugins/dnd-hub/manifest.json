@@ -145,7 +145,7 @@
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "b1664675b72c97f72ea708db56df2175c0839bd69be8a2d06998c31b652cb5d7"
+      "sha256": "d126602ce2a61971e9db4ba8623cc033dbf77f1a3b42ee17d08d375fe555d0e1"
     },
     {
       "url": "book/book-spells-in-play.js",
@@ -301,7 +301,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "f95d8818a193228ada65c51aa4126d830fb8ae8e99087efa7df02fe787f79578"
+      "sha256": "3f98df2129d67082293de895216adc25d294d8dc8d9b5d7a3f371610ca55d93e"
     },
     {
       "url": "dnd-hub-map-bg.js",
@@ -445,7 +445,7 @@
     },
     {
       "url": "lk-book.js",
-      "sha256": "e8a79d68302211c56059f4af2b5687c11a9554ac80156409716fb7e1743509f6"
+      "sha256": "3184aea6ef5d447af8dba788dff914a633fc305a0f4c647d022bed4b88ba9ece"
     },
     {
       "url": "lk-bus.js",

@@ -73,3 +73,29 @@ export async function loadPlayerParts(camp, request) {
   }
   return out;
 }
+
+// ── .lkpack: a whole book in one file, for backups and for moving a book (owner, 2026-10-04) ───────────────────
+export const PACK_KIND = 'lanternkeep-book';
+
+/** The .lkpack text for a book. */
+export function toPack(book) {
+  return JSON.stringify({ kind: PACK_KIND, formatVersion: BOOK_FORMAT, exportedAt: new Date().toISOString(), book });
+}
+
+/**
+ * A book from .lkpack text, as { parsed, title } for the review screen, or throws a sentence to show.
+ * Entries without an id and a name are dropped; nothing in the file is trusted beyond the four lists.
+ */
+export function fromPack(text) {
+  let j;
+  try { j = JSON.parse(text); } catch { throw new Error('That file is not a LanternKeep book (it could not be read).'); }
+  if (j?.kind !== PACK_KIND || !j.book) throw new Error('That file is not a LanternKeep book.');
+  if (j.formatVersion > BOOK_FORMAT) throw new Error('That book was saved by a newer LanternKeep. Update and try again.');
+  const ok = e => e && typeof e === 'object' && typeof e.id === 'string' && typeof (e.name ?? e.title) === 'string';
+  const list = k => (Array.isArray(j.book[k]) ? j.book[k] : []).filter(ok).map(e => ({ ...e }));
+  return { title: String(j.book.title || 'Imported book').slice(0, 80),
+    parsed: { monsters: list('monsters'), spells: list('spells'), items: list('items'), story: list('story') } };
+}
+
+/** A file name for a book's .lkpack. */
+export const packFileName = book => `${String(book.title || 'Book').replace(/[^\p{L}\p{N} '’-]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Book'}.lkpack`;

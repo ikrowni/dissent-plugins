@@ -2,14 +2,14 @@
 // Drawn in #screen-library. Owner, 2026-10-04: "The import campaign feature needs to be finished up and easy to work
 // with": one drop zone, a progress bar with Cancel, then a review where the sure finds are already ticked and one
 // click saves; the unsure ones say why.
-import { esc } from '../../plugin-sdk.js';
+import { esc, saveToDevice } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
 import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261009a';
 import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261006s';
-import { makeBook } from '../lk-book.js';
+import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readPdf, ScanError } from './book-pdf.js';
 import { parseBook } from './book-parse.js';
-import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook } from './book-library.js';
+import { listBooks, saveBook, deleteBook, campaignsUsing, attachBook, loadBook } from './book-library.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -45,11 +45,11 @@ function listView() {
       <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Your library</div></div>
     <label class="bk-drop" id="bk-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
       ondrop="event.preventDefault();this.classList.remove('over');bookPickFile(event.dataTransfer.files[0])">
-      <input type="file" accept="application/pdf,.pdf" onchange="bookPickFile(this.files[0])" hidden>
+      <input type="file" accept="application/pdf,.pdf,.lkpack" onchange="bookPickFile(this.files[0])" hidden>
       <div class="bk-drop-icon">${icon('book-open', { size: 34 })}</div>
       <b>Import a book</b>
       <span>Drop an adventure or rules PDF here, or click to choose one. Its monsters, spells, magic items and story
-        become usable at your table.</span>
+        become usable at your table. A <b>.lkpack</b> copy of a book you saved works too.</span>
       <small>Only import books you own. The PDF stays on your computer; only what you keep is saved, and only you can read it.</small>
     </label>
     ${S.notice ? `<div class="bk-notice">${esc(S.notice)}</div>` : ''}
@@ -65,6 +65,7 @@ function listView() {
             ${myCampaigns().length ? `<select onchange="if(this.value)bookAttach('${esc(b.fileId)}',this.value)" aria-label="Use in a campaign">
               <option value="">Use in a campaign…</option>${myCampaigns().filter(c => !used(b.id).includes(c.name))
                 .map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="bookExport('${esc(b.fileId)}')" title="Save a copy of this book to your device (.lkpack): a backup, or to bring it to another node">Save a copy</button>
             <button class="btn btn-ghost btn-sm" onclick="bookDelete('${esc(b.fileId)}','${esc(b.id)}')" aria-label="Delete ${esc(b.title)}">${icon('trash-2', { size: 14 })}</button>
           </div></div>`).join('')}</div>`}
     ${S.personalError ? `<div class="bk-notice">Your personal library is not available on this server (${esc(S.personalError)}). Books saved to this server still work.</div>` : ''}`;
@@ -73,7 +74,8 @@ const hue = s => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 36
 
 export async function bookPickFile(file) {
   if (!file) return;
-  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { S.notice = 'That is not a PDF.'; render(); return; }
+  if (/\.lkpack$/i.test(file.name)) return openPack(file);
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { S.notice = 'That is not a PDF or a .lkpack book.'; render(); return; }
   const ctrl = new AbortController();
   S = { mode: 'reading', file: file.name, page: 0, pages: 0, ctrl, phase: 'Opening the book…' };
   render();
@@ -96,6 +98,36 @@ export async function bookPickFile(file) {
     render(); refreshList();
   }
 }
+// A .lkpack (a book saved with Save a copy): straight to the review, everything ticked.
+async function openPack(file) {
+  try {
+    const { parsed, title } = fromPack(await file.text());
+    const keep = {};
+    for (const [k] of KINDS) keep[k] = new Set(parsed[k].map(e => e.id));
+    S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
+      title, place: 'personal', pages: null, personalError: null };
+    render();
+    listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
+  } catch (e) {
+    S = { mode: 'list', books: null, notice: e.message };
+    render(); refreshList();
+  }
+}
+
+/** Save a copy of a library book to the person's device, as a .lkpack (the host asks first). */
+export async function bookExport(fileId) {
+  try {
+    const book = await loadBook(fileId);
+    const data = new TextEncoder().encode(toPack(book)).buffer;
+    await saveToDevice(data, packFileName(book), 'application/json');
+  } catch (e) {
+    const m = String(e?.message || e);
+    if (/cancel/i.test(m)) return;
+    S.notice = /unknown action/i.test(m) ? 'Saving a copy needs a newer Dissent app. It already works in the web app.' : `The copy could not be saved (${m}).`;
+    render();
+  }
+}
+
 function readingView() {
   const pct = S.pages ? Math.round(100 * S.page / S.pages) : 0;
   return `<div class="bk-reading">
@@ -139,7 +171,7 @@ function reviewView() {
   return `<div class="screen-header">
       <button class="screen-back" onclick="showLibrary()" aria-label="Back">${icon('arrow-left')}</button>
       <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Review the book</div>
-      <span style="margin-left:auto;color:var(--lk-muted);font-size:12px">${S.pages} pages read</span></div>
+      <span style="margin-left:auto;color:var(--lk-muted);font-size:12px">${S.pages ? `${S.pages} pages read` : 'From a saved copy'}</span></div>
     <p class="bk-help">Everything below was found in the book. The ones we're sure of are already ticked. Click one to
       check it against what we read. Untick anything you don't want; ⚠ marks the ones to look at.</p>
     <div class="bk-tabs" role="tablist">${KINDS.map(([kk, label]) => `<button role="tab" aria-selected="${kk === k}" onclick="bookTab('${kk}')"
