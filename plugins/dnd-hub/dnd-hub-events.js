@@ -7,17 +7,17 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013c';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013e';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013c';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013e';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013c';
-import { renderFog } from './dnd-hub-fog.js?v=20261013c';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013c';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
+import { renderFog } from './dnd-hub-fog.js?v=20261013e';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013e';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
 import { loadSRD } from './dnd-hub-char.js?v=20261013c';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
@@ -27,8 +27,9 @@ import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
 import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013c';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
+import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013c';
+import { renderLights } from './dnd-hub-lights.js?v=20261013e';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013c';
 import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013c';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
@@ -36,7 +37,7 @@ import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013c';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013c';
+import { setView } from './dnd-hub-canvas.js?v=20261013e';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -163,7 +164,7 @@ export function onEvent(ev) {
 
 setSceneApplier(handleMapEvent); // travel pins load a scene on this screen the way a network scene:load does
 
-const OWN_ECHO_IGNORED = new Set(['map:weather', 'map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update']);
+const OWN_ECHO_IGNORED = new Set(['map:weather', 'map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update', 'pictures:update']);
 
 const PRIVILEGED_EVENTS = new Set([
   'hp:change','fog:reveal','fog:reset','map:set','initiative:update',
@@ -171,7 +172,7 @@ const PRIVILEGED_EVENTS = new Set([
   'token:turn-start','token:conditions','combat:settings',
   'scene:load','pins:update','audio:play','audio:zone-update',
   'shop:open','shop:volume','contest:roll',
-  'session:start','map:view','level:grant','map:weather',
+  'session:start','map:view','level:grant','map:weather','pictures:update',
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -666,6 +667,13 @@ export async function handleMapEvent(p) {
           p.settings?.spatialRange ?? 60,
         ).catch(() => {});
       }
+      break;
+    }
+    case PICTURES_UPDATE: {
+      // The DM pinned, moved, sized or removed a picture on the map (dnd-hub-pictures.js).
+      if (p.campaignId !== MAP.campaignId || p.mapId !== MAP.mapId || !MAP.mapData || !Array.isArray(p.pictures)) return;
+      MAP.mapData.pictures = p.pictures;
+      renderPictures();
       break;
     }
     case PIN_TRAVEL:

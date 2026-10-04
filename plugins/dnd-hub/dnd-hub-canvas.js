@@ -3,21 +3,22 @@ import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-st
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013c';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013e';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013c';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013c';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013c';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013e';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013e';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261009a';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013c';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013e';
 import { showPinDialog } from './dnd-hub-pins.js?v=20261013c';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013c';
+import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013e';
 import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013c';
 import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013c';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013c';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013e';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
 import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, placeVerdict } from './dnd-hub-movement.js';
@@ -44,11 +45,12 @@ export async function initPixiApp() {
     lights: new PIXI.Container(), trail: new PIXI.Container(),
     tokens: new PIXI.Container(), fog: new PIXI.Container(),
     walls: new PIXI.Container(), ui: new PIXI.Container(),
+    pictures: new PIXI.Container(), // pinned pictures (dnd-hub-pictures.js): above the map, under the fog
   };
   MAP.layers = layers;
   resetTrailGraphics();
   // The turn's trail sits under the fog: a path through fog must not show anyone the rooms in it.
-  app.stage.addChild(layers.bg, layers.grid, layers.lights, layers.trail, layers.tokens, layers.fog, layers.walls, layers.ui);
+  app.stage.addChild(layers.bg, layers.pictures, layers.grid, layers.lights, layers.trail, layers.tokens, layers.fog, layers.walls, layers.ui);
   app.stage.eventMode = 'static';
   app.stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
 
@@ -344,6 +346,11 @@ export async function initPixiApp() {
         if (hitTrig && e.detail >= 2) showTriggerDialog(clickCx, clickCy, hitTrig);
       }
     });
+
+    // ── Picture tool — click the map to pin a picture; drag one to move it, click it to size or remove it ──
+    app.canvas.addEventListener('mousedown', e => { if (MAP.activeTool === 'picture' && MAP.mapData) pictureToolDown(e); });
+    app.canvas.addEventListener('mousemove', e => { if (MAP.activeTool === 'picture') pictureToolMove(e); });
+    app.canvas.addEventListener('mouseup',   () => { if (MAP.activeTool === 'picture') pictureToolUp(); });
 
     // ── Pin tool — DM click places a new pin ──────────────────────────────
     app.canvas.addEventListener('mousedown', e => {

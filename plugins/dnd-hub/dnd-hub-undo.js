@@ -1,5 +1,5 @@
 // dnd-hub-undo.js — Ctrl+Z / Ctrl+Y for the DM's map tools (owner request 2026-10-04): walls, doors, lights, pins,
-// sound zones, traps and the fog brushes. Never tokens, HP, dice or combat: those belong to players too, and
+// sound zones, traps, pinned pictures and the fog brushes. Never tokens, HP, dice or combat: those belong to players too, and
 // undoing one could overwrite what someone else did.
 //
 // How: this screen keeps the last saved copy of each of those parts of the open map. Every save the DM makes on this
@@ -9,8 +9,8 @@
 // An undo puts the part back and sends it the way its own tool does.
 import { MAP } from './dnd-hub-state.js?v=20261009a';
 
-export const PARTS = ['walls', 'doors', 'lights', 'pins', 'audioZones', 'triggers'];
-const WORDS = { walls: 'walls', doors: 'doors', lights: 'lights', pins: 'pins', audioZones: 'sound zones', triggers: 'traps', fogState: 'fog' };
+export const PARTS = ['walls', 'doors', 'lights', 'pins', 'audioZones', 'triggers', 'pictures'];
+const WORDS = { walls: 'walls', doors: 'doors', lights: 'lights', pins: 'pins', audioZones: 'sound zones', triggers: 'traps', pictures: 'pictures', fogState: 'fog' };
 const LIMIT = 30;
 
 /** The pure part: a history of `{ parts: { name: before } }` steps over a map's state. */

@@ -4,8 +4,8 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013c';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261013c';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013e';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261013e';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261013c';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
@@ -439,6 +439,7 @@ export async function renderCampaignView(campaignId, isDM) {
             <button class="map-tool-btn" id="btn-tool-hide" onclick="setTool('brush-hide')" title="Brush to hide with fog">${icon('eye-off')}Hide</button>
             <button class="map-tool-btn" onclick="resetFog()" style="color:#f87171;border-color:rgba(248,113,113,.3)" title="Cover the whole map with fog again">${icon('trash-2')}Reset fog</button>
             <button class="map-tool-btn" id="btn-tool-pin" onclick="setTool('pin')" title="Place a map pin">${icon('map-pin')}Pin</button>
+            <button class="map-tool-btn" id="btn-tool-picture" onclick="setTool('picture')" title="Pin a picture onto the map: click the map to choose one; drag one to move it, click it to size or remove it">${icon('image')}Picture</button>
             <button class="map-tool-btn" id="btn-tool-light"   onclick="setTool('light')"   title="Place a light">${icon('lightbulb')}Light</button>
             <button class="map-tool-btn" id="btn-tool-speaker" onclick="setTool('speaker')" title="Place a sound zone">${icon('volume-2')}Sound</button>
             <button class="map-tool-btn" id="btn-tool-trap"    onclick="setTool('trap')"    title="Place a trap or trigger">${icon('bomb')}Trap</button>

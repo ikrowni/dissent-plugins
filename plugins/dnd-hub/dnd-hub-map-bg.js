@@ -3,20 +3,21 @@ import { MAP, serverData } from './dnd-hub-state.js?v=20261009a';
 import { request, requestWithTransfer, storageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261013c';
-import { renderFog } from './dnd-hub-fog.js?v=20261013c';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013c';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013e';
+import { renderFog } from './dnd-hub-fog.js?v=20261013e';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013e';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009g';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013c';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013e';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261013c';
+import { setZoom } from './dnd-hub-canvas.js?v=20261013e';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';
+import { renderPictures } from './dnd-hub-pictures.js';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 export function fitSprite(sprite, w, h, imgW, imgH) {
   // World frame = image pixels at the origin (dnd-hub-frame.js says why). The VIEW is
@@ -159,6 +160,7 @@ export async function renderMapBackground() {
 
   const statusEl = document.getElementById('map-status');
   if (statusEl) statusEl.style.display = 'none';
+  renderPictures(); // the map's pinned pictures sit on it (dnd-hub-pictures.js)
 
   // A fresh upload has no grid size until the image size is known (dnd-hub-frame.js).
   if (MAP.mapData && MAP.mapData.gridSize == null && !MAP.mapData.mapCellW && MAP._bgImgW) {

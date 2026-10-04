@@ -1,7 +1,7 @@
 // dnd-hub-walls.js — wall/door rendering and toolbar tool state
 import { MAP, segmentsIntersect } from './dnd-hub-state.js?v=20261009a';
-import { renderFog } from './dnd-hub-fog.js?v=20261013c';
-import { renderLights } from './dnd-hub-lights.js?v=20261013c';
+import { renderFog } from './dnd-hub-fog.js?v=20261013e';
+import { renderLights } from './dnd-hub-lights.js?v=20261013e';
 import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013c';
 import { renderTriggers } from './dnd-hub-triggers.js?v=20261013c';
 import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
@@ -114,7 +114,7 @@ export function toggleDMFog() {
 
 export function setTool(name) {
   MAP.activeTool = name;
-  ['select', 'wall', 'door', 'erase', 'reveal', 'hide', 'pin', 'light', 'speaker', 'trap', 'template'].forEach(t => {
+  ['select', 'wall', 'door', 'erase', 'reveal', 'hide', 'pin', 'picture', 'light', 'speaker', 'trap', 'template'].forEach(t => {
     const btnId = t === 'reveal' ? 'btn-tool-reveal'
                 : t === 'hide'   ? 'btn-tool-hide'
                 : `btn-tool-${t}`;
