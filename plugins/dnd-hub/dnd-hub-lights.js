@@ -3,9 +3,9 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20261011b';
-import { wallPx } from './dnd-hub-walls.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
+import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20261011h';
+import { wallPx } from './dnd-hub-walls.js?v=20261011h';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261011h';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 // ── Two shapes of light ───────────────────────────────────────────────────────

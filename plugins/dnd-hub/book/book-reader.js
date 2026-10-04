@@ -6,11 +6,11 @@ import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
 import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261009a';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261006s';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261011h';
 import { EV } from '../dnd-hub-event-types.js?v=20261011b';
 import { campaignBooks, listBooks, attachBook, loadBookImage } from './book-library.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261011b';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261011b';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261011h';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261011h';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 

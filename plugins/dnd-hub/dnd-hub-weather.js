@@ -3,7 +3,7 @@
 // The layer reads the open map's weather on every frame, so a map load or a change needs no other hook. With no
 // weather it sleeps on a slow timer; with the page hidden it pauses. Reduced motion: a still tint, no particles.
 import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261009a';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261011h';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { WEATHER, KINDS, normWeather, spawn, step, countFor } from './dnd-hub-weather-model.js';

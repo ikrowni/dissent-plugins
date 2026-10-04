@@ -54,6 +54,22 @@ async function readSecret(id, pub) {
   return { sec, ok: !!sec || !pub?.secretsKept };
 }
 
+const _joined = new Set();       // campaign ids this sidebar keeps joined (its open campaign)
+const _joinedObjs = new WeakSet(); // the campaign objects that already hold their secret part
+/** Join the DM's secret record into campaign `id` of `data`, in place; it stays joined across reloads. */
+export async function joinSecrets(data, id) {
+  const camp = data?.campaigns?.[id];
+  if (!camp || !isCampaignDm(camp, _me) || _joinedObjs.has(camp)) return camp;
+  const { sec, ok } = await readSecret(id, camp);
+  if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+  const joined = joinCampaign(camp, sec);
+  for (const k of Object.keys(camp)) if (!(k in joined)) delete camp[k];
+  Object.assign(camp, joined);
+  _joined.add(id); _joinedObjs.add(camp);
+  _lastSeen.set(id, JSON.stringify(camp));
+  return camp;
+}
+
 export async function loadHubDmCompanion() {
   const idx = await storageGetCompanion(HUB, 'hub-index', 'server');
   if (idx && Array.isArray(idx.campaignIds)) {
@@ -62,9 +78,15 @@ export async function loadHubDmCompanion() {
     for (const id of idx.campaignIds) {
       const pub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
       if (!pub) continue;
-      const { sec, ok } = await readSecret(id, pub);
-      if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
-      const camp = isCampaignDm(pub, _me) ? joinCampaign(pub, sec) : pub;
+      // The secret record only for the campaign this sidebar runs (joinSecrets): reading every DM campaign's doubled
+      // the load and passed the node's read limit (see dnd-hub-storage.js).
+      let camp = pub;
+      if (_joined.has(id) && isCampaignDm(pub, _me)) {
+        const { sec, ok } = await readSecret(id, pub);
+        if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+        camp = joinCampaign(pub, sec);
+        _joinedObjs.add(camp);
+      }
       campaigns[id] = camp;
       _lastSeen.set(id, JSON.stringify(camp));
     }

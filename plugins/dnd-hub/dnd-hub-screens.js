@@ -4,15 +4,15 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261011b';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261011b';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261011b';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261011h';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261011h';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261011h';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets } from './dnd-hub-storage.js?v=20261011h';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -374,6 +374,8 @@ export async function enterCampaignAsPlayer(campaignId) {
 }
 
 export async function renderCampaignView(campaignId, isDM) {
+  // The DM's secret record joins only for the campaign being opened (dnd-hub-storage.js joinSecrets).
+  if (isDM) await joinSecrets(serverData, campaignId).catch(() => {});
   // Refresh from storage so characterSummaries and any other changes made
   // since onInit (e.g. just after character creation) are visible to renderTokens.
   const fresh = await loadHubDm();

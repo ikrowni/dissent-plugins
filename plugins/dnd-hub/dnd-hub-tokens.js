@@ -3,13 +3,13 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261011b';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261011b';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261011b';
+import { renderFog } from './dnd-hub-fog.js?v=20261011h';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261011h';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261011h';
 import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261009a';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261011b';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261006s';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261011h';
+import { showTriggerToast } from './dnd-hub-triggers.js?v=20261011h';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261011h';
 import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own

@@ -53,6 +53,27 @@ async function readSecret(id, pub) {
   return { sec, ok: !!sec || !pub?.secretsKept };
 }
 
+// 🔴 Secret records are read only for the campaigns that need them (the one the DM has open: joinSecrets), not for
+// every campaign the DM runs. Reading all of them doubled a DM's load, and a couple of reloads then passed the node's
+// 120 reads a minute: the Hub came back with "Campaign not found" (2026-10-04). A campaign saved without its secret
+// part joined is still safe: base and local both lack the secrets, so the merge keeps the stored ones.
+const _joined = new Set();         // campaign ids kept joined across reloads (the open one)
+const _joinedObjs = new WeakSet(); // the campaign objects that already hold their secret part
+
+/** Join the DM's secret record into campaign `id` of `data`, in place (callers hold references into it). */
+export async function joinSecrets(data, id) {
+  const camp = data?.campaigns?.[id];
+  if (!camp || !isCampaignDm(camp, _me) || _joinedObjs.has(camp)) return camp;
+  const { sec, ok } = await readSecret(id, camp);
+  if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+  const joined = joinCampaign(camp, sec);
+  for (const k of Object.keys(camp)) if (!(k in joined)) delete camp[k];
+  Object.assign(camp, joined);
+  _joined.add(id); _joinedObjs.add(camp);
+  _lastWritten.set(id, JSON.stringify(camp));
+  return camp;
+}
+
 /** Reassemble the DM blob from its shards, falling back to the legacy value. */
 export async function loadHubDm() {
   const idx = await storageGet(HUB_INDEX_KEY);
@@ -60,18 +81,24 @@ export async function loadHubDm() {
     _indexIds = [...idx.campaignIds];
     const campaigns = {};
     let moveOut = false;
+    const keepJoined = new Set(_joined); // the open campaign stays joined across a reload of the list
+    _joined.clear();
     for (const id of idx.campaignIds) {
       const pub = await storageGet(hubCampKey(id));
       if (!pub) continue; // shard missing — skip rather than resurrect a stub
-      const { sec, ok } = await readSecret(id, pub);
-      if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
-      const camp = isCampaignDm(pub, _me) ? joinCampaign(pub, sec) : pub;
+      const dm = isCampaignDm(pub, _me);
+      // A DM's campaign whose public record still holds secrets (written before the split): joined now and left
+      // unmarked, so the save the load starts below moves them out with the whole picture.
+      const moving = dm && (!pub.secretsKept || !!splitCampaign(pub).sec);
+      let camp = pub;
+      if (dm && (moving || keepJoined.has(id))) {
+        const { sec, ok } = await readSecret(id, pub);
+        if (!ok) _secretUnreadable.add(id); else _secretUnreadable.delete(id);
+        camp = joinCampaign(pub, sec);
+        _joined.add(id); _joinedObjs.add(camp);
+      }
       campaigns[id] = camp;
-      // A DM's campaign whose public record still holds secrets (written before the split) is left unmarked, so the
-      // next save moves them out; the load below starts that save.
-      if (isCampaignDm(pub, _me) && (!pub.secretsKept || splitCampaign(pub).sec)) {
-        _lastWritten.delete(id); moveOut = true;
-      } else _lastWritten.set(id, JSON.stringify(camp));
+      if (moving) { _lastWritten.delete(id); moveOut = true; } else _lastWritten.set(id, JSON.stringify(camp));
     }
     const data = { ...(idx.rest ?? {}), campaigns };
     if (moveOut) queueMicrotask(() => saveHubDm(data).catch(e => console.warn('[dnd-hub-storage] moving DM secrets out failed', e)));

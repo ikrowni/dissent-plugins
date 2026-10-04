@@ -36,6 +36,8 @@ describe('DM secrets (lk-secrets.js)', () => {
     store.set('user:dm-camp-c', JSON.stringify({ encounters: { e: { name: 'Ghouls' } } }));
     mod.setSecretsUser('dm');
     const data = await mod.loadHubDmCompanion();
+    expect(data.campaigns.c.encounters).toBeUndefined(); // not read until the sidebar opens it
+    await mod.joinSecrets(data, 'c');
     expect(data.campaigns.c.encounters.e.name).toBe('Ghouls');
     data.campaigns.c.dmNotes = 'twist';
     await mod.saveHubDmCompanion(data);

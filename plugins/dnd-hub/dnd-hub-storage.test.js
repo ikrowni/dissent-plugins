@@ -104,9 +104,11 @@ describe('DM secrets stay with the DM (lk-secrets.js)', () => {
     expect(sec().dmNotes).toBe('twist');
     expect(sec().maps.m.tokens.g).toBeTruthy();
     expect(data.campaigns.c.dmNotes).toBe('twist');
-    // a fresh DM screen joins both
+    // a fresh DM screen joins both when the DM opens the campaign
     vi.resetModules(); mod = await import('./dnd-hub-storage.js'); mod.setSecretsUser('dm');
     const again = await mod.loadHubDm();
+    expect(again.campaigns.c.maps.m.triggers).toEqual([]);
+    await mod.joinSecrets(again, 'c');
     expect(again.campaigns.c.maps.m.triggers).toEqual([{ id: 't' }]);
     expect(again.campaigns.c.maps.m.tokens.g).toBeTruthy();
   });
@@ -127,6 +129,7 @@ describe('DM secrets stay with the DM (lk-secrets.js)', () => {
     mod.setSecretsUser('dm');
     const data = await mod.loadHubDm();
     await flush(); await flush();
+    await mod.joinSecrets(data, 'c');
     data.campaigns.c.maps.m.triggers.push({ id: 'pit' });
     await mod.saveHubDm(data);
     expect(pub().maps.m.triggers).toEqual([]);
@@ -161,5 +164,39 @@ describe('DM secrets stay with the DM (lk-secrets.js)', () => {
     await mod.saveHubDm(data);
     expect(store.get('user:dm-camp-c')).toBe(kept);
     expect(pub().maps.m.tokens.b.x).toBe(3);
+  });
+});
+
+describe('secret records are read only for the open campaign', () => {
+  const seedMany = () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a', 'b'], rest: {} }));
+    for (const id of ['a', 'b']) {
+      store.set('hub-camp-' + id, JSON.stringify({ id, dmUserId: 'dm', secretsKept: true, maps: { m: { tokens: {}, triggers: [], pins: [] } } }));
+      store.set('user:dm-camp-' + id, JSON.stringify({ dmNotes: 'secret ' + id }));
+    }
+  };
+  it('a DM\'s load reads no secret record until a campaign is opened, then that one only', async () => {
+    seedMany();
+    mod.setSecretsUser('dm');
+    const sdk = await import('../plugin-sdk.js');
+    sdk.storageGet.mockClear();
+    const data = await mod.loadHubDm();
+    expect(sdk.storageGet.mock.calls.filter(c => c[1] === 'user')).toEqual([]);
+    await mod.joinSecrets(data, 'b');
+    expect(sdk.storageGet.mock.calls.filter(c => c[1] === 'user').map(c => c[0])).toEqual(['dm-camp-b']);
+    expect(data.campaigns.b.dmNotes).toBe('secret b');
+    // and a reload of the list keeps the open one joined
+    const again = await mod.loadHubDm();
+    expect(again.campaigns.b.dmNotes).toBe('secret b');
+    expect(again.campaigns.a.dmNotes).toBeUndefined();
+  });
+  it('saving a campaign whose secrets were never joined keeps the stored secrets', async () => {
+    seedMany();
+    mod.setSecretsUser('dm');
+    const data = await mod.loadHubDm();
+    data.campaigns.a.name = 'Renamed';
+    await mod.saveHubDm(data);
+    expect(JSON.parse(store.get('hub-camp-a')).name).toBe('Renamed');
+    expect(JSON.parse(store.get('user:dm-camp-a'))).toEqual({ dmNotes: 'secret a' });
   });
 });

@@ -31,7 +31,7 @@ import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenP
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
 import { icon } from './lk-icons.js';
-import { loadHubDmCompanion, setSecretsUser } from './dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, setSecretsUser, joinSecrets } from './dnd-hub-shared-storage.js';
 import { sealedHtml } from './lk-sealed.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
@@ -138,6 +138,7 @@ async function onInit(data) {
     seal('For the DM', 'This panel is for the campaign\'s Dungeon Master. Your character is in the LanternKeep Player panel.');
     return;
   }
+  await joinSecrets(serverData, myCampaign.id); // its DM-only part (encounters, notes, traps): this campaign only
   document.getElementById('loading').classList.add('hidden');
 
   dmCampaignId = myCampaign.id;
