@@ -167,8 +167,14 @@ const crText = cr => cr == null ? '?' : cr === 0.125 ? '1/8' : cr === 0.25 ? '1/
 const wordCount = html => String(html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
 
 function preview(k, e) {
-  if (k === 'monsters') return `<div class="bk-stat">${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(a => `<span><b>${a.toUpperCase()}</b>${e[a] ?? '?'}</span>`).join('')}</div>
-    <p><b>AC</b> ${e.ac ?? '?'}${e.ac_type ? ` (${esc(e.ac_type)})` : ''} · <b>HP</b> ${e.hp ?? '?'}${e.hp_dice ? ` (${esc(e.hp_dice)})` : ''} · <b>Speed</b> ${esc(Object.entries(e.speed || {}).filter(([, v]) => v !== true).map(([k2, v]) => k2 === 'walk' ? v : `${k2} ${v}`).join(', '))}</p>
+  // Monsters: the numbers and the name can be put right here (a scan misreads them; a "?" was not read at all).
+  const num = (f, label, w = 3) => `<label class="bk-edit"><b>${label}</b><input inputmode="decimal" size="${w}" value="${esc(e[f] ?? '')}" placeholder="?"
+    aria-label="${label}" oninput="bookEdit('${esc(e.id)}','${f}',this.value)"></label>`;
+  if (k === 'monsters') return `<label class="bk-edit bk-edit-name"><b>Name</b><input value="${esc(e.name)}" maxlength="80" aria-label="Name"
+      oninput="bookEdit('${esc(e.id)}','name',this.value)"></label>
+    <div class="bk-stat">${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(a => num(a, a.toUpperCase(), 2)).join('')}</div>
+    <p class="bk-stat">${num('ac', 'AC')}${num('hp', 'HP')}${num('cr', 'CR')}</p>
+    <p>${e.ac_type ? `(${esc(e.ac_type)}) ` : ''}${e.hp_dice ? `HP ${esc(e.hp_dice)} · ` : ''}<b>Speed</b> ${esc(Object.entries(e.speed || {}).filter(([, v]) => v !== true).map(([k2, v]) => k2 === 'walk' ? v : `${k2} ${v}`).join(', '))}</p>
     ${[...(e.special_abilities || []), ...(e.actions || [])].slice(0, 6).map(a => `<p><b><i>${esc(a.name)}.</i></b> ${esc(a.desc.slice(0, 220))}${a.desc.length > 220 ? '…' : ''}</p>`).join('')}`;
   if (k === 'spells') return `<p><b>Casting time</b> ${esc(e.casting_time)} · <b>Range</b> ${esc(e.range)} · <b>Duration</b> ${esc(e.duration)}${e.classes?.length ? ` · ${esc(e.classes.join(', '))}` : ''}</p><p>${esc(e.desc.slice(0, 600))}${e.desc.length > 600 ? '…' : ''}</p>`;
   if (k === 'items') return `<p>${esc(e.desc.slice(0, 700)).replace(/\n/, '<br>')}${e.desc.length > 700 ? '…' : ''}</p>`;
@@ -186,6 +192,9 @@ function reviewView() {
       <span style="margin-left:auto;color:var(--lk-muted);font-size:12px">${S.pages ? `${S.pages} pages read` : 'From a saved copy'}</span></div>
     <p class="bk-help">Everything below was found in the book. The ones we're sure of are already ticked. Click one to
       check it against what we read. Untick anything you don't want; ⚠ marks the ones to look at.</p>
+    ${S.parsed.scanned ? `<p class="bk-help bk-scan">⚠ <b>This book is a scanned copy.</b> Its pages are pictures, and the words were
+      read from them by a machine, with mistakes. Nothing is ticked: check each find against the page, fix a name or a
+      number under <i>Look</i>, and leave out anything that came out garbled.</p>` : ''}
     <div class="bk-tabs" role="tablist">${KINDS.map(([kk, label]) => `<button role="tab" aria-selected="${kk === k}" onclick="bookTab('${kk}')"
       ${S.parsed[kk].length ? '' : 'disabled'}>${label} <span>${S.keep[kk].size}/${S.parsed[kk].length}</span></button>`).join('')}</div>
     <div class="bk-tools">
@@ -232,6 +241,15 @@ export function bookKeepAll(mode) {
   const list = S.parsed[S.tab];
   S.keep[S.tab] = new Set(mode === 'none' ? [] : list.filter(e => mode === 'all' || S.tab === 'story' || S.tab === 'images' || e.confidence === 'sure').map(e => e.id));
   render();
+}
+/** A number or the name put right in the review (Look). Typing does not redraw, so the field keeps its focus. */
+export function bookEdit(id, field, value) {
+  const e = S?.parsed?.monsters?.find(x => x.id === id);
+  if (!e) return;
+  if (field === 'name') { if (value.trim()) e.name = value.trim(); return; }
+  const v = String(value).trim();
+  if (field === 'cr') { const f = v.match(/^(\d+)\/(\d+)$/); e.cr = !v ? null : f ? +f[1] / +f[2] : Number.isFinite(+v) ? +v : e.cr; return; }
+  e[field] = !v ? null : /^\d+$/.test(v) ? +v : e[field];
 }
 export function bookPeek(id) { S.open = S.open === id ? null : id; render(); }
 export function bookTitle(v) { S.title = v; }

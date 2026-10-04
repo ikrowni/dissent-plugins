@@ -133,11 +133,11 @@
     },
     {
       "url": "book/book-monsters.js",
-      "sha256": "a72750dfb940abfc60cb1d499ddc2d4e6a2578f30b8c2cc70a3ed31b7c989c3f"
+      "sha256": "906ab14923c45fba755e434bf0e7618f2d4a65e4b60747392bd352ce866b4be8"
     },
     {
       "url": "book/book-parse.js",
-      "sha256": "864cf7525bab6d82a013535c310f865218e4a5f23962569b17673c3338c9d446"
+      "sha256": "9f70b5747335ea4af041f1ae4fb92b50e5a005e0f0215319595e11e0bafa11f2"
     },
     {
       "url": "book/book-pdf.js",
@@ -148,8 +148,12 @@
       "sha256": "930a9b5e9497ea3c7289b5c8744218922bcd070bd378f3b8ca7a19df50e84dac"
     },
     {
+      "url": "book/book-scan.js",
+      "sha256": "0fb20fdd11a3967ca7ed43c9cc2bfb61cfe1d8c4f2c7de86b4526bed809a4cf1"
+    },
+    {
       "url": "book/book-screens.js",
-      "sha256": "653ca1bebbefbb57e59c2573b8486fd5aa2970f9e3b0224e40bf35256b6ec5b4"
+      "sha256": "a7738c3c07a5b03937a80056a6e61b5eb2e4c53472e3013b0e45b93567beccae"
     },
     {
       "url": "book/book-spells-in-play.js",
@@ -161,11 +165,11 @@
     },
     {
       "url": "book/book-story.js",
-      "sha256": "2781836b228dd7d0ad8fe4aaf045ea818aa433ab44ba00865211c0810f7f3db2"
+      "sha256": "cc5ba87c7cdeeed489dca6ea2e3239751021c27683c50b7e4e3127ee5dff840a"
     },
     {
       "url": "book/book.css",
-      "sha256": "759187023a593f94ff2e237970be87e8213f836961511ea0120535dc3025649d"
+      "sha256": "0ecdfd480a5e8eaf4f0326ba110b548efdf5aef7767469dfaad7211b23262296"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -305,7 +309,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "86efcb822d110736823e214288b4afa1053aa01528145b8ced0866ab18c6a31b"
+      "sha256": "c88b5138f6d338fdf0bd3212510487a92c9c43715eb0124c54505e32c5410346"
     },
     {
       "url": "dnd-hub-map-bg.js",

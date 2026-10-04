@@ -125,3 +125,11 @@
 .bk-seg{display:flex;border:1px solid var(--lk-line);border-radius:999px;overflow:hidden}
 .bk-seg button{background:none;border:0;color:var(--lk-muted);font:inherit;font-size:11px;padding:2px 9px;cursor:pointer}
 .bk-seg button[aria-pressed="true"]{background:var(--lk-gold);color:#1a0f05}
+
+/* Review: a monster's name and numbers can be put right (a scan misreads them) */
+.bk-edit{display:inline-flex;flex-direction:column;align-items:center;gap:2px;font-size:13px}
+.bk-edit b{font-size:9px;color:var(--lk-gold);letter-spacing:.08em}
+.bk-edit input{width:3.2em;text-align:center;background:var(--lk-bg, transparent);color:inherit;border:1px solid var(--lk-line);border-radius:6px;padding:2px 4px;font:inherit}
+.bk-edit-name{flex-direction:row;gap:8px;margin-bottom:6px}
+.bk-edit-name input{width:min(22em,100%);text-align:left}
+.bk-scan{border:1px solid var(--lk-line);border-radius:8px;padding:8px 10px}

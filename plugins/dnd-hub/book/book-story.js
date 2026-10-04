@@ -5,7 +5,9 @@
 // `readAloud`. Text only: everything is escaped.
 // Section: { id, title, chapter, html, readAloud[], page }.
 import { slug, joinText, bodyFont } from './book-monsters.js';
+import { isScanHeading, scanName, clean, titleCase } from './book-scan.js';
 
+const DANGLING = /\b(of|the|and|to|in|on|at)$/i; // a scanned chapter title cut mid-phrase
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function mostCommonSize(lines) {
@@ -14,13 +16,17 @@ function mostCommonSize(lines) {
   return +Object.entries(n).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] || 10;
 }
 
-export function findStory(lines) {
+// `scanned` (book-scan.js): a scan's sizes are machine estimates, different for every heading, so headings are known
+// by their look instead (big capitals): very big or "CHAPTER …" opens a chapter, big a section, the rest are <h4>.
+export function findStory(lines, { scanned = false } = {}) {
   if (!lines.length) return [];
   const bodySize = mostCommonSize(lines);
   const body = bodyFont(lines.filter(l => Math.abs(l.size - bodySize) < 0.5));
-  const isHeading = l => l.size > bodySize + 0.9 && l.text.length <= 90;
+  const isHeading = scanned ? isScanHeading : l => l.size > bodySize + 0.9 && l.text.length <= 90;
   const sizes = [...new Set(lines.filter(isHeading).map(l => +l.size.toFixed(1)))].sort((a, b) => b - a);
   const chapterSize = sizes[0], sectionSize = sizes[1];
+  const level = l => (!scanned ? (+l.size.toFixed(1) === chapterSize ? 'chapter' : +l.size.toFixed(1) === sectionSize ? 'section' : 'sub')
+    : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
   const boxed = l => !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && l.runs[0].font !== body;
 
   const out = [];
@@ -43,13 +49,29 @@ export function findStory(lines) {
     cur = { id, title, chapter, html: '', readAloud: [], page };
   };
 
-  for (const l of lines) {
-    const t = l.text.trim();
+  let unfinished = null; // { at, sec, count }: a scanned chapter title waiting for its second half
+  for (const [n, l] of lines.entries()) {
+    const t = scanned && isHeading(l) ? (scanName(l.text) || titleCase(clean(l.text))) : l.text.trim();
     if (!t) continue;
     if (isHeading(l)) {
-      const sz = +l.size.toFixed(1);
-      if (sz === chapterSize) { chapter = t; open(t, l.page); continue; }
-      if (sz === sectionSize) { open(t, l.page); continue; }
+      const lv = level(l);
+      // A scan: a chapter title cut mid-phrase ("Chapter 2: the Lands of" … "Barovia"; "Chapter 3: the Village" …
+      // "Of Barovia") is finished by the next big heading within a page's worth of lines, wherever the scan put it.
+      const joins = unfinished && (DANGLING.test(chapter) || /^(of|and|the|to|in|on|at)\b/i.test(t));
+      if (joins && lv === 'chapter' && n - unfinished.at < 60) {
+        const whole = titleCase(`${chapter} ${t}`);
+        for (const sec of [unfinished.sec, ...out.slice(unfinished.count), cur]) {
+          if (sec?.chapter === chapter) { if (sec.title === chapter) sec.title = whole; sec.chapter = whole; }
+        }
+        chapter = whole; unfinished = null;
+        continue;
+      }
+      if (lv === 'chapter') {
+        chapter = t; open(t, l.page);
+        unfinished = scanned ? { at: n, sec: cur, count: out.length } : null;
+        continue;
+      }
+      if (lv === 'section') { open(t, l.page); continue; }
       flushPara();
       if (!cur) open(t, l.page);
       cur.html += `<h4>${esc(t)}</h4>`;
