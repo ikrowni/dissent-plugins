@@ -15,7 +15,7 @@ import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, del
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel, lootContests } from './dnd-master-items.js?v=20261013a';
+  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261013d';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
@@ -23,7 +23,7 @@ import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderShopsTab, setShopsState, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261011b';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopVideoSelected } from './dnd-master-shops.js?v=20261013d';
 import { setLaunchCallback } from './dnd-master-encounter.js?v=20261013c';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
@@ -297,8 +297,8 @@ window.openPartyMember = async uid => {
 // Read-only, for the playtest (like window.MAP on the Hub).
 window.__dmInitiative = () => getInitiativeState();
 // Read-only views for the playtests (scripts/playtest/dnd-rules-test.mjs).
-window.__dmItems = () => Object.values(dmCampaign?.items || {});
-window.__dmShops = () => Object.values(dmCampaign?.shops || {});
+window.__dmItems = () => currentItems(); // what the Items and Shops tabs hold, which is what the DM sees
+window.__dmShops = () => currentShops();
 window.__lootContests = () => lootContests();
 window.updateHP            = updateHP;
 window.toggleInitRow       = toggleInitRow;

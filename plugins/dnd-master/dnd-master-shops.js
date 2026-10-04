@@ -8,6 +8,9 @@ let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: n
 let _pendingShopVideo = null;   // File object for new shop upload
 const _shopVolDebounce = {};    // debounce timers keyed by shopId
 
+/** The shops as this tab holds them (read only, for the playtests). */
+export const currentShops = () => Object.values(_state?.dmCampaign?.shops || {});
+
 export function setShopsState(sharedState) {
   _state = sharedState;
 }

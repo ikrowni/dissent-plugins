@@ -16,6 +16,8 @@ let _contestPanel = null;
 let _forgeEffects = [];  // array of EffectDef objects being built
 
 export function setItemsState(state) { _state = state; }
+/** The items as this tab holds them (read only, for the playtests). */
+export const currentItems = () => Object.values(_state?.dmCampaign?.items || {});
 
 // Write items+shops to the DM's own storage so players can read a hub-race-proof copy.
 async function _persistDmCatalog() {
