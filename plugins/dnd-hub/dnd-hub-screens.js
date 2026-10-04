@@ -11,6 +11,7 @@ import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
+import { startWeather } from './dnd-hub-weather.js';
 import { saveHubDm, loadHubDm, hubCampKey } from './dnd-hub-storage.js?v=20261006s';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
@@ -422,6 +423,7 @@ export async function renderCampaignView(campaignId, isDM) {
           <button class="map-tool-btn" id="btn-edit-mode" onclick="toggleEditMode()" title="Edit the map: walls, doors, fog, lights, pins">${icon('pencil')}Edit</button>
           <button class="map-tool-btn" id="btn-fog-toggle" onclick="toggleDMFog()" title="Show or hide fog on your screen">${icon('cloud-fog')}Fog</button>
           <button class="map-tool-btn" onclick="updateAndBroadcastFog()" title="Reveal what the players' tokens can see (line of sight)">${icon('eye')}Sight</button>
+          <button class="map-tool-btn" id="btn-weather" onclick="toggleWeatherPanel()" title="Weather on this map: rain, storm, snow, fog, embers, ash">${icon('cloud-rain')}Weather</button>
           <button class="map-tool-btn" id="btn-grid-settings" onclick="toggleGridPanel()" title="Adjust grid size, offset, colour and opacity">${icon('grid-3x3')}Grid</button>
           <div id="edit-tools" style="display:none;align-items:center;gap:6px">
             <div class="map-tool-sep"></div>
@@ -527,6 +529,7 @@ export async function renderCampaignView(campaignId, isDM) {
   await initPixiApp();
   initKeyboardHandlers();
   await loadMapData(campaignId);
+  startWeather(); // after the map's canvas, so it sits above it
 }
 
 /** The toolbar's Guide button: guides on (every tip starts over) or off. */

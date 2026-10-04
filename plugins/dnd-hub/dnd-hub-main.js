@@ -1,23 +1,24 @@
 // dnd-hub-main.js — entry point, wiring only. Zero logic.
 import { levelupPick, levelupRoll, levelupRollDie, levelupAbility, levelupBack, levelupNext, levelupContinue } from './dnd-hub-levelup.js';
+import { toggleWeatherPanel, setWeather } from './dnd-hub-weather.js';
 import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete } from './book/book-screens.js';
 import { toggleBookPanel, bookPanelTab, bookPanelBook, bookPanelSection, bookPanelFilter, bookPanelOpen, bookShareSection, bookAddMonster, bookAddItem, bookUseHere } from './book/book-reader.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
 import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261009a';
 import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261006s';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261009r';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261010c';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { STARTING_KITS } from './dnd-hub-quick.js';
 import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261009a';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261009g';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261010c';
 import { setZoom } from './dnd-hub-canvas.js?v=20261009g';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261009g';
+} from './dnd-hub-screens.js?v=20261010c';
 import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261009a';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
@@ -95,6 +96,7 @@ window.levelupAbility = levelupAbility; window.levelupBack = levelupBack; window
 window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; window.quickPlay = quickPlay; window.quickChange = quickChange; window.forgeSelect = forgeSelect; window.forgeChoose = forgeChoose; window.forgeBack = forgeBack; window.forgeToggleMute = forgeToggleMute;
 window.__lkKits = STARTING_KITS;
 window.toggleGuides = toggleGuides;
+window.toggleWeatherPanel = toggleWeatherPanel; window.setWeather = setWeather;
 // Books (book/book-screens.js, book/book-reader.js).
 window.showLibrary = showLibrary; window.bookPickFile = bookPickFile; window.bookCancel = bookCancel; window.bookTab = bookTab; window.bookFilter = bookFilter; window.bookKeep = bookKeep; window.bookKeepAll = bookKeepAll; window.bookPeek = bookPeek; window.bookTitle = bookTitle; window.bookPlace = bookPlace; window.bookSave = bookSave; window.bookAttach = bookAttach; window.bookDelete = bookDelete; window.toggleBookPanel = toggleBookPanel; window.bookPanelTab = bookPanelTab; window.bookPanelBook = bookPanelBook; window.bookPanelSection = bookPanelSection; window.bookPanelFilter = bookPanelFilter; window.bookPanelOpen = bookPanelOpen; window.bookShareSection = bookShareSection; window.bookAddMonster = bookAddMonster; window.bookAddItem = bookAddItem; window.bookUseHere = bookUseHere;
 // The Hero Forge's guided steps (dnd-hub-forge-shape*.js).

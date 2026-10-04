@@ -15,7 +15,7 @@ const OUT = new URL("../plugins/lk-icons.js", import.meta.url).pathname;
 const NAMES = [
   "flame", "crown", "swords", "sword", "map", "users", "upload", "file-input", "brick-wall", "cloud-fog", "eye",
   "grid-3x3", "zoom-in", "zoom-out", "map-pin", "target", "skull", "globe", "coins", "music", "settings", "play",
-  "scroll-text", "book-open", "notebook-pen", "store", "gem", "flask-conical", "clapperboard", "user-round", "bomb",
+  "cloud-rain", "scroll-text", "book-open", "notebook-pen", "store", "gem", "flask-conical", "clapperboard", "user-round", "bomb",
   "dices", "heart", "shield", "zap", "sparkles", "circle-check", "circle", "door-open", "arrow-left", "plus", "x",
   "trash-2", "pencil", "info", "wand-sparkles", "backpack", "footprints", "sun", "moon", "check", "castle", "ruler",
   "list-ordered", "user-plus", "spline", "hand", "lightbulb", "volume-2", "volume-x", "eye-off", "hourglass",

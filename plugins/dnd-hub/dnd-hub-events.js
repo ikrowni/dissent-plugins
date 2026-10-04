@@ -155,7 +155,7 @@ export function onEvent(ev) {
   handleMapEvent(payload).catch(e => console.error('[dnd-hub] event handler error:', e));
 }
 
-const OWN_ECHO_IGNORED = new Set(['map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update']);
+const OWN_ECHO_IGNORED = new Set(['map:weather', 'map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update']);
 
 const PRIVILEGED_EVENTS = new Set([
   'hp:change','fog:reveal','fog:reset','map:set','initiative:update',
@@ -163,7 +163,7 @@ const PRIVILEGED_EVENTS = new Set([
   'token:turn-start','token:conditions','combat:settings',
   'scene:load','pins:update','audio:play','audio:zone-update',
   'shop:open','shop:volume','contest:roll',
-  'session:start','map:view','level:grant',
+  'session:start','map:view','level:grant','map:weather',
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -402,6 +402,14 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       MAP.mapData.fogState = {};
       renderFog();
+      break;
+    }
+    case 'map:weather': {
+      // The DM changed the weather (dnd-hub-weather.js draws it from mapData.weather on the next frame).
+      if (p.campaignId !== MAP.campaignId) return;
+      const m = serverData?.campaigns?.[p.campaignId]?.maps?.[p.mapId];
+      if (m) m.weather = p.weather;
+      if (MAP.mapData && p.mapId === MAP.mapId) MAP.mapData.weather = p.weather;
       break;
     }
     case 'map:grid-settings': {

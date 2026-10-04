@@ -225,7 +225,7 @@
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "812453a64b4a7a5a3d8df438c7fef1f65986973e7619f240965d1495af0dd7ce"
+      "sha256": "35be7a88ac52333e5e30f28a2aa612475127d8bebb33e49fa2cb7ecdfe45f901"
     },
     {
       "url": "dnd-hub-fog.js",
@@ -301,7 +301,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "eb66d606d4ef6d984cf902c6829fb0ea5ac885708da89460822ce317c84cfc10"
+      "sha256": "f95d8818a193228ada65c51aa4126d830fb8ae8e99087efa7df02fe787f79578"
     },
     {
       "url": "dnd-hub-map-bg.js",
@@ -341,11 +341,11 @@
     },
     {
       "url": "dnd-hub-sample.js",
-      "sha256": "10c7fd8c727ad15ab0c3032ed71bfbddc08b2dfdaa35564d8123aba08bf2d11d"
+      "sha256": "f98a7f82d098e1da638df5003bc1b355099fd8e303c49d26c4cf54958d7e4778"
     },
     {
       "url": "dnd-hub-screens.js",
-      "sha256": "d3d60635ce59cb4a120cc4c22670b9b442ed6b22888e7165c97c57e419c97e72"
+      "sha256": "2548a1bd0808c5302b1b79443c871671dfb0e6673c04e1b53a5adcd05d8472cd"
     },
     {
       "url": "dnd-hub-shop-scene.js",
@@ -365,7 +365,7 @@
     },
     {
       "url": "dnd-hub-styles.css",
-      "sha256": "d5c8c979a6827faef3aa1718aa5ae15f546a944eb14e3f76f9b12101ee2b8a5d"
+      "sha256": "7981af5a66b7f6e60437da84ccb8ca766ab9ef32fb0c20bd0dedd8d6444b673e"
     },
     {
       "url": "dnd-hub-templates.js",
@@ -386,6 +386,14 @@
     {
       "url": "dnd-hub-walls.js",
       "sha256": "77a020fc4af48a8aec722124a182d1808eef29a3de38df447f1ec110121225cd"
+    },
+    {
+      "url": "dnd-hub-weather-model.js",
+      "sha256": "c91fab77e13faab868414bf5caf557f8efc55ce3b8b3788d9c7fec63db60a835"
+    },
+    {
+      "url": "dnd-hub-weather.js",
+      "sha256": "31f02936f5b081d8e95cdeb1dd7ba1771cf2e335ebd8ee0ff0f8d66000327e1b"
     },
     {
       "url": "dnd-srd/backgrounds.json",
@@ -461,7 +469,7 @@
     },
     {
       "url": "lk-icons.js",
-      "sha256": "a5d80059a9fae667b2beb018cbd36e877bc9048b91fa6facf8a63bfb8c487cf7"
+      "sha256": "4f86a3ae1ead08a0d73d505406db30e1956bb628734d4b738aae6a3b268fe8b7"
     },
     {
       "url": "lk-levelling.js",

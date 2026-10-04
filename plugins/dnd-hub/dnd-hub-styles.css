@@ -205,3 +205,13 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .campaign-row:hover,.available-card:hover{transform:translateX(3px);box-shadow:-3px 0 0 var(--lk-gold),0 8px 22px rgba(0,0,0,.4)}
 @media (prefers-reduced-motion:reduce){.campaign-row,.available-card{animation:none!important}}
 .map-tool-btn[aria-pressed="true"]#btn-guides{color:var(--lk-gold);border-color:color-mix(in srgb,var(--lk-gold) 50%,transparent)}
+/* Small popovers on the map (Weather). */
+.lk-pop{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:110;min-width:300px;max-width:calc(100% - 20px);padding:12px;border-radius:10px;
+  border:1px solid color-mix(in srgb,var(--lk-gold) 45%,var(--lk-line));background:rgba(14,10,6,.97);box-shadow:0 14px 40px rgba(0,0,0,.6);animation:forge-rise-lk .3s both}
+.lk-pop-title{font-family:var(--lk-title);color:var(--lk-gold);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.lk-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lk-chips button{background:rgba(22,17,11,.8);border:1px solid var(--lk-line);color:var(--lk-text);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}
+.lk-chips button[aria-pressed="true"]{border-color:var(--lk-gold);color:#1a0f05;background:var(--lk-gold)}
+.lk-pop-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--lk-muted)}
+.lk-pop-row input{flex:1;accent-color:var(--lk-gold)}
+.lk-pop-note{font-size:11px;color:var(--lk-muted);margin-top:8px}
