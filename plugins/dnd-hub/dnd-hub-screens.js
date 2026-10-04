@@ -4,15 +4,15 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261011h';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261011h';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261011h';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261012a';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261012a';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261012a';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets } from './dnd-hub-storage.js?v=20261011h';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261012a';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -222,7 +222,8 @@ export function renderJoinScreen() {
     myEl.innerHTML = '<div class="empty-state">You haven\'t joined any campaigns yet.</div>';
     return;
   }
-  const all = Object.values(serverData.campaigns);
+  // Campaigns this user is not in are not read (lk-campaign-index.js): they are listed from the index's summaries.
+  const all = [...Object.values(serverData.campaigns), ...otherCampaigns()];
   const available = all.filter(c =>
     c.visibility === 'open' &&
     c.dmUserId !== userId &&
@@ -259,8 +260,10 @@ export function renderJoinScreen() {
 }
 
 export async function requestJoin(campaignId) {
-  if (!userId || !serverData?.campaigns?.[campaignId]) return;
-  const c = serverData.campaigns[campaignId];
+  if (!userId || !serverData) return;
+  // Listed from its summary until now: read the campaign itself before changing it.
+  const c = serverData.campaigns?.[campaignId] || await loadCampaign(serverData, campaignId).catch(() => null);
+  if (!c) return;
   if (c.autoAccept) {
     c.members = [...(c.members || []), userId];
     serverData.campaigns[campaignId] = c;

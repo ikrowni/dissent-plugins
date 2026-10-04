@@ -39,7 +39,7 @@
     },
     {
       "url": "dnd-hub-shared-storage.js",
-      "sha256": "e2e89ab8b677ebe078a3ef6545572c9e3b4cbe9f15384df301796477c1fcd86d"
+      "sha256": "73fc25f7eb9241db47efee5683d22ce379c8edcc3ea10afbf843f8a0279511dc"
     },
     {
       "url": "dnd-master-actors.js",
@@ -168,6 +168,10 @@
     {
       "url": "lk-bus.js",
       "sha256": "ae12ec4dfa388039ec49ce1578bd86521fbff197a5a7d07980f17c41433751db"
+    },
+    {
+      "url": "lk-campaign-index.js",
+      "sha256": "28c3e4cdf5ec3a615f003e530de142b580ff8f159210fdc34ebd16ac9a8dde51"
     },
     {
       "url": "lk-content-pack.js",

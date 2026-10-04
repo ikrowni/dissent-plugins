@@ -25,6 +25,7 @@
 import { storageGetCompanion, storageSetCompanion } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
+import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged } from './lk-campaign-index.js';
 
 const HUB = 'dnd-hub';
 
@@ -39,6 +40,12 @@ const _lastSeen = new Map();
 let _indexIds = null;
 /** The campaign ids from the last hub-index read, or null (not read, or a pre-split server). */
 export const cachedIndexIds = () => (_indexIds ? [..._indexIds] : null);
+
+// 🔴 A sidebar reads only the campaigns its user runs or plays in (lk-campaign-index.js; same rules as
+// dnd-hub/dnd-hub-storage.js). `_skipped` = listed but unread; saves keep them in the index.
+const _skipped = new Set();
+let _summaries = {};
+let _indexRest = null;
 
 /** Reassemble dnd-hub's campaign blob from its shards. */
 // 🔴 DM secrets: the same two-record layout as dnd-hub/dnd-hub-storage.js (read that header). Only the campaign's
@@ -74,8 +81,12 @@ export async function loadHubDmCompanion() {
   const idx = await storageGetCompanion(HUB, 'hub-index', 'server');
   if (idx && Array.isArray(idx.campaignIds)) {
     _indexIds = [...idx.campaignIds];
+    _summaries = idx.summaries && typeof idx.summaries === 'object' ? idx.summaries : {};
+    _indexRest = JSON.stringify(idx.rest ?? {});
+    _skipped.clear();
     const campaigns = {};
     for (const id of idx.campaignIds) {
+      if (!needsCampaign(_summaries, id, _me)) { _skipped.add(id); _lastSeen.delete(id); continue; }
       const pub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
       if (!pub) continue;
       // The secret record only for the campaign this sidebar runs (joinSecrets): reading every DM campaign's doubled
@@ -93,6 +104,7 @@ export async function loadHubDmCompanion() {
     return { ...(idx.rest ?? {}), campaigns };
   }
   // Pre-split fallback: dnd-hub has not written shards yet on this server.
+  _skipped.clear(); _summaries = {}; _indexRest = null;
   _lastSeen.clear();
   _indexIds = null;
   return (await storageGetCompanion(HUB, 'hub-dm', 'server')) || { campaigns: {} };
@@ -121,7 +133,8 @@ export async function loadHubDmCompanion() {
 export async function saveHubDmCompanion(data) {
   if (!data) return;
   const { campaigns = {}, ...rest } = data;
-  const nextIds = Object.keys(campaigns);
+  // Campaigns this sidebar left unread are kept (lk-campaign-index.js).
+  const nextIds = [...Object.keys(campaigns), ...[..._skipped].filter(id => !(id in campaigns))];
 
   let knownIds = _indexIds;
   if (knownIds === null) {
@@ -138,6 +151,7 @@ export async function saveHubDmCompanion(data) {
     nextIds.push(...dropped);
   }
 
+  const written = {}; // merged with what is stored by this save: the only campaigns whose summary is current
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
     if (_lastSeen.get(id) === json) continue;
@@ -148,12 +162,24 @@ export async function saveHubDmCompanion(data) {
     _lastSeen.set(id, JSON.stringify(merged));
     for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
     Object.assign(camp, merged);
+    written[id] = merged;
   }
   for (const id of [..._lastSeen.keys()]) {
     if (!(id in campaigns)) _lastSeen.delete(id);
   }
-  await storageSetCompanion(HUB, 'hub-index', 'server', { campaignIds: nextIds, rest });
-  _indexIds = [...nextIds];
+  // Written only when it changes, from a FRESH read (dnd-hub-storage.js explains both). A companion never removes.
+  const restJson = JSON.stringify(rest);
+  const idsSame = _indexIds && _indexIds.length === nextIds.length && nextIds.every(id => _indexIds.includes(id));
+  if (idsSame && restJson === _indexRest && !summariesChanged(written, _summaries)) return;
+  const fresh = await storageGetCompanion(HUB, 'hub-index', 'server');
+  const freshOk = !!fresh && Array.isArray(fresh.campaignIds);
+  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], []);
+  const summaries = summariesForIndex(ids, written, freshOk ? (fresh.summaries || {}) : null);
+  await storageSetCompanion(HUB, 'hub-index', 'server', { campaignIds: ids, rest, summaries });
+  _indexIds = [...ids];
+  _summaries = summaries;
+  _indexRest = restJson;
+  for (const id of ids) if (!(id in campaigns)) _skipped.add(id);
 }
 
 /** Merge one campaign with what is stored and write it (the DM's screen: both records); returns the merged whole. */

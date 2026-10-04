@@ -4,7 +4,7 @@ import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, g
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261009a';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261011h';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261012a';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
 import { draftScores } from './dnd-hub-char-steps.js?v=20261009a';

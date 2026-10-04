@@ -15,6 +15,7 @@
 import { storageGet, storageSet } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
+import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged } from './lk-campaign-index.js';
 
 export const HUB_LEGACY_KEY = 'hub-dm';
 export const HUB_INDEX_KEY = 'hub-index';
@@ -29,6 +30,14 @@ const _lastWritten = new Map();
 // Campaign ids the index advertised at last successful read. `null` means we
 // have not seen a valid index this session, which is NOT "there are none".
 let _indexIds = null;
+
+// 🔴 Campaigns this screen is not in are not read (lk-campaign-index.js): hub-index carries a summary of each, and a
+// load reads only the campaigns this user runs or plays in. `_skipped` = ids the index lists that this screen left
+// unread; a save keeps them in the index (they are not deletions). `_summaries`/`_indexRest` = what the index said
+// at our last read or write, so a save that changes nothing in it does not write it.
+const _skipped = new Set();
+let _summaries = {};
+let _indexRest = null;
 
 // Called with a campaign id when a save pulled in somebody else's edits, so the open
 // map can re-render them. Wired in dnd-hub-main.js.
@@ -79,11 +88,15 @@ export async function loadHubDm() {
   const idx = await storageGet(HUB_INDEX_KEY);
   if (idx && Array.isArray(idx.campaignIds)) {
     _indexIds = [...idx.campaignIds];
+    _summaries = idx.summaries && typeof idx.summaries === 'object' ? idx.summaries : {};
+    _indexRest = JSON.stringify(idx.rest ?? {});
+    _skipped.clear();
     const campaigns = {};
     let moveOut = false;
     const keepJoined = new Set(_joined); // the open campaign stays joined across a reload of the list
     _joined.clear();
     for (const id of idx.campaignIds) {
+      if (!needsCampaign(_summaries, id, _me)) { _skipped.add(id); _lastWritten.delete(id); continue; }
       const pub = await storageGet(hubCampKey(id));
       if (!pub) continue; // shard missing — skip rather than resurrect a stub
       const dm = isCampaignDm(pub, _me);
@@ -105,6 +118,7 @@ export async function loadHubDm() {
     return data;
   }
 
+  _skipped.clear(); _summaries = {}; _indexRest = null;
   const legacy = await storageGet(HUB_LEGACY_KEY);
   if (!legacy) return legacy;
   // First run after the split: force every campaign to be written out once by
@@ -112,6 +126,25 @@ export async function loadHubDm() {
   _lastWritten.clear();
   _indexIds = null;
   return legacy;
+}
+
+/** Campaigns the index lists that this screen did not read: their summaries (for the Join screen). */
+export function otherCampaigns() {
+  return [..._skipped].map(id => _summaries[id] && { ..._summaries[id], id }).filter(Boolean);
+}
+/** Whether campaign `id` is listed but was left unread because this user is not in it. */
+export const isUnreadCampaign = id => _skipped.has(id);
+
+/** Read one campaign this screen left unread (asking to join it) into `data`; returns it, or null. */
+export async function loadCampaign(data, id) {
+  if (data?.campaigns?.[id]) return data.campaigns[id];
+  const pub = await storageGet(hubCampKey(id));
+  if (!pub || !data) return null;
+  data.campaigns = data.campaigns || {};
+  data.campaigns[id] = pub;
+  _skipped.delete(id);
+  _lastWritten.set(id, JSON.stringify(pub));
+  return pub;
 }
 
 /**
@@ -150,7 +183,9 @@ export function saveHubDm(data, opts = {}) {
 
 async function _saveOnce(data, { allowRemovals = false } = {}) {
   const { campaigns = {}, ...rest } = data;
-  const nextIds = Object.keys(campaigns);
+  // Campaigns left unread are still the server's: keep them (a deletion only ever removes a loaded campaign).
+  const nextIds = [...Object.keys(campaigns), ...[..._skipped].filter(id => !(id in campaigns))];
+  const removed = allowRemovals && _indexIds ? _indexIds.filter(id => !nextIds.includes(id)) : [];
 
   if (!allowRemovals) {
     let knownIds = _indexIds;
@@ -166,6 +201,7 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
     }
   }
 
+  const written = {}; // campaigns this save merged with what is stored: the only ones whose summary is current
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
     if (_lastWritten.get(id) === json) continue;
@@ -185,6 +221,7 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
       Object.assign(camp, adopted);
       _onRemoteMerged?.(id);
     }
+    written[id] = merged;
   }
 
   for (const id of [..._lastWritten.keys()]) {
@@ -193,8 +230,22 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
 
   // Index last: if a shard write fails, the index still points at the previous
   // consistent set rather than advertising a campaign that was never stored.
-  await storageSet(HUB_INDEX_KEY, { campaignIds: nextIds, rest });
-  _indexIds = [...nextIds];
+  // Written only when it changes (a token move changes nothing in it), and from a FRESH read: campaigns created
+  // elsewhere since we loaded stay listed, and summaries of campaigns we did not write come from the stored index.
+  const restJson = JSON.stringify(rest);
+  const idsSame = _indexIds && _indexIds.length === nextIds.length && nextIds.every(id => _indexIds.includes(id));
+  if (idsSame && restJson === _indexRest && !summariesChanged(written, _summaries)) return;
+  const fresh = await storageGet(HUB_INDEX_KEY);
+  const freshOk = !!fresh && Array.isArray(fresh.campaignIds);
+  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], removed);
+  const summaries = summariesForIndex(ids, written, freshOk ? (fresh.summaries || {}) : null);
+  await storageSet(HUB_INDEX_KEY, { campaignIds: ids, rest, summaries });
+  _indexIds = [...ids];
+  _summaries = summaries;
+  _indexRest = restJson;
+  // A campaign another screen created since our load is listed now but unread here: kept by later saves, never
+  // counted as removed by a deletion. The next load decides whether to read it.
+  for (const id of ids) if (!(id in campaigns)) _skipped.add(id);
 }
 
 /**

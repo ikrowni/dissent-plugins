@@ -7,33 +7,33 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261011h';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261012a';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261011h';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261012a';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261011h';
-import { renderFog } from './dnd-hub-fog.js?v=20261011h';
-import { renderWalls } from './dnd-hub-walls.js?v=20261011h';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261012a';
+import { renderFog } from './dnd-hub-fog.js?v=20261012a';
+import { renderWalls } from './dnd-hub-walls.js?v=20261012a';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
-import { loadSRD } from './dnd-hub-char.js?v=20261011h';
+import { loadSRD } from './dnd-hub-char.js?v=20261012a';
 import { showPingAnimation } from './dnd-hub-ruler.js?v=20261009a';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261011h';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261012a';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20260419p1';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261011h';
-import { renderLights } from './dnd-hub-lights.js?v=20261011h';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261011h';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261011h';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261012a';
+import { renderLights } from './dnd-hub-lights.js?v=20261012a';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261012a';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261012a';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
 import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm, loadHubDm, setSecretsUser } from './dnd-hub-storage.js?v=20261011h';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261012a';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261011h';
+import { setView } from './dnd-hub-canvas.js?v=20261012a';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -95,6 +95,8 @@ export async function onInit(initData) {
   } else if (dmData && hubData) {
     let merged = false;
     for (const [cid, camp] of Object.entries(hubData.campaigns || {})) {
+      // Left unread (this user is not in it), not missing: copying the old blob in would overwrite it.
+      if (isUnreadCampaign(cid)) continue;
       if (!dmData.campaigns) dmData.campaigns = {};
       const dmCamp = dmData.campaigns[cid];
       if (!dmCamp) {
@@ -205,6 +207,9 @@ export async function handleMapEvent(p) {
   // Lazy-reload serverData when the campaign isn't cached yet.
   // This prevents isDMEvent from failing on player hubs that haven't fully loaded.
   if (p.campaignId && !serverData?.campaigns?.[p.campaignId]) {
+    // A campaign this screen left unread is one this user is not in (lk-campaign-index.js): not for this screen.
+    // Reloading for it would re-read the list on every event of every other table on the server.
+    if (isUnreadCampaign(p.campaignId)) return;
     setServerData(await loadHubDm());
   }
 

@@ -68,3 +68,37 @@ describe('DM secrets (lk-secrets.js)', () => {
     expect(pub().name).toBe('Renamed');
   });
 });
+
+describe('a sidebar reads only the campaigns its user is in (lk-campaign-index.js)', () => {
+  const sum = (id, dm, members = []) => ({ id, name: id, dmUserId: dm, members });
+  const seed = () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['mine', 'theirs'], rest: {},
+      summaries: { mine: sum('mine', 'dm', ['bob']), theirs: sum('theirs', 'carol') } }));
+    store.set('hub-camp-mine', JSON.stringify({ id: 'mine', dmUserId: 'dm', members: ['bob'], secretsKept: true, hp: 1 }));
+    store.set('hub-camp-theirs', JSON.stringify({ id: 'theirs', dmUserId: 'carol', members: [], secretsKept: true }));
+  };
+
+  it('skips the others and keeps them in the index on save', async () => {
+    seed(); mod.setSecretsUser('bob');
+    const data = await mod.loadHubDmCompanion();
+    expect(Object.keys(data.campaigns)).toEqual(['mine']);
+    data.campaigns.mine.hp = 2;
+    await mod.saveHubDmCompanion(data);
+    const idx = JSON.parse(store.get('hub-index'));
+    expect(idx.campaignIds.sort()).toEqual(['mine', 'theirs']);
+    expect(idx.summaries.theirs.dmUserId).toBe('carol');
+  });
+
+  it('an older copy never writes a new member back out of a summary', async () => {
+    seed(); mod.setSecretsUser('dm');
+    store.set('hub-index', JSON.stringify({ campaignIds: ['mine', 'theirs', 'two'], rest: {},
+      summaries: { mine: sum('mine', 'dm', ['bob']), theirs: sum('theirs', 'carol'), two: sum('two', 'dm') } }));
+    store.set('hub-camp-two', JSON.stringify({ id: 'two', dmUserId: 'dm', members: [], secretsKept: true }));
+    const data = await mod.loadHubDmCompanion();
+    const i1 = JSON.parse(store.get('hub-index'));
+    store.set('hub-index', JSON.stringify({ ...i1, summaries: { ...i1.summaries, two: sum('two', 'dm', ['charlie']) } }));
+    data.campaigns.mine.hp = 9;
+    await mod.saveHubDmCompanion(data);
+    expect(JSON.parse(store.get('hub-index')).summaries.two.members).toEqual(['charlie']);
+  });
+});

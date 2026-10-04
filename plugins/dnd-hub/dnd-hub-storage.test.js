@@ -200,3 +200,99 @@ describe('secret records are read only for the open campaign', () => {
     expect(JSON.parse(store.get('user:dm-camp-a'))).toEqual({ dmNotes: 'secret a' });
   });
 });
+
+describe('a load reads only the campaigns this user is in (lk-campaign-index.js)', () => {
+  const sum = (id, dm, members = [], extra = {}) => ({ id, name: id, dmUserId: dm, members, visibility: 'open', ...extra });
+  const seed = () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['mine', 'theirs', 'old'], rest: {},
+      summaries: { mine: sum('mine', 'dm', ['bob']), theirs: sum('theirs', 'carol') } })); // 'old': no summary yet
+    store.set('hub-camp-mine', JSON.stringify({ id: 'mine', dmUserId: 'dm', members: ['bob'], secretsKept: true, tokens: {} }));
+    store.set('hub-camp-theirs', JSON.stringify({ id: 'theirs', dmUserId: 'carol', members: [], secretsKept: true }));
+    store.set('hub-camp-old', JSON.stringify({ id: 'old', dmUserId: 'carol', members: [], secretsKept: true }));
+  };
+  const reads = async () => (await import('../plugin-sdk.js')).storageGet.mock.calls.map(c => c[0]);
+  beforeEach(async () => { (await import('../plugin-sdk.js')).storageGet.mockClear(); });
+
+  it('skips a campaign whose summary leaves the user out; one without a summary is still read', async () => {
+    seed(); mod.setSecretsUser('bob');
+    const data = await mod.loadHubDm();
+    expect(Object.keys(data.campaigns).sort()).toEqual(['mine', 'old']);
+    expect(await reads()).not.toContain('hub-camp-theirs');
+    expect(mod.otherCampaigns().map(c => c.id)).toEqual(['theirs']);
+    expect(mod.isUnreadCampaign('theirs')).toBe(true);
+  });
+
+  it('with no known user, reads everything (the old behaviour)', async () => {
+    seed();
+    expect(Object.keys((await mod.loadHubDm()).campaigns).sort()).toEqual(['mine', 'old', 'theirs']);
+  });
+
+  it('a save keeps the unread campaigns in the index, and a token move does not rewrite the index', async () => {
+    seed(); mod.setSecretsUser('bob');
+    const data = await mod.loadHubDm();
+    data.campaigns.mine.tokens.a = { x: 1 };
+    await mod.saveHubDm(data);
+    let idx = JSON.parse(store.get('hub-index'));
+    expect(idx.campaignIds.sort()).toEqual(['mine', 'old', 'theirs']);
+    expect(idx.summaries.theirs.dmUserId).toBe('carol');
+    expect(idx.summaries.mine.members).toEqual(['bob']);
+    const sdk = await import('../plugin-sdk.js');
+    sdk.storageSet.mockClear();
+    data.campaigns.mine.tokens.a = { x: 2 };
+    await mod.saveHubDm(data);
+    expect(sdk.storageSet.mock.calls.map(c => c[0])).toEqual(['hub-camp-mine']);
+  });
+
+  it('deleting your own campaign never drops one you did not read', async () => {
+    seed(); mod.setSecretsUser('dm');
+    const data = await mod.loadHubDm();
+    expect(mod.isUnreadCampaign('theirs')).toBe(true);
+    delete data.campaigns.mine;
+    await mod.saveHubDm(data, { allowRemovals: true });
+    expect(JSON.parse(store.get('hub-index')).campaignIds.sort()).toEqual(['old', 'theirs']);
+  });
+
+  it('a campaign created on another screen since our load survives our save', async () => {
+    seed(); mod.setSecretsUser('dm');
+    const data = await mod.loadHubDm();
+    const idx = JSON.parse(store.get('hub-index'));
+    store.set('hub-index', JSON.stringify({ ...idx, campaignIds: [...idx.campaignIds, 'new'], summaries: { ...idx.summaries, new: sum('new', 'carol') } }));
+    data.campaigns.mine.name = 'Renamed';
+    await mod.saveHubDm(data);
+    const after = JSON.parse(store.get('hub-index'));
+    expect(after.campaignIds).toContain('new');
+    expect(after.summaries.new.dmUserId).toBe('carol');
+    // ...and a later deletion of our own campaign still keeps it
+    delete data.campaigns.mine;
+    await mod.saveHubDm(data, { allowRemovals: true });
+    expect(JSON.parse(store.get('hub-index')).campaignIds.sort()).toEqual(['new', 'old', 'theirs']);
+  });
+
+  it('an older copy never writes a new member back out of the summary (Bob would lose his table)', async () => {
+    seed();
+    store.set('hub-camp-two', JSON.stringify({ id: 'two', dmUserId: 'dm', members: [], secretsKept: true }));
+    const i0 = JSON.parse(store.get('hub-index'));
+    store.set('hub-index', JSON.stringify({ ...i0, campaignIds: [...i0.campaignIds, 'two'], summaries: { ...i0.summaries, two: sum('two', 'dm') } }));
+    mod.setSecretsUser('dm');
+    const data = await mod.loadHubDm(); // the DM's screen holds 'two' with no members
+    // Charlie joins 'two' on his own screen: its record and its summary now list him
+    store.set('hub-camp-two', JSON.stringify({ id: 'two', dmUserId: 'dm', members: ['charlie'], secretsKept: true }));
+    const i1 = JSON.parse(store.get('hub-index'));
+    store.set('hub-index', JSON.stringify({ ...i1, summaries: { ...i1.summaries, two: sum('two', 'dm', ['charlie']) } }));
+    data.campaigns.mine.name = 'Renamed'; // the DM changes a different campaign
+    await mod.saveHubDm(data);
+    expect(JSON.parse(store.get('hub-index')).summaries.two.members).toEqual(['charlie']);
+  });
+
+  it('asking to join reads that one campaign', async () => {
+    seed(); mod.setSecretsUser('bob');
+    const data = await mod.loadHubDm();
+    const camp = await mod.loadCampaign(data, 'theirs');
+    expect(camp.dmUserId).toBe('carol');
+    expect(mod.isUnreadCampaign('theirs')).toBe(false);
+    camp.members = ['bob'];
+    await mod.saveHubDm(data);
+    expect(JSON.parse(store.get('hub-camp-theirs')).members).toEqual(['bob']);
+    expect(JSON.parse(store.get('hub-index')).summaries.theirs.members).toEqual(['bob']);
+  });
+});

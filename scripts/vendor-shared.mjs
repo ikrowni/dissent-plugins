@@ -81,6 +81,11 @@ const VENDORED = [
     source: "lk-table-rules.js",
     targets: ["dnd-hub/lk-table-rules.js", "dnd-master/lk-table-rules.js", "dnd-player/lk-table-rules.js"],
   },
+  // Campaign summaries in hub-index — a screen reads only the campaigns its user is in.
+  {
+    source: "lk-campaign-index.js",
+    targets: ["dnd-hub/lk-campaign-index.js", "dnd-master/lk-campaign-index.js", "dnd-player/lk-campaign-index.js"],
+  },
   // DM secrets — what of a campaign only the DM may read, and what live events may carry.
   {
     source: "lk-secrets.js",
