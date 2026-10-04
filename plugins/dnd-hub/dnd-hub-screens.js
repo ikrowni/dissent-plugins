@@ -4,8 +4,8 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013i';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261013i';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013j';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261013j';
 import { startCharacterCreator } from './dnd-hub-char.js?v=20261013c';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';

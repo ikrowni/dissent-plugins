@@ -6,12 +6,12 @@ import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { saveHubDm } from './dnd-hub-storage.js?v=20261013c';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013i';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013i';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013j';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013j';
 import { renderPins, savePinsAndBroadcast } from './dnd-hub-pins.js?v=20261013c';
 import { saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261013c';
-import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013i';
-import { renderFog } from './dnd-hub-fog.js?v=20261013i';
+import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013j';
+import { renderFog } from './dnd-hub-fog.js?v=20261013j';
 import { savePicturesAndBroadcast } from './dnd-hub-pictures.js';
 import { fogCells } from './dnd-hub-undo.js';
 

@@ -130,8 +130,17 @@ export const triggerCell = worldToCell;
 
 // ── Fire a trigger ─────────────────────────────────────────────────────────────
 
+// Spent at once and by id: the events below take a moment, and a save that finishes meanwhile swaps MAP.mapData for
+// the merged copy, so a flag set afterwards on the old object was lost and a one-shot trap fired again on the next
+// step (rules playtest, 2026-10-04).
+function markSpent(id) {
+  const t = MAP.mapData?.triggers?.find(x => x.id === id);
+  if (t) t.disabled = true;
+}
+
 export async function fireTrigger(trigger, tokenId) {
   const type = trigger.type || 'message';
+  if (trigger.oneShot) { trigger.disabled = true; markSpent(trigger.id); }
 
   if (type === 'message') {
     await publishTo([], EV.TRIGGER_FIRED, {
@@ -157,6 +166,8 @@ export async function fireTrigger(trigger, tokenId) {
         campaignId: MAP.campaignId, triggerId: trigger.id, tokenId, action: 'trap-spotted',
         message: `${name} spots a trap here (passive Perception ${summary.passivePerception}).`,
       });
+      // Seen, so not sprung: a one-shot trap stays armed for whoever comes next.
+      if (trigger.oneShot) { trigger.disabled = false; const t = MAP.mapData?.triggers?.find(x => x.id === trigger.id); if (t) t.disabled = false; }
       return 'spotted';
     }
     const dmg = rollDiceExpr(trigger.damageExpr || '1d6');
@@ -200,7 +211,7 @@ export async function fireTrigger(trigger, tokenId) {
   }
 
   if (trigger.oneShot) {
-    trigger.disabled = true;
+    markSpent(trigger.id); // on the map as it is now
     await saveTriggersAndBroadcast();
   }
 }
