@@ -1,6 +1,6 @@
 // dnd-master-settings.js — the DM's Table rules page: presets, switches, then the table (hearing range, export).
 // What each preset and switch means lives in lk-table-rules.js.
-import { EV } from './dnd-hub-event-types.js?v=20261014h';
+import { EV } from './dnd-hub-event-types.js?v=20261014i';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
 import { esc } from '../plugin-sdk.js';

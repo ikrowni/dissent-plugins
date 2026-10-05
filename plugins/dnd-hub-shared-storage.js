@@ -122,7 +122,16 @@ export async function loadHubDmCompanion() {
  * because the loader skips a shard that is gone, while dropping a live one is
  * unrecoverable.
  */
-export async function saveHubDmCompanion(data) {
+// Saves run one at a time: two at once (a DM clicking twice while the first save was slow, under HTTP 429) each
+// merged with what was stored and wrote back, and one of the two edits was lost (tavern playtest, 2026-10-05).
+let _saveChain = Promise.resolve();
+export function saveHubDmCompanion(data) {
+  const run = _saveChain.then(() => saveNow(data));
+  _saveChain = run.catch(() => {});
+  return run;
+}
+
+async function saveNow(data) {
   if (!data) return;
   const { campaigns = {}, ...rest } = data;
   // Campaigns this sidebar left unread are kept (lk-campaign-index.js).
@@ -150,10 +159,14 @@ export async function saveHubDmCompanion(data) {
     // Re-read and three-way merge (dnd-campaign-merge.js), so a sidebar save keeps what
     // the Hub or another player changed since this sidebar loaded.
     const baseJson = _lastSeen.get(id);
-    const merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, camp);
+    const merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, JSON.parse(json));
     _lastSeen.set(id, JSON.stringify(merged));
-    for (const k of Object.keys(camp)) if (!(k in merged)) delete camp[k];
-    Object.assign(camp, merged);
+    // What the screen changed WHILE this save was out is kept: merged over the stored result, not overwritten by it
+    // (it was: a host added during a slow save vanished). Left unsaved here; the next save writes it.
+    const now = JSON.stringify(camp);
+    const result = now === json ? merged : mergeCampaign(JSON.parse(json), JSON.parse(now), merged);
+    for (const k of Object.keys(camp)) if (!(k in result)) delete camp[k];
+    Object.assign(camp, result);
     written[id] = merged;
   }
   for (const id of [..._lastSeen.keys()]) {

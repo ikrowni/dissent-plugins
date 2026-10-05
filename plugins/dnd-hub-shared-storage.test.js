@@ -3,14 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const store = new Map();
 const failReads = new Set();
+let slow = 0; // ms each storage call takes (0 = at once); a real node takes tens of ms, longer under 429
+const pause = () => (slow ? new Promise(r => setTimeout(r, slow)) : null);
 const sk = (k, scope) => (scope === 'user' ? 'user:' + k : k);
 vi.mock('./plugin-sdk.js', () => ({
-  storageGetCompanion: vi.fn(async (_r, k, scope) => { k = sk(k, scope); return store.has(k) && !failReads.has(k) ? JSON.parse(store.get(k)) : null; }),
-  storageSetCompanion: vi.fn(async (_r, k, scope, v) => { store.set(sk(k, scope), JSON.stringify(v)); }),
+  storageGetCompanion: vi.fn(async (_r, k, scope) => { await pause(); k = sk(k, scope); return store.has(k) && !failReads.has(k) ? JSON.parse(store.get(k)) : null; }),
+  storageSetCompanion: vi.fn(async (_r, k, scope, v) => { await pause(); store.set(sk(k, scope), JSON.stringify(v)); }),
 }));
 
 let mod;
-beforeEach(async () => { store.clear(); failReads.clear(); vi.resetModules(); mod = await import('./dnd-hub-shared-storage.js'); });
+beforeEach(async () => { store.clear(); failReads.clear(); slow = 0; vi.resetModules(); mod = await import('./dnd-hub-shared-storage.js'); });
 
 it('a sidebar save keeps an edit the hub made meanwhile', async () => {
   store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
@@ -21,6 +23,22 @@ it('a sidebar save keeps an edit the hub made meanwhile', async () => {
   await mod.saveHubDmCompanion(data);
   expect(JSON.parse(store.get('hub-camp-c'))).toEqual({ id: 'c', a: 5, b: 2 });
   expect(data.campaigns.c.b).toBe(2);
+});
+
+it('an edit made while a save is out is kept, and saves run one at a time', async () => {
+  store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
+  store.set('hub-camp-c', JSON.stringify({ id: 'c', taverns: { t: { hosts: [] } } }));
+  const data = await mod.loadHubDmCompanion();
+  const camp = data.campaigns.c;
+  slow = 10;
+  camp.taverns.t.hosts = ['marta'];
+  const first = mod.saveHubDmCompanion(data);
+  await new Promise(r => setTimeout(r, 15));          // the first save has read and merged, and is writing…
+  camp.taverns.t.hosts = ['marta', 'fen'];            // …when the DM's next click lands
+  const second = mod.saveHubDmCompanion(data);
+  await Promise.all([first, second]);
+  expect(camp.taverns.t.hosts).toEqual(['marta', 'fen']);
+  expect(JSON.parse(store.get('hub-camp-c')).taverns.t.hosts).toEqual(['marta', 'fen']);
 });
 
 describe('DM secrets (lk-secrets.js)', () => {
