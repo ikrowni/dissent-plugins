@@ -27,7 +27,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261014j';
+import { handleTavern } from './dnd-player-tavern.js?v=20261014k';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -594,6 +594,7 @@ let _announcedCampaignId = null;
 // What the Hub said is open: 'unknown' (not heard yet), 'none' (lobby, Hero Forge: stay sealed), 'open', or 'fallback'
 // (no answer: a Hub too old to answer; pick a campaign the old way).
 let _hubState = 'unknown', _hubAsked = false;
+let _announcedRole = null, _loadRetries = 0, _loadRetryTimer = 0, _initGen = 0;
 
 /** The sheet is closed: nothing to use until there is a hero in an open campaign (lk-sealed.js). */
 function seal(title, text, action) {
@@ -617,12 +618,27 @@ async function onInit(data) {
     setTimeout(() => { if (_hubState === 'unknown') { _hubState = 'fallback'; onInit({}); } }, 6000);
   }
   if (_hubState === 'unknown') return; // the answer calls onInit again
+  // Only the newest load counts: an older one finishing late would open the campaign it read then.
+  const gen = ++_initGen;
   if (_hubState === 'none') { CAMPAIGN_ID = null; CHAR = null; sealTable(); return; }
-  SERVER_DATA = await loadHubDmCompanion() || { campaigns: {} };
+  const loaded = await loadHubDmCompanion() || { campaigns: {} };
   const storedCampaignId = await storageGetCompanion('dnd-hub', 'activePlayerCampaignId', 'user');
+  if (gen !== _initGen) return;
+  SERVER_DATA = loaded;
   // The Hub's announcement (CAMPAIGN_ACTIVE) wins over the stored id: it is what the
   // user is looking at right now.
   const myCampaign = pickCampaign(SERVER_DATA.campaigns, _announcedCampaignId || storedCampaignId, USER_ID);
+  // 🔴 The Hub's campaign did not load (a failed or rate-limited read reads as nothing): never open ANOTHER campaign's
+  // hero in its place — pickCampaign falls back to any campaign the user is in (dnd-master's twin, 2026-10-05). Wait, and read again.
+  if (_announcedRole === 'player' && _announcedCampaignId && myCampaign?.id !== _announcedCampaignId) {
+    seal('Opening your campaign…', 'The table is busy for a moment. Your sheet opens here as soon as it answers.');
+    CAMPAIGN_ID = null; CHAR = null;
+    clearTimeout(_loadRetryTimer);
+    _loadRetryTimer = setTimeout(() => onInit({}), Math.min(30000, 3000 * 2 ** _loadRetries++));
+    return;
+  }
+  // Loaded: a retry still waiting would reload later and replace the sheet the player is using.
+  clearTimeout(_loadRetryTimer); _loadRetries = 0;
   CAMPAIGN_ID = myCampaign?.id ?? null;
   if (!CAMPAIGN_ID) { sealTable(); return; }
   // Load the sheet BEFORE deciding whether this is a DM-only session. Having a
@@ -634,6 +650,7 @@ async function onInit(data) {
   const mirror = (USER_ID && CAMPAIGN_ID)
     ? await storageGetCompanion('dnd-hub', `player_sheet_${CAMPAIGN_ID}_${USER_ID}`, 'server').catch(() => null) ?? null
     : null;
+  if (gen !== _initGen) return;
   CHAR = migrateChar(newerSheet(userData[CAMPAIGN_ID] ?? null, mirror));
 
   // Hide the player sheet from a DM who is only running the game — they use the
@@ -1111,11 +1128,12 @@ async function onEvent(ev) {
   // re-pick instead of waiting for a reload.
   if (p.type === EV.CAMPAIGN_ACTIVE) {
     // No campaign open at the Hub (lobby, the Hero Forge): close the sheet.
-    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; CAMPAIGN_ID = null; CHAR = null; sealTable(); return; }
+    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; _announcedRole = null; _initGen++; clearTimeout(_loadRetryTimer); CAMPAIGN_ID = null; CHAR = null; sealTable(); return; }
     const wasSealed = _hubState !== 'open' && _hubState !== 'fallback';
     _hubState = 'open';
     const changed = p.campaignId !== CAMPAIGN_ID || wasSealed;
     _announcedCampaignId = p.campaignId || null;
+    _announcedRole = p.role || null;
     // A player opened a campaign: ask the host to show this panel (sidebar focus). The
     // host ignores it once the user has picked a panel themselves; older hosts ignore it.
     if (p.role === 'player') parent.postMessage({ type: 'dissent:slot-action', action: 'focus' }, '*');
