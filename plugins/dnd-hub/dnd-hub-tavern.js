@@ -4,31 +4,32 @@
 // shop is drawn, and puts each table's HOST along the bottom. A hero clicks a host to talk (dnd-hub-tavern-talk.js),
 // sits down to play (dnd-hub-tavern-seat.js), and the DM's Hub referees every seat and pays out
 // (dnd-hub-tavern-ref.js). The tavern and its game setups are read from the campaign, never from the event.
-import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014d';
+import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014e';
 import { request, localPublish } from '../plugin-sdk.js';
 import { cleanTavern, cleanSetup, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
-import { loadHubDm } from './dnd-hub-storage.js?v=20261014d';
-import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014d';
+import { loadHubDm } from './dnd-hub-storage.js?v=20261014e';
+import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014e';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
-import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014d';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014d';
-import { renderFog } from './dnd-hub-fog.js?v=20261014d';
+import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014e';
+import { renderWalls } from './dnd-hub-walls.js?v=20261014e';
+import { renderFog } from './dnd-hub-fog.js?v=20261014e';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
-import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014d';
-import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014d';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014d';
+import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014e';
+import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014e';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014e';
 
 /** The open tavern on this screen: { id, campaignId, busy: { hostId: [names] } }, or null. */
 export const TAVERN = { open: null, portraits: {} };
 
 const campaign = () => serverData?.campaigns?.[MAP.campaignId];
+/** The open tavern as the DM opened it (the event carries it), else as stored. */
 export const openTavernData = () => {
-  const t = campaign()?.taverns?.[TAVERN.open?.id];
+  const t = TAVERN.open?.tavern || campaign()?.taverns?.[TAVERN.open?.id];
   return t ? cleanTavern(t) : null;
 };
 export const setupFor = host => {
-  const s = campaign()?.gameSetups?.[host?.setupId];
+  const s = TAVERN.open?.setups?.[host?.setupId] || campaign()?.gameSetups?.[host?.setupId];
   return s ? cleanSetup(s) : null;
 };
 export const actorFor = host => (host?.actorId ? campaign()?.customActors?.[host.actorId] || null : null);
@@ -38,7 +39,7 @@ export const isTavernDM = () => MAP.isDM;
 export async function handleTavernEvent(p) {
   if (p.campaignId && p.campaignId !== MAP.campaignId) return;
   switch (p.type) {
-    case 'tavern:open': return openHere(p.tavernId);
+    case 'tavern:open': return openHere(p);
     case 'tavern:close': return closeTavernHere();
     case 'tavern:volume':
       if (TAVERN.open?.id === p.tavernId && MAP._tavernAudio) MAP._tavernAudio.volume = Math.min(1, Math.max(0, p.volume ?? 0.5));
@@ -50,15 +51,20 @@ export async function handleTavernEvent(p) {
   await onSeatEvent(p);
 }
 
-async function openHere(tavernId) {
-  setServerData(await loadHubDm()); // the DM saved the tavern just before announcing it
-  const t = cleanTavern(campaign()?.taverns?.[tavernId] || {});
-  if (!campaign()?.taverns?.[tavernId]) return;
+async function openHere(p) {
+  const tavernId = p.tavernId;
+  // The DM's tab sends the tavern and its setups with the event (dnd-master-taverns.js openTavern); an older sidebar
+  // sends only the id, and the tavern is read from storage.
+  if (!p.tavern) setServerData(await loadHubDm());
+  const raw = p.tavern || campaign()?.taverns?.[tavernId];
+  if (!raw) return;
+  const t = cleanTavern(raw);
   closeTavernHere({ restore: false });
   // a shop or a soundtrack gives way
   if (MAP._activeShopId) { document.getElementById('lk-shop-exit')?.remove(); stopShopScene(); MAP._activeShopId = null; }
   for (const k of ['_shopAudio', '_soundtrackAudio']) if (MAP[k]) { MAP[k].pause(); MAP[k].src = ''; MAP[k] = null; }
-  TAVERN.open = { id: tavernId, campaignId: MAP.campaignId, busy: {} };
+  TAVERN.open = { id: tavernId, campaignId: MAP.campaignId, busy: {}, tavern: p.tavern ? t : null,
+    setups: p.setups && typeof p.setups === 'object' ? p.setups : null };
   const wrap = document.getElementById('map-canvas-wrap');
   if (!wrap) return;
   let media = null;

@@ -6,10 +6,10 @@ bindPopoverDismiss();
 import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete, bookExport, bookPicKind, bookEdit, bookPickFiles, bookDrop } from './book/book-screens.js';
 import { toggleBookPanel, bookPanelTab, bookPanelBook, bookPanelSection, bookPanelFilter, bookPanelOpen, bookShareSection, bookAddMonster, bookAddItem, bookUseHere, bookUseMap, bookShowPicture } from './book/book-reader.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
-import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261014d';
-import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261014d';
+import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261014e';
+import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261014e';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261014d';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261014e';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { gearOpt, gearPick, gearBuy, gearShopTab, gearMode } from './dnd-hub-gear-view.js';
@@ -17,36 +17,36 @@ import { setUndoAppliers, undoMap, redoMap, rebaseUndo, refreshUndoButtons } fro
 import { UNDO_APPLIERS } from './dnd-hub-undo-apply.js';
 import { toggleDicePanel, diceLookPreset, diceLookColor, diceLookFinish, diceLookTry } from './dnd-hub-dice-panel.js';
 import { loadMyLook } from './dnd-hub-dice-look.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261014d';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261014d';
-import { setZoom } from './dnd-hub-canvas.js?v=20261014d';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261014e';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261014e';
+import { setZoom } from './dnd-hub-canvas.js?v=20261014e';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261014d';
-import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261014d';
+} from './dnd-hub-screens.js?v=20261014e';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261014e';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20261014d';
-import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261014d';
-import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014d';
-import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261014d';
+} from './dnd-hub-map-bg.js?v=20261014e';
+import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261014e';
+import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014e';
+import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261014e';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
   selectBackground, renderCCEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261014d';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261014d';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261014d';
-import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261014d';
-import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014d';
-import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014d';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014d';
+} from './dnd-hub-char-steps.js?v=20261014e';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261014e';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261014e';
+import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261014e';
+import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014e';
+import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014e';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014e';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
-         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261014d';
+         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261014e';
 
 // Render static lobby screen HTML (all other screens render on navigate)
 renderLobbyScreen();

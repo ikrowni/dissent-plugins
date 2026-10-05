@@ -1,18 +1,18 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261014d';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261014e';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014d';
+import { EV } from './dnd-hub-event-types.js?v=20261014e';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261014d';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261014d';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261014d';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261014e';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261014e';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261014e';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261014d';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261014e';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {

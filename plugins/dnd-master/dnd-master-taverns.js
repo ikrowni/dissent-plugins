@@ -3,9 +3,9 @@
 // Each table has a HOST — an NPC the heroes talk to — running one of the DM's game setups (dnd-master-games.js).
 // Opening a tavern sends `tavern:open` to the Hub, which draws the tavern and its hosts on every screen
 // (dnd-hub-tavern.js). The Hub reads the tavern itself from the campaign, so the save goes first.
-import { esc, genId, realtimePublishCompanion } from '../plugin-sdk.js';
+import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014d';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014e';
 import { cleanTavern, cleanHost, gameType } from './lk-tavern.js';
 
 let _state = null;
@@ -138,14 +138,26 @@ async function createTavern(btn) {
   await save();
 }
 
-/** Open the tavern on every screen. The Hub reads its tables from the campaign: save first, then announce. */
+/**
+ * Open the tavern on every screen. The event carries the tavern and its tables' game setups, so every Hub draws what
+ * this tab shows without reading storage: under HTTP 429 the read came back stale (no hosts) or not at all. Sent with
+ * `request` (the SDK's helper swallows a failure), retried once, and the DM is told if it still did not go.
+ */
 export async function openTavern(t) {
   if (!t) return;
-  await saveHubDmCompanion(_state.serverData);
-  await realtimePublishCompanion('dnd-hub', 'tavern:open', {
-    type: 'tavern:open', tavernId: t.id, campaignId: _state.dmCampaignId, fromUserId: _state.userId,
-  });
+  const tavern = cleanTavern(t);
+  const setups = Object.fromEntries(tavern.hosts.map(h => [h.setupId, setups_()[h.setupId]]).filter(([, s]) => s));
+  const payload = { type: 'tavern:open', tavernId: t.id, tavern, setups, campaignId: _state.dmCampaignId, fromUserId: _state.userId };
+  saveHubDmCompanion(_state.serverData).catch(() => {}); // kept for later visits; the open itself does not wait on it
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await request('realtime:publish-companion', { registryId: 'dnd-hub', event: 'tavern:open', data: payload });
+      return;
+    } catch { await new Promise(r => setTimeout(r, 2000)); }
+  }
+  alert(`${tavern.name} did not open: the server is busy. Try again in a moment.`);
 }
+const setups_ = () => _state.dmCampaign.gameSetups || {};
 
 function onInput(e) {
   if (e.target.dataset.f !== 'volume') return;
