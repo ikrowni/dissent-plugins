@@ -27,7 +27,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261014b';
+import { handleTavern } from './dnd-player-tavern.js?v=20261014c';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;

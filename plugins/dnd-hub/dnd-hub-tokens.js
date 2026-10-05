@@ -1,15 +1,15 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261014b';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261014c';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014b';
-import { renderFog } from './dnd-hub-fog.js?v=20261014b';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261014b';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261014b';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261014b';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261014b';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261014b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014b';
+import { EV } from './dnd-hub-event-types.js?v=20261014c';
+import { renderFog } from './dnd-hub-fog.js?v=20261014c';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261014c';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261014c';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261014c';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261014c';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261014c';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014c';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own

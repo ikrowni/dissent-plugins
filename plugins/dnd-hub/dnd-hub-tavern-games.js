@@ -6,7 +6,7 @@
 // `send`/`onMessage` for games the whole table plays). A new game = a loader here + its id in lk-tavern.js PLAYABLE.
 
 export const GAME_LOADERS = {
-  'bones-grid': () => import('./tavern-games/bones-grid.js?v=20261014b'),
+  'bones-grid': () => import('./tavern-games/bones-grid.js?v=20261014c'),
 };
 
 export async function loadGame(type) {

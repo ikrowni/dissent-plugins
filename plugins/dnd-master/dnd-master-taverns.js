@@ -5,7 +5,7 @@
 // (dnd-hub-tavern.js). The Hub reads the tavern itself from the campaign, so the save goes first.
 import { esc, genId, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014b';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014c';
 import { cleanTavern, cleanHost, gameType } from './lk-tavern.js';
 
 let _state = null;
@@ -115,8 +115,9 @@ async function onClick(e) {
     case 'open': return openTavern(t);
     default: return;
   }
-  await save();
+  // Drawn first, saved after: a redraw when the save lands would wipe whatever the DM typed meanwhile.
   renderTavernsTab();
+  await save();
 }
 
 async function createTavern(btn) {
@@ -132,9 +133,9 @@ async function createTavern(btn) {
   const t = cleanTavern({ id: genId(), name, soundFileId, videoFileId, videoMime,
     ambientVolume: parseFloat(document.getElementById('tavern-new-volume')?.value || '0.5') });
   (_state.dmCampaign.taverns ||= {})[t.id] = t;
-  await save();
   done();
   renderTavernsTab();
+  await save();
 }
 
 /** Open the tavern on every screen. The Hub reads its tables from the campaign: save first, then announce. */
@@ -168,6 +169,6 @@ async function onChange(e) {
   if (!id) return;
   if (f === 'sound') t.soundFileId = id;
   else { t.videoFileId = id; t.videoMime = file.type || ''; }
-  await save();
   renderTavernsTab();
+  await save();
 }

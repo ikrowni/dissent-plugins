@@ -4,7 +4,7 @@
 // settings are cleaned by lk-tavern.js cleanSetup on every change, and the DM's Hub cleans them again before it pays.
 import { esc, genId } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog } from './dnd-master-shops.js?v=20261014b';
+import { persistDmCatalog } from './dnd-master-shops.js?v=20261014c';
 import { GAME_TYPES, PLAYABLE, NPC_SKILLS, CAUGHT, gameType, cleanSetup } from './lk-tavern.js';
 
 let _state = null;
@@ -87,8 +87,8 @@ async function onClick(e) {
     if (!confirm(used ? 'A tavern table runs this game. Delete it anyway? That table will be emptied.' : 'Delete this game setup?')) return;
     delete setups[b.dataset.id];
   } else return;
+  renderGamesTab(); // drawn first, saved after (see dnd-master-taverns.js)
   await save();
-  renderGamesTab();
 }
 
 function onChange(e) {
