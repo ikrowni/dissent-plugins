@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { EV } from './dnd-hub-event-types.js?v=20261013u';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
@@ -311,6 +311,20 @@ export async function resolveContest(contestKey) {
   });
 }
 
+/** A shop sale the winner could not pay for: the item goes back on its shelf (the sale took it off). */
+export async function restockDeclined(p) {
+  const camp = _state.serverData?.campaigns?.[_state.dmCampaignId];
+  const shop = p.shopId ? camp?.shops?.[p.shopId] : null;
+  if (!shop) return;
+  shop.items = shop.items || [];
+  const line = shop.items.find(si => si.slotId === p.slotId);
+  if (line) line.qty = (line.qty ?? 1) + 1;
+  else shop.items.push({ slotId: p.slotId || genId(), itemId: p.itemId, price: p.goldCost || 0, qty: 1 });
+  if (_state.dmCampaign?.shops) _state.dmCampaign.shops[shop.id] = shop;
+  await saveHubDmCompanion(_state.serverData);
+  await _persistDmCatalog();
+}
+
 export async function handleContestResult(p) {
   const contestKey = p.contestKey;
   const contest = _lootContests[contestKey];
@@ -368,6 +382,7 @@ export async function handleContestResult(p) {
     goldCost: contest.goldCost || 0,
     tokenId:  contest.tokenId  || null,
     shopId:   contest.shopId   || null,
+    slotId:   contest.slotId   || null,
     // What is left on the shelf, so every open shop list updates without a reload.
     shopItems: shop ? (shop.items || []) : null,
     campaignId: _state.dmCampaignId,

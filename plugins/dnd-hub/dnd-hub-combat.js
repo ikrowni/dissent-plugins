@@ -1,13 +1,13 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013t';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013u';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013t';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
+import { EV } from './dnd-hub-event-types.js?v=20261013u';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013u';
 import { rule } from './lk-table-rules.js';
 import { attackVerdict } from './dnd-hub-rules.js';
 import { publishTo, isRepeat } from './lk-bus.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261013t';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013u';
 import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────

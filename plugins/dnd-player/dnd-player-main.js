@@ -1332,7 +1332,7 @@ async function onEvent(ev) {
         // The winner is told either way (owner, 2026-10-05: nothing said who won or where the item went).
         if (!_addItemToChar(item, 1, p.goldCost || 0)) {
           publishTo(['hub'], 'loot:declined', { campaignId: CAMPAIGN_ID, itemId: p.itemId, itemName: item.name,
-            goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '' }).catch(() => {});
+            goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '', shopId: p.shopId || null, slotId: p.slotId || null }).catch(() => {});
           _showPlayerToast(`You won ${item.name}, but no longer have the ${p.goldCost || 0} gp to pay for it.`);
         } else {
           _showPlayerToast(`🎉 You got ${item.name}${p.goldCost ? ` for ${p.goldCost} gp` : ''}! It is in your inventory.`);

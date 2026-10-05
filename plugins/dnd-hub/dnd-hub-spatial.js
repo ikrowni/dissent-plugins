@@ -3,7 +3,7 @@
 // It computes linear gain falloff from token positions and adjusts
 // each remote participant's local playback volume via voice.setGain.
 import { request } from '../plugin-sdk.js';
-import { effectiveGs } from './dnd-hub-state.js?v=20261013t';
+import { effectiveGs } from './dnd-hub-state.js?v=20261013u';
 
 /**
  * Recompute and apply spatial audio gains for all player tokens.

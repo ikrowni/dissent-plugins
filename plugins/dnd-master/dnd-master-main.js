@@ -1,30 +1,30 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { EV } from './dnd-hub-event-types.js?v=20261013u';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261013t';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261013u';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261013t';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261013u';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261013t';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261013u';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261013t';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261013u';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected } from './dnd-master-shops.js?v=20261013t';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261013t';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected } from './dnd-master-shops.js?v=20261013u';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261013u';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -260,6 +260,7 @@ function onEvent(ev) {
   }
   if (p.type === 'loot:declined' && p.campaignId === dmCampaignId) {
     appendLogEntry({ type: 'loot', message: `${p.name || 'A player'} could not pay ${p.goldCost} gp for ${p.itemName}: not taken` }).catch(() => {});
+    restockDeclined(p).catch(() => {}); // not sold: back on the shelf
     return;
   }
   if (p.type === 'loot:interest' && p.campaignId === dmCampaignId) {
