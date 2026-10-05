@@ -1,10 +1,10 @@
 // dnd-hub-lights.js — dynamic light sources: raycasting, PIXI glow rendering, flicker, storage
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014c';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014d';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014c';
-import { computeVisibleCells, computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261014c';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014c';
+import { EV } from './dnd-hub-event-types.js?v=20261014d';
+import { computeVisibleCells, computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261014d';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014d';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 // ── Two shapes of light ───────────────────────────────────────────────────────

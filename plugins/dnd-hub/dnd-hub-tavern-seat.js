@@ -9,14 +9,14 @@
 //
 // The DM's Hub decides what a result pays (lk-tavern.js settle, from the DM's setup), so a screen that lies about
 // its result still cannot pay itself more than the DM's own odds. Every wait gives up after a few seconds.
-import { MAP, userId } from './dnd-hub-state.js?v=20261014c';
+import { MAP, userId } from './dnd-hub-state.js?v=20261014d';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { gameType, statEdge, cheatCheck, hostPerception } from './lk-tavern.js';
-import { TAVERN, medal, actorFor } from './dnd-hub-tavern.js?v=20261014c';
-import { myHero } from './dnd-hub-tavern-talk.js?v=20261014c';
-import { loadGame } from './dnd-hub-tavern-games.js?v=20261014c';
-import { animateDiceFree } from './dnd-hub-dice.js?v=20261014c';
+import { TAVERN, medal, actorFor } from './dnd-hub-tavern.js?v=20261014d';
+import { myHero } from './dnd-hub-tavern-talk.js?v=20261014d';
+import { loadGame } from './dnd-hub-tavern-games.js?v=20261014d';
+import { animateDiceFree } from './dnd-hub-dice.js?v=20261014d';
 import { myLook } from './dnd-hub-dice-look.js';
 
 const _waiting = new Map();   // `${type}:${seatId}` → resolve
@@ -104,7 +104,7 @@ async function buildTable(host, g, stake) {
   document.getElementById('lk-tavern-game')?.remove();
   const table = document.createElement('div');
   table.id = 'lk-tavern-game';
-  table.innerHTML = '<div class="tv-head"><b></b><span class="tv-bark" aria-live="polite" style="font-size:12px;font-style:italic;color:var(--lk-text);flex:2"></span>' +
+  table.innerHTML = '<div class="tv-head"><b></b><span class="tv-bark" aria-live="polite" style="font-size:12px;font-style:italic;color:var(--lk-text)"></span>' +
     '<span class="tv-pot"></span><button class="tv-btn" title="Leave the table: your bet is lost">Leave</button></div><div class="tv-body"></div>';
   table.querySelector('.tv-head').prepend(await medal(host));
   table.querySelector('b').textContent = `${g.name} · ${host.name}`;

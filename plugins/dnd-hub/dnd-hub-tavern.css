@@ -21,7 +21,8 @@
 @keyframes tv-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
 /* the host talking */
-#lk-tavern-talk{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);width:min(720px,calc(100% - 32px));z-index:56;
+#lk-tavern-talk{position:absolute;left:16px;right:16px;bottom:5%;margin:0 auto;max-width:720px;z-index:56;
+  /* centred by margins, not a transform: the entrance animation sets transform and pushed it off to the right */
   display:flex;gap:16px;align-items:flex-start;padding:16px 18px;border-radius:12px;pointer-events:auto;
   background:linear-gradient(180deg,rgba(32,22,12,.97),rgba(16,11,6,.97));border:1px solid var(--lk-line);
   box-shadow:0 0 0 1px rgba(224,181,82,.12) inset,0 18px 50px rgba(0,0,0,.75);animation:tv-rise .25s ease both}
@@ -46,7 +47,10 @@
   box-shadow:0 0 0 1px rgba(224,181,82,.1) inset,0 24px 70px rgba(0,0,0,.85);animation:tv-rise .3s ease both}
 #lk-tavern-game .tv-head{display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(0,0,0,.35);border-bottom:1px solid var(--lk-line-soft)}
 #lk-tavern-game .tv-head .tv-medal{width:34px;font-size:15px}
-#lk-tavern-game .tv-head b{font:700 14px/1 var(--lk-title);color:var(--lk-gold);flex:1}
+#lk-tavern-game .tv-head b{font:700 14px/1.2 var(--lk-title);color:var(--lk-gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+#lk-tavern-game .tv-bark{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* at a table, the tavern's own way out would sit on the table's header: the table has its Leave button */
+#map-canvas-wrap:has(#lk-tavern-game) #lk-tavern-exit{display:none}
 #lk-tavern-game .tv-pot{font-size:12px;color:var(--lk-muted)}
 #lk-tavern-game .tv-body{flex:1;min-height:0;position:relative}
 .tv-btn{all:unset;cursor:pointer;font:700 12px/1 var(--lk-ui);padding:8px 14px;border-radius:7px;border:1px solid var(--lk-line);
