@@ -23,7 +23,7 @@
 
 /* a bone die */
 .bg-die{width:clamp(42px,5.6vw,62px);aspect-ratio:1;border-radius:22%;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);
-  padding:16%;box-sizing:border-box;background:radial-gradient(circle at 30% 25%,#fffaf0,#efe2c4 45%,#cdb68c);
+  padding:8px;box-sizing:border-box;background:radial-gradient(circle at 30% 25%,#fffaf0,#efe2c4 45%,#cdb68c);
   box-shadow:inset -3px -4px 6px rgba(120,90,50,.45),inset 2px 2px 3px rgba(255,255,255,.7),0 4px 8px rgba(0,0,0,.55);transition:box-shadow .2s,transform .2s}
 .bg-die i{width:72%;aspect-ratio:1;border-radius:50%;align-self:center;justify-self:center;visibility:hidden;
   background:radial-gradient(circle at 40% 35%,#3a2412,#120802);box-shadow:inset 0 1px 1px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.55)}

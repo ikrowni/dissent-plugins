@@ -9,16 +9,17 @@
 //
 // The DM's Hub decides what a result pays (lk-tavern.js settle, from the DM's setup), so a screen that lies about
 // its result still cannot pay itself more than the DM's own odds. Every wait gives up after a few seconds.
-import { MAP, userId } from './dnd-hub-state.js?v=20261014f';
+import { MAP, userId, serverData } from './dnd-hub-state.js?v=20261014g';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { gameType, statEdge, cheatCheck, hostPerception } from './lk-tavern.js';
-import { TAVERN, medal, actorFor } from './dnd-hub-tavern.js?v=20261014f';
-import { myHero } from './dnd-hub-tavern-talk.js?v=20261014f';
-import { loadGame } from './dnd-hub-tavern-games.js?v=20261014f';
-import { animateDiceFree } from './dnd-hub-dice.js?v=20261014f';
+import { TAVERN, medal, actorFor } from './dnd-hub-tavern.js?v=20261014g';
+import { myHero } from './dnd-hub-tavern-talk.js?v=20261014g';
+import { loadGame } from './dnd-hub-tavern-games.js?v=20261014g';
+import { animateDiceFree } from './dnd-hub-dice.js?v=20261014g';
 import { myLook } from './dnd-hub-dice-look.js';
 
+const HOUSE_KINDS = new Set(['lobby', 'state', 'cheated', 'refused']);
 const _waiting = new Map();   // `${type}:${seatId}` → resolve
 let _seat = null;             // { seatId, host, setup, stake, abort, listeners }
 
@@ -31,7 +32,13 @@ const newSeatId = () => `${Date.now().toString(36)}${Math.random().toString(36).
 const send = (type, data) => publishTo([], type, { type, campaignId: MAP.campaignId, fromUserId: userId, ...data });
 
 export async function onSeatEvent(p) {
-  if (p.type === 'tavern:game') { if (p.seatId === _seat?.seatId || p.hostId === _seat?.host.id) _seat?.listeners.forEach(f => f(p.data, p)); return; }
+  if (p.type === 'tavern:game') {
+    if (!_seat || p.hostId !== _seat.host.id) return;
+    // What the house says (the table's state, who cheated) counts only from the DM's Hub: the node stamps the sender.
+    if (HOUSE_KINDS.has(p.data?.kind) && p.fromUserId !== serverData?.campaigns?.[MAP.campaignId]?.dmUserId) return;
+    _seat.listeners.forEach(f => f(p.data, p));
+    return;
+  }
   if (p.userId && p.userId !== userId) return;
   _waiting.get(`${p.type}:${p.seatId}`)?.(p);
 }
@@ -42,7 +49,10 @@ export async function sit(host, setup, stake) {
   const seatId = newSeatId();
   const hero = myHero();
   const seatedP = wait('tavern:seated', seatId); // listening before asking: the answer can be quick
-  send('tavern:sit', { tavernId: TAVERN.open?.id, hostId: host.id, stake, seatId, name: hero?.name || '' });
+  const g = gameType(setup.type);
+  send('tavern:sit', { tavernId: TAVERN.open?.id, hostId: host.id, stake, seatId, name: hero?.name || '',
+    // a whole-table game is played on the DM's Hub, which needs the hero's numbers (their own sheet's word)
+    hero: { mod: hero?.mods?.[g?.stat] ?? 0, sleight: hero?.skills?.['Sleight of Hand'] ?? hero?.mods?.dex ?? 0 } });
   const seated = await seatedP;
   if (!seated) return 'The house isn\'t answering. (The DM\'s map has to be open.)';
   if (!seated.ok) return seated.reason || 'Not tonight, friend.';
@@ -87,16 +97,21 @@ async function playAt(host, setup, stake, seatId) {
       const sleight = hero.skills?.['Sleight of Hand'] ?? hero.mods?.dex ?? 0;
       return cheatCheck(d20, sleight, hostPerception(setup, actor));
     },
+    me: seatId, // a hero's id in a whole-table game's state
+    /** A condition the game leaves on the hero (Last One Standing: Poisoned): told to my own sheet, which keeps it. */
+    condition: name => localPublish('dnd-player', 'tavern:condition', { type: 'tavern:condition', campaignId: MAP.campaignId, condition: name }),
     send: data => send('tavern:game', { seatId, hostId: host.id, data }),
     onMessage: fn => { _seat?.listeners.add(fn); },
   };
+  // Listening for the payout from the start: a whole-table game is settled by the house the moment it ends,
+  // which can be before this screen has finished drawing the last move.
+  const payoutP = wait('tavern:payout', seatId, 30 * 60000);
   const game = await loadGame(setup.type);
   const outcome = await game.play(body, ctx);
   if (_seat?.seatId !== seatId) return; // walked away meanwhile
-  const payoutP = wait('tavern:payout', seatId);
-  send('tavern:result', { seatId, won: outcome?.won ?? false, multiplier: outcome?.multiplier ?? null, caught: !!outcome?.caught });
-  const payout = await payoutP;
-  showResult(body, outcome, payout, () => { _seat = null; table.remove(); });
+  if (g.mode !== 'table') send('tavern:result', { seatId, won: outcome?.won ?? false, multiplier: outcome?.multiplier ?? null, caught: !!outcome?.caught });
+  const payout = await Promise.race([payoutP, new Promise(r => setTimeout(() => r(null), 10000))]);
+  showResult(body, { ...outcome, caught: outcome?.caught || payout?.caught }, payout, () => { _seat = null; table.remove(); });
 }
 
 async function buildTable(host, g, stake) {

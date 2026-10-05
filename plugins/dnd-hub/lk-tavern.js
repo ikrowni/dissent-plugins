@@ -34,7 +34,7 @@ export const GAME_TYPES = [
       'Insight lets you read a liar\'s tells.' },
   { id: 'hearthlane', name: 'Hearthlane', mode: 'npc', stat: 'int',
     pitch: 'A pocket war of cards across three lanes of the hearth.',
-    howTo: 'Play cards into three lanes; each lane goes to the stronger side. Win two lanes to win the round.' },
+    howTo: 'Play five cards into three lanes; each lane goes to the stronger side. Take two lanes to win. Bards rally, rogues stab, storms flatten.' },
   { id: 'twenty', name: 'Twenty', mode: 'npc', stat: 'int',
     pitch: 'Get to twenty without going over. Your side deck is your edge.',
     howTo: 'Each turn a card is dealt to you. Stand, or play one card from your own small deck to push or pull ' +
@@ -44,10 +44,10 @@ export const GAME_TYPES = [
     howTo: 'Press when the marker crosses the bright band to push. Miss and you give ground. Strength widens the band.' },
   { id: 'fillet', name: 'Five-Finger Fillet', mode: 'npc', stat: 'dex',
     pitch: 'A knife, a table, and five fingers you would like to keep.',
-    howTo: 'Hit each gap between your fingers as the rhythm speeds up. A miss can cost you more than gold.' },
+    howTo: 'Strike each gap between your fingers on the beat as it speeds up. The host goes first; beat their count before your third miss.' },
   { id: 'beetle-derby', name: 'Beetle Derby', mode: 'table', stat: 'wis',
     pitch: 'Six beetles, one chalk track, and odds on every shell.',
-    howTo: 'Study the beetles, back one, and cheer. Longer odds pay more. Insight reads which beetle is keen today.' },
+    howTo: 'Study the beetles, back one, and cheer. Each beetle pays its odds (a 5× beetle pays five times your bet). Insight hears which is keen today.' },
   { id: 'last-standing', name: 'Last One Standing', mode: 'table', stat: 'con',
     pitch: 'Round after round of the house\'s strongest. The last one upright drinks free.',
     howTo: 'Each round, keep your tankard steady while the room sways, then make a Constitution save. ' +
@@ -55,7 +55,7 @@ export const GAME_TYPES = [
 ];
 
 /** The games that are built and playable; the rest show in the DM's list as coming soon. */
-export const PLAYABLE = new Set(['bones-grid']);
+export const PLAYABLE = new Set(GAME_TYPES.map(g => g.id));
 
 export const gameType = id => GAME_TYPES.find(g => g.id === id) || null;
 

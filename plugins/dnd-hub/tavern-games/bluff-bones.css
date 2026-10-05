@@ -1,0 +1,34 @@
+/* bluff-bones.css — the Bluff Bones table (bluff-bones.js). */
+.bb{display:grid;grid-template-rows:auto auto 1fr auto;gap:8px;padding:10px 14px;justify-items:center}
+.bb-cups{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.bb-seat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(224,181,82,.14);transition:.2s}
+.bb-seat b{font:700 13px var(--lk-title);color:var(--lk-gold)}
+.bb-seat.turn{box-shadow:inset 0 0 0 2px var(--lk-gold),0 0 18px rgba(255,180,80,.35)}
+.bb-seat.out{opacity:.35;filter:grayscale(1)}
+.bb-cup{width:70px;height:64px;position:relative;display:grid;place-items:center}
+.bb-cup::before{content:'';position:absolute;inset:0;clip-path:polygon(12% 0,88% 0,100% 100%,0 100%);border-radius:6px;
+  background:linear-gradient(90deg,#3a2210,#7a4a22 40%,#4a2a12);box-shadow:inset 0 -6px 0 rgba(0,0,0,.4)}
+.bb-cup span{position:relative;font:800 18px var(--lk-title);color:#f0d184;text-shadow:0 2px 3px #000}
+.bb-row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:260px}
+.bb-row .tk-die{width:30px}
+.tk-die.match{box-shadow:0 0 0 2px #ffd36a,0 0 14px rgba(255,200,90,.8)}
+.bb-bid{align-self:center;text-align:center;min-height:90px;display:grid;place-items:center}
+.bb-standing span{display:block;font-size:12px;color:var(--lk-muted)}
+.bb-standing b{display:block;font:800 clamp(22px,3vw,34px)/1.2 var(--lk-title);color:var(--lk-gold);text-shadow:0 0 22px rgba(255,170,60,.4);text-transform:capitalize}
+.bb-standing .bb-row .tk-die{width:24px}
+.bb-call{font-size:15px;line-height:1.6;color:var(--lk-text);padding:10px 18px;border-radius:10px;background:rgba(10,6,3,.7);border:1px solid var(--lk-line)}
+.bb-call b{color:var(--lk-gold)}
+.bb-mine{display:flex;flex-direction:column;align-items:center;gap:8px}
+.bb-dice{display:flex;gap:8px;min-height:50px}
+.bb-hint{min-height:16px;font-size:12.5px;font-style:italic;color:#9cc4f0}
+.bb-controls{display:flex;flex-direction:column;align-items:center;gap:8px}
+.bb-pick{display:flex;gap:14px;align-items:center}
+.bb-step{display:flex;align-items:center;gap:8px}
+.bb-step b{font:800 22px var(--lk-title);min-width:28px;text-align:center}
+.bb-step .tv-btn{padding:6px 11px}
+.bb-faces{display:flex;gap:4px}
+.bb-face{all:unset;cursor:pointer;border-radius:8px;padding:2px}
+.bb-face .tk-die{width:30px}
+.bb-face.on{box-shadow:0 0 0 2px var(--lk-gold)}
+.bb-face:focus-visible{outline:2px solid var(--lk-gold)}
+.bb-status{min-height:16px;font-size:12.5px;color:var(--lk-text)}

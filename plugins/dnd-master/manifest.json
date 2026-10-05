@@ -47,11 +47,11 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "b05c70c96465caa2c75cef41f01837fb4219348927987a5f03c8a99ac5543cc5"
+      "sha256": "2ff790d0b3912c2db02b9e7d3b45500c261584813fa438e0c989e2116743a4d7"
     },
     {
       "url": "dnd-master-games.js",
-      "sha256": "b569e485f9469b5f24d098f0027b11fa16252a765dd4d5205f69f988755b3840"
+      "sha256": "853d5cc002949e8f41c6a08e9bbaff941b714bfc8d013f50251218728df2bd55"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -63,19 +63,19 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "13b695ead65a289d29c4af6cac858a2903a7ae2d3aa57f7e962e476d3e6fe84e"
+      "sha256": "eaea226c14e71e6881d95f88afff3b341ff68f3cc9e87b4ecef2e21a9acd7b04"
     },
     {
       "url": "dnd-master-items.js",
-      "sha256": "4179983c1130f5ec53c58269b839863dbc0947e3fdb087468ee36ce822f3aee3"
+      "sha256": "38cabe203e36fc1aabba0f7c6004df368e611aa23c67fc7e9517096b1bf17504"
     },
     {
       "url": "dnd-master-journals.js",
-      "sha256": "e44ae24b4570229645f6af30a72a777aa33e87dda726bf96df248cbef165f9f7"
+      "sha256": "21ac4520ba6ed9f97f8bf3663e52d10e8171111d291cc8e7fe4b2489c2b8acb7"
     },
     {
       "url": "dnd-master-levels.js",
-      "sha256": "f289833dd9cbc08b29e2ae7fc2f8cfbb507ef1d7a932b8777744c73109f94134"
+      "sha256": "d22900696e7c71ae3573c32cb3ec0fa7fc40d48c4fb566b09d7daee4968daab5"
     },
     {
       "url": "dnd-master-logs.js",
@@ -83,11 +83,11 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "b6dbf624b451264b0601d7a6d77cda1d831b1812d38997adc24660fec23710e7"
+      "sha256": "ed6f2ef995fac37b26025071570a3836580f9de0ba2359eea53b6f85796be560"
     },
     {
       "url": "dnd-master-maps.js",
-      "sha256": "a58e6e08e0734ac1c1b2beaecc39328350999d178c92f14f7b5dd4663a9d2d70"
+      "sha256": "98d1881c51bb321d16130074dfbbacbaca75e6f8601e375bd4f57e66ac85e3b9"
     },
     {
       "url": "dnd-master-monster-filter.js",
@@ -95,7 +95,7 @@
     },
     {
       "url": "dnd-master-monsters.js",
-      "sha256": "db9bff1631593699654c3e38a84f984f2ed1c927abc5c7fd8a91385de28e2d90"
+      "sha256": "b73e0ed24fc1983a271d5695a11f599c088042dc37ba1cf6561644550af21eb9"
     },
     {
       "url": "dnd-master-notes.js",
@@ -115,7 +115,7 @@
     },
     {
       "url": "dnd-master-scenes.js",
-      "sha256": "d8999c679618e32a756d2ffbb368857402b78fcda06585934d75893d92fa8c00"
+      "sha256": "19c66c09ceff129dc4dfcb6befb89731473461404e3bbdd310b97998c64a4406"
     },
     {
       "url": "dnd-master-sections.js",
@@ -127,19 +127,19 @@
     },
     {
       "url": "dnd-master-session.js",
-      "sha256": "0d3581d8489e8383abad011f31d2264d9b2ad4057243b8d05a363023610a4804"
+      "sha256": "ef661b7cdfd4b5b4746c41b37ffca9cc725ec93672aad0bb3377b46febf3ab67"
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "16caab02d7a8d7033fb8696aff2227bcad40cef6b7b1263230910af93a4b1163"
+      "sha256": "1bb81ddf1d1841085a2c1b756957f1059df6350cae64093d036e32ef6c2ad954"
     },
     {
       "url": "dnd-master-shops.js",
-      "sha256": "c0eb3646108f5e2238283454b0200e65985bf91fbaa598563d9afbc7920f712a"
+      "sha256": "d538f321e58f6412c4b7da2a961bd9a2b2eab2e7f8bfe6801045c848ee07f321"
     },
     {
       "url": "dnd-master-sounds.js",
-      "sha256": "9d52f8912efcf50085b95e6a1de1735dc5f0c3e35a91bb9798723593c2635cc6"
+      "sha256": "3b60bf6840e53b475b7cb76e8f224f40b9beb41f509292d4d78c5a2cb6587211"
     },
     {
       "url": "dnd-master-styles.css",
@@ -147,7 +147,7 @@
     },
     {
       "url": "dnd-master-taverns.js",
-      "sha256": "6b308c087f18e74f81fded107b574d0f73a3ed441c61cebf3838bba62fbc84f1"
+      "sha256": "36852b2ebf71173228cc3775e3374eee6dddc16267f04bc67822c2fe0e6d8dff"
     },
     {
       "url": "dnd-master-triggers.js",
@@ -219,7 +219,7 @@
     },
     {
       "url": "lk-tavern.js",
-      "sha256": "69fdd289bfbf854629973a91b93675e912f91c3c0f87e954711a033a4dab862a"
+      "sha256": "1c9dfcf59b8c5fb26f5915f1dd9916a93528442f11dc4df39a10bc5ea28ddf07"
     },
     {
       "url": "lk-upload.js",

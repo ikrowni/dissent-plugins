@@ -5,7 +5,7 @@
 // (dnd-hub-tavern.js). The Hub reads the tavern itself from the campaign, so the save goes first.
 import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014f';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014g';
 import { cleanTavern, cleanHost, gameType } from './lk-tavern.js';
 
 let _state = null;

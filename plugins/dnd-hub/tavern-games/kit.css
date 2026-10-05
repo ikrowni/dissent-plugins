@@ -1,0 +1,58 @@
+/* kit.css — shared look of the tavern games (kit.js): bone dice, banners, coins, player chips, the lobby, cards. */
+.tk-felt{position:absolute;inset:0;background:radial-gradient(ellipse 75% 60% at 50% 50%,rgba(78,44,18,.55),transparent 72%),
+  repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 2px,transparent 2px 9px)}
+.tk-die{width:46px;aspect-ratio:1;flex-shrink:0;align-self:center;border-radius:22%;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:5px;box-sizing:border-box;/* never a % padding: it is of the PARENT width and swallowed dice in wide rows */
+  background:radial-gradient(circle at 30% 25%,#fffaf0,#efe2c4 45%,#cdb68c);
+  box-shadow:inset -3px -4px 6px rgba(120,90,50,.45),inset 2px 2px 3px rgba(255,255,255,.7),0 4px 8px rgba(0,0,0,.55)}
+.tk-die i{width:72%;aspect-ratio:1;border-radius:50%;align-self:center;justify-self:center;visibility:hidden;
+  background:radial-gradient(circle at 40% 35%,#3a2412,#120802);box-shadow:inset 0 1px 1px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.55)}
+.tk-die[data-f="1"] i:nth-child(5),.tk-die[data-f="2"] i:is(:nth-child(1),:nth-child(9)),
+.tk-die[data-f="3"] i:is(:nth-child(1),:nth-child(5),:nth-child(9)),.tk-die[data-f="4"] i:is(:nth-child(1),:nth-child(3),:nth-child(7),:nth-child(9)),
+.tk-die[data-f="5"] i:is(:nth-child(1),:nth-child(3),:nth-child(5),:nth-child(7),:nth-child(9)),
+.tk-die[data-f="6"] i:is(:nth-child(1),:nth-child(3),:nth-child(4),:nth-child(6),:nth-child(7),:nth-child(9)){visibility:visible}
+.tk-die.hidden{background:radial-gradient(circle at 30% 25%,#5a3a1c,#2a180a);box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 4px 8px rgba(0,0,0,.5)}
+.tk-die.hidden i{visibility:hidden!important}
+.tk-die.rolling{animation:tk-tumble .12s linear infinite}
+@keyframes tk-tumble{50%{transform:rotate(18deg) scale(.92)}}
+.tk-die.land{animation:tk-land .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tk-land{0%{transform:scale(1.3) rotate(-12deg)}}
+
+.tk-banner{position:absolute;left:0;right:0;top:38%;text-align:center;z-index:8;pointer-events:none;animation:tk-bin .35s cubic-bezier(.3,1.5,.5,1)}
+.tk-banner b{display:block;font:800 clamp(30px,5vw,58px)/1 var(--lk-title);color:var(--lk-gold);text-shadow:0 0 30px rgba(255,170,60,.55),0 4px 0 #3a2410}
+.tk-banner span{display:block;margin-top:8px;font-size:14px;color:var(--lk-text);text-shadow:0 2px 6px #000}
+.tk-banner.out{opacity:0;transform:translateY(-12px);transition:.3s}
+@keyframes tk-bin{from{opacity:0;transform:scale(.7)}}
+.tk-coin{position:absolute;width:14px;height:14px;border-radius:50%;z-index:9;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,#fff1b0,#e2b445 50%,#9a6a14);box-shadow:0 0 6px rgba(255,200,80,.7);
+  animation:tk-coin 1.2s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes tk-coin{70%{opacity:1}to{transform:translate(var(--dx),calc(var(--dy) + 160px)) rotate(var(--r));opacity:0}}
+
+.tk-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.tk-chip{display:flex;align-items:center;gap:7px;padding:5px 11px 5px 5px;border-radius:999px;background:rgba(0,0,0,.4);
+  border:1px solid var(--lk-line-soft);transition:box-shadow .2s,border-color .2s,opacity .3s}
+.tk-chip i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--lk-title);font-style:normal;
+  color:var(--lk-gold);background:radial-gradient(circle at 35% 30%,#4a3420,#1a1008);box-shadow:0 0 0 1px var(--lk-line)}
+.tk-chip b{font:700 12px/1 var(--lk-title);color:var(--lk-text)}
+.tk-chip span{font-size:11px;color:var(--lk-muted)}
+.tk-chip.me{border-color:rgba(224,181,82,.45)}
+.tk-chip.active{box-shadow:0 0 0 2px var(--lk-gold),0 0 18px rgba(255,180,80,.45)}
+.tk-chip.out{opacity:.38;filter:grayscale(.8)}
+
+.tk-lobby{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:6px;z-index:6}
+.tk-lobby h3{margin:0;font:700 22px/1.2 var(--lk-title);color:var(--lk-gold)}
+.tk-lobby p{margin:0;color:var(--lk-text);font-size:13px}
+.tk-lobby .tk-dim{color:var(--lk-muted);font-size:11px}
+.tk-count{font:800 64px/1.1 var(--lk-title);color:var(--lk-text);text-shadow:0 0 24px rgba(255,170,60,.4)}
+
+.tk-card{width:64px;height:92px;border-radius:8px;position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#f6ead0,#e2cfa6);color:#2a1a0a;box-shadow:0 5px 12px rgba(0,0,0,.5),inset 0 0 0 2px rgba(120,80,30,.35),inset 0 0 0 5px #f3e6c8,inset 0 0 0 6px rgba(150,100,40,.4);
+  font:800 26px/1 var(--lk-title);transition:transform .18s,box-shadow .18s}
+.tk-card small{font:600 9px/1.1 var(--lk-ui);text-align:center;padding:0 4px;margin-top:4px;color:#5a3a18}
+.tk-card .tk-pip{position:absolute;top:5px;left:7px;font-size:12px}
+.tk-card.back{background:repeating-linear-gradient(45deg,#6a2a1a 0 6px,#56200f 6px 12px);box-shadow:0 5px 12px rgba(0,0,0,.5),inset 0 0 0 3px #c79a44}
+.tk-card.play{cursor:pointer}
+.tk-card.play:hover,.tk-card.play:focus-visible{transform:translateY(-10px);box-shadow:0 12px 22px rgba(0,0,0,.55),0 0 0 2px var(--lk-gold);outline:none}
+.tk-card.minus{color:#8a1f12}.tk-card.plus{color:#1d5a1a}
+.tk-row{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.tk-note{font-size:12px;color:var(--lk-muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.tk-die.rolling,.tk-die.land,.tk-banner,.tk-coin{animation:none}}

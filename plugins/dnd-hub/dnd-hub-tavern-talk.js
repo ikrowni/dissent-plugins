@@ -3,11 +3,11 @@
 // A dialogue box at the foot of the tavern, with the host's portrait, words that type themselves out, and
 // numbered choices (keys 1–4, Esc to walk away). The DM can talk to a host too, to see what the players see,
 // but only heroes sit down. My purse and numbers come from my own sheet (`tavern:hero`, dnd-player-tavern.js).
-import { MAP, serverData } from './dnd-hub-state.js?v=20261014f';
+import { MAP, serverData } from './dnd-hub-state.js?v=20261014g';
 import { localPublish } from '../plugin-sdk.js';
 import { gameType, PLAYABLE, stakeProblem, CAUGHT } from './lk-tavern.js';
-import { medal } from './dnd-hub-tavern.js?v=20261014f';
-import { sit } from './dnd-hub-tavern-seat.js?v=20261014f';
+import { medal } from './dnd-hub-tavern.js?v=20261014g';
+import { sit } from './dnd-hub-tavern-seat.js?v=20261014g';
 
 let _hero = null;          // { gold, name, mods: {str…}, skills: {…} } from my sheet
 let _typer = 0, _keys = null;
@@ -28,7 +28,8 @@ export function stakesLine(s) {
   const parts = [];
   parts.push(s.minBet === s.maxBet ? `The bet is ${s.minBet} gold.` : `Bets run from ${s.minBet} to ${s.maxBet} gold.`);
   if (s.entryFee) parts.push(`${s.entryFee} gold to sit, win or lose.`);
-  parts.push(s.payout === 2 ? 'Win, and I double your money.' : `Win, and you walk away with ${s.payout} times your bet.`);
+  if (s.type === 'beetle-derby') parts.push('Every beetle pays its own odds — the long shots pay best.');
+  else parts.push(s.payout === 2 ? 'Win, and I double your money.' : `Win, and you walk away with ${s.payout} times your bet.`);
   const prize = itemName(s.prizeItemId);
   if (prize) parts.push(`And the winner takes ${prize}.`);
   if (s.playsPerVisit) parts.push(`${s.playsPerVisit === 1 ? 'One game' : s.playsPerVisit + ' games'} a visit, no more.`);

@@ -8,6 +8,7 @@ import { localPublish } from '../plugin-sdk.js';
 import { abilityMod, profBonus } from './lk-rules5e.js';
 
 const SKILLS = { 'Sleight of Hand': 'dex', Insight: 'wis', Perception: 'wis', Athletics: 'str', Deception: 'cha' };
+const TAVERN_CONDITIONS = new Set(['Poisoned']);
 const _paid = new Set(); // payouts already taken (the same event can arrive on two channels)
 
 /** What a tavern game may know of my hero. `eff` is the sheet with items applied (effectiveChar). */
@@ -48,6 +49,13 @@ export async function handleTavern(ev, d) {
       await d.save();
       hub('tavern:paid', { seatId: p.seatId, ok: true });
       hub('tavern:hero', heroForTavern(d.char, d.eff));
+      return true;
+    }
+    case 'tavern:condition': {
+      // A tavern game left my hero with a condition (only from my own Hub, and only the ones a game may give).
+      if (ev.sender_id || !d.char || !TAVERN_CONDITIONS.has(p.condition)) return true;
+      const list = (d.char.conditions ||= []);
+      if (!list.includes(p.condition)) { list.push(p.condition); await d.save(); d.toast(`🍺 You wake up ${p.condition.toLowerCase()}.`); }
       return true;
     }
     case 'tavern:payout': {

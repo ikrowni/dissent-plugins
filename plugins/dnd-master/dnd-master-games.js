@@ -4,7 +4,7 @@
 // settings are cleaned by lk-tavern.js cleanSetup on every change, and the DM's Hub cleans them again before it pays.
 import { esc, genId } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog } from './dnd-master-shops.js?v=20261014f';
+import { persistDmCatalog } from './dnd-master-shops.js?v=20261014g';
 import { GAME_TYPES, PLAYABLE, NPC_SKILLS, CAUGHT, gameType, cleanSetup } from './lk-tavern.js';
 
 let _state = null;
@@ -59,7 +59,8 @@ function setupCard(s, items) {
     '<div class="lk-row"><span class="lk-lbl">Bets (gp)</span>' +
       '<input type="number" min="0" value="' + s.minBet + '" data-k="minBet" data-id="' + s.id + '" title="Least bet"> to ' +
       '<input type="number" min="0" value="' + s.maxBet + '" data-k="maxBet" data-id="' + s.id + '" title="Biggest bet"></div>' +
-    num('payout', 'Win pays ×', 'A win hands back the bet times this: 2 doubles their money', 0.25) +
+    (s.type === 'beetle-derby' ? '<div class="lk-row" style="font-size:10px;color:var(--muted)">Each beetle pays its own odds (2× to 9×).</div>'
+      : num('payout', 'Win pays ×', 'A win hands back the bet times this: 2 doubles their money', 0.25)) +
     sel('prizeItemId', 'Prize', [['', 'No item'], ...items.map(i => [i.id, i.name])]) +
     sel('npcSkill', 'Host is a', Object.entries(NPC_SKILLS).map(([k, v]) => [k, v.label])) +
     check('statsHelp', 'The hero\'s ' + (STAT[g?.stat] || 'stats') + ' helps', 'Better stats make the game easier') +

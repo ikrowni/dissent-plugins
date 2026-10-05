@@ -1,0 +1,18 @@
+/* last-standing.css — the Last One Standing table (last-standing.js). */
+.ls{display:grid;grid-template-rows:auto 1fr auto auto;gap:8px;padding:10px 14px;justify-items:center}
+.ls-stage{position:relative;width:100%;height:100%;min-height:240px;animation:ls-sway 4.5s ease-in-out infinite}
+@keyframes ls-sway{0%,100%{transform:rotate(calc(var(--sway,0deg) * -1))}50%{transform:rotate(var(--sway,0deg))}}
+.ls-ale{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;transition:opacity .25s;cursor:none}
+.ls-ale.on{opacity:1;pointer-events:auto}
+.ls-results{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:min(520px,92%);padding:14px 18px;border-radius:12px;
+  background:rgba(14,9,4,.92);border:1px solid var(--lk-line);opacity:0;transition:opacity .3s;pointer-events:none}
+.ls-results.on{opacity:1}
+.ls-results h3{margin:0 0 8px;text-align:center;font:700 16px var(--lk-title);color:var(--lk-gold)}
+.ls-roll{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid rgba(224,181,82,.1);font-size:12.5px;animation:tk-bin .3s both}
+.ls-roll:nth-child(3){animation-delay:.25s}.ls-roll:nth-child(4){animation-delay:.5s}.ls-roll:nth-child(5){animation-delay:.75s}.ls-roll:nth-child(6){animation-delay:1s}
+.ls-roll b{font-family:var(--lk-title);color:var(--lk-text)}
+.ls-roll span{color:var(--lk-muted)}.ls-roll span b{color:var(--lk-text)}
+.ls-roll i{font-style:normal;font-weight:700}
+.ls-roll.pass i{color:#7fbf6a}.ls-roll.fail i{color:#e0705a}.ls-roll.fail{opacity:.8}
+.ls-status{min-height:16px;font-size:12.5px;color:var(--lk-text);max-width:640px}
+@media (prefers-reduced-motion:reduce){.ls-stage{animation:none}}
