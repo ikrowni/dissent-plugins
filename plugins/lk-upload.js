@@ -39,5 +39,43 @@ export async function uploadFile(send, params, show = m => alert(m)) {
   return res;
 }
 
-/** `guarded(requestWithTransfer)('files:upload', …same arguments)`: the transport, with uploadFile's message. */
-export const guarded = send => (...args) => uploadFile(() => send(...args), undefined);
+// ── Pictures are shrunk before they go up (owner, 2026-10-05) ────────────────────────────────────────────────────
+// Item art arrived as 7–8 MB PNGs; every screen that shows the item downloads all of it, and from a slow bucket one
+// picture took minutes. Anything over SHRINK_OVER is re-encoded as WebP with its longest side at most `maxSide`
+// (MAX_SIDE unless the caller asks for less: item and portrait art is shown small). GIFs (animation) and SVGs are
+// left alone, and so is any picture the re-encode would not make smaller.
+export const SHRINK_OVER = 600 * 1024, MAX_SIDE = 4096;
+const SHRINKABLE = /^image\/(png|jpeg|webp|bmp)$/;
+
+/** What to upload instead of `params` (a files:upload call): smaller when it is a big picture, else `params` itself. */
+export async function shrinkPicture(params, encode = encodeWebp) {
+  const { maxSide, ...rest } = params || {};
+  const data = rest.data;
+  if (!(data instanceof ArrayBuffer) || !SHRINKABLE.test(rest.mime || '') || data.byteLength <= SHRINK_OVER) return rest;
+  let out = null;
+  try { out = await encode(data, rest.mime, Math.max(256, maxSide || MAX_SIDE)); } catch { out = null; }
+  if (!out || out.byteLength >= data.byteLength) return rest;
+  return { ...rest, data: out, mime: 'image/webp', size: out.byteLength, name: String(rest.name || 'picture').replace(/\.[a-z0-9]+$/i, '') + '.webp' };
+}
+
+async function encodeWebp(data, mime, maxSide) {
+  const bmp = await createImageBitmap(new Blob([data], { type: mime }));
+  const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+  const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  bmp.close?.();
+  const blob = canvas.convertToBlob ? await canvas.convertToBlob({ type: 'image/webp', quality: 0.86 })
+    : await new Promise(r => canvas.toBlob(r, 'image/webp', 0.86));
+  return blob?.type === 'image/webp' ? blob.arrayBuffer() : null; // a browser that cannot write WebP gives a PNG: keep the original
+}
+
+/**
+ * `guarded(requestWithTransfer)('files:upload', …same arguments)`: the transport, with uploadFile's message. A big
+ * picture is shrunk first (shrinkPicture); a transfer list then carries the new bytes instead of the old.
+ */
+export const guarded = send => async (action, params, transfers, ...rest) => {
+  const p = action === 'files:upload' ? await shrinkPicture(params) : params;
+  const t = Array.isArray(transfers) && p?.data !== params?.data ? [p.data] : transfers;
+  return uploadFile(() => send(action, p, ...(transfers === undefined && !rest.length ? [] : [t, ...rest])), undefined);
+};

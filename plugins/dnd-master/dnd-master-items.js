@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014k';
+import { EV } from './dnd-hub-event-types.js?v=20261014l';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
@@ -422,7 +422,7 @@ export async function saveNewItem() {
     if (_pendingItemImg) {
       const buf = await _pendingItemImg.arrayBuffer();
       const res = await guarded(requestWithTransfer)('files:upload',
-        { name: _pendingItemImg.name, mime: _pendingItemImg.type, size: _pendingItemImg.size, dmOnly: false, data: buf },
+        { name: _pendingItemImg.name, mime: _pendingItemImg.type, size: _pendingItemImg.size, dmOnly: false, data: buf, maxSide: 1024 }, // shown small: lk-upload.js shrinks it
         [buf], 60000);
       imageFileId = res?.id || null;
     }

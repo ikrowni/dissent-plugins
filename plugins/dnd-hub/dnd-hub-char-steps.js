@@ -1,5 +1,5 @@
 // dnd-hub-char-steps.js — character creator step renderers (Race → Review)
-import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20261014k';
+import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20261014l';
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 import { armorClass } from './lk-rules5e.js';
@@ -631,7 +631,7 @@ export async function handlePortraitUpload(input) {
     // attachContext ties the portrait to the campaign so it is reclaimed with it
     // and never swept as an abandoned upload — plugin-storage spec §7.
     const result = await guarded(request)('files:upload', {
-      data: buf, name: file.name, mime: file.type,
+      data: buf, name: file.name, mime: file.type, maxSide: 1024, // a portrait: lk-upload.js shrinks it
       attachContext: `campaign:${CC.campaignId}`,
     });
     CC.draft.portraitUrl    = result.url;

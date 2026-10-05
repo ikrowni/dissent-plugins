@@ -5,7 +5,7 @@
 // (dnd-hub-tavern.js). The Hub reads the tavern itself from the campaign, so the save goes first.
 import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014k';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014l';
 import { cleanTavern, cleanHost, gameType } from './lk-tavern.js';
 
 let _state = null;
@@ -104,7 +104,7 @@ async function onClick(e) {
       if (!name) { alert('Give the host a name, or pick one of your NPCs.'); return; }
       let portraitFileId = null;
       const file = field(t.id, 'portrait')?.files?.[0];
-      if (file) { portraitFileId = await uploadCampaignFile(file); if (portraitFileId === false) return; }
+      if (file) { portraitFileId = await uploadCampaignFile(file, { maxSide: 1024 }); if (portraitFileId === false) return; }
       t.hosts = [...(t.hosts || []), cleanHost({ id: genId(), name, actorId, portraitFileId,
         setupId: field(t.id, 'setup')?.value, greeting: field(t.id, 'greeting')?.value })];
       break;

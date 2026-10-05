@@ -1,46 +1,47 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261014k';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261014l';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
 import { floatHp, secretRoll } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014k';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261014k';
+import { EV } from './dnd-hub-event-types.js?v=20261014l';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261014l';
 import { startShopScene, stopShopScene, startShopMedia } from './dnd-hub-shop-scene.js';
-import { handleTavernEvent, closeTavernHere } from './dnd-hub-tavern.js?v=20261014k';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261014l';
+import { handleTavernEvent, closeTavernHere } from './dnd-hub-tavern.js?v=20261014l';
 import { playConditionFx } from './dnd-hub-condition-fx.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261014k';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261014k';
+import { renderGrid } from './dnd-hub-grid.js?v=20261014l';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261014l';
 import { syncTurn, commitPath, refereeMove, moveToast, limitingTurnId } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261014k';
-import { renderFog } from './dnd-hub-fog.js?v=20261014k';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014k';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261014k';
-import { loadSRD } from './dnd-hub-char.js?v=20261014k';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261014k';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261014k';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261014l';
+import { renderFog } from './dnd-hub-fog.js?v=20261014l';
+import { renderWalls } from './dnd-hub-walls.js?v=20261014l';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261014l';
+import { loadSRD } from './dnd-hub-char.js?v=20261014l';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261014l';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261014l';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261014k';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261014k';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261014l';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261014l';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261014k';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261014k';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261014k';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014k';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261014k';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261014k';
+import { renderLights } from './dnd-hub-lights.js?v=20261014l';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261014l';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261014l';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014l';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261014l';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261014l';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261014k';
+import { setView } from './dnd-hub-canvas.js?v=20261014l';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -763,11 +764,10 @@ export async function handleMapEvent(p) {
         const wrap = document.getElementById('map-canvas-wrap');
         const shopName = p.shopName || serverData?.campaigns?.[p.campaignId]?.shops?.[p.shopId]?.name || '';
         if (wrap) {
-          let media = null;
-          if (p.videoFileId) media = await request('files:getUrl', { fileId: p.videoFileId }).catch(() => null);
-          if (media?.url) startShopMedia(wrap, media.url, p.videoMime || media.mime || '');
-          else startShopScene(wrap, shopName);
+          // the drawn shop at once; the DM's own picture fades in over it when it arrives (dnd-hub-file-url.js)
+          startShopScene(wrap, shopName);
           showShopExit(wrap);
+          if (p.videoFileId) fileUrl(p.videoFileId).then(m => { if (m?.url && MAP._activeShopId === p.shopId) startShopMedia(wrap, m.url, p.videoMime || m.mime || ''); });
         }
       }
       // Clear tokens and walls from display (visual only — mapData unchanged so they restore on map reload)
@@ -781,7 +781,7 @@ export async function handleMapEvent(p) {
       // The shop's background sound, looping (without one, its video's own soundtrack).
       if (p.soundFileId || p.videoFileId) {
         try {
-          const res = await request('files:getUrl', { fileId: p.soundFileId || p.videoFileId });
+          const res = await fileUrl(p.soundFileId || p.videoFileId);
           if (res?.url) {
             const aud = new Audio(res.url);
             aud.loop = true;

@@ -27,7 +27,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261014k';
+import { handleTavern } from './dnd-player-tavern.js?v=20261014l';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1494,7 +1494,7 @@ function openCharEdit() {
       try {
         const file = fileInput.files[0];
         const buf  = await file.arrayBuffer();
-        const res  = await guarded(request)('files:upload', { data: buf, name: file.name, mime: file.type });
+        const res  = await guarded(request)('files:upload', { data: buf, name: file.name, mime: file.type, maxSide: 1024 }); // a portrait: shrunk in lk-upload.js
         if (res?.id) { CHAR.portraitUrl = res.url || ''; CHAR.portraitFileId = res.id; }
       } catch (e) { console.error('Portrait upload failed', e); }
     }

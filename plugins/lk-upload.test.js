@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { uploadFile, storageAdvice, guarded } from './lk-upload.js';
+import { uploadFile, storageAdvice, guarded, shrinkPicture, SHRINK_OVER } from './lk-upload.js';
 
 describe('uploadFile', () => {
   it('returns the file on success and shows nothing', async () => {
@@ -47,5 +47,44 @@ describe('the shown mark', () => {
   it('marks a failure the helper already showed, so callers do not alert twice', async () => {
     const err = await uploadFile(async () => { throw new Error('x'); }, {}, () => {}).catch(e => e);
     expect(err.shown).toBe(true);
+  });
+});
+
+describe('shrinkPicture', () => {
+  const big = () => new ArrayBuffer(SHRINK_OVER + 10);
+  const small = new ArrayBuffer(1000);
+  it('re-encodes a big picture as WebP, named and sized to match', async () => {
+    const out = await shrinkPicture({ name: 'Sword.png', mime: 'image/png', data: big(), size: 1 }, async () => new ArrayBuffer(500));
+    expect(out).toMatchObject({ name: 'Sword.webp', mime: 'image/webp', size: 500 });
+    expect(out.data.byteLength).toBe(500);
+  });
+  it('leaves small pictures, GIFs, other files and a re-encode that is not smaller alone', async () => {
+    const enc = async () => new ArrayBuffer(10);
+    const p1 = { name: 'a.png', mime: 'image/png', data: small };
+    expect(await shrinkPicture(p1, enc)).toEqual(p1);
+    const gif = { name: 'a.gif', mime: 'image/gif', data: big() };
+    expect((await shrinkPicture(gif, enc)).mime).toBe('image/gif');
+    const mp3 = { name: 'a.mp3', mime: 'audio/mpeg', data: big() };
+    expect((await shrinkPicture(mp3, enc)).mime).toBe('audio/mpeg');
+    const worse = await shrinkPicture({ name: 'b.jpg', mime: 'image/jpeg', data: big() }, async () => new ArrayBuffer(SHRINK_OVER + 99));
+    expect(worse.mime).toBe('image/jpeg');
+    expect((await shrinkPicture({ name: 'c.png', mime: 'image/png', data: big() }, async () => { throw new Error('no'); })).mime).toBe('image/png');
+  });
+  it('passes the caller\'s size limit, and never sends it on', async () => {
+    let side = 0;
+    const out = await shrinkPicture({ name: 'p.png', mime: 'image/png', data: big(), maxSide: 1024 }, async (_d, _m, s) => { side = s; return new ArrayBuffer(5); });
+    expect(side).toBe(1024);
+    expect('maxSide' in out).toBe(false);
+  });
+});
+
+describe('guarded', () => {
+  it('sends the shrunk bytes, and transfers them instead of the old ones', async () => {
+    const send = vi.fn(async () => ({ id: 'f' }));
+    const data = new ArrayBuffer(10);
+    await guarded(send)('files:upload', { name: 'a.txt', mime: 'text/plain', data }, [data], 5000);
+    expect(send).toHaveBeenCalledWith('files:upload', { name: 'a.txt', mime: 'text/plain', data }, [data], 5000);
+    await guarded(send)('files:upload', { name: 'b.txt', mime: 'text/plain', data });
+    expect(send).toHaveBeenLastCalledWith('files:upload', { name: 'b.txt', mime: 'text/plain', data });
   });
 });

@@ -1,17 +1,17 @@
 // dnd-hub-undo-apply.js — how an undo puts each part of the map back on every screen: the same save and the same
 // event its own tool sends (dnd-hub-undo.js decides what to put back).
-import { MAP, serverData, userId, hubFogKey } from './dnd-hub-state.js?v=20261014k';
+import { MAP, serverData, userId, hubFogKey } from './dnd-hub-state.js?v=20261014l';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014k';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014k';
+import { EV } from './dnd-hub-event-types.js?v=20261014l';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014l';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014k';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014k';
-import { renderPins, savePinsAndBroadcast } from './dnd-hub-pins.js?v=20261014k';
-import { saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014k';
-import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014k';
-import { renderFog } from './dnd-hub-fog.js?v=20261014k';
+import { renderWalls } from './dnd-hub-walls.js?v=20261014l';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014l';
+import { renderPins, savePinsAndBroadcast } from './dnd-hub-pins.js?v=20261014l';
+import { saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014l';
+import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014l';
+import { renderFog } from './dnd-hub-fog.js?v=20261014l';
 import { savePicturesAndBroadcast } from './dnd-hub-pictures.js';
 import { fogCells } from './dnd-hub-undo.js';
 

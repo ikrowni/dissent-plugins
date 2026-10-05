@@ -1,17 +1,17 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014k';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014l';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
-import { EV } from './dnd-hub-event-types.js?v=20261014k';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014k';
+import { EV } from './dnd-hub-event-types.js?v=20261014l';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014l';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
 import { pickCell } from './dnd-hub-trigger-pick.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261014k';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261014l';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261014k';
-import { renderFog } from './dnd-hub-fog.js?v=20261014k';
+import { renderLights } from './dnd-hub-lights.js?v=20261014l';
+import { renderFog } from './dnd-hub-fog.js?v=20261014l';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, esc, genId, requestWithTransfer, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014k';
+import { EV } from './dnd-hub-event-types.js?v=20261014l';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';
@@ -220,11 +220,11 @@ export function onShopVolumeChange(shopId, value) {
 }
 
 /** Upload a shop's file (its sound, or its picture/video): the file id, or false when it failed (the user has been told). */
-async function _uploadSound(file) {
+async function _uploadSound(file, opts = {}) {
   try {
     const buf = await file.arrayBuffer();
     const res = await guarded(requestWithTransfer)('files:upload',
-      { name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf, attachContext: `campaign:${_state.dmCampaignId}` },
+      { name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf, attachContext: `campaign:${_state.dmCampaignId}`, ...opts },
       [buf], 120000);
     return res?.id || null;
   } catch (e) {
@@ -266,4 +266,4 @@ export async function onShopSoundSelected(shopId, input) {
 }
 
 /** Upload a file for this campaign (a tavern's sound, picture or video): its id, or false when it failed (said). */
-export const uploadCampaignFile = file => _uploadSound(file);
+export const uploadCampaignFile = (file, opts) => _uploadSound(file, opts); // opts.maxSide: a picture shown small

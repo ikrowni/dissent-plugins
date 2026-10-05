@@ -4,7 +4,7 @@
 // opens a shop that has no video of its own. A 2D canvas over the map rather than a Pixi layer, so it
 // always fills the view whatever the zoom/pan. Light on CPU: one canvas, ~50 motes, no allocation per frame.
 
-let _raf = 0, _canvas = null, _ro = null;
+let _raf = 0, _canvas = null, _ro = null, _media = null;
 
 // Deterministic "random" so the shelves are the same for everyone and every time.
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -133,21 +133,30 @@ export function startShopScene(wrap, name = '') {
   _raf = requestAnimationFrame(frame);
 }
 
-/** A shop's own picture or video, over the map (the DM chose one for this shop). */
+/**
+ * A shop's own picture or video (the DM chose one), faded in over the drawn shop once it has loaded: the shop is
+ * there at once, however slow the DM's bucket (2026-10-05).
+ */
 export function startShopMedia(wrap, url, mime = '') {
-  stopShopScene();
   const isVideo = /^video\//.test(mime) || /\.(mp4|webm|mov)(\?|$)/i.test(url);
   const el = document.createElement(isVideo ? 'video' : 'img');
-  el.id = 'lk-shop-scene';
-  el.src = url;
+  el.id = 'lk-shop-media';
   if (isVideo) Object.assign(el, { autoplay: true, loop: true, muted: true, playsInline: true });
-  el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#070504;z-index:45;pointer-events:none';
+  el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#070504;z-index:46;pointer-events:none;opacity:0;transition:opacity .6s ease';
+  el.addEventListener(isVideo ? 'loadeddata' : 'load', () => {
+    if (_media !== el) return;
+    el.style.opacity = '1';
+    setTimeout(() => { if (_media === el) { cancelAnimationFrame(_raf); _raf = 0; } }, 700);
+  }, { once: true });
+  el.src = url;
+  document.getElementById('lk-shop-media')?.remove();
   wrap.appendChild(el);
-  _canvas = el;
+  _media = el;
 }
 
 export function stopShopScene() {
   document.getElementById('lk-shop-exit')?.remove(); // the shop's exit button goes with it (a scene or map took over)
+  _media?.remove(); _media = null;
   cancelAnimationFrame(_raf); _raf = 0;
   _ro?.disconnect(); _ro = null;
   _canvas?.remove(); _canvas = null;

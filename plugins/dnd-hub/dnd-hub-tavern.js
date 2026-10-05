@@ -4,23 +4,24 @@
 // shop is drawn, and puts each table's HOST along the bottom. A hero clicks a host to talk (dnd-hub-tavern-talk.js),
 // sits down to play (dnd-hub-tavern-seat.js), and the DM's Hub referees every seat and pays out
 // (dnd-hub-tavern-ref.js). The tavern and its game setups are read from the campaign, never from the event.
-import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014k';
-import { request, localPublish } from '../plugin-sdk.js';
+import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014l';
+import { localPublish } from '../plugin-sdk.js';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261014l';
 import { cleanTavern, cleanSetup, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
-import { loadHubDm } from './dnd-hub-storage.js?v=20261014k';
-import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014k';
+import { loadHubDm } from './dnd-hub-storage.js?v=20261014l';
+import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014l';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
-import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014k';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014k';
-import { renderFog } from './dnd-hub-fog.js?v=20261014k';
+import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014l';
+import { renderWalls } from './dnd-hub-walls.js?v=20261014l';
+import { renderFog } from './dnd-hub-fog.js?v=20261014l';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
-import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014k';
-import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014k';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014k';
+import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014l';
+import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014l';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014l';
 
 /** The open tavern on this screen: { id, campaignId, busy: { hostId: [names] } }, or null. */
-export const TAVERN = { open: null, portraits: {} };
+export const TAVERN = { open: null };
 
 const campaign = () => serverData?.campaigns?.[MAP.campaignId];
 /** The open tavern as the DM opened it (the event carries it), else as stored. */
@@ -67,25 +68,25 @@ async function openHere(p) {
     setups: p.setups && typeof p.setups === 'object' ? p.setups : null };
   const wrap = document.getElementById('map-canvas-wrap');
   if (!wrap) return;
-  let media = null;
-  if (t.videoFileId) media = await request('files:getUrl', { fileId: t.videoFileId }).catch(() => null);
-  if (media?.url) startTavernMedia(wrap, media.url, t.videoMime || media.mime || '');
-  else startTavernScene(wrap, t.name);
+  // The drawn tavern and its tables at once; the DM's own picture and sound follow as they arrive (a slow bucket
+  // used to hold everything back ~10 s, 2026-10-05).
+  startTavernScene(wrap, t.name);
   // the map's tokens and walls leave the view (the map itself is unchanged), and the fog with them
   MAP.layers?.tokens?.removeChildren(); MAP.layers?.walls?.removeChildren();
   MAP.tokenSprites = {};
   MAP._shopFogHidden = true;
   renderFog();
-  if (t.soundFileId) {
-    const res = await request('files:getUrl', { fileId: t.soundFileId }).catch(() => null);
-    if (res?.url && TAVERN.open?.id === tavernId) {
-      const aud = new Audio(res.url);
-      aud.loop = true; aud.crossOrigin = 'anonymous'; aud.volume = t.ambientVolume;
-      playWhenAllowed(() => aud.play());
-      MAP._tavernAudio = aud;
-    }
-  }
+  const media = t.videoFileId ? fileUrl(t.videoFileId) : null;
+  const sound = t.soundFileId ? fileUrl(t.soundFileId) : null;
   await renderHall(wrap, t);
+  media?.then(m => { if (m?.url && TAVERN.open?.id === tavernId) startTavernMedia(wrap, m.url, t.videoMime || m.mime || ''); });
+  sound?.then(res => {
+    if (!res?.url || TAVERN.open?.id !== tavernId) return;
+    const aud = new Audio(res.url);
+    aud.loop = true; aud.crossOrigin = 'anonymous'; aud.volume = t.ambientVolume; aud.preload = 'auto';
+    playWhenAllowed(() => aud.play());
+    MAP._tavernAudio = aud;
+  });
   showExit(wrap);
   if (MAP.isDM) refereeOpen(tavernId);
   else localPublish('dnd-player', 'tavern:hero?', { type: 'tavern:hero?', campaignId: MAP.campaignId });
@@ -107,11 +108,7 @@ export function closeTavernHere({ restore = true } = {}) {
 }
 
 async function portraitUrl(fileId) {
-  if (!fileId) return null;
-  if (!(fileId in TAVERN.portraits)) {
-    TAVERN.portraits[fileId] = (await request('files:getUrl', { fileId }).catch(() => null))?.url || null;
-  }
-  return TAVERN.portraits[fileId];
+  return (await fileUrl(fileId))?.url || null;
 }
 
 /** The round portrait of a host: their picture, or their initial. */
