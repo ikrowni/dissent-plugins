@@ -1,32 +1,32 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014a';
+import { EV } from './dnd-hub-event-types.js?v=20261014b';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014a';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014b';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014a';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014b';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014a';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014b';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014a';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014b';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014a';
-import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014a';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014a';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014a';
+import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014b';
+import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014b';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014b';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014b';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -96,6 +96,7 @@ function switchDMTab(name) {
 let _announcedCampaignId = null;
 // What the Hub said is open: 'unknown', 'none' (no campaign: stay sealed), 'open', or 'fallback' (no answer).
 let _hubState = 'unknown', _hubAsked = false;
+let _announcedRole = null, _loadRetries = 0, _loadRetryTimer = 0;
 
 /** The DM tools are closed until the DM opens a campaign at the table (lk-sealed.js). */
 function seal(title, text) {
@@ -137,6 +138,17 @@ async function onInit(data) {
   // wins. It used to take the FIRST campaign the user DMs, whatever the Hub showed.
   const runs = Object.fromEntries(Object.entries(serverData.campaigns || {})
     .filter(([, c]) => c.dmUserId === userId));
+  // 🔴 The Hub's campaign did not load (a failed or rate-limited read reads as nothing): never open ANOTHER campaign
+  // in its place. The sidebar used to fall back to the first campaign the DM runs, and its tabs then edited that
+  // campaign's shops and taverns (tavern playtest, 2026-10-05, under HTTP 429). Wait, and read again.
+  if (_announcedRole === 'dm' && _announcedCampaignId && !runs[_announcedCampaignId]) {
+    seal('Opening your campaign…', 'The table is busy for a moment. Your tools open here as soon as it answers.');
+    dmCampaignId = null; dmCampaign = null;
+    clearTimeout(_loadRetryTimer);
+    _loadRetryTimer = setTimeout(() => onInit({}), Math.min(30000, 3000 * 2 ** _loadRetries++));
+    return;
+  }
+  _loadRetries = 0;
   const myCampaign = pickCampaign(runs, _announcedCampaignId, userId);
 
   if (!myCampaign) {
@@ -196,10 +208,11 @@ function onEvent(ev) {
 
   // The Hub opened a campaign: follow it if this user runs it and it isn't shown yet.
   if (p.type === EV.CAMPAIGN_ACTIVE) {
-    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; dmCampaignId = null; dmCampaign = null; sealTable(); return; }
+    if (!p.campaignId) { _hubState = 'none'; _announcedCampaignId = null; _announcedRole = null; clearTimeout(_loadRetryTimer); dmCampaignId = null; dmCampaign = null; sealTable(); return; }
     const wasSealed = _hubState !== 'open' && _hubState !== 'fallback';
     _hubState = 'open';
     _announcedCampaignId = p.campaignId || null;
+    _announcedRole = p.role || null;
     // The DM opened a campaign: ask the host to show this panel (see dnd-player's twin).
     if (p.role === 'dm') parent.postMessage({ type: 'dissent:slot-action', action: 'focus' }, '*');
     if ((p.role === 'dm' && p.campaignId !== dmCampaignId) || (wasSealed && !dmCampaignId)) onInit({});
