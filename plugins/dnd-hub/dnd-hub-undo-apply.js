@@ -4,14 +4,14 @@ import { MAP, serverData, userId, hubFogKey } from './dnd-hub-state.js?v=2026100
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013q';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013r';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013q';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013q';
-import { renderPins, savePinsAndBroadcast } from './dnd-hub-pins.js?v=20261013q';
-import { saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261013q';
-import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013q';
-import { renderFog } from './dnd-hub-fog.js?v=20261013q';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013r';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013r';
+import { renderPins, savePinsAndBroadcast } from './dnd-hub-pins.js?v=20261013r';
+import { saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261013r';
+import { saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261013r';
+import { renderFog } from './dnd-hub-fog.js?v=20261013r';
 import { savePicturesAndBroadcast } from './dnd-hub-pictures.js';
 import { fogCells } from './dnd-hub-undo.js';
 

@@ -3,13 +3,13 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261013q';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013q';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013q';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013q';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013q';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013q';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013q';
+import { renderFog } from './dnd-hub-fog.js?v=20261013r';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013r';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013r';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013r';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013r';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013r';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013r';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
@@ -430,7 +430,9 @@ function setupTokenDrag(container, token) {
     // The DM drags a waiting hero onto the map: from now on it moves and sees like any other.
     const tokRec = MAP.mapData?.tokens?.[token.id];
     const placed = !!(MAP.isDM && tokRec?.waiting && onMap(snappedX, snappedY));
-    if (placed) delete tokRec.waiting;
+    // false, never deleted: a deleted key reads as "unchanged here" to the save's three-way merge, which then takes
+    // the stored `waiting: true` back and the hero is stuck beside the map after a reload (toolbar test, 2026-10-05).
+    if (placed) tokRec.waiting = false;
 
     if (MAP.mapData?.tokens?.[token.id]) {
       // Update facing when token moves more than half a cell

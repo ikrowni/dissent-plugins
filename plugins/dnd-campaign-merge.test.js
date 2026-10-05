@@ -118,3 +118,12 @@ describe('pruneDeadHeroes', () => {
     }
   });
 });
+
+describe('a flag cleared while someone else saved it set (waiting heroes, 2026-10-05)', () => {
+  it('false survives the merge; a deleted key would not', () => {
+    const remote = { maps: { m: { tokens: { p: { x: -60, waiting: true } } } } };
+    const placed = w => ({ maps: { m: { tokens: { p: { x: 140, ...w } } } } });
+    expect(mergeCampaign({ maps: { m: { tokens: {} } } }, placed({ waiting: false }), remote).maps.m.tokens.p).toEqual({ x: 140, waiting: false });
+    expect(mergeCampaign({ maps: { m: { tokens: {} } } }, placed({}), remote).maps.m.tokens.p.waiting).toBe(true);
+  });
+});
