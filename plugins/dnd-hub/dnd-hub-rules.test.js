@@ -91,7 +91,7 @@ describe('placing your own token', () => {
 });
 
 import { fogAlpha } from './dnd-hub-rules.js';
-import { campaignRecord, waitingSpot, newWaitingToken } from './dnd-hub-rules.js';
+import { campaignRecord, waitingSpot, newWaitingToken, isOwnWaitingSpawn } from './dnd-hub-rules.js';
 describe('fogAlpha', () => {
   it('players: unexplored is solid, explored is dimmed, visible is clear', () => {
     expect(fogAlpha('unexplored', false)).toBe(1);
@@ -122,6 +122,15 @@ describe('waiting tokens', () => {
   });
   it('from the top while the map\'s height is not known', () => {
     expect(waitingSpot(2, 50)).toEqual({ x: -75, y: 125 });
+  });
+  it('a player may spawn only their own token, and only waiting', () => {
+    const own = newWaitingToken('u1', { name: 'Bob' }, 0, 50, 8, 800);
+    expect(isOwnWaitingSpawn({ fromUserId: 'u1', tokens: [own] })).toBe(true);
+    expect(isOwnWaitingSpawn({ fromUserId: 'u2', tokens: [own] })).toBe(false);                         // someone else's
+    expect(isOwnWaitingSpawn({ fromUserId: 'u1', tokens: [{ ...own, waiting: false, x: 300 }] })).toBe(false); // onto the map
+    expect(isOwnWaitingSpawn({ fromUserId: 'u1', tokens: [own, { ...own, id: 'goblin' }] })).toBe(false);
+    expect(isOwnWaitingSpawn({ fromUserId: 'u1', tokens: [own], deleted: ['player_u2'] })).toBe(false);
+    expect(isOwnWaitingSpawn({ tokens: [own] })).toBe(false);
   });
   it('a new hero\'s token is marked waiting and is off the map', () => {
     const t = newWaitingToken('u1', { name: 'Bob', hp: 12, hpMax: 12 }, 1, 50, 8);

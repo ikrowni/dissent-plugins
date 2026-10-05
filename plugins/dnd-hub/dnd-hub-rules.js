@@ -129,6 +129,18 @@ export function waitingSpot(memberIdx, gs, mapH = 0) {
   return { x: -gs * 1.5, y: mapH > gs ? mapH - gs * (row + 0.5) : gs * (row + 0.5) };
 }
 
+/**
+ * A player's "Place token": a tokens:spawn of exactly their own token, waiting beside the map. The one spawn a
+ * player may send (spawns are otherwise the DM's), so the DM's screen hears it. 🔴 It used to be dropped as
+ * privileged, so a token a player placed reached nobody until a reload. It must be waiting: a player can never
+ * spawn themselves onto the map.
+ */
+export function isOwnWaitingSpawn(p) {
+  const t = p?.tokens;
+  return !!p?.fromUserId && !p.deleted && Array.isArray(t) && t.length === 1 && t[0]?.waiting === true
+    && t[0].id === `player_${p.fromUserId}` && t[0].userId === p.fromUserId && t[0].type === 'player';
+}
+
 /** A new hero's token, waiting beside the map (waitingSpot). */
 export function newWaitingToken(uid, summary, memberIdx, gs, colorCount, mapH = 0) {
   const { x, y } = waitingSpot(memberIdx, gs, mapH);

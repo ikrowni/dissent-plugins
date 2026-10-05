@@ -7,7 +7,7 @@
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
 import { genId, request, requestWithTransfer } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013p';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013q';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { guarded } from './lk-upload.js';
 

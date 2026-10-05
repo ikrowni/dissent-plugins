@@ -7,7 +7,7 @@ import { secretKey } from './lk-secrets.js';
 import { publishTo } from './lk-bus.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013p';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013q';
 import { canTravel, travelTooSoon } from './dnd-hub-pin-travel.js';
 
 export const PIN_TRAVEL = 'pin:travel'; // a player → the DM's Hub: "take us through this pin"

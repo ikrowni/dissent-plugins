@@ -7,38 +7,38 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013p';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013q';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013p';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013q';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013p';
-import { renderFog } from './dnd-hub-fog.js?v=20261013p';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013p';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013q';
+import { renderFog } from './dnd-hub-fog.js?v=20261013q';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013q';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
-import { loadSRD } from './dnd-hub-char.js?v=20261013p';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013p';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013p';
+import { loadSRD } from './dnd-hub-char.js?v=20261013q';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013q';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013q';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013p';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013q';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013p';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013p';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013p';
+import { renderLights } from './dnd-hub-lights.js?v=20261013q';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013q';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013q';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
 import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013p';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013q';
 import { isRepeat, publishTo } from './lk-bus.js';
-import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013p';
+import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
+import { setView } from './dnd-hub-canvas.js?v=20261013q';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -224,7 +224,9 @@ export async function handleMapEvent(p) {
   // Block privileged events from non-DM senders (requires fromUserId to be stamped)
   // A player may change their OWN token's HP (their sheet is where their HP lives); nothing else of theirs.
   const ownHp = p.type === EV.HP_CHANGE && p.fromUserId && p.tokenId === `player_${p.fromUserId}`;
-  if (PRIVILEGED_EVENTS.has(p.type) && !isDMEvent(p) && !ownHp) {
+  // …and put their own token beside the map, waiting for the DM (dnd-hub-rules.js isOwnWaitingSpawn).
+  const ownSpawn = p.type === 'tokens:spawn' && isOwnWaitingSpawn(p);
+  if (PRIVILEGED_EVENTS.has(p.type) && !isDMEvent(p) && !ownHp && !ownSpawn) {
     console.warn('[dnd-hub] blocked privileged event from non-DM:', p.type, p.fromUserId);
     return;
   }
