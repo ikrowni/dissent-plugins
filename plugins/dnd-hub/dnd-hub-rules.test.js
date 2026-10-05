@@ -222,3 +222,91 @@ describe('view sync', () => {
     }
   });
 });
+
+import { percentile, percentileFaces } from './dnd-hub-rules.js';
+describe('percentile (d100 from two d10s)', () => {
+  it('tens and ones, the 10 face reading 0, 00 and 0 being 100', () => {
+    expect(percentile(3, 7)).toBe(37);
+    expect(percentile(10, 5)).toBe(5);
+    expect(percentile(4, 10)).toBe(40);
+    expect(percentile(10, 10)).toBe(100);
+  });
+  it('every result from 1 to 100 comes from exactly one pair of faces, and percentileFaces finds it', () => {
+    const seen = new Map();
+    for (let t = 1; t <= 10; t++) for (let o = 1; o <= 10; o++) seen.set(percentile(t, o), (seen.get(percentile(t, o)) || 0) + 1);
+    expect([...seen.keys()].sort((a, b) => a - b)).toEqual(Array.from({ length: 100 }, (_, i) => i + 1));
+    expect([...seen.values()].every(n => n === 1)).toBe(true);
+    for (let r = 1; r <= 100; r++) expect(percentile(...percentileFaces(r))).toBe(r);
+  });
+});
+
+import { pointInPoly, playerSees } from './dnd-hub-rules.js';
+describe('what a player sees of other tokens', () => {
+  const sq = (x0, y0, s) => [{ x: x0, y: y0 }, { x: x0 + s, y: y0 }, { x: x0 + s, y: y0 + s }, { x: x0, y: y0 + s }];
+  it('pointInPoly', () => {
+    expect(pointInPoly(5, 5, sq(0, 0, 10))).toBe(true);
+    expect(pointInPoly(15, 5, sq(0, 0, 10))).toBe(false);
+  });
+  it('heroes always; a monster only in vision, or in light a hero can see', () => {
+    const goblin = { type: 'monster', x: 50, y: 50 };
+    expect(playerSees({ type: 'player', x: 999, y: 999 }, 'u')).toBe(true);
+    expect(playerSees(goblin, 'u', { visionPolys: [sq(0, 0, 100)] })).toBe(true);
+    expect(playerSees(goblin, 'u', { visionPolys: [sq(200, 0, 100)] })).toBe(false);          // an explored room, not in sight
+    expect(playerSees(goblin, 'u', { litPolys: [sq(0, 0, 100)], sightPolys: [sq(0, 0, 100)] })).toBe(true);
+    expect(playerSees(goblin, 'u', { litPolys: [sq(0, 0, 100)], sightPolys: [] })).toBe(false); // lit, behind a shut door
+  });
+});
+
+import { attackCheck, attackTurnCheck } from './dnd-hub-rules.js';
+import { weaponReach, attacksPerAction } from './lk-rules5e.js';
+describe('attackCheck — range, reach, flanking (owner, 2026-10-05)', () => {
+  const at = (id, type, cx, cy, extra = {}) => ({ id, type, x: cx * 50 + 25, y: cy * 50 + 25, hp: 10, name: id, ...extra });
+  const bob = at('bob', 'player', 5, 5), sword = weaponReach({ id: 'longsword' }), bow = weaponReach({ id: 'longbow' });
+  it('a longsword hits the next square, not two away', () => {
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 6, 6), reach: sword }).ok).toBe(true);
+    const far = attackCheck({ attacker: bob, target: at('g', 'monster', 7, 5), reach: sword });
+    expect(far.ok).toBe(false);
+    expect(far.reason).toMatch(/10 ft away/);
+  });
+  it('a glaive reaches two squares', () => {
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 7, 5), reach: weaponReach({ id: 'glaive' }) }).ok).toBe(true);
+  });
+  it('a longbow: fine to 150 ft, disadvantage to 600, nothing beyond; disadvantage with an enemy next to you', () => {
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 35, 5), reach: bow })).toMatchObject({ ok: true, mode: 'ranged', dis: false });
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 45, 5), reach: bow })).toMatchObject({ ok: true, dis: true, far: true });
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 130, 5), reach: bow }).ok).toBe(false);
+    const g2 = at('g2', 'monster', 6, 5);
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 20, 5), reach: bow, tokens: [bob, g2] })).toMatchObject({ dis: true, crowded: true });
+  });
+  it('a thrown handaxe: melee next to you, thrown out to 60 ft', () => {
+    const axe = weaponReach({ id: 'handaxe' });
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 6, 5), reach: axe }).mode).toBe('melee');
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 9, 5), reach: axe })).toMatchObject({ ok: true, mode: 'ranged', dis: false });
+    expect(attackCheck({ attacker: bob, target: at('g', 'monster', 15, 5), reach: axe })).toMatchObject({ ok: true, dis: true });
+  });
+  it('flanking: an ally on the far side of the target gives advantage, only with the rule on', () => {
+    const g = at('g', 'monster', 6, 5), ally = at('ria', 'player', 7, 5), side = at('ria', 'player', 6, 6);
+    expect(attackCheck({ attacker: bob, target: g, reach: sword, tokens: [bob, g, ally], flanking: true }).adv).toBe(true);
+    expect(attackCheck({ attacker: bob, target: g, reach: sword, tokens: [bob, g, side], flanking: true }).adv).toBe(false);
+    expect(attackCheck({ attacker: bob, target: g, reach: sword, tokens: [bob, g, ally], flanking: false }).adv).toBe(false);
+    // diagonal flank
+    expect(attackCheck({ attacker: bob, target: at('d', 'monster', 6, 6), reach: sword, tokens: [at('r', 'player', 7, 7)], flanking: true }).adv).toBe(true);
+  });
+  it('turns and Extra Attack', () => {
+    expect(attackTurnCheck({ fightOn: false })).toEqual({ ok: true });
+    expect(attackTurnCheck({ fightOn: true, myTurn: false }).ok).toBe(false);
+    expect(attackTurnCheck({ fightOn: true, myTurn: true, used: 1, perAction: 1 }).ok).toBe(false);
+    expect(attackTurnCheck({ fightOn: true, myTurn: true, used: 1, perAction: attacksPerAction(['Rage', 'Extra Attack']) }).ok).toBe(true);
+    expect(attacksPerAction(['Extra Attack', 'Extra Attack (2)'])).toBe(3);
+  });
+});
+
+import { snapWallPoint } from './dnd-hub-rules.js';
+describe('snapWallPoint', () => {
+  it('joins an existing end first, then the grid corner, else stays put', () => {
+    expect(snapWallPoint({ x: 104, y: 97 }, [{ x: 100, y: 100 }], { gs: 50 })).toEqual({ x: 100, y: 100, snapped: 'end' });
+    expect(snapWallPoint({ x: 74, y: 128 }, [{ x: 300, y: 300 }], { gs: 50 })).toEqual({ x: 50, y: 150, snapped: 'grid' });
+    expect(snapWallPoint({ x: 74, y: 128 }, [], { gs: 50, ox: 10, oy: 0 })).toEqual({ x: 60, y: 150, snapped: 'grid' });
+    expect(snapWallPoint({ x: 74, y: 128 }, [], null)).toEqual({ x: 74, y: 128, snapped: null });
+  });
+});

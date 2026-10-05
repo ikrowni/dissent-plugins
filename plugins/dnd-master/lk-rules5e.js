@@ -335,6 +335,37 @@ const WEAPONS = {
 };
 export const isWeaponId = id => !!WEAPONS[id];
 
+// Thrown weapons' ranges, normal/long in ft; a ranged weapon's long range is four times its normal (SRD 5.1).
+const THROWN = { dagger: [20, 60], handaxe: [20, 60], javelin: [30, 120], 'light-hammer': [20, 60], spear: [20, 60],
+  dart: [20, 60], trident: [20, 60] };
+
+/**
+ * How far a weapon reaches: `melee` (5 ft, 10 with reach; null for a bow) and, for ranged or thrown weapons, `normal`
+ * and `long` range (beyond normal: disadvantage; beyond long: no attack). Null for something that is not a weapon.
+ */
+export function weaponReach(item) {
+  const forged = (item?.effects || []).find(e => e.type === 'weapon');
+  if (forged) {
+    const r = Number(forged.rangeFt) || 5;
+    return r > 10 ? { melee: null, normal: r, long: r * 4 } : { melee: r, normal: null, long: null };
+  }
+  const w = WEAPONS[item?.id];
+  if (!w) return null;
+  if (w.props.includes('ranged')) return { melee: null, normal: w.range, long: w.range * 4 };
+  const t = THROWN[item.id];
+  return { melee: w.props.includes('reach') ? 10 : 5, normal: t?.[0] ?? null, long: t?.[1] ?? null };
+}
+
+/** Attacks per Attack action: Extra Attack gives 2, "Extra Attack (2)" 3, "(3)" 4 (fighters at 11 and 20). */
+export function attacksPerAction(features = []) {
+  let n = 1;
+  for (const f of features) {
+    const m = String(typeof f === 'string' ? f : f?.name || '').match(/^Extra Attack(?:\s*\((\d)\))?$/i);
+    if (m) n = Math.max(n, m[1] ? Number(m[1]) + 1 : 2);
+  }
+  return n;
+}
+
 /**
  * How the rules sort a weapon: `{ cat: 'simple'|'martial', ranged }`, or null for no weapon. Darts and nets are ranged
  * weapons (the class equipment lists say "any simple melee weapon"); a net has no attack roll entry here.

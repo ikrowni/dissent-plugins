@@ -1,5 +1,5 @@
 // dnd-player-sheet.js — character sheet rendering + HP/action functions
-import { esc, realtimePublish } from '../plugin-sdk.js';
+import { esc, realtimePublish, localPublish } from '../plugin-sdk.js';
 import { guide } from './lk-guide-ui.js';
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
@@ -125,8 +125,15 @@ export function effectiveChar() {
   return _char ? { ..._char, ...(_effectiveStats.abilities || {}) } : null;
 }
 
+let _shownConds = null; // my conditions as last drawn: a new one plays its effect on my map (dnd-hub-condition-fx.js)
 export function renderAll() {
   if (!_char) return;
+  const conds = [...(_char.conditions || [])];
+  if (_shownConds) {
+    const fresh = conds.filter(c => !_shownConds.includes(c));
+    if (fresh.length) localPublish('dnd-hub', 'conditions:fx', { type: 'conditions:fx', conditions: fresh });
+  }
+  _shownConds = conds;
   _effectiveStats = computeEffectiveStats(_char);
   renderHeader(); renderMain(); renderAbilities(); renderInventory(); renderFeatures(); renderNotes();
 }

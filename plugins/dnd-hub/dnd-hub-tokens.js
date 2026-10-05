@@ -1,20 +1,21 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261013v';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { renderFog } from './dnd-hub-fog.js?v=20261013u';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013u';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013u';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013u';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013u';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013u';
-import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { renderFog } from './dnd-hub-fog.js?v=20261013v';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013v';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013v';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013v';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013v';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013v';
+import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
 import { CLIENT_ID } from './dnd-hub-client-id.js';
+import { noticeMyConditions } from './dnd-hub-condition-fx.js';
 export { CLIENT_ID };
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
@@ -53,7 +54,7 @@ import { publishTo, isRepeat } from './lk-bus.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
-import { onMap, clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
+import { onMap, clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, limitingTurnId, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, cellsBetween } from './dnd-hub-movement.js';
 
 const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
@@ -137,12 +138,53 @@ export function renderTokens() {
     _tokenDataCache.set(token.id, cacheKey);
   });
 
+  // A condition the DM put on my hero plays its effect on my screen (dnd-hub-condition-fx.js).
+  if (!MAP.isDM) noticeMyConditions(mapData.tokens[`player_${userId}`]);
+
   // Reposition active-turn ring to match rebuilt sprite
   if (MAP.activeTurnTokenId) {
     const spr = MAP.tokenSprites[MAP.activeTurnTokenId];
     const gs = effectiveGs(MAP.mapData);
     if (spr) showActiveTurnRing(spr.x, spr.y, Math.floor(gs * 0.42));
     else hideActiveTurnRing();
+  }
+}
+
+/**
+ * A player's map shows other creatures only while a hero sees them (dnd-hub-rules.js playerSees). Runs with every
+ * fog redraw, which follows every move, light and sight change.
+ */
+export function applyPlayerSight() {
+  if (MAP.isDM || !MAP.mapData?.tokens) return;
+  const lit = MAP.localVisiblePoly ? (MAP._litPolysWorld || []) : [];
+  if (!MAP.localVisiblePoly) MAP._litPolysWorld = [];
+  const sight = { visionPolys: MAP.localVisiblePoly || [], sightPolys: MAP.localSightPolys || [], litPolys: lit };
+  for (const [id, spr] of Object.entries(MAP.tokenSprites || {})) {
+    const t = MAP.mapData.tokens[id];
+    if (t) spr.visible = playerSees(t, userId, sight);
+  }
+}
+
+/**
+ * Every hero and monster faces the closest enemy its viewer can see (owner, 2026-10-05); with none in sight, the
+ * way it last moved. Only creatures shown on this screen count, so a hero never points at a monster in the dark.
+ */
+export function applyFacing() {
+  const toks = MAP.mapData?.tokens;
+  if (!toks) return;
+  const seen = Object.values(toks).filter(t => (t.type === 'player' || t.type === 'monster') && !t.waiting
+    && (t.hp ?? 1) > 0 && MAP.tokenSprites?.[t.id]?.visible !== false);
+  for (const t of Object.values(toks)) {
+    const arrow = MAP.tokenSprites?.[t.id]?.lkFacing;
+    if (!arrow) continue;
+    let best = null, bd = Infinity;
+    for (const o of seen) {
+      if (o.id === t.id || o.type === t.type) continue;
+      const d = Math.hypot(o.x - t.x, o.y - t.y);
+      if (d < bd) { bd = d; best = o; }
+    }
+    if (best) { arrow.rotation = Math.atan2(best.y - t.y, best.x - t.x); arrow.visible = true; }
+    else { arrow.rotation = (t.facing ?? 0) * Math.PI / 180; arrow.visible = t.facing != null; }
   }
 }
 
@@ -233,19 +275,18 @@ export function buildTokenSprite(token, gs) {
     container.addChild(condG);
   }
 
-  // Facing arrow — small triangle just outside the ring pointing in movement direction
-  if (token.facing != null) {
-    const rad   = token.facing * Math.PI / 180;
+  // Facing arrow — a small triangle just outside the ring. Drawn pointing right and turned: it faces the closest
+  // threat in sight (applyFacing), else the way the token last moved.
+  if (token.type === 'player' || token.type === 'monster' || token.facing != null) {
     const tipD  = r + Math.max(6, r * 0.4);
-    const baseD = r;
     const span  = 0.55; // radians half-spread of base
     const arrowG = new PIXI.Graphics();
-    arrowG.poly([
-      Math.cos(rad)        * tipD,  Math.sin(rad)        * tipD,
-      Math.cos(rad + span) * baseD, Math.sin(rad + span) * baseD,
-      Math.cos(rad - span) * baseD, Math.sin(rad - span) * baseD,
-    ]).fill({ color: 0xffffff, alpha: 0.8 });
+    arrowG.poly([tipD, 0, Math.cos(span) * r, Math.sin(span) * r, Math.cos(span) * r, -Math.sin(span) * r])
+      .fill({ color: 0xffffff, alpha: 0.8 });
+    arrowG.rotation = (token.facing ?? 0) * Math.PI / 180;
+    arrowG.visible = token.facing != null;
     container.addChild(arrowG);
+    container.lkFacing = arrowG;
   }
 
   // Lootable ring — gold static ring signals to players that this token has loot
@@ -299,7 +340,7 @@ export function buildTokenSprite(token, gs) {
   }
 
   // Out of turn during a fight: dimmed. Always on (fog safety, owner 2026-10-03), not a Table rule.
-  if (MAP.activeTurnTokenId && MAP.activeTurnTokenId !== token.id) {
+  if (limitingTurnId() && limitingTurnId() !== token.id) {
     const overlay = new PIXI.Graphics();
     overlay.circle(0, 0, r).fill({ color: 0x000000, alpha: 0.45 });
     container.addChild(overlay);
@@ -395,7 +436,7 @@ function setupTokenDrag(container, token) {
       // Walk the path square by square; on the token's own turn it stops where its speed runs out.
       const budget = modeFor(token.id) === 'budget';
       const cell = toCell(step.x, step.y);
-      dragPath = extendPath(dragPath, cell, { committed, blocked: cellBlocked,
+      dragPath = extendPath(dragPath, cell, { committed, blocked: MAP.isDM ? () => false : cellBlocked,
         speedFt: budget ? speedFor(token.id) : Infinity }).path;
       const end = dragPath[dragPath.length - 1];
       if (end.cx !== cell.cx || end.cy !== cell.cy) step = { ...toPoint(end) };
@@ -489,6 +530,8 @@ function setupTokenDrag(container, token) {
 }
 
 function _crossesWallForSize(token, fromX, fromY, toX, toY, gs) {
+  // The DM moves anything anywhere, through walls and shut doors; players are stopped (owner, 2026-10-05).
+  if (MAP.isDM) return false;
   const cells = SIZE_CELLS[token.size || 'medium'] || 1;
   const half  = cells * gs / 2;
   if (cells <= 1) return wouldCrossWall(fromX, fromY, toX, toY);

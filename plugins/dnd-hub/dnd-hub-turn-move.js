@@ -3,8 +3,8 @@
 //
 // 🔴 The trail is drawn UNDER the fog layer. Another player's path through fog must not show
 // them the shape of rooms they have not seen.
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013u';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013u';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013v';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013v';
 import { activeTokenId } from './dnd-hub-rules.js';
 import { guide } from './lk-guide-ui.js';
 import { turnChanged } from './dnd-hub-fx-combat.js';
@@ -42,7 +42,13 @@ export function clampToMap(p) {
   return { x: Math.min(w - 1, Math.max(1, p.x)), y: Math.min(h - 1, Math.max(1, p.y)) };
 }
 
-export const modeFor = tokenId => moveMode({ isDM: MAP.isDM, activeTurnTokenId: MAP.activeTurnTokenId, tokenId });
+/**
+ * The token whose turn limits movement: only while a fight is on. The DM's "Set as Active Turn" outside a fight
+ * highlights a token but limits nobody — it used to give every player a speed limit until the next fight
+ * (owner, 2026-10-05: "player movement shouldn't be tracked unless they are in combat").
+ */
+export const limitingTurnId = () => (MAP.turnIsFight ? MAP.activeTurnTokenId : null);
+export const modeFor = tokenId => moveMode({ isDM: MAP.isDM, activeTurnTokenId: limitingTurnId(), tokenId });
 
 export function speedFor(tokenId) {
   const tok = MAP.mapData?.tokens?.[tokenId];
@@ -65,7 +71,9 @@ export function turnFor(tokenId) {
 export function syncTurn(init, manualTokenId = null) {
   const active = manualTokenId || activeTokenId(init);
   MAP.activeTurnTokenId = active;
-  const key = manualTokenId ? `manual:${manualTokenId}:${init?.ts ?? ''}` : turnKey(init, active);
+  const fight = serverData?.campaigns?.[MAP.campaignId]?.initiative;
+  MAP.turnIsFight = !!active && (manualTokenId ? !!fight?.active && !fight?.waiting : true);
+  const key = !MAP.turnIsFight ? null : manualTokenId ? `manual:${manualTokenId}:${init?.ts ?? ''}` : turnKey(init, active);
   if (key !== MAP.turnMove?.key) {
     MAP.turnMove = key ? (_restore(key) || { key, tokenId: active, path: [] }) : null;
     turnFor(active);
@@ -187,7 +195,7 @@ export function refusal(tokenId) {
  * An honest player's screen never sends a bad move; this catches one that does.
  */
 export function refereeMove(p) {
-  const mode = moveMode({ isDM: false, activeTurnTokenId: MAP.activeTurnTokenId, tokenId: p.tokenId });
+  const mode = moveMode({ isDM: false, activeTurnTokenId: limitingTurnId(), tokenId: p.tokenId });
   if (mode === 'free') return 'ok';
   if (!p.final) return 'wait';
   if (mode === 'locked') return 'bounce';

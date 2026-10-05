@@ -1,44 +1,45 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013v';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
 import { floatHp, secretRoll } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013u';
-import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261013u';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013u';
-import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013v';
+import { startShopScene, stopShopScene, startShopMedia } from './dnd-hub-shop-scene.js';
+import { playConditionFx } from './dnd-hub-condition-fx.js';
+import { renderGrid } from './dnd-hub-grid.js?v=20261013v';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013v';
+import { syncTurn, commitPath, refereeMove, moveToast, limitingTurnId } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013u';
-import { renderFog } from './dnd-hub-fog.js?v=20261013u';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013u';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261013u';
-import { loadSRD } from './dnd-hub-char.js?v=20261013u';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013u';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013u';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013v';
+import { renderFog } from './dnd-hub-fog.js?v=20261013v';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013v';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261013v';
+import { loadSRD } from './dnd-hub-char.js?v=20261013v';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013v';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261013v';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013u';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013u';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013v';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013v';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013u';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013u';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261013u';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261013u';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261013u';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013u';
+import { renderLights } from './dnd-hub-lights.js?v=20261013v';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013v';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261013v';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261013v';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261013v';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013v';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013u';
+import { setView } from './dnd-hub-canvas.js?v=20261013v';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -172,7 +173,7 @@ const PRIVILEGED_EVENTS = new Set([
   'tokens:spawn','walls:update','lights:update','trigger:fired','trigger:pending',
   'token:turn-start','token:conditions','combat:settings',
   'scene:load','pins:update','audio:play','audio:zone-update',
-  'shop:open','shop:volume','contest:roll',
+  'shop:open','shop:volume','shop:close','contest:roll',
   'session:start','map:view','level:grant','map:weather','pictures:update',
 ]);
 
@@ -512,11 +513,28 @@ export async function handleMapEvent(p) {
       // Turn lock and this turn's path follow the DM's tracker (dnd-hub-turn-move.js).
       syncTurn(p.initiative);
       renderTokens();
+      if (!MAP.isDM && limitingTurnId() === `player_${userId}`) focusClosestEnemy(); // my turn: aim at the closest foe
       break;
     }
     case EV.DICE_PHYSICS_ROLL: {
       // A player asked us to run a genuine physics roll and report back the result.
-      const { sides, count, mod = 0, label, expression, userId: rollerId, ts, advMode, rollType = null } = p;
+      const { sides, count, mod = 0, label, expression, userId: rollerId, ts, rollType = null } = p;
+      let advMode = p.advMode || null;
+      // A weapon attack from my sheet is checked first: target, reach, my turn, attacks left; flanking and range
+      // add advantage or disadvantage (dnd-hub-combat.js preAttack). A refused attack throws no dice.
+      if (rollType === 'attack' && p.weapon && !MAP.isDM) {
+        const pre = preAttack(rollerId, p.weapon);
+        if (!pre.ok) {
+          moveToast(pre.reason);
+          localPublish('dnd-player', 'attack:refused', { type: 'attack:refused', ts, reason: pre.reason });
+          break;
+        }
+        const ups = [advMode === 'adv', pre.adv].filter(Boolean).length, downs = [advMode === 'dis', pre.dis].filter(Boolean).length;
+        advMode = ups && downs ? null : ups ? 'adv' : downs ? 'dis' : null; // one of each cancels out (SRD)
+        const why = [pre.flanked && 'flanking: advantage', pre.far && 'long range: disadvantage',
+          pre.crowded && 'an enemy next to you: disadvantage'].filter(Boolean).join(' · ');
+        if (why) showCombatToast(why);
+      }
       const effectiveCount = advMode ? 2 : count;
       const rolls = await animateDiceFree(sides, effectiveCount, myLook());
       let usedRolls = rolls;
@@ -730,12 +748,18 @@ export async function handleMapEvent(p) {
       // Stop any playing soundtrack or previous shop audio
       if (MAP._soundtrackAudio) { MAP._soundtrackAudio.pause(); MAP._soundtrackAudio.src = ''; MAP._soundtrackAudio = null; }
       if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
-      // The shop is always the lantern-lit scene drawn in code (dnd-hub-shop-scene.js). A shop's own video or
-      // picture is gone: the owner chose the scene, and a shop now carries a background sound instead (2026-10-05).
+      // The shop's own picture or video if it has one, else the lantern-lit scene drawn in code. Both sit OVER the map:
+      // the old video path wrote the shop's file into the map's own data, where a save could keep it.
       {
         const wrap = document.getElementById('map-canvas-wrap');
         const shopName = p.shopName || serverData?.campaigns?.[p.campaignId]?.shops?.[p.shopId]?.name || '';
-        if (wrap) startShopScene(wrap, shopName);
+        if (wrap) {
+          let media = null;
+          if (p.videoFileId) media = await request('files:getUrl', { fileId: p.videoFileId }).catch(() => null);
+          if (media?.url) startShopMedia(wrap, media.url, p.videoMime || media.mime || '');
+          else startShopScene(wrap, shopName);
+          showShopExit(wrap);
+        }
       }
       // Clear tokens and walls from display (visual only — mapData unchanged so they restore on map reload)
       if (MAP.layers?.tokens) MAP.layers.tokens.removeChildren();
@@ -745,7 +769,7 @@ export async function handleMapEvent(p) {
       MAP._activeShopId = p.shopId;
       MAP._shopFogHidden = true;
       renderFog();
-      // The shop's background sound, looping (an older shop's video still lends its soundtrack).
+      // The shop's background sound, looping (without one, its video's own soundtrack).
       if (p.soundFileId || p.videoFileId) {
         try {
           const res = await request('files:getUrl', { fileId: p.soundFileId || p.videoFileId });
@@ -759,6 +783,18 @@ export async function handleMapEvent(p) {
           }
         } catch { /* autoplay blocked or fetch failed */ }
       }
+      break;
+    }
+    case 'conditions:fx': {
+      // My own sheet: my hero gained these conditions (0 HP, or I marked one).
+      if (p.fromUserId && p.fromUserId !== userId) return;
+      (p.conditions || []).forEach((c, i) => setTimeout(() => playConditionFx(c), i * 2700));
+      break;
+    }
+    case 'shop:close': {
+      // The DM closed the shop: every screen goes back to the map.
+      if (p.campaignId !== MAP.campaignId) return;
+      await leaveShop();
       break;
     }
     case 'shop:volume': {
@@ -926,6 +962,35 @@ export async function handleMapEvent(p) {
       break;
     }
   }
+}
+
+/**
+ * Back from the shop to the map, on this screen. There was no way out: the shop stayed until the DM loaded a scene
+ * or a map (owner, 2026-10-05). A player leaves on their own screen (their sidebar keeps the shop to buy from); the
+ * DM's button closes it for everyone.
+ */
+export async function leaveShop() {
+  if (!MAP._activeShopId) return;
+  document.getElementById('lk-shop-exit')?.remove();
+  if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
+  stopShopScene();
+  MAP._shopFogHidden = false;
+  MAP._activeShopId = null;
+  clearTokenCache(); renderTokens(); renderWalls(); renderFog();
+}
+
+function showShopExit(wrap) {
+  document.getElementById('lk-shop-exit')?.remove();
+  const b = document.createElement('button');
+  b.id = 'lk-shop-exit';
+  b.className = 'map-tool-btn';
+  b.style.cssText = 'position:absolute;top:12px;left:12px;z-index:60';
+  b.textContent = MAP.isDM ? '✕ Close shop for everyone' : '← Back to the map';
+  b.onclick = async () => {
+    if (MAP.isDM) await publishTo(['player'], 'shop:close', { type: 'shop:close', campaignId: MAP.campaignId, fromUserId: userId });
+    await leaveShop();
+  };
+  wrap.appendChild(b);
 }
 
 function _showPendingTriggerConfirm(p) {

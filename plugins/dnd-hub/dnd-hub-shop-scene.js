@@ -133,7 +133,21 @@ export function startShopScene(wrap, name = '') {
   _raf = requestAnimationFrame(frame);
 }
 
+/** A shop's own picture or video, over the map (the DM chose one for this shop). */
+export function startShopMedia(wrap, url, mime = '') {
+  stopShopScene();
+  const isVideo = /^video\//.test(mime) || /\.(mp4|webm|mov)(\?|$)/i.test(url);
+  const el = document.createElement(isVideo ? 'video' : 'img');
+  el.id = 'lk-shop-scene';
+  el.src = url;
+  if (isVideo) Object.assign(el, { autoplay: true, loop: true, muted: true, playsInline: true });
+  el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#070504;z-index:45;pointer-events:none';
+  wrap.appendChild(el);
+  _canvas = el;
+}
+
 export function stopShopScene() {
+  document.getElementById('lk-shop-exit')?.remove(); // the shop's exit button goes with it (a scene or map took over)
   cancelAnimationFrame(_raf); _raf = 0;
   _ro?.disconnect(); _ro = null;
   _canvas?.remove(); _canvas = null;

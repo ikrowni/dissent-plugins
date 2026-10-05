@@ -1,13 +1,14 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013v';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013v';
 import { rule } from './lk-table-rules.js';
-import { attackVerdict } from './dnd-hub-rules.js';
+import { attackVerdict, attackCheck, attackTurnCheck } from './dnd-hub-rules.js';
+import { limitingTurnId } from './dnd-hub-turn-move.js';
 import { publishTo, isRepeat } from './lk-bus.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261013u';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013v';
 import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
@@ -134,6 +135,53 @@ export function judgeAttack(total, natural, rollerId) {
   return v;
 }
 
+const _attacksUsed = {}; // turn key → weapon attacks I have made this turn
+
+/**
+ * Before a weapon attack from my sheet is rolled (owner, 2026-10-05): is there a target, is it in reach, is it my
+ * turn with an attack left (Extra Attack counts), and does flanking, long range or a nearby enemy give advantage or
+ * disadvantage? `weapon` = { reach (lk-rules5e weaponReach), perAction }. Returns attackCheck's answer plus `target`.
+ */
+export function preAttack(rollerId, weapon) {
+  const toks = Object.values(MAP.mapData?.tokens || {});
+  const me = toks.find(t => t.type === 'player' && t.userId === rollerId && !t.waiting);
+  if (!me) return { ok: false, reason: 'Your token is not on the map yet.' };
+  let target = [...MAP.selectedTokens].map(id => MAP.mapData.tokens[id]).find(Boolean);
+  if (!target) {
+    const near = adjacentEnemies(rollerId);
+    if (near.length !== 1) return { ok: false, reason: near.length ? 'Several enemies are next to you: click the one you attack, then roll.'
+      : 'No target: click the enemy you attack on the map, then roll.' };
+    target = near[0];
+    MAP.selectedTokens.add(target.id); renderTokens();
+  }
+  const turnId = limitingTurnId();
+  const key = MAP.turnMove?.key || 'none';
+  const turn = attackTurnCheck({ fightOn: !!turnId, myTurn: turnId === me.id, used: _attacksUsed[key] || 0, perAction: weapon?.perAction || 1 });
+  if (!turn.ok) return turn;
+  const r = attackCheck({ attacker: me, target, reach: weapon?.reach, tokens: toks, gs: effectiveGs(MAP.mapData), flanking: tableRule('flanking') });
+  if (r.ok && turnId) _attacksUsed[key] = (_attacksUsed[key] || 0) + 1;
+  return { ...r, target };
+}
+
+/**
+ * My turn has come: target the closest enemy I can see (owner, 2026-10-05), unless I already picked one that is still
+ * standing. My next attack is against it; clicking another enemy changes it.
+ */
+export function focusClosestEnemy() {
+  if (MAP.isDM || !MAP.mapData?.tokens) return;
+  const toks = Object.values(MAP.mapData.tokens);
+  const me = toks.find(t => t.type === 'player' && t.userId === userId && !t.waiting);
+  if (!me) return;
+  const still = [...MAP.selectedTokens].some(id => (MAP.mapData.tokens[id]?.hp ?? 0) > 0);
+  if (still) return;
+  const foes = toks.filter(t => t.type === 'monster' && (t.hp ?? 1) > 0 && MAP.tokenSprites?.[t.id]?.visible !== false);
+  if (!foes.length) return;
+  const near = foes.reduce((a, b) => (Math.hypot(a.x - me.x, a.y - me.y) <= Math.hypot(b.x - me.x, b.y - me.y) ? a : b));
+  MAP.selectedTokens.clear();
+  MAP.selectedTokens.add(near.id);
+  renderTokens();
+}
+
 /** Visible monsters within one square of `uid`'s hero. */
 function adjacentEnemies(uid) {
   const tokens = Object.values(MAP.mapData?.tokens || {});
@@ -141,6 +189,7 @@ function adjacentEnemies(uid) {
   if (!me) return [];
   const gs = effectiveGs(MAP.mapData);
   return tokens.filter(t => t.type === 'monster' && t.visible !== false && (t.hp ?? 1) > 0
+    && MAP.tokenSprites?.[t.id]?.visible !== false // one the player can see right now
     && Math.max(Math.abs(t.x - me.x), Math.abs(t.y - me.y)) <= gs * 1.5);
 }
 

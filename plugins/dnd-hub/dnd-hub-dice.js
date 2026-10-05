@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { cleanLook, lookKey } from './dnd-hub-dice-look.js';
+import { percentile, percentileFaces } from './dnd-hub-rules.js';
 
 const FLOOR_Y           = -2.5;
 const FIXED_STEP        = 1 / 60;
@@ -846,30 +847,24 @@ export function animateDiceFree(dieSides, count, look = null) {
     ensureWorld();
     ensureWalls();
 
-    // d100: roll 5 d20 freely — their sum is the result
+    // d100: two d10s, tens and ones (dnd-hub-rules.js percentile)
     if (dieSides === 100) {
-      const values = [];
-      let lastDie = null;
-      for (let i = 0; i < 5; i++) {
-        const isLast = i === 4;
+      const faces = [];
+      let onesDie = null;
+      for (let i = 0; i < 2; i++) {
         setTimeout(() => {
-          const die = spawnState(20, null, {
-            freeRoll: true, look,
-            suppressLabel: true,
+          const die = spawnState(10, null, {
+            freeRoll: true, look, suppressLabel: true,
             onSettled: value => {
-              values.push(value);
-              if (values.length === 5) {
-                const total = values.reduce((a, b) => a + b, 0);
+              faces[i] = value;
+              if (faces.filter(v => v != null).length === 2) {
+                const total = percentile(faces[0], faces[1]);
                 resolve([total]);
-                if (lastDie) {
-                  lastDie.suppressLabel = false;
-                  lastDie.labelResult   = total;
-                  showResult(lastDie);
-                }
+                if (onesDie) { onesDie.suppressLabel = false; onesDie.labelResult = total; showResult(onesDie); }
               }
             },
           });
-          if (isLast) lastDie = die;
+          if (i === 1) onesDie = die;
           _activeDice.push(die);
           startLoop();
         }, i * 180);
@@ -895,7 +890,7 @@ export function animateDiceFree(dieSides, count, look = null) {
 /**
  * Animate dice rolling on the map overlay with a predetermined result.
  * Used for observer clients who receive someone else's roll result.
- * d100 spawns 5 d20 dice; the actual result is shown as a label on the last die.
+ * d100 spawns two d10s (tens and ones); the result is shown as a label on the second.
  * @param {number}   dieSides - faces (4, 6, 8, 10, 12, 20, 100)
  * @param {number[]} results  - one result per die
  * @param {object}   [look]   - the roller's dice skin, as sent in their roll (checked before it is drawn)
@@ -909,12 +904,10 @@ export function animateDice(dieSides, results, look = null) {
 
   if (dieSides === 100) {
     const d100result = results[0];
-    for (let i = 0; i < 5; i++) {
+    const faces = percentileFaces(d100result);
+    for (let i = 0; i < 2; i++) {
       setTimeout(() => {
-        _activeDice.push(spawnState(20, Math.ceil(Math.random() * 20), {
-          suppressLabel: i < 4,
-          labelResult:   i === 4 ? d100result : null, look,
-        }));
+        _activeDice.push(spawnState(10, faces[i], { suppressLabel: i === 0, labelResult: i === 1 ? d100result : null, look }));
         startLoop();
       }, i * 200);
     }

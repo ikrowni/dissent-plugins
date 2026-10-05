@@ -22,7 +22,7 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { loadPlayerParts } from './lk-book.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 import { pickCampaign } from './dnd-campaign-pick.js';
-import { normalizeSlots, characterSummary, weaponProfile, critDamageExpr, applyDamage, applyHealing, abilityMod, setHp } from './lk-rules5e.js';
+import { normalizeSlots, characterSummary, weaponProfile, weaponReach, attacksPerAction, critDamageExpr, applyDamage, applyHealing, abilityMod, setHp } from './lk-rules5e.js';
 import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
@@ -257,7 +257,7 @@ function setDiceRollLabel(label, forceMod) {
   document.getElementById('roll-label').textContent = label;
 }
 
-async function rollDice(rollType = null) {
+async function rollDice(rollType = null, weapon = null) {
   const sides  = parseInt(selectedDie.replace('d', ''), 10);
   const count  = Math.max(1, parseInt(document.getElementById('dice-count').value, 10) || 1);
   const mod    = parseInt(document.getElementById('dice-mod').value, 10) || 0;
@@ -274,7 +274,7 @@ async function rollDice(rollType = null) {
   _pendingPhysicsRollTs = ts;
   localPublish('dnd-hub', EV.DICE_PHYSICS_ROLL, {
     type: EV.DICE_PHYSICS_ROLL, sides, count, mod, label, expression,
-    advMode, userId: USER_ID, ts, rollType,
+    advMode, userId: USER_ID, ts, rollType, weapon,
   });
 
   // Fallback: if hub doesn't respond within 8 s (e.g. map not open), compute locally
@@ -928,7 +928,8 @@ function weaponAttack(equipIdx) {
   _pendingWeaponAttack = { item, weaponEffect, equipIdx };
 
   setDiceRollLabel(`${item.name} — Attack`, toHitMod);
-  rollDice('attack');
+  // The Hub checks reach, the turn and attacks left before it throws (dnd-hub-combat.js preAttack).
+  rollDice('attack', { reach: weaponReach(item), perAction: attacksPerAction(CHAR.features) });
 }
 
 /**
@@ -1147,6 +1148,18 @@ async function onEvent(ev) {
     return;
   }
 
+  // My Hub refused a weapon attack before throwing (out of reach, not my turn, no attacks left, no target).
+  if (p.type === 'attack:refused' && p.ts === _pendingPhysicsRollTs) {
+    clearTimeout(_pendingPhysicsRollTimer);
+    _pendingPhysicsRollTimer = null;
+    _pendingPhysicsRollTs = null;
+    _pendingWeaponAttack = null;
+    document.getElementById('roll-result').textContent = '—';
+    document.getElementById('roll-breakdown').textContent = '';
+    _showPlayerToast(p.reason || 'That attack is not possible now.');
+    return;
+  }
+
   // Physics roll result returned from dnd-hub (or bounced back via realtime)
   if (p.type === EV.DICE_ROLL && p.userId === USER_ID && _pendingPhysicsRollTs !== null) {
     clearTimeout(_pendingPhysicsRollTimer);
@@ -1312,6 +1325,9 @@ async function onEvent(ev) {
     _openShopTab(p.shopId).catch(() => {});
     return;
   }
+
+  // The DM closed the shop for everyone (the Hub's "Close shop" button).
+  if (p.type === 'shop:close' && p.campaignId === CAMPAIGN_ID) { if (_activeShopId) _closeShopTab(); return; }
 
   if (p.type === EV.SCENE_LOAD && p.campaignId === CAMPAIGN_ID) {
     if (p.shopId) {

@@ -20,9 +20,9 @@
 export const PRESET_ORDER = ['guided', 'classic', 'raw'];
 
 export const PRESETS = {
-  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  levelByXp: false, featsAllowed: true, hints: true  },
-  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
-  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
+  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  levelByXp: false, featsAllowed: true, hints: true,  flanking: true  },
+  classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false, flanking: false },
+  raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false, flanking: false },
 };
 
 export const RULE_KEYS = Object.keys(PRESETS.guided);
@@ -37,6 +37,7 @@ export const RULE_INFO = {
   autoHit:               { group: 'Combat', label: 'Hit or miss',            desc: 'Compare attack rolls with the target\'s AC and say hit or miss' },
   autoDamage:            { group: 'Combat', label: 'Apply damage',           desc: 'After a hit, the damage roll comes off the target\'s HP' },
   playersRollInitiative: { group: 'Combat', label: 'Players roll initiative', desc: 'Each player rolls their own; the tracker waits for them' },
+  flanking:              { group: 'Combat', label: 'Flanking',               desc: 'A melee attack has advantage when an ally stands on the far side of the target (an optional rule)' },
   deathSaves:            { group: 'Danger', label: 'Death save reminders',   desc: 'A hero at 0 HP is asked to roll a death save when their turn starts' },
   concentrationAutoRoll: { group: 'Danger', label: 'Roll concentration saves', desc: 'When a concentrating caster takes damage, roll the CON save for them' },
   trapSavesAuto:         { group: 'Danger', label: 'Roll trap saves',        desc: 'When a trap springs, roll the hero\'s saving throw for them' },

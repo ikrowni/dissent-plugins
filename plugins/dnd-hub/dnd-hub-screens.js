@@ -1,18 +1,18 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261013v';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013u';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261013u';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261013u';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013v';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261013v';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261013v';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261013u';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261013v';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -435,6 +435,7 @@ export async function renderCampaignView(campaignId, isDM) {
             <button class="map-tool-btn" id="btn-tool-select" onclick="setTool('select')" title="Select and drag tokens">${icon('hand')}Select</button>
             <button class="map-tool-btn" id="btn-tool-wall" onclick="setTool('wall')" title="Draw a wall">${icon('brick-wall')}Wall</button>
             <button class="map-tool-btn" id="btn-tool-door" onclick="setTool('door')" title="Draw a door (click a door to open, close or lock it)">${icon('door-open')}Door</button>
+            <button class="map-tool-btn" id="btn-wall-snap" onclick="toggleWallSnap()" aria-pressed="${MAP.wallSnapGrid !== false}" title="Wall and door ends snap to grid corners (they always join other walls' ends). Hold Alt to draw freely.">${icon('grid-3x3')}Snap</button>
             <button class="map-tool-btn" id="btn-tool-reveal" onclick="setTool('brush-reveal')" title="Brush to reveal fog">${icon('eye')}Reveal</button>
             <button class="map-tool-btn" id="btn-tool-hide" onclick="setTool('brush-hide')" title="Brush to hide with fog">${icon('eye-off')}Hide</button>
             <button class="map-tool-btn" onclick="resetFog()" style="color:#f87171;border-color:rgba(248,113,113,.3)" title="Cover the whole map with fog again">${icon('trash-2')}Reset fog</button>

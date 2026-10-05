@@ -1,6 +1,6 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, esc, genId, requestWithTransfer, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';
@@ -82,6 +82,13 @@ function _shopCard(shop, allItems) {
         'oninput="onShopVolumeChange(\'' + shop.id + '\', this.value)" style="flex:1" title="Volume">' : '<span style="flex:1"></span>') +
       '<label class="btn btn-ghost" style="font-size:10px;cursor:pointer">' + (hasSound ? 'Change' : 'Add sound') +
         '<input type="file" accept="audio/*" style="display:none" onchange="onShopSoundSelected(\'' + shop.id + '\', this)"></label>' +
+    '</div>' +
+    // Your own picture or video for the main panel, instead of the drawn shop (owner, 2026-10-05: keep both).
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">' +
+      '<span style="font-size:10px;color:var(--muted);flex:1">' + (shop.videoFileId ? '🖼 Your picture/video' : '🏮 The drawn shop') + '</span>' +
+      '<label class="btn btn-ghost" style="font-size:10px;cursor:pointer">' + (shop.videoFileId ? 'Change' : 'Use a picture/video') +
+        '<input type="file" accept="image/*,video/*" style="display:none" onchange="onShopMediaSelected(\'' + shop.id + '\', this)"></label>' +
+      (shop.videoFileId ? '<button class="btn btn-ghost" style="font-size:10px" onclick="onShopMediaSelected(\'' + shop.id + '\', null)">Remove</button>' : '') +
     '</div>';
 
   return '<div class="shop-card">' +
@@ -175,7 +182,8 @@ export async function loadShop(shopId) {
   await realtimePublishCompanion('dnd-hub', EV.SHOP_OPEN, {
     type: EV.SHOP_OPEN, shopId, shopName: shop.name || '',
     soundFileId: shop.soundFileId || null,
-    videoFileId: shop.videoFileId || null, // an older shop's video: its soundtrack plays (dnd-hub-events.js)
+    videoFileId: shop.videoFileId || null, // the shop's own picture/video (dnd-hub-shop-scene.js startShopMedia)
+    videoMime: shop.videoMime || '',
     ambientVolume: shop.ambientVolume ?? 0.5,
     campaignId: _state.dmCampaignId,
     fromUserId: _state.userId,
@@ -204,7 +212,7 @@ export function onShopVolumeChange(shopId, value) {
   }, 100);
 }
 
-/** Upload a shop's background sound: its file id, or false when it failed (the user has been told). */
+/** Upload a shop's file (its sound, or its picture/video): the file id, or false when it failed (the user has been told). */
 async function _uploadSound(file) {
   try {
     const buf = await file.arrayBuffer();
@@ -213,9 +221,27 @@ async function _uploadSound(file) {
       [buf], 120000);
     return res?.id || null;
   } catch (e) {
-    if (!e?.shown) alert('That sound could not be uploaded: ' + (e?.message || String(e)));
+    if (!e?.shown) alert('That file could not be uploaded: ' + (e?.message || String(e)));
     return false;
   }
+}
+
+/** A shop's own picture or video for the main panel; `input` null removes it (the drawn shop comes back). */
+export async function onShopMediaSelected(shopId, input) {
+  const shop = _state.dmCampaign.shops?.[shopId];
+  if (!shop) return;
+  if (input === null) { delete shop.videoFileId; delete shop.videoMime; }
+  else {
+    const file = input?.files?.[0];
+    if (!file) return;
+    const id = await _uploadSound(file);
+    if (!id) return;
+    shop.videoFileId = id; shop.videoMime = file.type || '';
+  }
+  _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
+  await saveHubDmCompanion(_state.serverData);
+  await _persistDmCatalog();
+  renderShopsTab();
 }
 
 /** A new background sound for an existing shop. */
@@ -226,7 +252,6 @@ export async function onShopSoundSelected(shopId, input) {
   const id = await _uploadSound(file);
   if (!id) return;
   shop.soundFileId = id;
-  delete shop.videoFileId; delete shop.videoMime;
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();

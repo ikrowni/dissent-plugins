@@ -141,6 +141,95 @@ export function isOwnWaitingSpawn(p) {
     && t[0].id === `player_${p.fromUserId}` && t[0].userId === p.fromUserId && t[0].type === 'player';
 }
 
+/**
+ * A d100 from two d10s, tens and ones (the 10 face reads as 0); 00 and 0 is 100. It used to be five d20s added up,
+ * which gives 5–100 bunched in the middle, not an even 1–100 (2026-10-05).
+ */
+export const percentile = (tensFace, onesFace) => ((tensFace % 10) * 10 + (onesFace % 10)) || 100;
+/** The two d10 faces that show `result` (1–100). */
+export const percentileFaces = result => [Math.floor(result / 10) % 10 || 10, result % 10 || 10];
+
+/** Is point (x, y) inside polygon `poly` ([{x, y}…])? Even-odd ray casting. */
+export function pointInPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Does a player see a token right now? Their own and the party's always; anything else only inside a hero's vision,
+ * or in light (`litPolys`) that a hero has a line of sight to (`sightPolys`). An explored room stays on the map as
+ * a memory, but who is in it does not (owner's question, 2026-10-05): monsters were visible through the dim fog.
+ */
+export function playerSees(token, uid, { visionPolys = [], sightPolys = [], litPolys = [] } = {}) {
+  if (token.type === 'player') return true;
+  const p = [token.x, token.y];
+  if (visionPolys.some(poly => pointInPoly(...p, poly))) return true;
+  return litPolys.some(poly => pointInPoly(...p, poly)) && sightPolys.some(poly => pointInPoly(...p, poly));
+}
+
+/**
+ * May `attacker` hit `target` with a weapon of this `reach` (lk-rules5e weaponReach), and with advantage or
+ * disadvantage? Pure. Distances are counted in squares, 5 ft each, diagonals too (the table's grid rule).
+ * - melee if within reach; otherwise a ranged or thrown attack within its long range;
+ * - ranged: disadvantage beyond normal range, and with an enemy standing next to the attacker;
+ * - flanking (an optional rule): a melee attack with an ally on the far side of the target has advantage.
+ * Owner, 2026-10-05: "attacks only if the player is within the appropriate range".
+ * Returns { ok, reason, mode: 'melee'|'ranged', adv, dis, feet }.
+ */
+export function attackCheck({ attacker, target, reach, tokens = [], gs = 50, flanking = false }) {
+  const cell = t => ({ cx: Math.floor(t.x / gs), cy: Math.floor(t.y / gs) });
+  const a = cell(attacker), t = cell(target);
+  const sqs = (p, q) => Math.max(Math.abs(p.cx - q.cx), Math.abs(p.cy - q.cy));
+  const feet = sqs(a, t) * 5;
+  const name = target.name || 'That target';
+  if (!reach) return { ok: false, reason: 'That is not a weapon you can attack with.', feet };
+  const foe = x => x.id !== attacker.id && x.type !== attacker.type && (x.type === 'player' || x.type === 'monster')
+    && (x.hp ?? 1) > 0 && !x.waiting;
+  if (reach.melee && feet <= reach.melee) {
+    let adv = false;
+    if (flanking && feet === 5) {
+      const far = { cx: 2 * t.cx - a.cx, cy: 2 * t.cy - a.cy };
+      adv = tokens.some(x => x.id !== attacker.id && x.type === attacker.type && (x.hp ?? 1) > 0 && !x.waiting
+        && sqs(cell(x), far) === 0);
+    }
+    return { ok: true, mode: 'melee', adv, dis: false, feet, flanked: adv };
+  }
+  if (reach.long && feet <= reach.long) {
+    const crowded = tokens.some(x => foe(x) && sqs(cell(x), a) <= 1);
+    const far = reach.normal != null && feet > reach.normal;
+    return { ok: true, mode: 'ranged', adv: false, dis: crowded || far, feet, crowded, far };
+  }
+  const can = reach.long ? `${reach.long} ft at most` : `${reach.melee} ft`;
+  return { ok: false, reason: `${name} is ${feet} ft away: out of reach (${can}).`, feet };
+}
+
+/** May I attack now, in a fight: on my turn, with attacks left? `used` attacks so far this turn. */
+export function attackTurnCheck({ fightOn, myTurn, used = 0, perAction = 1 }) {
+  if (!fightOn) return { ok: true };
+  if (!myTurn) return { ok: false, reason: 'It is not your turn: you can attack on your turn.' };
+  if (used >= perAction) return { ok: false, reason: perAction > 1 ? `You have made all ${perAction} of your attacks this turn.` : 'You have already attacked this turn.' };
+  return { ok: true };
+}
+
+/**
+ * Where a wall or door end lands: on an existing wall or door end within `radius` (so walls join up), else on the
+ * nearest grid corner when `grid` ({ gs, ox, oy }) is given, else where the pointer is (owner, 2026-10-05).
+ */
+export function snapWallPoint(p, ends = [], grid = null, radius = 12) {
+  let best = null, bd = radius;
+  for (const e of ends) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d <= bd) { bd = d; best = e; } }
+  if (best) return { x: best.x, y: best.y, snapped: 'end' };
+  if (grid) {
+    const { gs, ox = 0, oy = 0 } = grid;
+    return { x: ox + Math.round((p.x - ox) / gs) * gs, y: oy + Math.round((p.y - oy) / gs) * gs, snapped: 'grid' };
+  }
+  return { x: p.x, y: p.y, snapped: null };
+}
+
 /** A new hero's token, waiting beside the map (waitingSpot). */
 export function newWaitingToken(uid, summary, memberIdx, gs, colorCount, mapH = 0) {
   const { x, y } = waitingSpot(memberIdx, gs, mapH);

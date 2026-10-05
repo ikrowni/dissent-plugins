@@ -104,7 +104,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 20;
+  z-index: 50; /* above the shop scene (45): dice rolled while shopping were hidden behind it (owner, 2026-10-05) */
 }
 
 /* Floating result number that appears after the die settles */
@@ -116,7 +116,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   color: #d4af37;
   text-shadow: 0 0 28px rgba(212,175,55,0.9), 0 2px 8px rgba(0,0,0,0.95);
   pointer-events: none;
-  z-index: 21;
+  z-index: 51; /* just above the dice */
   animation: die-result-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -204,7 +204,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .campaign-row:nth-child(n+5),.available-card:nth-child(n+5){animation-delay:.24s}
 .campaign-row:hover,.available-card:hover{transform:translateX(3px);box-shadow:-3px 0 0 var(--lk-gold),0 8px 22px rgba(0,0,0,.4)}
 @media (prefers-reduced-motion:reduce){.campaign-row,.available-card{animation:none!important}}
-.map-tool-btn[aria-pressed="true"]#btn-guides{color:var(--lk-gold);border-color:color-mix(in srgb,var(--lk-gold) 50%,transparent)}
+.map-tool-btn[aria-pressed="true"]#btn-guides,.map-tool-btn[aria-pressed="true"]#btn-wall-snap{color:var(--lk-gold);border-color:color-mix(in srgb,var(--lk-gold) 50%,transparent)}
 /* Small popovers on the map (Weather). */
 .lk-pop{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:110;min-width:300px;max-width:calc(100% - 20px);padding:12px;border-radius:10px;
   border:1px solid color-mix(in srgb,var(--lk-gold) 45%,var(--lk-line));background:rgba(14,10,6,.97);box-shadow:0 14px 40px rgba(0,0,0,.6);animation:forge-rise-lk .3s both}

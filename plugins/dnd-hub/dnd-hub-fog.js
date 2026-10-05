@@ -1,11 +1,12 @@
 // dnd-hub-fog.js — fog-of-war rendering, brush tools, fog save/reset
-import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013u';
+import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013v';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { computeLitCells, lightPx, getEffectiveRadius } from './dnd-hub-lights.js?v=20261013u';
-import { computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { computeLitCells, lightPx, getEffectiveRadius } from './dnd-hub-lights.js?v=20261013v';
+import { computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013v';
 import { fogAlpha } from './dnd-hub-rules.js';
+import { applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261013v';
 import { fogBefore, fogAfter } from './dnd-hub-undo.js';
 
 export function renderFog() {
@@ -21,6 +22,7 @@ export function renderFog() {
   if (MAP.isDM && !MAP.fogVisible) {
     layers.fog.removeChildren();
     MAP._fogSprite = null;
+    applyFacing();
     return;
   }
 
@@ -32,6 +34,7 @@ export function renderFog() {
   // the lights' own smooth shapes, clipped to what the player's heroes can see. Squares gave the fog staircase edges
   // and stray black blocks round a lit room (owner, 2026-10-05).
   const litCells = MAP.isDM ? computeLitCells(MAP.mapData.lights || [], MAP.mapData) : new Set();
+  if (!MAP.isDM) MAP._litPolysWorld = []; // filled below with the lights this player can see
   const W = MAP.app.screen.width;
   const H = MAP.app.screen.height;
   const z = MAP.zoom || 1;
@@ -72,14 +75,23 @@ export function renderFog() {
   // as explored here — it used to punch a square hole the round vision did not match.
   const player = !MAP.isDM;
   let cellCtx = ctx;
+  // The blur reads past the canvas edge as empty, which thinned the fog along the screen's edges and showed a strip
+  // of the map there (owner, 2026-10-05). The squares are drawn PAD px past every edge, then cropped.
+  const blurPx = Math.max(2, Math.min(cellPx * 0.35, 18));
+  const PAD = Math.ceil(blurPx * 3);
+  const extra = player ? Math.ceil(PAD / cellPx) : 0;
   if (player) {
     let bc = MAP._fogCellCanvas;
-    if (!bc || bc.width !== W || bc.height !== H) { bc = document.createElement('canvas'); bc.width = W; bc.height = H; MAP._fogCellCanvas = bc; }
+    if (!bc || bc.width !== W + 2 * PAD || bc.height !== H + 2 * PAD) {
+      bc = document.createElement('canvas'); bc.width = W + 2 * PAD; bc.height = H + 2 * PAD; MAP._fogCellCanvas = bc;
+    }
     cellCtx = bc.getContext('2d');
-    cellCtx.clearRect(0, 0, W, H);
+    cellCtx.setTransform(1, 0, 0, 1, 0, 0);
+    cellCtx.clearRect(0, 0, bc.width, bc.height);
+    cellCtx.setTransform(1, 0, 0, 1, PAD, PAD);
   }
-  for (let cy = startCy; cy <= endCy; cy++) {
-    for (let cx = startCx; cx <= endCx; cx++) {
+  for (let cy = startCy - extra; cy <= endCy + extra; cy++) {
+    for (let cx = startCx - extra; cx <= endCx + extra; cx++) {
       // Lit cells are always clear (the DM's screen) — treat as visible regardless of fogState
       if (litCells.has(`${cx},${cy}`)) continue;
       let state = fogState[`${cx},${cy}`] ?? 'unexplored';
@@ -92,8 +104,8 @@ export function renderFog() {
     }
   }
   if (player) {
-    ctx.filter = `blur(${Math.max(2, Math.min(cellPx * 0.35, 18)).toFixed(1)}px)`;
-    ctx.drawImage(MAP._fogCellCanvas, 0, 0);
+    ctx.filter = `blur(${blurPx.toFixed(1)}px)`;
+    ctx.drawImage(MAP._fogCellCanvas, -PAD, -PAD);
     ctx.filter = 'none';
   }
 
@@ -149,10 +161,11 @@ export function renderFog() {
             c.closePath(); c.fill();
           };
           const walls = sightBlockers(MAP.mapData);
+          MAP._litPolysWorld = [];
           for (const raw of lights) {
             const l = lightPx(raw);
             const poly = computeVisibilityPolygon(l.x, l.y, getEffectiveRadius(l), walls);
-            if (poly.length >= 3) fill(lctx, poly);
+            if (poly.length >= 3) { fill(lctx, poly); MAP._litPolysWorld.push(poly); }
           }
           lctx.globalCompositeOperation = 'destination-in';
           const sc = MAP._sightCanvas && MAP._sightCanvas.width === W && MAP._sightCanvas.height === H
@@ -175,8 +188,8 @@ export function renderFog() {
         }
         const mctx = mc.getContext('2d');
         mctx.clearRect(0, 0, W, H);
-        const blurPx = Math.max(3, Math.min(cellPx * 0.30, 20));
-        mctx.filter = `blur(${blurPx.toFixed(1)}px)`;
+        const maskBlur = Math.max(3, Math.min(cellPx * 0.30, 20));
+        mctx.filter = `blur(${maskBlur.toFixed(1)}px)`;
         mctx.drawImage(vc, 0, 0);
         mctx.filter = 'none';
         // Crop back to original footprint — blur only bleeds inward, not past walls.
@@ -205,6 +218,9 @@ export function renderFog() {
       }
     }
   }
+
+  if (!MAP.isDM) applyPlayerSight(); // who is in sight right now (dnd-hub-tokens.js)
+  applyFacing();                     // …and who faces whom
 
   // ── Upload canvas pixels to GPU ───────────────────────────────────────────────
   if (!MAP._fogTexture) {

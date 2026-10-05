@@ -1,26 +1,26 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20261013v';
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013u';
-import { renderGrid } from './dnd-hub-grid.js?v=20261013u';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013u';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013u';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013u';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013u';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013u';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013v';
+import { renderGrid } from './dnd-hub-grid.js?v=20261013v';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013v';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013v';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013v';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013v';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013v';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261013v';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013u';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013u';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013u';
-import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261013u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013u';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013u';
-import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor } from './dnd-hub-rules.js';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013v';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013v';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013v';
+import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261013v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013v';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013v';
+import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor, snapWallPoint } from './dnd-hub-rules.js';
 import { onMap, toCell, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath } from './dnd-hub-movement.js';
 
@@ -209,28 +209,42 @@ export async function initPixiApp() {
     app.canvas.addEventListener('mouseup',    () => { if (brushDown) { brushDown = false; fogAfter(); saveFogState(); } });
     app.canvas.addEventListener('mouseleave', () => { if (brushDown) { brushDown = false; fogAfter(); saveFogState(); } });
 
+    window.toggleWallSnap = () => {
+      MAP.wallSnapGrid = MAP.wallSnapGrid === false;
+      document.getElementById('btn-wall-snap')?.setAttribute('aria-pressed', String(MAP.wallSnapGrid));
+    };
+
     // ── Wall / door drawing ────────────────────────────────────────────────
     let drawStart = null, drawPreview = null;
+    // Ends snap onto other walls' and doors' ends, then (Snap on) to grid corners; Alt draws freely (owner, 2026-10-05).
+    const snapAt = e => {
+      const rect = app.canvas.getBoundingClientRect();
+      const p = { x: (e.clientX - rect.left - MAP.panX) / MAP.zoom, y: (e.clientY - rect.top - MAP.panY) / MAP.zoom };
+      if (e.altKey) return p;
+      const ends = [...(MAP.mapData.walls || []), ...Object.values(MAP.mapData.doors || {})].map(w => wallPx(w))
+        .flatMap(w => [{ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 }]);
+      const grid = MAP.wallSnapGrid === false ? null : {
+        gs: effectiveGs(MAP.mapData),
+        ox: (MAP._bgOffset?.x ?? 0) + (MAP.mapData.gridOffsetX || 0), oy: (MAP._bgOffset?.y ?? 0) + (MAP.mapData.gridOffsetY || 0) };
+      return snapWallPoint(p, ends, grid, 12 / MAP.zoom);
+    };
 
     app.canvas.addEventListener('mousedown', e => {
       const tool = MAP.activeTool;
       if (tool !== 'wall' && tool !== 'door') return;
-      const rect = app.canvas.getBoundingClientRect();
-      const z = MAP.zoom;
-      drawStart = { x: (e.clientX - rect.left - MAP.panX) / z, y: (e.clientY - rect.top - MAP.panY) / z };
+      drawStart = snapAt(e);
     });
 
     app.canvas.addEventListener('mousemove', e => {
       if (!drawStart) return;
       const tool = MAP.activeTool;
       if (tool !== 'wall' && tool !== 'door') return;
-      const rect = app.canvas.getBoundingClientRect();
-      const z = MAP.zoom;
-      const ex = (e.clientX - rect.left - MAP.panX) / z, ey = (e.clientY - rect.top - MAP.panY) / z;
+      const end = snapAt(e), ex = end.x, ey = end.y;
       if (drawPreview) MAP.layers.ui.removeChild(drawPreview);
       const pg = new PIXI.Graphics();
       pg.moveTo(drawStart.x, drawStart.y).lineTo(ex, ey)
         .stroke({ color: MAP.activeTool === 'wall' ? 0xff6b35 : 0xf59e0b, width: 2, alpha: 0.7 });
+      if (end.snapped) pg.circle(ex, ey, 5 / MAP.zoom).stroke({ color: end.snapped === 'end' ? 0x22c55e : 0xffffff, width: 2 / MAP.zoom });
       MAP.layers.ui.addChild(pg);
       drawPreview = pg;
     });
@@ -239,9 +253,7 @@ export async function initPixiApp() {
       if (!drawStart) return;
       const tool = MAP.activeTool;
       if (tool !== 'wall' && tool !== 'door') { drawStart = null; return; }
-      const rect = app.canvas.getBoundingClientRect();
-      const z = MAP.zoom;
-      const ex = (e.clientX - rect.left - MAP.panX) / z, ey = (e.clientY - rect.top - MAP.panY) / z;
+      const { x: ex, y: ey } = snapAt(e);
       if (drawPreview) { MAP.layers.ui.removeChild(drawPreview); drawPreview = null; }
 
       const dx = ex - drawStart.x, dy = ey - drawStart.y;
@@ -677,14 +689,14 @@ export function initKeyboardHandlers() {
       const gs = effectiveGs(MAP.mapData);
       const newX = token.x + dir[0] * gs;
       const newY = token.y + dir[1] * gs;
-      if (wouldCrossWall(token.x, token.y, newX, newY)) return;
+      if (!MAP.isDM && wouldCrossWall(token.x, token.y, newX, newY)) return; // the DM's arrow keys pass walls too
       if (!onMap(newX, newY)) return; // the arrow keys used to walk a token off the edge of the map
       const to = toCell(newX, newY);
       const turn = turnFor(tokenId);
       let turnPath = null;
       if (turn) {
         const r = extendPath(turn.path, to, {
-          committed: turn.path.length, blocked: cellBlocked,
+          committed: turn.path.length, blocked: MAP.isDM ? () => false : cellBlocked,
           speedFt: modeFor(tokenId) === 'budget' ? speedFor(tokenId) : Infinity,
         });
         if (r.path.length === turn.path.length) { if (r.stopped === 'speed' && !e.repeat) moveToast(refusal(tokenId) || 'No movement left.'); return; }
@@ -850,7 +862,7 @@ function _showTemplateContextMenu(clientX, clientY, wx, wy) {
 
 window._placeTemplateAt = async (type, wx, wy) => {
   document.getElementById('tmpl-ctx-menu')?.remove();
-  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261013u');
+  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261013v');
   await addTemplate(type, wx, wy, 10, 0, 10, 0xff4444, userId);
 };
 

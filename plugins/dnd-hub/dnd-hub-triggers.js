@@ -1,17 +1,17 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013u';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013v';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
-import { EV } from './dnd-hub-event-types.js?v=20261013u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013u';
+import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013v';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
 import { pickCell } from './dnd-hub-trigger-pick.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013u';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013v';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013u';
-import { renderFog } from './dnd-hub-fog.js?v=20261013u';
+import { renderLights } from './dnd-hub-lights.js?v=20261013v';
+import { renderFog } from './dnd-hub-fog.js?v=20261013v';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -411,6 +411,8 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     ['message','trap','teleport','sound'].forEach(t => {
       document.getElementById('td-fields-' + t).style.display = (t === v) ? '' : 'none';
     });
+    // A teleporter needs somewhere to send people: ask for it straight away (owner, 2026-10-05).
+    if (v === 'teleport' && !d.querySelector('#td-destcx').value) d.querySelector('#td-pick-dest').click();
   };
 
   document.getElementById('td-save').onclick = async () => {
