@@ -16,7 +16,7 @@ export function loadCss(id, file, base) {
   if (document.getElementById(id)) return;
   document.head.appendChild(Object.assign(document.createElement('link'), { id, rel: 'stylesheet', href: new URL(file, base).href }));
 }
-export const useKit = () => loadCss('tk-css', './kit.css?v=20261014i', import.meta.url);
+export const useKit = () => loadCss('tk-css', './kit.css?v=20261014j', import.meta.url);
 
 export function el(tag, cls = '', text = '') {
   const e = document.createElement(tag);
@@ -100,4 +100,13 @@ export function tableClient(root, ctx, rules, { onState, onCheated = () => {}, o
   ctx.signal.addEventListener('abort', () => { clearInterval(lobbyTimer); resolve({ won: false }); });
   ctx.send({ kind: 'hello' });
   return { act: action => ctx.send({ kind: 'act', action }), cheat: () => ctx.send({ kind: 'cheat' }), done };
+}
+
+/**
+ * An animation frame that can never take the Hub down: the Hub shows any uncaught error over the whole screen, so
+ * one bad frame (a race drawn a moment before it began) blanked the tavern. Logged once, and the next frame runs.
+ */
+export function guardFrame(fn) {
+  let told = false;
+  return t => { try { fn(t); } catch (e) { if (!told) { told = true; console.warn('[tavern game] a frame failed to draw:', e); } } };
 }

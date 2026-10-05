@@ -3,7 +3,7 @@
 // the map when the turn changes ("Your turn!" in gold for the player whose turn it is). Page elements over the
 // map, positioned from its pan and zoom; nothing here touches the map's state. Off under reduced motion, where a
 // quiet version shows instead.
-import { MAP, userId } from './dnd-hub-state.js?v=20261014i';
+import { MAP, userId } from './dnd-hub-state.js?v=20261014j';
 
 const still = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 

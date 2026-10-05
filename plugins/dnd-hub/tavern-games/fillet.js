@@ -3,9 +3,9 @@
 // A ring closes on the gap to strike; strike it as the ring meets it (keys 1–6 or A S D F G H, or click the gap).
 // The host runs first; beat their count before your third miss. Cheating: get the crowd to slow the count.
 // Rules: fillet-rules.js.
-import { MISSES, targetGap, bpm, beatTimes, retime, windowFor, judge, hostStrikes, result } from './fillet-rules.js?v=20261014i';
-import { useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014i';
-import { thunk, tick, buzz, chime } from './tavern-sfx.js?v=20261014i';
+import { MISSES, targetGap, bpm, beatTimes, retime, windowFor, judge, hostStrikes, result } from './fillet-rules.js?v=20261014j';
+import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014j';
+import { thunk, tick, buzz, chime } from './tavern-sfx.js?v=20261014j';
 
 const KEYS = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, a: 0, s: 1, d: 2, f: 3, g: 4, h: 5 };
 const BARKS = {
@@ -38,7 +38,7 @@ export async function play(root, ctx) {
   };
 
   let raf = 0;
-  const frame = now => {
+  const frame = guardFrame(now => {
     raf = requestAnimationFrame(frame);
     const G = geo(), t = (now - S.t0) / 1000;
     drawTable(g, w, h);
@@ -60,7 +60,7 @@ export async function play(root, ctx) {
       g.fillStyle = f.kind === 'miss' ? '#e0705a' : '#ffd36a'; g.fillText(f.kind === 'perfect' ? 'Perfect' : f.kind === 'hit' ? 'Tak!' : 'Miss!', f.x, G.gy - 70 * G.U - k * 24); g.globalAlpha = 1;
     }
     drawHud(g, w, S, ctx.host.name, S.mode === 'hero' ? bpm(S.beat, S.beat >= S.slowedFrom) : null);
-  };
+  });
   raf = requestAnimationFrame(frame);
 
   const strikeAt = (gap, kind) => {

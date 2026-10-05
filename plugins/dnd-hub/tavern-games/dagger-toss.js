@@ -3,9 +3,9 @@
 // Aim with the mouse (or arrow keys), hold to build power (or Space), let go to throw. The hand sways less with
 // Dexterity. Cheating: loosen the board's pin so the host's daggers wander (Sleight of Hand vs the host's eye).
 // Rules: dagger-toss-rules.js.
-import { THROWS, RINGS, SWEET, scoreAt, swayAmp, sway, powerAt, heroLanding, hostLanding, winner } from './dagger-toss-rules.js?v=20261014i';
-import { useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014i';
-import { whoosh, thunk, chime, buzz } from './tavern-sfx.js?v=20261014i';
+import { THROWS, RINGS, SWEET, scoreAt, swayAmp, sway, powerAt, heroLanding, hostLanding, winner } from './dagger-toss-rules.js?v=20261014j';
+import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014j';
+import { whoosh, thunk, chime, buzz } from './tavern-sfx.js?v=20261014j';
 
 const BARKS = {
   start: ['Three daggers. Mind the barmaid.', 'Closest to the heart takes it.', 'Don\'t hit the lantern this time.'],
@@ -51,7 +51,7 @@ export async function play(root, ctx) {
 
   // ── drawing ──
   let raf = 0, t0 = performance.now();
-  const frame = now => {
+  const frame = guardFrame(now => {
     raf = requestAnimationFrame(frame);
     const t = (now - t0) / 1000;
     g.drawImage(wall, 0, 0, w, h);
@@ -82,7 +82,7 @@ export async function play(root, ctx) {
       g.fillStyle = f.pts >= 25 ? '#ffd36a' : f.pts ? '#efe4cc' : '#d98a6a';
       g.fillText(f.pts ? `+${f.pts}` : 'Miss', p.x, p.y - 26 - k * 30); g.globalAlpha = 1;
     }
-  };
+  });
   raf = requestAnimationFrame(frame);
 
   const land = async (who, at) => {

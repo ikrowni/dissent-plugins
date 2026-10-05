@@ -1,7 +1,7 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014i';
+import { EV } from './dnd-hub-event-types.js?v=20261014j';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { withPlayerRoll, rollMissing, nextTurn, isDefeated } from './dnd-master-init-order.js';

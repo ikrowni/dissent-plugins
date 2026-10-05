@@ -3,9 +3,9 @@
 // Press (Space, click or tap) while the marker is in the bright band to push; miss and you give ground. Strength
 // widens the band. Cheating: lift your elbow off the pad for a sudden heave (Sleight of Hand vs the host's eye).
 // Rules: arm-wrestle-rules.js.
-import { bandWidth, markerAt, press, nextBand, lean, clampP, boutResult, HOST_HEAVE, TIME_LIMIT } from './arm-wrestle-rules.js?v=20261014i';
-import { useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014i';
-import { thump, chime, buzz, tick } from './tavern-sfx.js?v=20261014i';
+import { bandWidth, markerAt, press, nextBand, lean, clampP, boutResult, HOST_HEAVE, TIME_LIMIT } from './arm-wrestle-rules.js?v=20261014j';
+import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014j';
+import { thump, chime, buzz, tick } from './tavern-sfx.js?v=20261014j';
 
 const BARKS = {
   start: ['Elbows on the table. On three.', 'Don\'t blink.', 'Hope that arm\'s not just for show.'],
@@ -33,7 +33,7 @@ export async function play(root, ctx) {
 
   let resolveBout;
   const bout = new Promise(r => { resolveBout = r; });
-  const frame = now => {
+  const frame = guardFrame(now => {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (S.started && !S.over) {
@@ -49,7 +49,7 @@ export async function play(root, ctx) {
     S.strain *= 0.93;
     drawScene(g, w, h, S, ctx.host.name);
     drawBar(g, w, h, S, S.started ? markerAt(S.t) : 0.5);
-  };
+  });
   raf = requestAnimationFrame(frame);
 
   const onPress = e => {

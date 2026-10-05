@@ -1,6 +1,6 @@
 // dnd-master-maps.js — Maps tab: list, activate, rename, upload
 import { request, requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014i';
+import { EV } from './dnd-hub-event-types.js?v=20261014j';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';

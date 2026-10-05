@@ -3,16 +3,16 @@
 // Each round: keep your tankard steady for a few seconds (follow the ale's level with the mouse, or the arrow keys),
 // then the house rolls everyone's Constitution save. Out, and you wake up poisoned (your sheet is told).
 // Cheating: pour it in the plant pot (Sleight of Hand vs the host's eye). Rules: last-standing-rules.js.
-import * as R from './last-standing-rules.js?v=20261014i';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014i';
-import { clack, chime, buzz, thump, tick } from './tavern-sfx.js?v=20261014i';
+import * as R from './last-standing-rules.js?v=20261014j';
+import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014j';
+import { clack, chime, buzz, thump, tick } from './tavern-sfx.js?v=20261014j';
 
 const STEADY_MS = 5000;
 const BARKS = { start: ['Tankards up! Last one standing drinks free.', 'House brew. Strong as a mule\'s kick.'], caught: ['Feeding my plant? OUT!'] };
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('ls-css', './last-standing.css?v=20261014i', import.meta.url);
+  loadCss('ls-css', './last-standing.css?v=20261014j', import.meta.url);
   const wrap = el('div', 'tk-felt ls');
   wrap.innerHTML = `<div class="ls-top"></div><div class="ls-stage"><canvas class="ls-ale"></canvas><div class="ls-results" aria-live="polite"></div></div>
     <div class="tk-row ls-btns"></div><div class="tk-note ls-status" aria-live="polite"></div>`;
@@ -49,7 +49,7 @@ export async function play(root, ctx) {
     const move = e => { const r = canvas.getBoundingClientRect(); hand.x = (e.clientX - r.left - cx) / R0; hand.y = (e.clientY - r.top - cy) / R0; };
     const key = e => { if (e.key.startsWith('Arrow')) { keys[e.key] = e.type === 'keydown'; e.preventDefault(); } };
     canvas.addEventListener('pointermove', move); document.addEventListener('keydown', key); document.addEventListener('keyup', key);
-    const frame = now => {
+    const frame = guardFrame(now => {
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       bub.vx += (Math.random() - 0.5) * wobble * 3 * dt - bub.x * 0.8 * dt; bub.vy += (Math.random() - 0.5) * wobble * 3 * dt - bub.y * 0.8 * dt;
       bub.vx *= 0.995; bub.vy *= 0.995; bub.x += bub.vx * dt * 2.2; bub.y += bub.vy * dt * 2.2;
@@ -63,7 +63,7 @@ export async function play(root, ctx) {
         canvas.removeEventListener('pointermove', move); document.removeEventListener('keydown', key); document.removeEventListener('keyup', key);
         canvas.classList.remove('on'); resolve(inside / Math.max(0.01, total));
       }
-    };
+    });
     raf = requestAnimationFrame(frame);
   });
 

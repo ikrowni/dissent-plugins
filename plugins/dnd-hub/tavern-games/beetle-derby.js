@@ -3,15 +3,15 @@
 // Pick a beetle (odds pay that many times your bet), then the house runs the race and every screen plays the same
 // frames. Insight brings a whisper about one beetle. Cheating: slip your beetle a sugar cube (Sleight of Hand vs
 // the host's eye, judged by the DM's Hub). Rules: beetle-derby-rules.js.
-import * as R from './beetle-derby-rules.js?v=20261014i';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014i';
-import { tick, chime, thump } from './tavern-sfx.js?v=20261014i';
+import * as R from './beetle-derby-rules.js?v=20261014j';
+import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014j';
+import { tick, chime, thump } from './tavern-sfx.js?v=20261014j';
 
 const BARKS = { start: ['Place your bets! Six shells, one chalk line.', 'Back a beetle, friend. Any beetle.'], caught: ['Feeding the runners? Disqualified — and so are you!'] };
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('bd-css', './beetle-derby.css?v=20261014i', import.meta.url);
+  loadCss('bd-css', './beetle-derby.css?v=20261014j', import.meta.url);
   const wrap = el('div', 'tk-felt bd');
   wrap.innerHTML = `<div class="bd-top"></div><div class="bd-trackbox"><canvas class="bd-track"></canvas></div><div class="bd-call" aria-live="polite"></div>
     <div class="bd-board"></div><div class="tk-row bd-btns"></div><div class="tk-note bd-status" aria-live="polite"></div>`;
@@ -23,11 +23,11 @@ export async function play(root, ctx) {
 
   const frameAt = t => {
     if (!S?.frames) return Array(R.LANES).fill(0);
-    const f = t / R.TICK_MS, i = Math.min(S.frames.length - 1, Math.floor(f)), k = Math.min(1, f - i);
+    const f = Math.max(0, t / R.TICK_MS), i = Math.min(S.frames.length - 1, Math.floor(f)), k = Math.min(1, f - i);
     const a = S.frames[i], b = S.frames[Math.min(S.frames.length - 1, i + 1)];
     return a.map((x, j) => x + (b[j] - x) * k);
   };
-  const draw = now => {
+  const draw = guardFrame(now => {
     raf = requestAnimationFrame(draw);
     const d = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth, h = canvas.clientHeight;
     if (canvas.width !== Math.round(w * d) || canvas.height !== Math.round(h * d)) { canvas.width = Math.round(w * d); canvas.height = Math.round(h * d); }
@@ -42,7 +42,7 @@ export async function play(root, ctx) {
         $('.bd-call').textContent = pick([`${S.beetles[leader].name} takes the lead!`, `It's ${S.beetles[leader].name} in front!`, `${S.beetles[leader].name} scuttles ahead!`]);
       }
     }
-  };
+  });
   raf = requestAnimationFrame(draw);
 
   const drawBoard = () => {

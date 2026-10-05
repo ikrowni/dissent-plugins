@@ -4,13 +4,13 @@
 // setup and answers (`tavern:seated`); when the game ends (`tavern:result`) the house settles it with
 // lk-tavern.js `settle` and pays (`tavern:payout`, to the hero's sheet). The sender is the node's sender_id
 // (dnd-hub-events.js onEvent), so a hero can only sit, leave or report for themselves.
-import { MAP, serverData } from './dnd-hub-state.js?v=20261014i';
+import { MAP, serverData } from './dnd-hub-state.js?v=20261014j';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { PLAYABLE, stakeProblem, settle, gameType } from './lk-tavern.js';
-import { openTavernData, setupFor, setBusy, actorFor } from './dnd-hub-tavern.js?v=20261014i';
-import { tableFor, tableAt, closeTables } from './dnd-hub-tavern-table.js?v=20261014i';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20261014i';
+import { openTavernData, setupFor, setBusy, actorFor } from './dnd-hub-tavern.js?v=20261014j';
+import { tableFor, tableAt, closeTables } from './dnd-hub-tavern-table.js?v=20261014j';
+import { showTriggerToast } from './dnd-hub-triggers.js?v=20261014j';
 
 let _ref = null; // { tavernId, seats: { seatId: {...} }, plays: { 'user:setup': n }, out: Set<userId> }
 
