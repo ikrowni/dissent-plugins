@@ -3,13 +3,13 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261013r';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013r';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013r';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013r';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013r';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013r';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013r';
+import { renderFog } from './dnd-hub-fog.js?v=20261013s';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013s';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013s';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013s';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013s';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013s';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
@@ -123,6 +123,10 @@ export function renderTokens() {
     const existing = MAP.tokenSprites[token.id];
     if (existing && _tokenDataCache.get(token.id) === cacheKey) {
       if (!existing.parent) layers.tokens.addChild(existing);
+      // Moves (drags, arrow keys, moves from other screens) put the sprite in place without touching this cache, so
+      // a token whose data came BACK to the cached state was left where it had been moved to: a hero sent back to
+      // the waiting spot stayed drawn on the map, out of reach (toolbar test, 2026-10-05). Not while it is dragged.
+      if (!existing.lkDragging && (existing.x !== token.x || existing.y !== token.y)) { existing.x = token.x; existing.y = token.y; }
       return;
     }
     if (existing?.parent) layers.tokens.removeChild(existing);
@@ -354,7 +358,7 @@ function setupTokenDrag(container, token) {
     // Out of turn, or no movement left: it does not move, so it reveals nothing (fog safety).
     const why = !MAP.isDM && refusal(token.id);
     if (why) { moveToast(why); return; }
-    dragging = true; container.cursor = 'grabbing';
+    dragging = container.lkDragging = true; container.cursor = 'grabbing';
     lastValid = { x: container.x, y: container.y };
     dragTurn = turnFor(token.id);
     dragPath = dragTurn ? dragTurn.path.slice() : null;
@@ -392,7 +396,7 @@ function setupTokenDrag(container, token) {
   // token; it used to end the drag without saving or reverting. Both finish the move.
   const finishDrag = async () => {
     if (!dragging) return;
-    dragging = false; container.cursor = 'grab';
+    dragging = container.lkDragging = false; container.cursor = 'grab';
 
     // Snap to grid (offset-aware so tokens land inside image grid cells)
     const gs = MAP.mapData ? effectiveGs(MAP.mapData) : 40;

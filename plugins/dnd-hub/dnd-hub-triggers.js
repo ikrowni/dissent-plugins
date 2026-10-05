@@ -4,15 +4,15 @@ import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013r';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
 import { pickCell } from './dnd-hub-trigger-pick.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013r';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013s';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013r';
-import { renderFog } from './dnd-hub-fog.js?v=20261013r';
+import { renderLights } from './dnd-hub-lights.js?v=20261013s';
+import { renderFog } from './dnd-hub-fog.js?v=20261013s';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
