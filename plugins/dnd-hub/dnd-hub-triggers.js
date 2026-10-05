@@ -4,10 +4,14 @@ import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013l';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013m';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013m';
+import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
+import { renderLights } from './dnd-hub-lights.js?v=20261013m';
+import { renderFog } from './dnd-hub-fog.js?v=20261013m';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -122,8 +126,8 @@ export async function checkTriggers(tokenId, cells) {
           type: EV.TRIGGER_PENDING, campaignId: MAP.campaignId, triggerId: trig.id, tokenId,
           cx, cy, label: trig.label || trig.type, fromUserId: userId,
         });
-      } else {
-        await fireTrigger(trig, tokenId);
+      } else if (await fireTrigger(trig, tokenId) === 'teleported') {
+        return; // the rest of this move's squares are behind it now
       }
     }
   }
@@ -202,6 +206,7 @@ export async function fireTrigger(trigger, tokenId) {
       destCy: trigger.destCy,
     });
   }
+  const teleported = type === 'teleport' && trigger.destCx != null && teleportToken(tokenId, trigger.destCx, trigger.destCy);
 
   if (type === 'sound' && trigger.fileId) {
     await publishTo([], EV.TRIGGER_FIRED, {
@@ -218,6 +223,36 @@ export async function fireTrigger(trigger, tokenId) {
     markSpent(trigger.id); // on the map as it is now
     await saveTriggersAndBroadcast();
   }
+  return teleported ? 'teleported' : undefined;
+}
+
+/**
+ * Move a token to a square, on the DM's screen (the only one that fires triggers), and tell every screen.
+ * The teleport event used to go out with nobody acting on it, so a teleporter moved no one (owner, 2026-10-05).
+ * During a fight the jump goes on the end of this turn's path, so every screen agrees where the token now
+ * walks from; it counts as one 5 ft step.
+ */
+function teleportToken(tokenId, cx, cy) {
+  const tok = MAP.mapData?.tokens?.[tokenId];
+  if (!tok || cy == null) return false;
+  const { x, y } = clampToMap(toPoint({ cx, cy }));
+  tok.x = x; tok.y = y;
+  const spr = MAP.tokenSprites?.[tokenId];
+  if (spr) { spr.x = x; spr.y = y; }
+  _lastCell[tokenId] = `${cx},${cy}`; // arriving is not stepping onto: a trigger on the destination does not fire
+  let moved = false;
+  for (const light of MAP.mapData.lights || []) if (light.tokenId === tokenId) { light.x = x; light.y = y; moved = true; }
+  if (moved) { renderLights(); renderFog(); }
+  const turn = turnFor(tokenId);
+  const turnPath = turn ? [...turn.path, { cx, cy }] : null;
+  if (turnPath) commitPath(turnPath);
+  const camp = serverData?.campaigns?.[MAP.campaignId];
+  if (camp?.maps && MAP.mapId) camp.maps[MAP.mapId] = MAP.mapData;
+  saveHubDm(serverData);
+  renderTokens();
+  publishMove({ type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x, y, final: true,
+    turnPath, turnKey: turnPath ? turn.key : null, fromUserId: userId, ...moveStamp() });
+  return true;
 }
 
 // ── Toast notification ─────────────────────────────────────────────────────────
@@ -321,8 +356,9 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     const saveAbility = document.getElementById('td-save-ability')?.value || '';
     const saveDC   = parseInt(document.getElementById('td-save-dc')?.value) || null;
     const spotDC   = parseInt(document.getElementById('td-spot-dc')?.value) || null;
-    const destCx   = parseInt(document.getElementById('td-destcx')?.value) || null;
-    const destCy   = parseInt(document.getElementById('td-destcy')?.value) || null;
+    const cellNo   = id => { const v = parseInt(document.getElementById(id)?.value); return Number.isFinite(v) ? v : null; };
+    const destCx   = cellNo('td-destcx'); // square 0 is a square (`|| null` dropped it)
+    const destCy   = cellNo('td-destcy');
 
     let fileId = trigger.fileId;
     const soundFileEl = document.getElementById('td-soundfile');

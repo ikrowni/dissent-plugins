@@ -37,7 +37,8 @@ export function updateRuler(toX, toY) {
 
   const outOfRange = MAP.selectedAttack && distFt > MAP.selectedAttack.rangeFt;
   const lineColor  = outOfRange ? 0xef4444 : 0xd4af37;
-  const textColor  = outOfRange ? '#ef4444' : 'var(--lk-gold)';
+  // A hex, not var(--lk-gold): PIXI cannot read CSS variables and threw on every mouse move (owner, 2026-10-05).
+  const textColor  = outOfRange ? '#ef4444' : '#d4af37';
 
   let label = `${distFt}ft`;
   if (MAP.activeTurnTokenId && MAP.rulerStart) {

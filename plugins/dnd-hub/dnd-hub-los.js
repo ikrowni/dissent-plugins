@@ -1,14 +1,29 @@
 // dnd-hub-los.js — line-of-sight math, fog update from LOS
 import { MAP, serverData, userId, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261009a';
-import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261013l';
-import { wallPx } from './dnd-hub-walls.js?v=20261013l';
-import { renderPins } from './dnd-hub-pins.js?v=20261013l';
+import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261013m';
+import { wallPx } from './dnd-hub-walls.js?v=20261013m';
+import { renderPins } from './dnd-hub-pins.js?v=20261013m';
 
 export function getOpaqueSegments(mapData) {
   const segs = [...(mapData.walls || [])];
   Object.values(mapData.doors || {}).forEach(d => {
     if (d.state === 'closed' || d.state === 'locked' || d.isWindow) segs.push(d);
   });
+  return segs;
+}
+
+/**
+ * Everything that blocks sight, in world pixels: walls, shut doors, windows, and the edge of the map image.
+ * The edge counts as a wall so a hero at the border does not see out over the blank backdrop beyond it
+ * (tokens were already kept on the map; their sight was not).
+ */
+export function sightBlockers(mapData) {
+  const segs = getOpaqueSegments(mapData).map(seg => wallPx(seg));
+  const w = MAP._bgImgW, h = MAP._bgImgH;
+  if (w && h) {
+    segs.push({ x1: 0, y1: 0, x2: w, y2: 0 }, { x1: w, y1: 0, x2: w, y2: h },
+      { x1: w, y1: h, x2: 0, y2: h }, { x1: 0, y1: h, x2: 0, y2: 0 });
+  }
   return segs;
 }
 
@@ -67,7 +82,7 @@ export function computeVisibilityPolygon(ox, oy, visionPx, walls) {
 export function computeVisibleCells(tokenX, tokenY, visionFeet, mapData) {
   const gs = effectiveGs(mapData);
   const visionPx = (visionFeet / 5) * gs;
-  const segs = getOpaqueSegments(mapData).map(seg => wallPx(seg));
+  const segs = sightBlockers(mapData);
   const visible = new Set();
   const RAY_COUNT = 360;
 
@@ -111,7 +126,7 @@ export function computeLocalPlayerLOS() {
   if (!myTokens.length) { MAP.localVisiblePoly = null; MAP.localSightCells = new Set(); return; }
 
   const gs = effectiveGs(MAP.mapData);
-  const walls = getOpaqueSegments(MAP.mapData).map(seg => wallPx(seg));
+  const walls = sightBlockers(MAP.mapData);
   const polys = [];
 
   for (const t of myTokens) {

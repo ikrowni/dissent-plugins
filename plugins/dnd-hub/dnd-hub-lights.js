@@ -3,9 +3,8 @@ import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeVisibleCells, computeVisibilityPolygon, getOpaqueSegments } from './dnd-hub-los.js?v=20261013l';
-import { wallPx } from './dnd-hub-walls.js?v=20261013l';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013l';
+import { computeVisibleCells, computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013m';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013m';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 // ── Two shapes of light ───────────────────────────────────────────────────────
@@ -87,7 +86,7 @@ export function renderLights() {
 
   // Warm light that stops at walls (it used to be a 7–18 % disc that went straight through them, too faint to tell
   // whether a light worked). Drawn under the fog: players see it only where they can see.
-  const walls = getOpaqueSegments(MAP.mapData).map(seg => wallPx(seg));
+  const walls = sightBlockers(MAP.mapData);
   const glow = new PIXI.Graphics();
   glow.blendMode = 'add';
   const g = new PIXI.Graphics();
