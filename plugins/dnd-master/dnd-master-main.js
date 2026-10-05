@@ -1,30 +1,32 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013w';
+import { EV } from './dnd-hub-event-types.js?v=20261014a';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261013w';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014a';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261013w';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014a';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261013w';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014a';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261013w';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014a';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261013w';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261013w';
+import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014a';
+import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014a';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014a';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014a';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -78,6 +80,8 @@ function switchDMTab(name) {
   if (name === 'actors')     renderActorsTab();
   if (name === 'items')      renderItemsTab();
   if (name === 'shops')      renderShopsTab();
+  if (name === 'taverns')    renderTavernsTab();
+  if (name === 'games')      renderGamesTab();
   if (name === 'scenes')     renderScenesTab();
   if (name === 'journals')   renderJournalsTab();
   if (name === 'sounds')     renderSoundsTab();
@@ -124,6 +128,8 @@ async function onInit(data) {
       if (!camp) continue;
       if (catCamp.items) camp.items = { ...camp.items, ...catCamp.items };
       if (catCamp.shops) camp.shops = { ...camp.shops, ...catCamp.shops };
+      if (catCamp.taverns) camp.taverns = { ...camp.taverns, ...catCamp.taverns };
+      if (catCamp.gameSetups) camp.gameSetups = { ...camp.gameSetups, ...catCamp.gameSetups };
     }
   }
 
@@ -164,6 +170,8 @@ async function onInit(data) {
   setActorsState(sharedState);
   setItemsState(sharedState);
   setShopsState(sharedState);
+  setTavernsState(sharedState);
+  setGamesState(sharedState);
   setNotesState(sharedState);
   setHomebrewState(sharedState);
   setLogsState(sharedState);
@@ -258,6 +266,11 @@ function onEvent(ev) {
     const tally = p.successes !== undefined ? ' death saves: ' + p.successes + ' success, ' + (p.failures || 0) + ' failure' : ' death save';
     appendLogEntry({ type: 'death-save', message: p.message || ((p.name || 'Token') + tally) });
   }
+  // A tavern game was settled on the DM's Hub (dnd-hub-tavern-ref.js): what was bet, won or caught.
+  if (p.type === 'tavern:log' && p.campaignId === dmCampaignId) {
+    appendLogEntry({ type: 'loot', message: String(p.message || '').slice(0, 300) }).catch(() => {});
+    return;
+  }
   if (p.type === 'loot:declined' && p.campaignId === dmCampaignId) {
     appendLogEntry({ type: 'loot', message: `${p.name || 'A player'} could not pay ${p.goldCost} gp for ${p.itemName}: not taken` }).catch(() => {});
     restockDeclined(p).catch(() => {}); // not sold: back on the shelf
@@ -300,6 +313,8 @@ window.__dmInitiative = () => getInitiativeState();
 // Read-only views for the playtests (scripts/playtest/dnd-rules-test.mjs).
 window.__dmItems = () => currentItems(); // what the Items and Shops tabs hold, which is what the DM sees
 window.__dmShops = () => currentShops();
+window.__dmTaverns = () => currentTaverns();
+window.__dmGameSetups = () => currentGameSetups();
 window.__lootContests = () => lootContests();
 window.updateHP            = updateHP;
 window.toggleInitRow       = toggleInitRow;

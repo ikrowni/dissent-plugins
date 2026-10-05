@@ -104,7 +104,7 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 50; /* above the shop scene (45): dice rolled while shopping were hidden behind it (owner, 2026-10-05) */
+  z-index: 62; /* above the shop scene (45) and a tavern game's table (58): dice rolled there were hidden behind them */
 }
 
 /* Floating result number that appears after the die settles */

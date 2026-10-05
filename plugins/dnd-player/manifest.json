@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "9ba9684cff649f61b6985afe7becabca849df2f21a748f70315fcb2e5074559f"
+      "sha256": "10d7d76dc056959167bb972c9b4225d4a60e8170682f733164d10900b7e2ff9e"
     },
     {
       "url": "dnd-player-resources.js",
@@ -66,6 +66,10 @@
     {
       "url": "dnd-player-table.js",
       "sha256": "3af2c3dc26fdd85d84a42783fbef1228623be272acd20a3b5040471351065a0f"
+    },
+    {
+      "url": "dnd-player-tavern.js",
+      "sha256": "cabb9fe71dd62fe17e1dcb197a8ca25f1c6a2fdb90418450f7827d0d70406b43"
     },
     {
       "url": "dnd-player-zones.js",

@@ -27,6 +27,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
+import { handleTavern } from './dnd-player-tavern.js?v=20261014a';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1096,6 +1097,15 @@ function useConsumable(idx) {
 async function onEvent(ev) {
   const p = ev.data;
   if (!p) return;
+
+  // The tavern: my Hub asks for my purse and takes my bet; the DM's Hub pays my winnings (dnd-player-tavern.js).
+  if (await handleTavern(ev, {
+    char: CHAR, eff: CHAR ? effectiveChar() : null, campaignId: CAMPAIGN_ID, userId: USER_ID,
+    dmUserId: SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.dmUserId,
+    save: async () => { await saveChar(); renderAll(); },
+    addItem: id => { const item = _resolveItemFromLibrary(id); return item && _addItemToChar(item, 1, 0) ? item.name : null; },
+    toast: _showPlayerToast,
+  })) return;
 
   // The Hub switched campaign, or the player just joined or finished a character:
   // re-pick instead of waiting for a reload.

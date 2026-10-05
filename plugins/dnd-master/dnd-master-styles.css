@@ -138,3 +138,22 @@ option{background:#1a1410;color:var(--text)}
 .mf-bar{display:flex;flex-wrap:wrap;gap:4px;margin:-4px 0 8px}
 .mf-sel{width:auto;flex:1 1 30%;min-width:0;margin:0;padding:4px 6px;font-size:10px}
 .mf-clear{flex:1 1 100%;background:none;border:none;color:var(--gold);font-size:10px;cursor:pointer;text-align:right;padding:2px 0}
+/* Taverns and Games tabs */
+.lk-sec{font-size:11px;font-weight:700;color:var(--gold);margin:4px 0 8px;letter-spacing:.05em}
+.lk-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.lk-row>.lk-lbl{font-size:10px;color:var(--muted);min-width:68px}
+.lk-row input[type=number]{width:62px}
+.lk-row select,.lk-row input[type=text],.lk-row textarea{flex:1;min-width:0}
+.lk-empty{font-size:11px;color:var(--muted);text-align:center;padding:8px}
+.game-type{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px}
+.game-type.soon{opacity:.55}
+.game-type h4{margin:0;font-size:12px;display:flex;align-items:center;gap:6px}
+.game-type p{margin:4px 0 0;font-size:10px;color:var(--muted);line-height:1.4}
+.lk-badge{font-size:8px;font-weight:700;padding:2px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--border);color:var(--muted)}
+.lk-badge.gold{color:var(--gold);border-color:rgba(212,175,55,.35)}
+.setup-card{background:var(--surface);border:1px solid rgba(212,175,55,.25);border-radius:8px;padding:8px;margin-bottom:8px}
+.setup-card .lk-row input,.setup-card .lk-row select,.tavern-card .lk-row input,.tavern-card .lk-row select,.tavern-card textarea{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:3px 6px}
+.tavern-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px}
+.host-row{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:11px}
+.host-row .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icon-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px}

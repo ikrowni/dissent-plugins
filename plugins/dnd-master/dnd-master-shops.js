@@ -1,6 +1,6 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, esc, genId, requestWithTransfer, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013w';
+import { EV } from './dnd-hub-event-types.js?v=20261014a';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';
@@ -14,6 +14,11 @@ export function setShopsState(sharedState) {
   _state = sharedState;
 }
 
+/**
+ * A backup of what the Loot tabs made (items, shops, taverns, game setups) in the DM's own storage: the Hub writes
+ * hub-dm often from its own copy, and an older copy could drop them (restored in dnd-master-main.js onInit).
+ */
+export async function persistDmCatalog() { return _persistDmCatalog(); }
 async function _persistDmCatalog() {
   try {
     const camp = _state.serverData?.campaigns?.[_state.dmCampaignId];
@@ -23,6 +28,8 @@ async function _persistDmCatalog() {
     existing.campaigns[_state.dmCampaignId] = {
       items: camp.items || {},
       shops: camp.shops || {},
+      taverns: camp.taverns || {},
+      gameSetups: camp.gameSetups || {},
     };
     await storageSet('dm-catalog', existing);
   } catch { /* non-critical */ }
@@ -257,3 +264,6 @@ export async function onShopSoundSelected(shopId, input) {
   await _persistDmCatalog();
   renderShopsTab();
 }
+
+/** Upload a file for this campaign (a tavern's sound, picture or video): its id, or false when it failed (said). */
+export const uploadCampaignFile = file => _uploadSound(file);

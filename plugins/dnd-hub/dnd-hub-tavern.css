@@ -1,0 +1,62 @@
+/* dnd-hub-tavern.css — the tavern's tables, the host's dialogue, and the game table (dnd-hub-tavern*.js). */
+
+#lk-tavern-hall{position:absolute;inset:0;z-index:50;pointer-events:none;font-family:var(--lk-ui);color:var(--lk-text)}
+#lk-tavern-hall .tv-tables{position:absolute;left:0;right:0;bottom:4%;display:flex;justify-content:center;gap:clamp(10px,2.4vw,34px);
+  padding:0 16px;flex-wrap:wrap}
+.tv-host{pointer-events:auto;cursor:pointer;width:clamp(112px,12vw,150px);display:flex;flex-direction:column;align-items:center;
+  background:none;border:none;color:inherit;padding:0;transition:transform .18s ease;animation:tv-rise .5s ease both}
+.tv-host:hover,.tv-host:focus-visible{transform:translateY(-6px);outline:none}
+.tv-host:hover .tv-medal,.tv-host:focus-visible .tv-medal{box-shadow:0 0 0 2px var(--lk-gold),0 0 28px rgba(255,170,70,.55)}
+.tv-medal{width:clamp(70px,7.5vw,96px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4a3420,#1a1008);
+  box-shadow:0 0 0 2px var(--lk-line),0 8px 22px rgba(0,0,0,.6);display:grid;place-items:center;overflow:hidden;
+  font:700 clamp(26px,3vw,38px)/1 var(--lk-title);color:var(--lk-gold);transition:box-shadow .18s}
+.tv-medal img{width:100%;height:100%;object-fit:cover}
+.tv-plaque{margin-top:-10px;position:relative;background:linear-gradient(#3b2715,#24170b);border:1px solid var(--lk-line);
+  border-radius:6px;padding:5px 10px 4px;text-align:center;min-width:100%;box-shadow:0 6px 16px rgba(0,0,0,.55)}
+.tv-plaque b{display:block;font:700 12px/1.2 var(--lk-title);color:var(--lk-gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-plaque span{display:block;font-size:10px;color:var(--lk-muted);margin-top:2px}
+.tv-busy{font-size:10px;color:var(--lk-good);margin-top:5px;min-height:13px;text-shadow:0 1px 3px #000}
+.tv-table-top{width:120%;height:16px;margin-top:4px;border-radius:50%;background:radial-gradient(ellipse at 50% 30%,#3a2412,#170d05 70%);
+  box-shadow:0 6px 14px rgba(0,0,0,.7)}
+@keyframes tv-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* the host talking */
+#lk-tavern-talk{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);width:min(720px,calc(100% - 32px));z-index:56;
+  display:flex;gap:16px;align-items:flex-start;padding:16px 18px;border-radius:12px;pointer-events:auto;
+  background:linear-gradient(180deg,rgba(32,22,12,.97),rgba(16,11,6,.97));border:1px solid var(--lk-line);
+  box-shadow:0 0 0 1px rgba(224,181,82,.12) inset,0 18px 50px rgba(0,0,0,.75);animation:tv-rise .25s ease both}
+#lk-tavern-talk .tv-medal{width:88px;flex-shrink:0}
+#lk-tavern-talk .tv-say{flex:1;min-width:0}
+#lk-tavern-talk h3{margin:0 0 6px;font:700 15px/1.2 var(--lk-title);color:var(--lk-gold);letter-spacing:.03em}
+#lk-tavern-talk .tv-line{font-size:13.5px;line-height:1.55;min-height:42px;white-space:pre-line}
+#lk-tavern-talk .tv-choices{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.tv-choice{all:unset;cursor:pointer;font-size:12.5px;padding:6px 10px;border-radius:6px;color:var(--lk-text);border:1px solid transparent}
+.tv-choice::before{content:attr(data-n) '. ';color:var(--lk-gold-dim);font-weight:700}
+.tv-choice:hover,.tv-choice:focus-visible{background:rgba(224,181,82,.1);border-color:var(--lk-line-soft)}
+.tv-choice[disabled]{opacity:.45;cursor:default}
+.tv-stake{display:flex;align-items:center;gap:10px;margin-top:10px}
+.tv-stake input[type=range]{flex:1;accent-color:var(--lk-gold)}
+.tv-stake output{font:700 16px/1 var(--lk-title);color:var(--lk-gold);min-width:64px;text-align:right}
+.tv-close{position:absolute;top:8px;right:10px;all:unset;cursor:pointer;color:var(--lk-muted);font-size:14px;padding:2px 6px}
+.tv-gold{font-size:11px;color:var(--lk-muted);margin-top:6px}
+
+/* the game table */
+#lk-tavern-game{position:absolute;inset:3%;z-index:58;pointer-events:auto;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 40%,#2d1c0e,#120a05 75%);border:1px solid var(--lk-line);
+  box-shadow:0 0 0 1px rgba(224,181,82,.1) inset,0 24px 70px rgba(0,0,0,.85);animation:tv-rise .3s ease both}
+#lk-tavern-game .tv-head{display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(0,0,0,.35);border-bottom:1px solid var(--lk-line-soft)}
+#lk-tavern-game .tv-head .tv-medal{width:34px;font-size:15px}
+#lk-tavern-game .tv-head b{font:700 14px/1 var(--lk-title);color:var(--lk-gold);flex:1}
+#lk-tavern-game .tv-pot{font-size:12px;color:var(--lk-muted)}
+#lk-tavern-game .tv-body{flex:1;min-height:0;position:relative}
+.tv-btn{all:unset;cursor:pointer;font:700 12px/1 var(--lk-ui);padding:8px 14px;border-radius:7px;border:1px solid var(--lk-line);
+  color:var(--lk-gold);background:rgba(224,181,82,.08);text-align:center}
+.tv-btn:hover,.tv-btn:focus-visible{background:rgba(224,181,82,.18)}
+.tv-btn.primary{background:linear-gradient(#e7c066,#b98d34);color:var(--lk-gold-ink);border-color:#f0d184}
+.tv-btn[disabled]{opacity:.4;cursor:default}
+.tv-result{position:absolute;inset:0;display:grid;place-items:center;background:rgba(8,5,2,.72);z-index:5;animation:tv-rise .35s ease both}
+.tv-result>div{text-align:center}
+.tv-result h2{margin:0 0 6px;font:800 clamp(26px,4vw,44px)/1.1 var(--lk-title);color:var(--lk-gold);text-shadow:0 0 30px rgba(255,170,60,.45)}
+.tv-result.lose h2{color:#d98a6a;text-shadow:none}
+.tv-result p{margin:0 0 14px;color:var(--lk-text);font-size:14px}
+@media (prefers-reduced-motion:reduce){.tv-host,#lk-tavern-talk,#lk-tavern-game,.tv-result{animation:none}}
