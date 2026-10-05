@@ -1,12 +1,12 @@
 // dnd-hub-sample.js — "Start the sample adventure": a normal, editable campaign built from a content pack
 // (spec 2026-10-03 §3).
-import { serverData, setServerData } from './dnd-hub-state.js?v=20261014g';
+import { serverData, setServerData } from './dnd-hub-state.js?v=20261014h';
 import { getIdentity, genId } from '../plugin-sdk.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014g';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014h';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { compileMap, validatePack } from './lk-content-pack.js';
 import { packFileId } from './dnd-hub-pack-map.js';
-import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261014g';
+import { enterCampaignAsDM } from './dnd-hub-screens.js?v=20261014h';
 
 const html = parts => (parts || []).map(p => p).join('\n\n');
 

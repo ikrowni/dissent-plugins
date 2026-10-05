@@ -2,8 +2,8 @@
 // The DM picks it in the toolbar (Weather); it is stored on the map (mapData.weather) and sent to every screen.
 // The layer reads the open map's weather on every frame, so a map load or a change needs no other hook. With no
 // weather it sleeps on a slow timer; with the page hidden it pauses. Reduced motion: a still tint, no particles.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261014g';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014g';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261014h';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014h';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { WEATHER, KINDS, normWeather, spawn, step, countFor } from './dnd-hub-weather-model.js';
