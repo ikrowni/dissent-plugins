@@ -115,10 +115,13 @@ describe('campaignRecord', () => {
 });
 
 describe('waiting tokens', () => {
-  it('wait left of the map, one row per party member', () => {
-    expect(waitingSpot(0, 50)).toEqual({ x: -75, y: 25 });
+  it('wait left of the map, one row per party member, up from the bottom', () => {
+    expect(waitingSpot(0, 50, 800)).toEqual({ x: -75, y: 775 });
+    expect(waitingSpot(2, 50, 800)).toEqual({ x: -75, y: 675 });
+    expect(waitingSpot(-1, 50, 800)).toEqual({ x: -75, y: 775 }); // not a member (yet): the first row
+  });
+  it('from the top while the map\'s height is not known', () => {
     expect(waitingSpot(2, 50)).toEqual({ x: -75, y: 125 });
-    expect(waitingSpot(-1, 50)).toEqual({ x: -75, y: 25 }); // not a member (yet): the first row
   });
   it('a new hero\'s token is marked waiting and is off the map', () => {
     const t = newWaitingToken('u1', { name: 'Bob', hp: 12, hpMax: 12 }, 1, 50, 8);

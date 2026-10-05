@@ -3,7 +3,7 @@ import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=202610
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeLitCells } from './dnd-hub-lights.js?v=20261013o';
+import { computeLitCells } from './dnd-hub-lights.js?v=20261013p';
 import { fogAlpha } from './dnd-hub-rules.js';
 import { fogBefore, fogAfter } from './dnd-hub-undo.js';
 

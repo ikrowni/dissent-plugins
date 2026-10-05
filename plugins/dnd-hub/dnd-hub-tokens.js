@@ -3,13 +3,13 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261013o';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013o';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013o';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013o';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013o';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013o';
+import { renderFog } from './dnd-hub-fog.js?v=20261013p';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013p';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013p';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013p';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013p';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013p';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013p';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
@@ -87,7 +87,7 @@ export function renderTokens() {
       toSeed.forEach(uid => {
         const idx = (campaign.members || []).indexOf(uid);
         // Beside the map, waiting for the DM to drag them in (dnd-hub-rules.js waitingSpot).
-        mapData.tokens[`player_${uid}`] = newWaitingToken(uid, summaries[uid], idx, gs, TOKEN_COLORS.length);
+        mapData.tokens[`player_${uid}`] = newWaitingToken(uid, summaries[uid], idx, gs, TOKEN_COLORS.length, MAP._bgImgH || 0);
         mapData.seededPlayers[uid] = true;
       });
       saveHubDm(serverData); // fire-and-forget

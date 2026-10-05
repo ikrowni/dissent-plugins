@@ -3,23 +3,23 @@ import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-st
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013o';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013p';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013o';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013o';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013o';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013o';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261013o';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013p';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013p';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013p';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013p';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013p';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261013p';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013o';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013o';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013o';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013p';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013p';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013p';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013o';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013o';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013p';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013p';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor } from './dnd-hub-rules.js';
 import { onMap, toCell, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath } from './dnd-hub-movement.js';
@@ -53,7 +53,9 @@ export async function initPixiApp() {
   // The turn's trail sits under the fog: a path through fog must not show anyone the rooms in it.
   app.stage.addChild(layers.bg, layers.pictures, layers.grid, layers.lights, layers.trail, layers.tokens, layers.fog, layers.walls, layers.ui);
   app.stage.eventMode = 'static';
-  app.stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
+  // Round the map too, not just right of and below its corner: PIXI prunes hit tests outside a hitArea, so a token
+  // left of or above the map (a hero waiting to be placed) could not be grabbed.
+  app.stage.hitArea = new PIXI.Rectangle(-10000, -10000, 30000, 30000);
 
   MAP.resizeObserver = new ResizeObserver(() => {
     app.renderer.resize(wrap.clientWidth, wrap.clientHeight);
@@ -541,7 +543,7 @@ export async function initPixiApp() {
     const summary = camp.characterSummaries?.[userId];
     if (!summary) { alert('Create your character first.'); return; }
     const idx = (camp.members || []).indexOf(userId);
-    const tok = newWaitingToken(userId, summary, idx, effectiveGs(MAP.mapData), TOKEN_COLORS.length);
+    const tok = newWaitingToken(userId, summary, idx, effectiveGs(MAP.mapData), TOKEN_COLORS.length, MAP._bgImgH || 0);
     MAP.mapData.tokens = MAP.mapData.tokens || {};
     MAP.mapData.tokens[tokenId] = tok;
     MAP.mapData.seededPlayers = { ...(MAP.mapData.seededPlayers || {}), [userId]: true };

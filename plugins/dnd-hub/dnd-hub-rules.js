@@ -119,17 +119,19 @@ export function campaignRecord({ id, name, description = '', dmUserId, dmDisplay
 }
 
 /**
- * Where a new hero's token waits: just outside the map's left edge, one row per party member, until the DM drags it
- * onto the map. A waiting token cannot move and sees nothing (owner, 2026-10-05). It used to be put on the map at
- * once, by the player on any square the party had seen or by the DM's screen in a row near the top-left.
+ * Where a new hero's token waits: just outside the map's left edge, one row per party member counted up from the
+ * bottom (the DM's "Set the scene" card covers the top-left), until the DM drags it onto the map. A waiting token
+ * cannot move and sees nothing (owner, 2026-10-05). It used to be put on the map at once, by the player on any
+ * square the party had seen or by the DM's screen in a row near the top-left. `mapH` 0 (not known): from the top.
  */
-export function waitingSpot(memberIdx, gs) {
-  return { x: -gs * 1.5, y: gs * (Math.max(0, memberIdx) + 0.5) };
+export function waitingSpot(memberIdx, gs, mapH = 0) {
+  const row = Math.max(0, memberIdx);
+  return { x: -gs * 1.5, y: mapH > gs ? mapH - gs * (row + 0.5) : gs * (row + 0.5) };
 }
 
 /** A new hero's token, waiting beside the map (waitingSpot). */
-export function newWaitingToken(uid, summary, memberIdx, gs, colorCount) {
-  const { x, y } = waitingSpot(memberIdx, gs);
+export function newWaitingToken(uid, summary, memberIdx, gs, colorCount, mapH = 0) {
+  const { x, y } = waitingSpot(memberIdx, gs, mapH);
   return { ...newPlayerToken(uid, summary, memberIdx, x, y, colorCount), waiting: true };
 }
 
