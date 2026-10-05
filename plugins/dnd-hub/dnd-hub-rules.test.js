@@ -91,7 +91,7 @@ describe('placing your own token', () => {
 });
 
 import { fogAlpha } from './dnd-hub-rules.js';
-import { campaignRecord, seedCell } from './dnd-hub-rules.js';
+import { campaignRecord, waitingSpot, newWaitingToken } from './dnd-hub-rules.js';
 describe('fogAlpha', () => {
   it('players: unexplored is solid, explored is dimmed, visible is clear', () => {
     expect(fogAlpha('unexplored', false)).toBe(1);
@@ -114,13 +114,16 @@ describe('campaignRecord', () => {
   });
 });
 
-describe('seedCell', () => {
-  it('lines players up from the map start cell', () => {
-    expect(seedCell({ startCell: { cx: 2, cy: 11 } }, 0)).toEqual({ cx: 2, cy: 11 });
-    expect(seedCell({ startCell: { cx: 2, cy: 11 } }, 2)).toEqual({ cx: 4, cy: 11 });
+describe('waiting tokens', () => {
+  it('wait left of the map, one row per party member', () => {
+    expect(waitingSpot(0, 50)).toEqual({ x: -75, y: 25 });
+    expect(waitingSpot(2, 50)).toEqual({ x: -75, y: 125 });
+    expect(waitingSpot(-1, 50)).toEqual({ x: -75, y: 25 }); // not a member (yet): the first row
   });
-  it('without a start cell: the old place (2 + 2i, 3)', () => {
-    expect(seedCell({}, 1)).toEqual({ cx: 4, cy: 3 });
+  it('a new hero\'s token is marked waiting and is off the map', () => {
+    const t = newWaitingToken('u1', { name: 'Bob', hp: 12, hpMax: 12 }, 1, 50, 8);
+    expect(t).toMatchObject({ id: 'player_u1', userId: 'u1', name: 'Bob', waiting: true, x: -75, y: 75 });
+    expect(t.x).toBeLessThan(0);
   });
 });
 

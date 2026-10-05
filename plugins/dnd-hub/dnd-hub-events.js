@@ -7,38 +7,38 @@ import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013n';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013o';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013n';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013o';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013n';
-import { renderFog } from './dnd-hub-fog.js?v=20261013n';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013n';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
+import { renderFog } from './dnd-hub-fog.js?v=20261013o';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013o';
 import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
-import { loadSRD } from './dnd-hub-char.js?v=20261013n';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013n';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013n';
+import { loadSRD } from './dnd-hub-char.js?v=20261013o';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013o';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013o';
 import { rule } from './lk-table-rules.js';
 import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013n';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013o';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013n';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013n';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013n';
+import { renderLights } from './dnd-hub-lights.js?v=20261013o';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013o';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013o';
 import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
 import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013n';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013o';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013n';
+import { setView } from './dnd-hub-canvas.js?v=20261013o';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -301,6 +301,8 @@ export async function handleMapEvent(p) {
           return;
         }
       }
+      // A hero waiting beside the map stays there until the DM drags it in (dnd-hub-rules.js waitingSpot).
+      if (MAP.isDM && p.fromUserId && !isDMEvent(p) && MAP.mapData.tokens?.[p.tokenId]?.waiting) { _sendBack(p); return; }
       // During a fight the DM's screen referees players' moves (fog safety; owner 2026-10-03).
       if (MAP.isDM && p.fromUserId && !isDMEvent(p)) {
         const verdict = refereeMove(p);
@@ -315,6 +317,7 @@ export async function handleMapEvent(p) {
       const entered = walked ? p.turnPath.slice(Math.max(1, MAP.turnMove.path.length))
         : was ? cellsBetween(triggerCell(was.x, was.y), now) : [now];
       if (walked) commitPath(p.turnPath);
+      if (p.placed && isDMEvent(p)) delete MAP.mapData.tokens?.[p.tokenId]?.waiting;
       if (MAP.mapData.tokens?.[p.tokenId]) {
         MAP.mapData.tokens[p.tokenId].x = p.x;
         MAP.mapData.tokens[p.tokenId].y = p.y;
@@ -389,6 +392,10 @@ export async function handleMapEvent(p) {
         if (kept) MAP.mapData.tokens[t.id] = kept; else delete MAP.mapData.tokens[t.id];
       });
       if (p.deleted) p.deleted.forEach(id => { delete MAP.mapData.tokens[id]; });
+      if (MAP.isDM) {
+        const waiting = (p.tokens || []).filter(t => t.waiting && t.userId && t.userId === p.fromUserId);
+        if (waiting.length) moveToast(`${waiting.map(t => t.name).join(', ')} is waiting left of the map — drag them in.`);
+      }
       renderTokens();
       if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
       break;

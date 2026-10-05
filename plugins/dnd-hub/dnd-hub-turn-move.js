@@ -4,7 +4,7 @@
 // 🔴 The trail is drawn UNDER the fog layer. Another player's path through fog must not show
 // them the shape of rooms they have not seen.
 import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013n';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013o';
 import { activeTokenId } from './dnd-hub-rules.js';
 import { guide } from './lk-guide-ui.js';
 import { turnChanged } from './dnd-hub-fx-combat.js';
@@ -172,6 +172,7 @@ export function moveToast(text) {
 
 /** Why a player's token will not move, or null. */
 export function refusal(tokenId) {
+  if (MAP.mapData?.tokens?.[tokenId]?.waiting) return 'Waiting for the DM to place you on the map.';
   const mode = modeFor(tokenId);
   if (mode === 'locked') return 'It is not your turn — you can move on your turn.';
   if (mode === 'budget' && remainingFt(tokenId) <= 0) {

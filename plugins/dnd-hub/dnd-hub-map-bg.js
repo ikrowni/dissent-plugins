@@ -1,19 +1,19 @@
 // dnd-hub-map-bg.js — map background loading, upload, fitSprite, loadMapData
-import { MAP, serverData } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, effectiveGs } from './dnd-hub-state.js?v=20261009a';
 import { request, requestWithTransfer, storageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261013n';
-import { renderFog } from './dnd-hub-fog.js?v=20261013n';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013n';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013o';
+import { renderFog } from './dnd-hub-fog.js?v=20261013o';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013o';
 import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261009g';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013n';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013n';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013o';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261013n';
+import { setZoom } from './dnd-hub-canvas.js?v=20261013o';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';
@@ -36,7 +36,8 @@ export function fitSprite(sprite, w, h, imgW, imgH) {
   MAP._bgImgH   = ih;
   const fileId = MAP.mapData?.fileId ?? null;
   if (MAP._fittedFileId !== fileId) {
-    const v = fitView(w, h, iw, ih);
+    // The DM's view keeps three squares of room round the map: heroes wait left of it, new monsters right of it.
+    const v = fitView(w, h, iw, ih, MAP.isDM ? effectiveGs(MAP.mapData) * 3 : 0);
     MAP.panX = v.panX; MAP.panY = v.panY; MAP._fittedFileId = fileId;
     setZoom(v.zoom);
   }

@@ -3,14 +3,14 @@ import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CE
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261013n';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013n';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013n';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013n';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013n';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013n';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013n';
-import { playerTokensToSeed, dragStep, snapToGrid, newPlayerToken, seedCell } from './dnd-hub-rules.js';
+import { renderFog } from './dnd-hub-fog.js?v=20261013o';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013o';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013o';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013o';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013o';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013o';
+import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
@@ -53,7 +53,7 @@ import { publishTo, isRepeat } from './lk-bus.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { plateText, plateFontSize } from './dnd-hub-nameplate.js';
 import { rule } from './lk-table-rules.js';
-import { clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
+import { onMap, clampToMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath, cellsBetween } from './dnd-hub-movement.js';
 
 const tableRule = k => rule(serverData?.campaigns?.[MAP.campaignId]?.settings, k);
@@ -83,14 +83,11 @@ export function renderTokens() {
     const toSeed = playerTokensToSeed(campaign, mapData);
     if (toSeed.length) {
       const summaries = campaign.characterSummaries || {};
-      const ox = mapData.gridOffsetX ?? 0, oy = mapData.gridOffsetY ?? 0;
       mapData.seededPlayers = mapData.seededPlayers || {};
-      toSeed.forEach((uid, i) => {
-        const summary = summaries[uid];
+      toSeed.forEach(uid => {
         const idx = (campaign.members || []).indexOf(uid);
-        const tokenId = `player_${uid}`;
-        mapData.tokens[tokenId] = newPlayerToken(uid, summary, idx,
-          ox + seedCell(mapData, i).cx * gs + gs / 2, oy + seedCell(mapData, i).cy * gs + gs / 2, TOKEN_COLORS.length);
+        // Beside the map, waiting for the DM to drag them in (dnd-hub-rules.js waitingSpot).
+        mapData.tokens[`player_${uid}`] = newWaitingToken(uid, summaries[uid], idx, gs, TOKEN_COLORS.length);
         mapData.seededPlayers[uid] = true;
       });
       saveHubDm(serverData); // fire-and-forget
@@ -430,6 +427,11 @@ function setupTokenDrag(container, token) {
     if (turnPath && dragTurn === MAP.turnMove) commitPath(turnPath);
     dragPath = null;
 
+    // The DM drags a waiting hero onto the map: from now on it moves and sees like any other.
+    const tokRec = MAP.mapData?.tokens?.[token.id];
+    const placed = !!(MAP.isDM && tokRec?.waiting && onMap(snappedX, snappedY));
+    if (placed) delete tokRec.waiting;
+
     if (MAP.mapData?.tokens?.[token.id]) {
       // Update facing when token moves more than half a cell
       const moveDx = snappedX - savedX;
@@ -443,14 +445,15 @@ function setupTokenDrag(container, token) {
       saveHubDm( serverData);
       // Traps spring on the DM's screen, which checks moves it RECEIVES; its own echo is dropped, so a token the DM
       // moved (every monster, and heroes the DM moves) never set one off (rules playtest, 2026-10-04).
-      if (MAP.isDM) checkTriggers(token.id, cellsBetween(triggerCell(savedX, savedY), triggerCell(snappedX, snappedY))).catch(() => {});
+      // Being placed is not walking in from the edge: nothing on the way springs.
+      if (MAP.isDM && !placed) checkTriggers(token.id, cellsBetween(triggerCell(savedX, savedY), triggerCell(snappedX, snappedY))).catch(() => {});
     }
 
     // Recompute local LOS after player moves their own token
     if (!MAP.isDM) { computeLocalPlayerLOS(); renderFog(); }
 
     const movePayload = { type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId: token.id, x: snappedX, y: snappedY,
-      facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, final: true,
+      facing: MAP.mapData?.tokens?.[token.id]?.facing ?? null, final: true, placed: placed || undefined,
       turnPath: turnPath || null, turnKey: turnPath ? dragTurn?.key : null, fromUserId: userId, ...moveStamp() };
     publishMove(movePayload);
     // My own sidebar sets zone-audio volume from where my token stands (in squares: dnd-hub-zone-pos.js).

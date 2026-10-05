@@ -3,26 +3,26 @@ import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-st
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013n';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261013o';
 import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013n';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013n';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013n';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013n';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013n';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261013n';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261013o';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013o';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013o';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261013o';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261013o';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261013o';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013n';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013n';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013n';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261013o';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261013o';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013o';
 import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013n';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013n';
-import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newPlayerToken, panFor, seedCell } from './dnd-hub-rules.js';
-import { onMap, toCell, toPoint, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
-import { extendPath, placeVerdict } from './dnd-hub-movement.js';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013o';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261013o';
+import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor } from './dnd-hub-rules.js';
+import { onMap, toCell, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
+import { extendPath } from './dnd-hub-movement.js';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 export async function initPixiApp() {
@@ -519,67 +519,39 @@ export async function initPixiApp() {
     showPingAnimation(worldX, worldY);
   });
 
-  // ── Place-token mode (player only) ────────────────────────────────────
-  // 🔴 Fog safety: this used to teleport an existing token to any clicked square, so a player could look
-  // into any room. Now it only puts a token on the map when there is none, only on ground the party
-  // has already seen, and never during a fight.
-  const placeRefusal = () => {
-    if (MAP.mapData?.tokens?.['player_' + userId]) return 'Your token is already on the map — drag it or use the arrow keys.';
-    if (MAP.activeTurnTokenId) return 'A fight is on — ask the DM to place your token.';
-    return null;
-  };
-  window._togglePlaceTokenMode = () => {
-    const btn = document.getElementById('btn-place-token');
-    if (MAP.activeTool === 'place-token') {
-      MAP.activeTool = 'select';
-      app.canvas.style.cursor = '';
-      if (btn) { btn.style.background = ''; btn.style.color = ''; }
-    } else {
-      const why = MAP.mapData && placeRefusal();
-      if (why) { moveToast(why); return; }
-      MAP.activeTool = 'place-token';
-      app.canvas.style.cursor = 'crosshair';
-      if (btn) { btn.style.background = 'rgba(96,165,250,.2)'; btn.style.color = '#60a5fa'; }
-    }
-  };
-  app.canvas.addEventListener('mousedown', async e => {
-    if (MAP.activeTool !== 'place-token' || !MAP.mapData || e.button !== 0 || MAP.isDM) return;
-    e.preventDefault(); e.stopPropagation();
-    const rect = app.canvas.getBoundingClientRect();
-    const wx = (e.clientX - rect.left - MAP.panX) / MAP.zoom;
-    const wy = (e.clientY - rect.top  - MAP.panY) / MAP.zoom;
+  // ── Place token (player only) ─────────────────────────────────────────
+  // 🔴 Fog safety: the token appears beside the map, waiting, blind and unable to move, and the DM drags it in
+  // (owner, 2026-10-05). It used to go on any square the party had seen; before that it teleported an existing
+  // token to any clicked square, so a player could look into any room.
+  window._togglePlaceTokenMode = async () => {
+    if (!MAP.mapData || MAP.isDM) return;
     const tokenId = 'player_' + userId;
-    const why = placeRefusal();
-    const verdict = placeOwnTokenVerdict(MAP.mapData, userId);
-    if (why) {
-      moveToast(why);
-    } else if (verdict === 'removed-by-dm') {
-      alert('The DM removed your token from this map. Ask them to place it again (👥 Party).');
-    } else {
-      // Never placed on this map (the DM may not have opened it since this player
-      // joined): the player places their own. They own this token, so this is theirs to write.
-      const camp = serverData.campaigns[MAP.campaignId];
-      const summary = camp.characterSummaries?.[userId];
-      if (!summary) { alert('Create your character first.'); window._togglePlaceTokenMode(); return; }
-      let cell = toCell(wx, wy);
-      const where = placeVerdict(MAP.mapData.fogState, cell);
-      if (where === 'fogged') { moveToast('Place your token on ground the party has already seen.'); return; }
-      const idx = (camp.members || []).indexOf(userId);
-      if (where === 'nothing-revealed') cell = seedCell(MAP.mapData, Math.max(0, idx));
-      const { x, y } = toPoint(cell);
-      const tok = newPlayerToken(userId, summary, idx, x, y, TOKEN_COLORS.length);
-      MAP.mapData.tokens = MAP.mapData.tokens || {};
-      MAP.mapData.tokens[tokenId] = tok;
-      MAP.mapData.seededPlayers = { ...(MAP.mapData.seededPlayers || {}), [userId]: true };
-      camp.maps[MAP.mapId] = MAP.mapData;
-      await saveHubDm(serverData);
-      await realtimePublish(EV.TOKENS_SPAWN, { type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId, mapId: MAP.mapId, tokens: [tok], fromUserId: userId });
-      renderTokens();
-      computeLocalPlayerLOS(); renderFog();
+    if (MAP.mapData.tokens?.[tokenId]) {
+      moveToast(MAP.mapData.tokens[tokenId].waiting ? 'Waiting for the DM to place you on the map.'
+        : 'Your token is already on the map — drag it or use the arrow keys.');
+      return;
     }
-    // Exit placement mode after placing
-    window._togglePlaceTokenMode();
-  });
+    if (placeOwnTokenVerdict(MAP.mapData, userId) === 'removed-by-dm') {
+      alert('The DM removed your token from this map. Ask them to place it again (👥 Party).');
+      return;
+    }
+    // Never placed on this map (the DM may not have opened it since this player joined): the player makes their
+    // own. They own this token, so this is theirs to write.
+    const camp = serverData.campaigns[MAP.campaignId];
+    const summary = camp.characterSummaries?.[userId];
+    if (!summary) { alert('Create your character first.'); return; }
+    const idx = (camp.members || []).indexOf(userId);
+    const tok = newWaitingToken(userId, summary, idx, effectiveGs(MAP.mapData), TOKEN_COLORS.length);
+    MAP.mapData.tokens = MAP.mapData.tokens || {};
+    MAP.mapData.tokens[tokenId] = tok;
+    MAP.mapData.seededPlayers = { ...(MAP.mapData.seededPlayers || {}), [userId]: true };
+    camp.maps[MAP.mapId] = MAP.mapData;
+    await saveHubDm(serverData);
+    await realtimePublish(EV.TOKENS_SPAWN, { type: EV.TOKENS_SPAWN, campaignId: MAP.campaignId, mapId: MAP.mapId, tokens: [tok], fromUserId: userId });
+    renderTokens();
+    computeLocalPlayerLOS(); renderFog();
+    moveToast('Your token is waiting beside the map. The DM will place you.');
+  };
 
   // ── Ruler update on mousemove ──────────────────────────────────────────
   app.canvas.addEventListener('mousemove', e => {

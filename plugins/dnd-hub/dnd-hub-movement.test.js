@@ -1,6 +1,6 @@
 // plugins/dnd-hub/dnd-hub-movement.test.js
 import { describe, it, expect } from 'vitest';
-import { cellAt, turnKey, moveMode, pathFeet, cellsBetween, extendPath, checkReportedPath, speedOf, placeVerdict } from './dnd-hub-movement.js';
+import { cellAt, turnKey, moveMode, pathFeet, cellsBetween, extendPath, checkReportedPath, speedOf } from './dnd-hub-movement.js';
 
 const c = (cx, cy) => ({ cx, cy });
 
@@ -97,15 +97,3 @@ describe('speedOf', () => {
   });
 });
 
-describe('placeVerdict', () => {
-  it('allows revealed ground only', () => {
-    const fog = { '1,1': 'visible', '2,2': 'explored', '3,3': 'unexplored' };
-    expect(placeVerdict(fog, c(1, 1))).toBe('ok');
-    expect(placeVerdict(fog, c(2, 2))).toBe('ok');
-    expect(placeVerdict(fog, c(3, 3))).toBe('fogged');
-    expect(placeVerdict(fog, c(9, 9))).toBe('fogged');
-  });
-  it('says when nothing is revealed at all', () => {
-    expect(placeVerdict({}, c(0, 0))).toBe('nothing-revealed');
-  });
-});

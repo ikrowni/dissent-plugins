@@ -9,8 +9,10 @@
 // up "through walls" and doors out of reach on some screens but not others.
 
 /** Zoom/pan that shows the whole image centred in a W×H view. */
-export function fitView(W, H, iw, ih) {
-  const zoom = Math.min(W / iw, H / ih);
+export function fitView(W, H, iw, ih, pad = 0) {
+  // `pad` (world px) of room on every side: the DM's view keeps the waiting heroes and new monsters, which stand
+  // just outside the map, on screen.
+  const zoom = Math.min(W / (iw + 2 * pad), H / (ih + 2 * pad));
   return { zoom, panX: (W - iw * zoom) / 2, panY: (H - ih * zoom) / 2 };
 }
 

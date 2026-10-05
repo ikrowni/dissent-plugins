@@ -1,8 +1,8 @@
 // dnd-hub-los.js — line-of-sight math, fog update from LOS
 import { MAP, serverData, userId, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261009a';
-import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261013n';
-import { wallPx } from './dnd-hub-walls.js?v=20261013n';
-import { renderPins } from './dnd-hub-pins.js?v=20261013n';
+import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261013o';
+import { wallPx } from './dnd-hub-walls.js?v=20261013o';
+import { renderPins } from './dnd-hub-pins.js?v=20261013o';
 
 export function getOpaqueSegments(mapData) {
   const segs = [...(mapData.walls || [])];
@@ -120,7 +120,7 @@ export function computeLocalPlayerLOS() {
   if (MAP.isDM || !MAP.mapData) { MAP.localVisiblePoly = null; MAP.localSightCells = null; return; }
 
   const myTokens = Object.values(MAP.mapData.tokens || {}).filter(t =>
-    t.type === 'player' && t.visible && t.userId === userId
+    t.type === 'player' && t.visible && t.userId === userId && !t.waiting // waiting beside the map: sees nothing
   );
 
   if (!myTokens.length) { MAP.localVisiblePoly = null; MAP.localSightCells = new Set(); return; }
@@ -150,7 +150,7 @@ export function computeLocalPlayerLOS() {
 export function updateFogFromLOS() {
   if (!MAP.isDM || !MAP.mapData) return;
   const mapData = MAP.mapData;
-  const playerTokens = Object.values(mapData.tokens).filter(t => t.type === 'player' && t.visible);
+  const playerTokens = Object.values(mapData.tokens).filter(t => t.type === 'player' && t.visible && !t.waiting);
   if (!playerTokens.length) return;
 
   const newVisible = new Set();

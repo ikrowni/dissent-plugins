@@ -84,13 +84,3 @@ export function speedOf(token, summary) {
   return Number(token?.speed) || Number(summary?.speed) || 30;
 }
 
-/**
- * Where a player may put their own token the first time: only on ground the party has already seen,
- * so placing it cannot open the fog anywhere new. 'nothing-revealed' means the DM has revealed
- * nothing yet; the caller then uses the map's start cell.
- */
-export function placeVerdict(fogState, cell) {
-  const seen = s => s === 'visible' || s === 'explored';
-  if (seen(fogState?.[`${cell.cx},${cell.cy}`])) return 'ok';
-  return Object.values(fogState || {}).some(seen) ? 'fogged' : 'nothing-revealed';
-}

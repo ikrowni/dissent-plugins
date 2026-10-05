@@ -9,6 +9,11 @@ describe('fitView', () => {
     expect(v.panX).toBe(0);
     expect(v.panY).toBe(150);                   // (800 - 1000*0.5)/2
   });
+  it('leaves `pad` of room round the map (the DM sees what stands just outside it)', () => {
+    const v = fitView(1000, 800, 1800, 1000, 100); // the map plus 100 each side = 2000 wide
+    expect(v.zoom).toBe(0.5);
+    expect(v.panX).toBe(50);                    // the 100 px of room on the left, at half size
+  });
 });
 
 describe('legacyFrame', () => {

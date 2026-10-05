@@ -4,15 +4,15 @@ import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, es
 import { realtimePublish } from './dnd-hub-publish.js';
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013n';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261013n';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261013n';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261013o';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261013o';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261013o';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261013n';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261013o';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -452,7 +452,7 @@ export async function renderCampaignView(campaignId, isDM) {
           <input type="file" id="vtt-dd2vtt-input" accept=".dd2vtt,.json" style="display:none" onchange="onVTTFileSelected()">
           <input type="file" id="vtt-video-input" accept="video/webm,video/mp4" style="display:none" onchange="onVTTVideoSelected()">
         ` : `
-          <button class="map-tool-btn" id="btn-place-token" onclick="window._togglePlaceTokenMode()" title="Click the map to place your token">${icon('map-pin')}Place token</button>
+          <button class="map-tool-btn" id="btn-place-token" onclick="window._togglePlaceTokenMode()" title="Put your token beside the map; the DM drags you in">${icon('map-pin')}Place token</button>
           <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">

@@ -118,10 +118,19 @@ export function campaignRecord({ id, name, description = '', dmUserId, dmDisplay
   };
 }
 
-/** Where the i-th player's token is first placed: along a row from the map's start cell. */
-export function seedCell(mapData, i) {
-  const s = mapData?.startCell;
-  return s ? { cx: s.cx + i, cy: s.cy } : { cx: 2 + i * 2, cy: 3 };
+/**
+ * Where a new hero's token waits: just outside the map's left edge, one row per party member, until the DM drags it
+ * onto the map. A waiting token cannot move and sees nothing (owner, 2026-10-05). It used to be put on the map at
+ * once, by the player on any square the party had seen or by the DM's screen in a row near the top-left.
+ */
+export function waitingSpot(memberIdx, gs) {
+  return { x: -gs * 1.5, y: gs * (Math.max(0, memberIdx) + 0.5) };
+}
+
+/** A new hero's token, waiting beside the map (waitingSpot). */
+export function newWaitingToken(uid, summary, memberIdx, gs, colorCount) {
+  const { x, y } = waitingSpot(memberIdx, gs);
+  return { ...newPlayerToken(uid, summary, memberIdx, x, y, colorCount), waiting: true };
 }
 
 /**
