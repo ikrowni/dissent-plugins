@@ -4,14 +4,15 @@ import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
 import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013m';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013n';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013m';
+import { pickCell } from './dnd-hub-trigger-pick.js';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013n';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013m';
-import { renderFog } from './dnd-hub-fog.js?v=20261013m';
+import { renderLights } from './dnd-hub-lights.js?v=20261013n';
+import { renderFog } from './dnd-hub-fog.js?v=20261013n';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -90,6 +91,27 @@ export function renderTriggers() {
     uiLayer.addChild(gfx);
     uiLayer.addChild(label);
     _triggerSprites.push({ id: trig.id, gfx, label });
+
+    // A teleporter's exit: a ring on its square and a dotted line from the entrance, so the DM sees the pair.
+    if (trig.type === 'teleport' && trig.destCx != null && trig.destCy != null) {
+      const to = cellToWorld(trig.destCx, trig.destCy);
+      const exit = new PIXI.Graphics();
+      exit.eventMode = 'none';
+      const a = { x: wx + gs / 2, y: wy + gs / 2 }, b = { x: to.wx + gs / 2, y: to.wy + gs / 2 };
+      const len = Math.hypot(b.x - a.x, b.y - a.y), n = Math.floor(len / 10);
+      for (let i = 0; i < n; i += 2) {
+        exit.moveTo(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n)
+          .lineTo(a.x + (b.x - a.x) * (i + 1) / n, a.y + (b.y - a.y) * (i + 1) / n);
+      }
+      if (n) exit.stroke({ color, width: 2, alpha: 0.6 });
+      exit.circle(b.x, b.y, gs * 0.42).fill({ color, alpha: 0.15 }).stroke({ color, width: 2, alpha: 0.9 });
+      const tag = new PIXI.Text({ text: 'exit', style: new PIXI.TextStyle({ fontSize: Math.max(9, gs * 0.26), fill: '#e9d5ff', fontWeight: 'bold' }) });
+      tag.anchor.set(0.5, 0.5);
+      tag.x = b.x; tag.y = b.y;
+      tag.eventMode = 'none';
+      uiLayer.addChild(exit, tag);
+      _triggerSprites.push({ id: trig.id, gfx: exit, label: tag });
+    }
   }
 }
 
@@ -288,7 +310,11 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
   d.id = 'trigger-dialog';
   d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--lk-panel);border:1px solid var(--lk-line);border-radius:12px;padding:20px;z-index:9999;min-width:300px;color:var(--lk-text);box-shadow:0 8px 32px rgba(0,0,0,0.5)';
   d.innerHTML = `
-    <div style="font-weight:700;font-size:14px;margin-bottom:12px">🪤 ${existingTrigger ? 'Edit' : 'New'} Trigger (Cell ${cx},${cy})</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">🪤 ${existingTrigger ? 'Edit' : 'New'} Trigger</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px">
+      <span id="td-at-label" style="flex:1">Where it is: square <b id="td-at">${trigger.cx}, ${trigger.cy}</b></span>
+      <button id="td-pick-at" type="button" style="background:transparent;border:1px solid #a855f7;color:#c4b5fd;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap">📍 Pick on map</button>
+    </div>
     <label style="font-size:12px;display:block;margin-bottom:4px">Label</label>
     <input id="td-label" value="${esc(trigger.label)}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
     <label style="font-size:12px;display:block;margin-bottom:4px">Type</label>
@@ -317,10 +343,12 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
       </div>
     </div>
     <div id="td-fields-teleport" style="${trigger.type!=='teleport'?'display:none':''}">
-      <label style="font-size:12px;display:block;margin-bottom:4px">Destination cell X</label>
-      <input id="td-destcx" type="number" value="${trigger.destCx ?? ''}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
-      <label style="font-size:12px;display:block;margin-bottom:4px">Destination cell Y</label>
-      <input id="td-destcy" type="number" value="${trigger.destCy ?? ''}" style="width:100%;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px;margin-bottom:10px">
+      <div style="font-size:12px;margin-bottom:4px">Sends them to square</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px">
+        X <input id="td-destcx" type="number" value="${trigger.destCx ?? ''}" style="width:60px;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px">
+        Y <input id="td-destcy" type="number" value="${trigger.destCy ?? ''}" style="width:60px;box-sizing:border-box;background:var(--lk-bg);border:1px solid var(--lk-line);color:inherit;padding:6px 8px;border-radius:6px">
+        <button id="td-pick-dest" type="button" style="background:transparent;border:1px solid #a855f7;color:#c4b5fd;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap">📍 Pick on map</button>
+      </div>
     </div>
     <div id="td-fields-sound" style="${trigger.type!=='sound'?'display:none':''}">
       <label style="font-size:12px;display:block;margin-bottom:4px">Audio file</label>
@@ -338,6 +366,27 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
       <button id="td-save" style="background:var(--dnd-primary,#6366f1);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Save</button>
     </div>`;
   document.body.appendChild(d);
+
+  // 📍 Pick on map: the dialog steps aside while the DM clicks a square, then comes back with it filled in.
+  const at = { cx: trigger.cx, cy: trigger.cy };
+  const pick = async prompt => {
+    d.style.display = 'none';
+    const c = await pickCell(prompt);
+    d.style.display = '';
+    return c;
+  };
+  d.querySelector('#td-pick-at').onclick = async () => {
+    const c = await pick('Click the square that sets it off');
+    if (!c) return;
+    Object.assign(at, c);
+    d.querySelector('#td-at').textContent = `${c.cx}, ${c.cy}`;
+  };
+  d.querySelector('#td-pick-dest').onclick = async () => {
+    const c = await pick('Click the square it sends them to');
+    if (!c) return;
+    d.querySelector('#td-destcx').value = c.cx;
+    d.querySelector('#td-destcy').value = c.cy;
+  };
 
   window._triggerDialogTypeChange = () => {
     const v = document.getElementById('td-type').value;
@@ -376,7 +425,7 @@ export function showTriggerDialog(cx, cy, existingTrigger) {
     }
 
     const updated = {
-      ...trigger,
+      ...trigger, cx: at.cx, cy: at.cy,
       type, label, requireConfirm: confirm, oneShot,
       message, damageExpr: dmgExpr, destCx, destCy, fileId, saveAbility, saveDC, spotDC,
     };
