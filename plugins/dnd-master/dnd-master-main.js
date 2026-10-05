@@ -1,32 +1,32 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014e';
+import { EV } from './dnd-hub-event-types.js?v=20261014f';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014e';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014f';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014e';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014f';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014e';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014f';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014e';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014f';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014e';
-import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014e';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014e';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014e';
+import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014f';
+import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014f';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014f';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014f';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -96,7 +96,7 @@ function switchDMTab(name) {
 let _announcedCampaignId = null;
 // What the Hub said is open: 'unknown', 'none' (no campaign: stay sealed), 'open', or 'fallback' (no answer).
 let _hubState = 'unknown', _hubAsked = false;
-let _announcedRole = null, _loadRetries = 0, _loadRetryTimer = 0;
+let _announcedRole = null, _loadRetries = 0, _loadRetryTimer = 0, _initGen = 0;
 
 /** The DM tools are closed until the DM opens a campaign at the table (lk-sealed.js). */
 function seal(title, text) {
@@ -118,11 +118,16 @@ async function onInit(data) {
   }
   if (_hubState === 'unknown') return; // the answer calls onInit again
   if (_hubState === 'none') { dmCampaignId = null; dmCampaign = null; sealTable(); return; }
-  serverData = await loadHubDmCompanion() || { campaigns: {} };
+  // Only the newest load counts: an older one finishing late would put back what storage held then (edits lost).
+  const gen = ++_initGen;
+  const loaded = await loadHubDmCompanion() || { campaigns: {} };
+  if (gen !== _initGen) return;
+  serverData = loaded;
 
   // Restore items/shops from the dm-catalog backup in case dnd-hub overwrote hub-dm
   // with an older serverData (race: dnd-hub writes hub-dm frequently from its own copy).
   const catalog = await storageGet('dm-catalog');
+  if (gen !== _initGen) return;
   if (catalog?.campaigns) {
     for (const [cid, catCamp] of Object.entries(catalog.campaigns)) {
       const camp = serverData.campaigns?.[cid];
@@ -148,7 +153,8 @@ async function onInit(data) {
     _loadRetryTimer = setTimeout(() => onInit({}), Math.min(30000, 3000 * 2 ** _loadRetries++));
     return;
   }
-  _loadRetries = 0;
+  // Loaded: a retry still waiting would reload from storage later and drop edits made since (tavern playtest).
+  clearTimeout(_loadRetryTimer); _loadRetries = 0;
   const myCampaign = pickCampaign(runs, _announcedCampaignId, userId);
 
   if (!myCampaign) {
