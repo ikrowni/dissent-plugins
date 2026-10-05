@@ -5,7 +5,7 @@ import { PRESETS, RULE_KEYS, PRESET_ORDER, RULE_INFO, rule, presetOf, applyPrese
 const SPEC = {
   autoHit:               { guided: true,  classic: true,  raw: false },
   autoDamage:            { guided: true,  classic: false, raw: false },
-  playersRollInitiative: { guided: false, classic: true,  raw: true  },
+  playersRollInitiative: { guided: true,  classic: true,  raw: true  },
   deathSaves:            { guided: true,  classic: true,  raw: false },
   concentrationAutoRoll: { guided: true,  classic: false, raw: false },
   trapSavesAuto:         { guided: true,  classic: false, raw: false },
@@ -33,7 +33,7 @@ describe('rule', () => {
   });
   it('gives a missing switch its Guided value, so old campaigns keep working', () => {
     expect(rule({}, 'trapSavesAuto')).toBe(true);
-    expect(rule(undefined, 'playersRollInitiative')).toBe(false);
+    expect(rule(undefined, 'playersRollInitiative')).toBe(true); // players roll their own (owner, 2026-10-05)
     expect(rule(null, 'hints')).toBe(true);
   });
   it('ignores a non-boolean value', () => {

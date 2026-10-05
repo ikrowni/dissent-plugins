@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
@@ -236,6 +236,7 @@ export function handleLootInterest(p) {
   const c = _lootContests[p.contestKey] || {
     tokenId:  p.tokenId,
     shopId:   p.shopId,
+    slotId:   p.slotId || null,
     itemId:   p.itemId,
     itemName: p.itemName,
     source:   p.source,
@@ -289,6 +290,12 @@ function _renderContestPanel() {
 export async function resolveContest(contestKey) {
   const contest = _lootContests[contestKey];
   if (!contest || !contest.interested.length) return;
+  // Nobody to roll against: it is theirs (owner, 2026-10-05 — a lone buyer had to win a roll-off with nobody).
+  if (contest.interested.length === 1) {
+    const only = contest.interested[0];
+    await handleContestResult({ contestKey, winner: only.userId, winnerName: only.displayName, rolls: [] });
+    return;
+  }
 
   // Send to DM hub to animate physics dice and return results via CONTEST_RESULT
   _contestPanel = { status: 'rolling', contestKey, itemName: contest.itemName,
@@ -325,6 +332,18 @@ export async function handleContestResult(p) {
     { itemId: contest.itemId, qty: 1, source: contest.source, goldCost: contest.goldCost || 0, awardedAt: Date.now() },
   ];
 
+  // A shop sells what it has: one fewer of that line, gone at none (it stayed for sale forever, owner 2026-10-05).
+  const shop = contest.source === 'shop' && contest.shopId ? camp.shops?.[contest.shopId] : null;
+  if (shop) {
+    const slotId = contest.slotId || String(contestKey).replace('shop_' + contest.shopId + '_', '');
+    const line = (shop.items || []).find(si => si.slotId === slotId);
+    if (line) {
+      line.qty = Math.max(0, (line.qty ?? 1) - 1);
+      if (!line.qty) shop.items = shop.items.filter(si => si !== line);
+    }
+    if (_state.dmCampaign?.shops) _state.dmCampaign.shops[shop.id] = shop;
+  }
+
   // Mark claimed on the token if this is a loot contest
   if (contest.source === 'loot' && contest.tokenId) {
     const activeMapId = camp.activeMapId;
@@ -349,6 +368,8 @@ export async function handleContestResult(p) {
     goldCost: contest.goldCost || 0,
     tokenId:  contest.tokenId  || null,
     shopId:   contest.shopId   || null,
+    // What is left on the shelf, so every open shop list updates without a reload.
+    shopItems: shop ? (shop.items || []) : null,
     campaignId: _state.dmCampaignId,
     fromUserId: _state.userId,
   };

@@ -1,12 +1,14 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013t';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
 import { rule } from './lk-table-rules.js';
 import { attackVerdict } from './dnd-hub-rules.js';
 import { publishTo, isRepeat } from './lk-bus.js';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261013t';
+import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
 
@@ -117,11 +119,29 @@ let _pendingHit = null; // { rollerId, hitIds, at }: the last attack judged on t
  */
 export function judgeAttack(total, natural, rollerId) {
   _pendingHit = null;
-  if (!tableRule('autoHit') || !MAP.mapData || !MAP.selectedTokens.size) return null;
+  if (!tableRule('autoHit') || !MAP.mapData) return null;
+  if (!MAP.selectedTokens.size && !MAP.isDM) {
+    // No target picked: the one enemy standing next to my hero, if there is exactly one (a melee swing).
+    const near = adjacentEnemies(rollerId);
+    if (near.length === 1) { MAP.selectedTokens.add(near[0].id); renderTokens(); }
+    else { moveToast(near.length ? 'Several enemies are next to you: click the one you attack, then roll.'
+      : 'No target: click the enemy you attack on the map, then roll.'); return null; }
+  }
+  if (!MAP.selectedTokens.size) return null;
   const targets = [...MAP.selectedTokens].map(id => MAP.mapData.tokens?.[id]).filter(Boolean);
   const v = attackVerdict(targets, natural, total);
   if (v?.hitIds.length) _pendingHit = { rollerId, hitIds: v.hitIds, crit: !!v.crit, at: Date.now() };
   return v;
+}
+
+/** Visible monsters within one square of `uid`'s hero. */
+function adjacentEnemies(uid) {
+  const tokens = Object.values(MAP.mapData?.tokens || {});
+  const me = tokens.find(t => t.type === 'player' && t.userId === uid && !t.waiting);
+  if (!me) return [];
+  const gs = effectiveGs(MAP.mapData);
+  return tokens.filter(t => t.type === 'monster' && t.visible !== false && (t.hp ?? 1) > 0
+    && Math.max(Math.abs(t.x - me.x), Math.abs(t.y - me.y)) <= gs * 1.5);
 }
 
 // ── Auto Damage ───────────────────────────────────────────────────────────────

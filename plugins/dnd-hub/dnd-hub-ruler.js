@@ -1,5 +1,5 @@
 // dnd-hub-ruler.js — measurement ruler, map ping animation, active-turn ring
-import { MAP, effectiveGs } from './dnd-hub-state.js?v=20261009a';
+import { MAP, effectiveGs } from './dnd-hub-state.js?v=20261013t';
 import { gridFeet } from './lk-rules5e.js';
 import { remainingFt } from './dnd-hub-turn-move.js';
 

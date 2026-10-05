@@ -1,13 +1,13 @@
 // dnd-hub-travel.js — travel pins in play: the DM's Hub loads the pin's scene for the whole table; a player's click
 // asks the DM's Hub, which checks the pin's permission (dnd-hub-pin-travel.js) and loads it on their behalf.
 // The rules are in dnd-hub-pin-travel.js; the pin dialogs in dnd-hub-pins.js.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261013t';
 import { storageGet } from '../plugin-sdk.js';
 import { secretKey } from './lk-secrets.js';
 import { publishTo } from './lk-bus.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
 import { canTravel, travelTooSoon } from './dnd-hub-pin-travel.js';
 
 export const PIN_TRAVEL = 'pin:travel'; // a player → the DM's Hub: "take us through this pin"

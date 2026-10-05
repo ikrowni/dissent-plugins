@@ -4,6 +4,7 @@ import { guide } from './lk-guide-ui.js';
 import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { allowedLevel } from './lk-levelling.js';
+import { featureDesc } from './lk-features.js';
 import { rule } from './lk-table-rules.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
   armorClass, weaponProfile } from './lk-rules5e.js';
@@ -25,68 +26,10 @@ function fmtMod(m) { return m >= 0 ? `+${m}` : `${m}`; }
 const XP_THRESHOLDS_SHEET = [0,0,300,900,2700,6500,14000,23000,34000,48000,
   64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
 
-// Compact SRD feature descriptions — keyed by lowercase feature name (partial match supported)
-const SRD_FEATURES = {
-  'rage': 'Bonus action: enter a rage. Adv. on STR checks/saves, +2–4 dmg with STR melee, resistance to bludgeoning/piercing/slashing. Lasts 1 minute. Limited uses/long rest.',
-  'unarmored defense': 'When not wearing armor, AC = 10 + DEX mod + CON mod (Barbarian) or 10 + DEX mod + WIS mod (Monk).',
-  'reckless attack': 'When you attack, gain advantage on STR-based melee attacks this turn. Attackers also gain advantage against you until next turn.',
-  'danger sense': 'Advantage on DEX saving throws against effects you can see (e.g., traps, spells) if not blinded, deafened, or incapacitated.',
-  'bardic inspiration': 'Bonus action: grant a creature within 60 ft a Bardic Inspiration die (d6–d12). They can roll it once within 10 min on an ability check, attack, or save.',
-  'jack of all trades': 'Add half proficiency bonus (rounded down) to any ability check that doesn\'t already include your proficiency bonus.',
-  'song of rest': 'After a short rest, you and allies who hear you perform regain extra HP: d6 at level 2 (increasing at higher levels).',
-  'spellcasting': 'You can cast spells from your class spell list. You have spell slots that recharge on a long rest.',
-  'channel divinity': 'Use a supernatural effect from your Divine Domain. Recharges on a short or long rest. Number of uses increases at higher levels.',
-  'wild shape': 'Action: transform into a beast you\'ve seen. Limited CR based on level. Retains your mental stats but uses beast\'s physical stats.',
-  'action surge': 'Once per short/long rest, take one additional action on your turn. At level 17 you can use this twice between rests.',
-  'second wind': 'Bonus action: regain 1d10 + Fighter level HP. Recharges on a short or long rest.',
-  'extra attack': 'When you take the Attack action, you can attack twice. Increases to 3 attacks at level 11 and 4 at level 20 (Fighter).',
-  'fighting style': 'You adopt a fighting style specialty: Archery, Defense, Dueling, Great Weapon Fighting, Protection, or Two-Weapon Fighting.',
-  'indomitable': 'Reroll a failed saving throw. You must use the new roll. Uses: 1 at level 9, 2 at level 13, 3 at level 17.',
-  'ki': 'Fuel special martial arts abilities (Flurry of Blows, Patient Defense, Step of the Wind) using ki points that recharge on a short rest.',
-  'flurry of blows': 'After taking the Attack action, spend 1 ki point to make 2 unarmed strikes as a bonus action.',
-  'stunning strike': 'Spend 1 ki point when you hit with a melee attack. Target must succeed on a CON save or be stunned until end of your next turn.',
-  'lay on hands': 'A pool of healing power (5 × paladin level). Use an action to restore HP, or spend 5 points to cure one disease or poison.',
-  'divine smite': 'When you hit with a melee attack, expend a spell slot to deal extra radiant damage (2d8 per slot level, up to 5d8). +1d8 vs undead/fiends.',
-  'aura of protection': 'Friendly creatures within 10 ft (including you) add your CHA modifier to saving throws (minimum +1) while you\'re conscious.',
-  'sneak attack': 'Once per turn, deal extra damage when you attack with advantage, or when an ally is adjacent to the target. Scales: 1d6 at level 1 up to 10d6 at level 19.',
-  'cunning action': 'Bonus action: Dash, Disengage, or Hide.',
-  'evasion': 'When you succeed on a DEX save for half damage, you take no damage. When you fail, you take half damage.',
-  'uncanny dodge': 'When you can see the attacker, use your reaction to halve the damage from one attack.',
-  'reliable talent': 'Treat any d20 roll below 10 as a 10 for skill checks where you\'re proficient.',
-  'eldritch invocations': 'Supernatural boons that enhance your warlock abilities. Choose 2 at level 2; gain more at higher levels.',
-  'pact magic': 'You have spell slots that recharge on a short rest. All your warlock spell slots are the same level (1st–5th depending on your level).',
-  'pact of the blade': 'Create a pact weapon in your hand (action). You\'re proficient with it and it counts as magical.',
-  'pact of the chain': 'Gain a familiar more powerful than the find familiar spell (imp, pseudodragon, quasit, or sprite).',
-  'pact of the tome': 'Gain a Book of Shadows with 3 cantrips from any class spell list.',
-  'sorcery points': 'Pool of sorcery points equal to your level. Spend to create spell slots (Flexible Casting) or fuel Metamagic options.',
-  'metamagic': 'Twist your spells using sorcery points: Careful, Distant, Empowered, Extended, Heightened, Quickened, Subtle, or Twinned Spell.',
-  'arcane recovery': 'Once per long rest, during a short rest, recover expended spell slots totalling up to half your wizard level (rounded up, max 5th level).',
-  'sneak attack': 'Once per turn, deal extra damage (1d6 per 2 levels) when attacking with advantage or when an ally is adjacent to your target.',
-  'hunter\'s mark': 'Bonus action: mark a creature. Deal an extra 1d6 damage each time you hit it. Move the mark to another target if it drops.',
-  'favored enemy': 'Advantage on Survival checks to track and Intelligence checks to recall information about your chosen enemy type.',
-  'natural explorer': 'Gain benefits (no difficult terrain penalty, no chance of getting lost, extra food, etc.) in your favored terrain.',
-  'divine health': 'Your devotion prevents disease. You are immune to disease.',
-  'aura of courage': 'Friendly creatures within 10 ft can\'t be frightened while you\'re conscious.',
-  'improved divine smite': 'Whenever you hit a creature with a melee attack, deal an extra 1d8 radiant damage.',
-  'deflect missiles': 'Reaction: reduce ranged weapon damage by 1d10 + DEX mod + Monk level. If damage is reduced to 0, catch and throw the missile (1d10+DEX+level, range 20/60).',
-  'slow fall': 'Reaction: reduce falling damage by 5 × Monk level.',
-  'timeless body': 'You age slowly (1 year per 10) and can\'t be magically aged.',
-  'feral instinct': 'Advantage on initiative. Can enter rage before acting even if surprised (not surprised after).',
-  'brutal critical': 'Roll 1 extra weapon damage die on a critical hit (2 at level 13, 3 at level 17).',
-  'relentless rage': 'When you drop to 0 HP while raging and don\'t die, succeed on a DC 10 CON save to stay at 1 HP. DC increases by 5 each time.',
-  'persistent rage': 'Your rage only ends if you fall unconscious or choose to end it. No longer ends from lack of attacking/taking damage.',
-};
-
-function _lookupFeatureDesc(name) {
-  if (!name) return '';
-  const key = name.toLowerCase().replace(/\s*\(.*\)/, '').trim(); // strip parentheticals
-  if (SRD_FEATURES[key]) return SRD_FEATURES[key];
-  // Partial match — feature name starts with a known key
-  for (const [k, v] of Object.entries(SRD_FEATURES)) {
-    if (key.startsWith(k) || k.startsWith(key)) return v;
-  }
-  return '';
-}
+// What each feature does: lk-features.js (shared with the Hub). Feats' text comes from the SRD feats, read once.
+let _feats = [];
+fetch(new URL('./dnd-srd/feats.json', document.baseURI).href).then(r => r.ok ? r.json() : [])
+  .then(f => { _feats = Array.isArray(f) ? f : []; renderFeatures(); }).catch(() => {});
 
 let _char = null;
 let _saveChar = null;
@@ -288,7 +231,8 @@ export function renderAbilities() {
     const isProficient = saves.includes(a);
     const score = _effectiveStats.abilities[a] ?? _char[a] ?? 10;
     const bonus = abilityMod(score) + (isProficient ? profBonus : 0);
-    return `<div class="skill-row">
+    // Clicking rolls it, like a skill (owner, 2026-10-05: saves did nothing).
+    return `<div class="skill-row" onclick="rollSkillCheck('${ABILITY_NAMES[a]} Saving Throw',${bonus})">
       <div class="skill-prof-dot ${isProficient?'proficient':''}"></div>
       <span class="skill-name">${ABILITY_NAMES[a]} Saving Throw</span>
       <span class="skill-bonus" style="color:var(--dnd-gold)">${fmtMod(bonus)}</span>
@@ -395,7 +339,9 @@ export function toggleInventoryItem(key) {
 export function renderInventory() {
   const items = _char.equipment || [];
   document.getElementById('equipment-list').innerHTML = items.length
-    ? items.map((item, i) => _invItemCard(item, i)).join('')
+    // Equipped first (owner, 2026-10-05), otherwise in the order they were gained. Cards keep their real index.
+    ? items.map((item, i) => [item, i]).sort((a, b) => !!b[0].equipped - !!a[0].equipped || a[1] - b[1])
+      .map(([item, i]) => _invItemCard(item, i)).join('')
     : '<div style="font-size:11px;color:var(--muted)">No items in inventory.</div>';
   const currencies = [
     {key:'platinum',symbol:'pp',color:'var(--lk-text)'},
@@ -438,27 +384,27 @@ export function renderFeatures() {
     el.innerHTML = '<div style="font-size:11px;color:var(--muted)">No features recorded.</div>';
     return;
   }
+  // The description shows under the name (it used to sit behind a click, for a third of the features at most);
+  // clicking opens the player's own notes.
   el.innerHTML = features.map((f, i) => {
     const name     = typeof f === 'string' ? f : (f.name || '');
-    const desc     = typeof f === 'string' ? '' : (f.desc || '');
+    const notes    = typeof f === 'string' ? '' : (f.desc || '');
+    const what     = featureDesc(name, { feats: _feats });
     const expanded = _expandedFeatures.has(i);
     return '<div style="background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--dnd-gold);border-radius:6px;overflow:hidden">' +
-      '<div style="padding:9px 10px;cursor:pointer;display:flex;align-items:center;gap:6px" onclick="toggleFeatureExpand(' + i + ')">' +
-        '<div style="font-size:12px;font-weight:600;flex:1">' + esc(name) + '</div>' +
-        '<span style="font-size:10px;color:var(--muted)">' + (expanded ? '▲' : '▼') + '</span>' +
+      '<div style="padding:9px 10px;cursor:pointer" onclick="toggleFeatureExpand(' + i + ')">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          '<div style="font-size:12px;font-weight:600;flex:1">' + esc(name) + '</div>' +
+          '<span style="font-size:10px;color:var(--muted)" title="Your notes">' + (notes ? '📝 ' : '') + (expanded ? '▲' : '▼') + '</span>' +
+        '</div>' +
+        (what ? '<div style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px">' + esc(what) + '</div>' : '') +
       '</div>' +
       (expanded
         ? '<div style="padding:0 10px 10px">' +
-            (() => {
-              const srd = !desc ? _lookupFeatureDesc(name) : '';
-              return (srd
-                ? '<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:4px;padding:6px 8px;font-size:10px;color:rgba(255,255,255,.65);line-height:1.5;margin-bottom:6px"><span style="color:#60a5fa;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">SRD Reference</span>' + esc(srd) + '</div>'
-                : '') +
-              '<textarea placeholder="Add your notes…" onblur="saveFeatureDesc(' + i + ',this.value)"' +
-                ' style="width:100%;min-height:50px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;' +
-                'color:var(--text);font-size:11px;line-height:1.5;padding:6px;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box">' +
-                esc(desc) + '</textarea>';
-            })() +
+            '<textarea placeholder="Your notes…" onblur="saveFeatureDesc(' + i + ',this.value)"' +
+              ' style="width:100%;min-height:50px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;' +
+              'color:var(--text);font-size:11px;line-height:1.5;padding:6px;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box">' +
+              esc(notes) + '</textarea>' +
           '</div>'
         : '') +
     '</div>';

@@ -1,10 +1,10 @@
 // dnd-hub-lights.js — dynamic light sources: raycasting, PIXI glow rendering, flicker, storage
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013t';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeVisibleCells, computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013s';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { computeVisibleCells, computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 // ── Two shapes of light ───────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export function getEffectiveRadius(light) {
 export function renderLights() {
   const layer = MAP.layers?.lights;
   if (!layer) return;
-  layer.removeChildren();
+  for (const c of layer.removeChildren()) c.destroy(); // redrawn 8 times a second for a flickering light
   if (!MAP.mapData) return;
 
   const lights = MAP.mapData.lights || [];
@@ -86,17 +86,26 @@ export function renderLights() {
 
   // Warm light that stops at walls (it used to be a 7–18 % disc that went straight through them, too faint to tell
   // whether a light worked). Drawn under the fog: players see it only where they can see.
+  // One smooth radial gradient per light, cut to the light's wall-stopped shape. It was four stacked discs, which
+  // showed as rings of light (owner, 2026-10-05).
   const walls = sightBlockers(MAP.mapData);
-  const glow = new PIXI.Graphics();
-  glow.blendMode = 'add';
+  const glows = [];
   const g = new PIXI.Graphics();
   for (const raw of lights) {
     const light = lightPx(raw);
     const r = getEffectiveRadius(light);
     const col = light.color ?? 0xffd9a0;
-    for (const [k, a] of [[1, 0.10], [0.7, 0.10], [0.45, 0.12], [0.22, 0.16]]) {
-      const poly = computeVisibilityPolygon(light.x, light.y, r * k, walls);
-      if (poly.length >= 3) glow.poly(poly.flatMap(p => [p.x, p.y])).fill({ color: col, alpha: a });
+    const poly = computeVisibilityPolygon(light.x, light.y, r, walls);
+    if (poly.length >= 3) {
+      const glow = new PIXI.Sprite(glowTexture());
+      glow.anchor.set(0.5);
+      glow.position.set(light.x, light.y);
+      glow.width = glow.height = r * 2;
+      glow.tint = col;
+      glow.blendMode = 'add';
+      const mask = new PIXI.Graphics().poly(poly.flatMap(p => [p.x, p.y])).fill(0xffffff);
+      glow.mask = mask;
+      glows.push(mask, glow);
     }
     // The source itself, so the DM can find and select it
     if (MAP.isDM) {
@@ -116,7 +125,23 @@ export function renderLights() {
     }
   }
 
-  layer.addChild(glow, g);
+  layer.addChild(...glows, g);
+}
+
+let _glowTex = null;
+/** A white radial gradient, opaque-ish at the centre fading to nothing at the edge; tinted per light. */
+function glowTexture() {
+  if (_glowTex) return _glowTex;
+  const size = 256, c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  // Roughly what the four discs added up to (0.48 at the centre), without the steps.
+  for (const [at, a] of [[0, 0.5], [0.2, 0.42], [0.45, 0.28], [0.7, 0.14], [0.88, 0.05], [1, 0]]) grad.addColorStop(at, `rgba(255,255,255,${a})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  _glowTex = PIXI.Texture.from(c);
+  return _glowTex;
 }
 
 // ── Flicker ticker ────────────────────────────────────────────────────────────

@@ -1,44 +1,44 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013t';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
 import { floatHp, secretRoll } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261013t';
 import { startShopScene, stopShopScene } from './dnd-hub-shop-scene.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261009a';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013s';
+import { renderGrid } from './dnd-hub-grid.js?v=20261013t';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261013t';
 import { syncTurn, commitPath, refereeMove, moveToast } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013s';
-import { renderFog } from './dnd-hub-fog.js?v=20261013s';
-import { renderWalls } from './dnd-hub-walls.js?v=20261013s';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261009g';
-import { loadSRD } from './dnd-hub-char.js?v=20261013s';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013s';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013s';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013t';
+import { renderFog } from './dnd-hub-fog.js?v=20261013t';
+import { renderWalls } from './dnd-hub-walls.js?v=20261013t';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261013t';
+import { loadSRD } from './dnd-hub-char.js?v=20261013t';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261013t';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast } from './dnd-hub-combat.js?v=20261013t';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013d';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013s';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261013t';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261013t';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013s';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013s';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast } from './dnd-hub-triggers.js?v=20261013s';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261009a';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013s';
+import { renderLights } from './dnd-hub-lights.js?v=20261013t';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013t';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261013t';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261013t';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261013t';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261013t';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261013s';
+import { setView } from './dnd-hub-canvas.js?v=20261013t';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -416,6 +416,7 @@ export async function handleMapEvent(p) {
       if (p.cells) {
         p.cells.forEach(([key, state]) => { MAP.mapData.fogState[key] = state; });
         renderPins();
+        if (!MAP.isDM) renderWalls(); // doors in newly revealed ground
       }
       renderFog();
       break;
@@ -424,6 +425,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId || !MAP.mapData) return;
       MAP.mapData.fogState = {};
       renderFog();
+      if (!MAP.isDM) renderWalls();
       break;
     }
     case 'map:weather': {
@@ -728,14 +730,9 @@ export async function handleMapEvent(p) {
       // Stop any playing soundtrack or previous shop audio
       if (MAP._soundtrackAudio) { MAP._soundtrackAudio.pause(); MAP._soundtrackAudio.src = ''; MAP._soundtrackAudio = null; }
       if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
-      // Replace map background with shop video/image — or, with none uploaded, the lantern-lit
-      // shop drawn in code (dnd-hub-shop-scene.js).
-      if (p.videoFileId && MAP.mapData) {
-        stopShopScene();
-        MAP.mapData.fileId = p.videoFileId;
-        MAP.mapData.mime = p.videoMime || '';
-        await renderMapBackground();
-      } else {
+      // The shop is always the lantern-lit scene drawn in code (dnd-hub-shop-scene.js). A shop's own video or
+      // picture is gone: the owner chose the scene, and a shop now carries a background sound instead (2026-10-05).
+      {
         const wrap = document.getElementById('map-canvas-wrap');
         const shopName = p.shopName || serverData?.campaigns?.[p.campaignId]?.shops?.[p.shopId]?.name || '';
         if (wrap) startShopScene(wrap, shopName);
@@ -748,10 +745,10 @@ export async function handleMapEvent(p) {
       MAP._activeShopId = p.shopId;
       MAP._shopFogHidden = true;
       renderFog();
-      // Play audio track from the same video file
-      if (p.videoFileId) {
+      // The shop's background sound, looping (an older shop's video still lends its soundtrack).
+      if (p.soundFileId || p.videoFileId) {
         try {
-          const res = await request('files:getUrl', { fileId: p.videoFileId });
+          const res = await request('files:getUrl', { fileId: p.soundFileId || p.videoFileId });
           if (res?.url) {
             const aud = new Audio(res.url);
             aud.loop = true;
@@ -932,28 +929,6 @@ export async function handleMapEvent(p) {
 }
 
 function _showPendingTriggerConfirm(p) {
-  const existing = document.getElementById('trigger-confirm-overlay');
-  if (existing) existing.remove();
-
   const trig = MAP.mapData?.triggers?.find(t => t.id === p.triggerId);
-  if (!trig) return;
-
-  const d = document.createElement('div');
-  d.id = 'trigger-confirm-overlay';
-  d.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:14px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);text-align:center;min-width:240px';
-  d.innerHTML = `
-    <div style="font-weight:700;margin-bottom:8px">🪤 Trigger: ${trig.label || trig.type}</div>
-    <div style="font-size:11px;color:var(--lk-muted);margin-bottom:12px">Token entered this tile. Fire?</div>
-    <div style="display:flex;gap:8px;justify-content:center">
-      <button id="tcp-cancel" style="background:transparent;border:1px solid #475569;color:var(--lk-muted);padding:6px 14px;border-radius:6px;cursor:pointer">Cancel</button>
-      <button id="tcp-fire" style="background:#ef4444;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Fire!</button>
-    </div>`;
-  document.body.appendChild(d);
-
-  document.getElementById('tcp-cancel').onclick = () => d.remove();
-  document.getElementById('tcp-fire').onclick = async () => {
-    d.remove();
-    await fireTrigger(trig, p.tokenId);
-  };
-  setTimeout(() => { if (d.parentNode) d.remove(); }, 20000);
+  if (trig) showTriggerConfirm(trig, p.tokenId);
 }

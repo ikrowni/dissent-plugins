@@ -1,18 +1,17 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261013t';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
-import { realtimePublish } from './dnd-hub-publish.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
 import { pickCell } from './dnd-hub-trigger-pick.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013s';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261013t';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261013s';
-import { renderFog } from './dnd-hub-fog.js?v=20261013s';
+import { renderLights } from './dnd-hub-lights.js?v=20261013t';
+import { renderFog } from './dnd-hub-fog.js?v=20261013t';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -143,11 +142,10 @@ export async function checkTriggers(tokenId, cells) {
     _lastCell[tokenId] = key;
     const hit = MAP.mapData.triggers.filter(t => t.cx === cx && t.cy === cy && !t.disabled);
     for (const trig of hit) {
+      // Only the DM's screen gets here, so it asks its own DM: no round trip through the node (the prompt used to
+      // wait for the echo of a message the DM's screen sent itself).
       if (trig.requireConfirm) {
-        await realtimePublish(EV.TRIGGER_PENDING, {
-          type: EV.TRIGGER_PENDING, campaignId: MAP.campaignId, triggerId: trig.id, tokenId,
-          cx, cy, label: trig.label || trig.type, fromUserId: userId,
-        });
+        showTriggerConfirm(trig, tokenId);
       } else if (await fireTrigger(trig, tokenId) === 'teleported') {
         return; // the rest of this move's squares are behind it now
       }
@@ -275,6 +273,26 @@ function teleportToken(tokenId, cx, cy) {
   publishMove({ type: EV.TOKEN_MOVE, campaignId: MAP.campaignId, tokenId, x, y, final: true,
     turnPath, turnKey: turnPath ? turn.key : null, fromUserId: userId, ...moveStamp() });
   return true;
+}
+
+/** The DM's prompt: someone stepped on a trigger that waits for the DM. */
+export function showTriggerConfirm(trig, tokenId) {
+  document.getElementById('trigger-confirm-overlay')?.remove();
+  const who = MAP.mapData?.tokens?.[tokenId]?.name || 'A token';
+  const d = document.createElement('div');
+  d.id = 'trigger-confirm-overlay';
+  d.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--lk-panel);border:1px solid #f59e0b;color:#fbbf24;padding:14px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);text-align:center;min-width:240px';
+  d.innerHTML = `
+    <div style="font-weight:700;margin-bottom:8px">🪤 ${esc(who)} stepped on ${esc(trig.label || trig.type)}</div>
+    <div style="font-size:11px;color:var(--lk-muted);margin-bottom:12px">Set it off?</div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button id="tcp-cancel" style="background:transparent;border:1px solid #475569;color:var(--lk-muted);padding:6px 14px;border-radius:6px;cursor:pointer">Not now</button>
+      <button id="tcp-fire" style="background:#ef4444;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600">Fire!</button>
+    </div>`;
+  document.body.appendChild(d);
+  d.querySelector('#tcp-cancel').onclick = () => d.remove();
+  d.querySelector('#tcp-fire').onclick = async () => { d.remove(); await fireTrigger(trig, tokenId); };
+  setTimeout(() => d.remove(), 30000);
 }
 
 // ── Toast notification ─────────────────────────────────────────────────────────

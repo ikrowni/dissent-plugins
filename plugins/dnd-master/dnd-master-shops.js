@@ -1,11 +1,10 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
-import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { storageGet, storageSet, esc, genId, requestWithTransfer, realtimePublishCompanion } from '../plugin-sdk.js';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
-let _pendingShopVideo = null;   // File object for new shop upload
 const _shopVolDebounce = {};    // debounce timers keyed by shopId
 
 /** The shops as this tab holds them (read only, for the playtests). */
@@ -36,26 +35,16 @@ export async function renderShopsTab() {
   const items = Object.values(_state.dmCampaign?.items || {});
   const shops = Object.values(_state.dmCampaign?.shops || {});
 
-  // Build video file options for the creation form
-  let fileOpts = '<option value="">none</option>';
-  try {
-    const filesRes = await request('files:list', {});
-    const videoFiles = (filesRes || []).filter(f => f.mime_type?.startsWith('video/') || f.mime_type?.startsWith('image/'));
-    fileOpts += videoFiles.map(f =>
-      '<option value="' + f.id + '">' + esc(f.filename) + '</option>'
-    ).join('');
-  } catch { /* ignore — file list unavailable */ }
-
   el.innerHTML =
     '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.05em">CREATE SHOP</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:6px">' +
       '<input id="shop-name-input" class="search-input" placeholder="Shop name…" style="margin:0;flex:1">' +
     '</div>' +
+    // A background sound for while players shop (the shop scene itself is drawn by the Hub). It replaced the
+    // video/image choice (owner, 2026-10-05).
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
-      '<span style="font-size:10px;color:var(--muted);min-width:60px">Video/Image</span>' +
-      '<select id="shop-video-select" class="search-input" style="margin:0;flex:1" onchange="onShopVideoSelected(null, this.value)">' +
-        fileOpts +
-      '</select>' +
+      '<span style="font-size:10px;color:var(--muted);min-width:60px">Sound</span>' +
+      '<input id="shop-sound-input" type="file" accept="audio/*" style="font-size:10px;flex:1;min-width:0">' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
       '<span style="font-size:10px;color:var(--muted);min-width:60px">Volume</span>' +
@@ -78,20 +67,22 @@ function _shopCard(shop, allItems) {
     const item = allItems.find(i => i.id === si.itemId);
     return item
       ? '<div style="display:flex;align-items:center;gap:4px;padding:3px 0;font-size:11px">' +
-          '<span style="flex:1">' + esc(item.name) + '</span>' +
+          '<span style="flex:1">' + esc(item.name) + ((si.qty ?? 1) > 1 ? ' <span style="color:var(--muted)">×' + si.qty + '</span>' : '') + '</span>' +
           '<span style="color:var(--gold);font-size:10px">' + esc(String(si.price)) + ' gp</span>' +
           '<button onclick="removeShopItem(\'' + shop.id + '\',\'' + si.slotId + '\')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">&#x2715;</button>' +
         '</div>'
       : '';
   }).join('');
 
-  const volSlider = shop.videoFileId
-    ? '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">' +
-        '<span style="font-size:10px;color:var(--muted);min-width:60px">Volume</span>' +
-        '<input type="range" min="0" max="1" step="0.05" value="' + (shop.ambientVolume ?? 0.5) + '" ' +
-          'oninput="onShopVolumeChange(\'' + shop.id + '\', this.value)" style="flex:1">' +
-      '</div>'
-    : '';
+  const hasSound = shop.soundFileId || shop.videoFileId;
+  const volSlider =
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">' +
+      '<span style="font-size:10px;color:var(--muted);min-width:60px">' + (hasSound ? '🔊 Sound' : 'No sound') + '</span>' +
+      (hasSound ? '<input type="range" min="0" max="1" step="0.05" value="' + (shop.ambientVolume ?? 0.5) + '" ' +
+        'oninput="onShopVolumeChange(\'' + shop.id + '\', this.value)" style="flex:1" title="Volume">' : '<span style="flex:1"></span>') +
+      '<label class="btn btn-ghost" style="font-size:10px;cursor:pointer">' + (hasSound ? 'Change' : 'Add sound') +
+        '<input type="file" accept="audio/*" style="display:none" onchange="onShopSoundSelected(\'' + shop.id + '\', this)"></label>' +
+    '</div>';
 
   return '<div class="shop-card">' +
     '<div style="display:flex;align-items:center;margin-bottom:6px">' +
@@ -103,7 +94,8 @@ function _shopCard(shop, allItems) {
     (allItems.length > 0
       ? '<div style="display:flex;gap:4px;margin-top:6px">' +
           '<select id="shop-item-sel-' + shop.id + '" class="search-input" style="flex:2;margin:0;padding:4px 6px">' + itemOpts + '</select>' +
-          '<input  id="shop-price-'    + shop.id + '" class="num-input" type="number" value="10" style="width:52px" title="Price in gp">' +
+          '<input  id="shop-qty-'      + shop.id + '" class="num-input" type="number" value="1" min="1" style="width:40px" title="How many">' +
+          '<input  id="shop-price-'    + shop.id + '" class="num-input" type="number" value="10" style="width:52px" title="Price in gp, each">' +
           '<button class="btn btn-ghost" onclick="addItemToShop(\'' + shop.id + '\')" style="font-size:10px">Add</button>' +
         '</div>'
       : '<div style="font-size:10px;color:var(--muted);margin-top:4px">Create items above to stock this shop</div>'
@@ -119,33 +111,19 @@ export async function saveNewShop() {
   const btn = document.getElementById('btn-save-shop');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
-  let videoFileId = null;
-  try {
-    if (_pendingShopVideo) {
-      const buf = await _pendingShopVideo.arrayBuffer();
-      const res = await guarded(requestWithTransfer)('files:upload',
-        { name: _pendingShopVideo.name, mime: _pendingShopVideo.type, size: _pendingShopVideo.size, dmOnly: false, data: buf },
-        [buf], 120000);
-      videoFileId = res?.id || null;
-    } else {
-      // Video may have been chosen from the existing files list
-      const sel = document.getElementById('shop-video-select');
-      videoFileId = sel?.value || null;
-    }
-  } catch (e) {
-    if (!e?.shown) alert('Video upload failed: ' + (e?.message || String(e)));
-    if (btn) { btn.disabled = false; btn.textContent = '+ Shop'; }
-    return;
+  let soundFileId = null;
+  const file = document.getElementById('shop-sound-input')?.files?.[0];
+  if (file) {
+    soundFileId = await _uploadSound(file);
+    if (soundFileId === false) { if (btn) { btn.disabled = false; btn.textContent = '+ Shop'; } return; }
   }
 
-  const videoMime = _pendingShopVideo?.type || '';
-  const shop = { id: genId(), name, items: [], videoFileId, videoMime, ambientVolume };
+  const shop = { id: genId(), name, items: [], soundFileId, ambientVolume };
   if (!_state.dmCampaign.shops) _state.dmCampaign.shops = {};
   _state.dmCampaign.shops[shop.id] = shop;
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
-  _pendingShopVideo = null;
   if (btn) { btn.disabled = false; btn.textContent = '+ Shop'; }
   renderShopsTab();
 }
@@ -164,9 +142,13 @@ export async function addItemToShop(shopId) {
   if (!shop) return;
   const itemId = document.getElementById('shop-item-sel-' + shopId)?.value;
   const price  = parseInt(document.getElementById('shop-price-' + shopId)?.value) || 0;
+  const qty    = Math.max(1, Math.min(999, parseInt(document.getElementById('shop-qty-' + shopId)?.value) || 1));
   if (!itemId) return;
   if (!shop.items) shop.items = [];
-  shop.items.push({ slotId: genId(), itemId, price });
+  // How many, at this price each (owner, 2026-10-05). The same item at the same price adds to its line.
+  const line = shop.items.find(si => si.itemId === itemId && si.price === price);
+  if (line) line.qty = (line.qty ?? 1) + qty;
+  else shop.items.push({ slotId: genId(), itemId, price, qty });
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
@@ -192,7 +174,8 @@ export async function loadShop(shopId) {
   await saveHubDmCompanion(_state.serverData);
   await realtimePublishCompanion('dnd-hub', EV.SHOP_OPEN, {
     type: EV.SHOP_OPEN, shopId, shopName: shop.name || '',
-    videoFileId: shop.videoFileId || null,
+    soundFileId: shop.soundFileId || null,
+    videoFileId: shop.videoFileId || null, // an older shop's video: its soundtrack plays (dnd-hub-events.js)
     ambientVolume: shop.ambientVolume ?? 0.5,
     campaignId: _state.dmCampaignId,
     fromUserId: _state.userId,
@@ -221,19 +204,31 @@ export function onShopVolumeChange(shopId, value) {
   }, 100);
 }
 
-// Called when a video/image file is selected from the files list dropdown for an existing shop.
-// shopId=null means the new-shop creation form; fileId is the file registry ID.
-export async function onShopVideoSelected(shopId, fileId) {
-  if (shopId) {
-    // Update an existing shop's video in place
-    const shop = _state.dmCampaign.shops?.[shopId];
-    if (!shop) return;
-    shop.videoFileId = fileId || null;
-    _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
-    await saveHubDmCompanion(_state.serverData);
-    await _persistDmCatalog();
-    renderShopsTab();
+/** Upload a shop's background sound: its file id, or false when it failed (the user has been told). */
+async function _uploadSound(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const res = await guarded(requestWithTransfer)('files:upload',
+      { name: file.name, mime: file.type, size: file.size, dmOnly: false, data: buf, attachContext: `campaign:${_state.dmCampaignId}` },
+      [buf], 120000);
+    return res?.id || null;
+  } catch (e) {
+    if (!e?.shown) alert('That sound could not be uploaded: ' + (e?.message || String(e)));
+    return false;
   }
-  // For shopId=null (new shop form) the selected value is read directly from the
-  // <select id="shop-video-select"> in saveNewShop(), so no further action needed here.
+}
+
+/** A new background sound for an existing shop. */
+export async function onShopSoundSelected(shopId, input) {
+  const shop = _state.dmCampaign.shops?.[shopId];
+  const file = input?.files?.[0];
+  if (!shop || !file) return;
+  const id = await _uploadSound(file);
+  if (!id) return;
+  shop.soundFileId = id;
+  delete shop.videoFileId; delete shop.videoMime;
+  _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
+  await saveHubDmCompanion(_state.serverData);
+  await _persistDmCatalog();
+  renderShopsTab();
 }

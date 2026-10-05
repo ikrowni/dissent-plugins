@@ -114,6 +114,8 @@ const VENDORED = [
     source: "lk-levelling.js",
     targets: ["dnd-hub/lk-levelling.js", "dnd-master/lk-levelling.js", "dnd-player/lk-levelling.js"],
   },
+  // What each hero feature does, in a sentence (the sheet's Features tab).
+  { source: "lk-features.js", targets: ["dnd-player/lk-features.js"] },
   // Party at a glance — the DM's rows and the players' strip (the Hub draws neither).
   {
     source: "lk-party.js",

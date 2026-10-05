@@ -20,7 +20,7 @@
 export const PRESET_ORDER = ['guided', 'classic', 'raw'];
 
 export const PRESETS = {
-  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: false, deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  levelByXp: false, featsAllowed: true, hints: true  },
+  guided:  { autoHit: true,  autoDamage: true,  playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: true,  trapSavesAuto: true,  levelByXp: false, featsAllowed: true, hints: true  },
   classic: { autoHit: true,  autoDamage: false, playersRollInitiative: true,  deathSaves: true,  concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
   raw:     { autoHit: false, autoDamage: false, playersRollInitiative: true,  deathSaves: false, concentrationAutoRoll: false, trapSavesAuto: false, levelByXp: false, featsAllowed: true, hints: false },
 };

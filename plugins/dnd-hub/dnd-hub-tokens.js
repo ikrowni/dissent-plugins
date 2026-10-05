@@ -1,15 +1,15 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261009a';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261013t';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { renderFog } from './dnd-hub-fog.js?v=20261013s';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013s';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013s';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013s';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013s';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013s';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { renderFog } from './dnd-hub-fog.js?v=20261013t';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013t';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013t';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013t';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013t';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013t';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
@@ -119,7 +119,8 @@ export function renderTokens() {
       return;
     }
     // Whose turn it is changes how a token looks (dimmed out of turn) and whether it drags.
-    const cacheKey = JSON.stringify(token) + '|' + modeFor(token.id);
+    // Selection is drawn on the sprite too: without it here a selected token kept its old sprite, with no ring.
+    const cacheKey = JSON.stringify(token) + '|' + modeFor(token.id) + '|' + MAP.selectedTokens.has(token.id);
     const existing = MAP.tokenSprites[token.id];
     if (existing && _tokenDataCache.get(token.id) === cacheKey) {
       if (!existing.parent) layers.tokens.addChild(existing);
@@ -274,10 +275,15 @@ export function buildTokenSprite(token, gs) {
   container.y = token.y;
   container.tokenId = token.id;
 
-  // Selection ring (DM shift-select)
+  // Selection ring: the DM's shift-select (white), or a player's attack target (red, with ticks)
   if (MAP.selectedTokens.has(token.id)) {
     const selRing = new PIXI.Graphics();
-    selRing.circle(0, 0, r + 6).stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+    if (MAP.isDM) selRing.circle(0, 0, r + 6).stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+    else {
+      selRing.circle(0, 0, r + 6).stroke({ color: 0xef4444, width: 2.5, alpha: 0.95 });
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) selRing.moveTo(dx * (r + 3), dy * (r + 3)).lineTo(dx * (r + 11), dy * (r + 11));
+      selRing.stroke({ color: 0xef4444, width: 2.5, alpha: 0.95 });
+    }
     container.addChild(selRing);
   }
 
@@ -345,6 +351,18 @@ function setupTokenDrag(container, token) {
 
   container.on('pointerdown', e => {
     if (MAP.activeTool !== 'select') return;
+    // A player clicking a token that is not theirs makes it their target (one at a time; click again to clear).
+    // Only the DM could select before, so a player's attack was never judged and its damage never applied
+    // (owner, 2026-10-05: "hit an 8 hp enemy for 16, nothing happened").
+    if (!MAP.isDM && token.userId !== userId) {
+      const was = MAP.selectedTokens.has(token.id);
+      MAP.selectedTokens.clear();
+      if (!was) MAP.selectedTokens.add(token.id);
+      renderTokens();
+      if (!was) moveToast(`Target: ${token.name || 'token'}. Your next attack roll is against it.`);
+      e.stopPropagation();
+      return;
+    }
     // Shift-click: DM multi-select
     if (e.shiftKey && MAP.isDM) {
       if (MAP.selectedTokens.has(token.id)) MAP.selectedTokens.delete(token.id);
@@ -914,5 +932,14 @@ export function placePartyTokens() {
   for (const uid of Object.keys(seeded)) {
     if (!MAP.mapData.tokens?.[`player_${uid}`]) delete seeded[uid];
   }
+  const before = new Set(Object.keys(MAP.mapData.tokens || {}));
   renderTokens();
+  // It used to say nothing, so with everyone already on the map the button looked broken (owner, 2026-10-05).
+  const toks = Object.values(MAP.mapData.tokens || {}).filter(t => t.type === 'player');
+  const added = toks.filter(t => !before.has(t.id)).map(t => t.name);
+  const waiting = toks.filter(t => t.waiting).map(t => t.name);
+  const heroes = (serverData?.campaigns?.[MAP.campaignId]?.members || []).length;
+  moveToast(added.length ? `${added.join(', ')} added — waiting left of the map. Drag them in.`
+    : waiting.length ? `Everyone has a token. Waiting left of the map: ${waiting.join(', ')}.`
+    : heroes ? 'Every hero is already on the map.' : 'No players have joined this campaign yet.');
 }

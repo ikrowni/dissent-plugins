@@ -1,10 +1,10 @@
 // dnd-hub-walls.js — wall/door rendering and toolbar tool state
-import { MAP, segmentsIntersect } from './dnd-hub-state.js?v=20261009a';
-import { renderFog } from './dnd-hub-fog.js?v=20261013s';
-import { renderLights } from './dnd-hub-lights.js?v=20261013s';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013s';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261013s';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261011b';
+import { MAP, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261013t';
+import { renderFog } from './dnd-hub-fog.js?v=20261013t';
+import { renderLights } from './dnd-hub-lights.js?v=20261013t';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261013t';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261013t';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261013t';
 
 // Convert a stored wall/door segment to canvas pixel coordinates.
 // Handles both formats:
@@ -70,6 +70,9 @@ export function renderWalls() {
 
   Object.values(MAP.mapData.doors || {}).forEach(d => {
     if (!showWalls && d.isWindow) return;
+    // The walls layer sits above the fog, so a player saw every door on a black map (owner, 2026-10-05). A door
+    // shows once either side of it has been seen.
+    if (!showWalls && !doorSeen(d)) return;
     const isSelected = d.id === MAP.selectedDoor;
     const isHover    = d.id === MAP.eraseHover;
     let baseCol;
@@ -93,6 +96,21 @@ export function renderWalls() {
   });
 
   layers.walls.addChild(g);
+}
+
+/** Has the player seen a door: is the square on either side of its middle in sight now, or explored? */
+function doorSeen(d) {
+  const p = wallPx(d), md = MAP.mapData;
+  const gs = effectiveGs(md);
+  const ox = (MAP._bgOffset?.x ?? 0) + (md.gridOffsetX || 0), oy = (MAP._bgOffset?.y ?? 0) + (md.gridOffsetY || 0);
+  const len = Math.hypot(p.x2 - p.x1, p.y2 - p.y1) || 1;
+  const nx = -(p.y2 - p.y1) / len * gs * 0.4, ny = (p.x2 - p.x1) / len * gs * 0.4; // a little way off each face
+  const mx = (p.x1 + p.x2) / 2, my = (p.y1 + p.y2) / 2;
+  return [[mx + nx, my + ny], [mx - nx, my - ny]].some(([x, y]) => {
+    const key = `${Math.floor((x - ox) / gs)},${Math.floor((y - oy) / gs)}`;
+    const st = md.fogState?.[key];
+    return MAP.localSightCells?.has(key) || st === 'visible' || st === 'explored';
+  });
 }
 
 export function toggleEditMode() {

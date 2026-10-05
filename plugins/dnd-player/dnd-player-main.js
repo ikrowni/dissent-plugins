@@ -292,6 +292,7 @@ async function rollDice(rollType = null) {
     }
     const total = rolls.reduce((a, b) => a + b, 0) + mod;
     _applyRollResult({ result: total, rolls, advMode, expression, label, ts, userId: USER_ID });
+    _afterMyRoll({ result: total, rolls, advMode, expression, label, ts, userId: USER_ID }).catch(() => {});
     const payload = { type: EV.DICE_ROLL, userId: USER_ID, expression, result: total, rolls, label, ts };
     realtimePublish(EV.DICE_ROLL, payload);
     localPublish('dnd-hub', EV.DICE_ROLL, payload);
@@ -713,6 +714,15 @@ document.addEventListener('visibilitychange', async () => {
   if (storedId && storedId !== _lastCampaignId && storedId !== CAMPAIGN_ID) onInit({});
 });
 
+let _activeItemLib = {};
+/** A shop's lines as cards: the item, its price, how many are left. */
+function _shopLines(lines, itemLib) {
+  return (lines || []).map((si, idx) => {
+    const item = itemLib[si.itemId];
+    return item ? { ...item, price: si.price, qty: si.qty ?? 1, slotId: si.slotId || (si.itemId + '_' + idx) } : null;
+  }).filter(Boolean);
+}
+
 async function _openShopTab(shopId) {
   // Read the DM's authoritative catalog first — the hub can't overwrite this namespace.
   // Fall back to hub-dm for backwards compatibility with sessions before dm-catalog was written.
@@ -727,10 +737,8 @@ async function _openShopTab(shopId) {
   const shopDef = dmCamp?.shops?.[shopId] || hubCamp?.shops?.[shopId];
   if (!shopDef) return;
 
-  const shopItems = (shopDef.items || []).map((si, idx) => {
-    const item = itemLib[si.itemId];
-    return item ? { ...item, price: si.price, slotId: si.slotId || (si.itemId + '_' + idx) } : null;
-  }).filter(Boolean);
+  _activeItemLib = itemLib;
+  const shopItems = _shopLines(shopDef.items, itemLib);
 
   await Promise.all(shopItems.map(async it => {
     if (it.imageFileId && !_shopImageUrls[it.id]) {
@@ -822,7 +830,7 @@ function _renderShopTab(shopItems) {
             imgHtml +
             '<div style="flex:1;min-width:0">' +
               '<div style="font-size:12px;font-weight:600;color:var(--text)">' + esc(it.name) + '</div>' +
-              '<div style="font-size:10px;color:var(--muted)">' + esc(it.type) + '</div>' +
+              '<div style="font-size:10px;color:var(--muted)">' + esc(it.type) + (it.qty > 1 ? ' · ' + it.qty + ' left' : '') + '</div>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">' +
               (!expanded ? '<span style="font-size:12px;font-weight:700;color:var(--dnd-gold)">' + it.price + ' gp</span>' : '') +
@@ -864,7 +872,7 @@ function _renderShopTab(shopItems) {
       const contestKey = 'shop_' + _activeShopId + '_' + slotId;
       const payload = {
         type: EV.LOOT_INTEREST,
-        contestKey,
+        contestKey, slotId,
         tokenId: null, shopId: _activeShopId,
         itemId, itemName,
         price, source: 'shop',
@@ -923,16 +931,110 @@ function weaponAttack(equipIdx) {
   rollDice('attack');
 }
 
+/**
+ * What a roll of mine was for: a weapon's to-hit, then its damage; a healing item; my initiative. Runs for the Hub's
+ * dice and for the sheet's own fallback roll alike — the fallback used to show the number and drop the rest.
+ */
+async function _afterMyRoll(p) {
+  // My initiative (Table rules: playersRollInitiative), thrown with the table's dice.
+  if (_pendingInitiative) {
+    _pendingInitiative = false;
+    _showPlayerToast(`Initiative: ${p.result}`);
+    await publishTo(['hub'], EV.INITIATIVE_ROLL, { campaignId: CAMPAIGN_ID, userId: USER_ID, roll: p.result, fromUserId: USER_ID });
+    return;
+  }
+
+  // Weapon to-hit phase
+  if (_pendingWeaponAttack) {
+    const { item, weaponEffect, equipIdx } = _pendingWeaponAttack;
+    const toHitRoll = (p.rolls && p.rolls.length > 0) ? p.rolls[0] : p.result;
+    const toHitTotal = p.result;
+    _pendingWeaponAttack = null;
+
+    // Store context for damage phase
+    _pendingWeaponDamage = { item, weaponEffect, toHitRoll, toHitMod: parseToHitMod(weaponEffect.toHit), toHitTotal, equipIdx };
+    setPendingDamageIdx(equipIdx);
+
+    // Broadcast to-hit to DM
+    const attackPayload = {
+      type: EV.WEAPON_ATTACK,
+      userId: USER_ID,
+      campaignId: CAMPAIGN_ID,
+      fromUserId: USER_ID,
+      weaponName: item.name,
+      toHitRoll,
+      toHitMod: parseToHitMod(weaponEffect.toHit),
+      toHitTotal,
+      label: `${item.name} — Attack`,
+    };
+    // Players cannot publish to the DM's sidebar (no consent → 403); the DM's Hub hands it on.
+    await publishTo(['hub'], EV.WEAPON_ATTACK, attackPayload);
+    return;
+  }
+
+  // Weapon damage phase
+  if (_pendingWeaponDamage) {
+    const { item, weaponEffect, toHitRoll, toHitMod, toHitTotal, equipIdx } = _pendingWeaponDamage;
+    _pendingWeaponDamage = null;
+    clearPendingDamageIdx();
+
+    const conditionEffect = (item.effects || []).find(e => e.type === 'condition_target');
+    const damagePayload = {
+      type: EV.WEAPON_ATTACK,
+      userId: USER_ID,
+      campaignId: CAMPAIGN_ID,
+      fromUserId: USER_ID,
+      weaponName: item.name,
+      toHitRoll,
+      toHitMod,
+      toHitTotal,
+      damageRoll: p.result,
+      damageExpr: weaponEffect.damage,
+      damageType: weaponEffect.damageType,
+      label: `${item.name} — Damage`,
+      ...(conditionEffect ? {
+        conditionTarget: {
+          condition: conditionEffect.condition,
+          ...(conditionEffect.saveDC !== undefined ? { saveDC: conditionEffect.saveDC } : {}),
+          ...(conditionEffect.saveAbility ? { saveAbility: conditionEffect.saveAbility } : {}),
+        }
+      } : {}),
+    };
+    await publishTo(['hub'], EV.WEAPON_ATTACK, damagePayload);
+    return;
+  }
+
+  // Healing consumable phase
+  if (_pendingHealItem) {
+    const { item } = _pendingHealItem;
+    _pendingHealItem = null;
+
+    const healAmount = p.result;
+    const effectiveStats = computeEffectiveStats(CHAR);
+    // Healing from 0 wakes the hero and clears death saves (lk-rules5e).
+    Object.assign(CHAR, applyHealing({ ...CHAR, hpMax: effectiveStats.hpMax }, healAmount), { hpMax: CHAR.hpMax });
+    window.CHAR = CHAR;
+    saveChar();
+    renderAll();
+
+    _showPlayerToast(`🧪 ${item.name}: healed ${healAmount} HP`);
+    announceHp(`${item.name} (healing)`);
+    return;
+  }
+
+}
+
 /** My initiative: d20 + DEX modifier, sent to the DM's tracker (Table rules: playersRollInitiative). */
+let _pendingInitiative = false;
 async function rollInitiativeNow() {
-  if (!CHAR || !needsMyRoll(_initiative, USER_ID)) return;
-  const d20 = Math.floor(Math.random() * 20) + 1;
-  const roll = d20 + abilityMod((effectiveChar() || CHAR).dex);
+  if (!CHAR || !needsMyRoll(_initiative, USER_ID) || _pendingInitiative) return;
   setNeedsInitiativeRoll(false);
   renderCombat(_initiativeActive);
-  _showPlayerToast(`Initiative: ${roll} (d20 ${d20})`);
-  // Via the Hub: players have not consented to the DM's sidebar, so the node refuses a publish to it (403).
-  await publishTo(['hub'], EV.INITIATIVE_ROLL, { campaignId: CAMPAIGN_ID, userId: USER_ID, roll, fromUserId: USER_ID });
+  // The real dice, on the table like every other roll (it was a hidden random number). _afterMyRoll sends it to the
+  // DM's tracker — via the Hub: players cannot publish to the DM's sidebar (403).
+  _pendingInitiative = true;
+  setDiceRollLabel('Initiative', abilityMod((effectiveChar() || CHAR).dex));
+  await rollDice('initiative');
 }
 
 function weaponRollDamage() {
@@ -1051,84 +1153,7 @@ async function onEvent(ev) {
     _pendingPhysicsRollTimer = null;
     _pendingPhysicsRollTs = null;
     _applyRollResult(p);
-
-    // Weapon to-hit phase
-    if (_pendingWeaponAttack) {
-      const { item, weaponEffect, equipIdx } = _pendingWeaponAttack;
-      const toHitRoll = (p.rolls && p.rolls.length > 0) ? p.rolls[0] : p.result;
-      const toHitTotal = p.result;
-      _pendingWeaponAttack = null;
-
-      // Store context for damage phase
-      _pendingWeaponDamage = { item, weaponEffect, toHitRoll, toHitMod: parseToHitMod(weaponEffect.toHit), toHitTotal, equipIdx };
-      setPendingDamageIdx(equipIdx);
-
-      // Broadcast to-hit to DM
-      const attackPayload = {
-        type: EV.WEAPON_ATTACK,
-        userId: USER_ID,
-        campaignId: CAMPAIGN_ID,
-        fromUserId: USER_ID,
-        weaponName: item.name,
-        toHitRoll,
-        toHitMod: parseToHitMod(weaponEffect.toHit),
-        toHitTotal,
-        label: `${item.name} — Attack`,
-      };
-      // Players cannot publish to the DM's sidebar (no consent → 403); the DM's Hub hands it on.
-      await publishTo(['hub'], EV.WEAPON_ATTACK, attackPayload);
-      return;
-    }
-
-    // Weapon damage phase
-    if (_pendingWeaponDamage) {
-      const { item, weaponEffect, toHitRoll, toHitMod, toHitTotal, equipIdx } = _pendingWeaponDamage;
-      _pendingWeaponDamage = null;
-      clearPendingDamageIdx();
-
-      const conditionEffect = (item.effects || []).find(e => e.type === 'condition_target');
-      const damagePayload = {
-        type: EV.WEAPON_ATTACK,
-        userId: USER_ID,
-        campaignId: CAMPAIGN_ID,
-        fromUserId: USER_ID,
-        weaponName: item.name,
-        toHitRoll,
-        toHitMod,
-        toHitTotal,
-        damageRoll: p.result,
-        damageExpr: weaponEffect.damage,
-        damageType: weaponEffect.damageType,
-        label: `${item.name} — Damage`,
-        ...(conditionEffect ? {
-          conditionTarget: {
-            condition: conditionEffect.condition,
-            ...(conditionEffect.saveDC !== undefined ? { saveDC: conditionEffect.saveDC } : {}),
-            ...(conditionEffect.saveAbility ? { saveAbility: conditionEffect.saveAbility } : {}),
-          }
-        } : {}),
-      };
-      await publishTo(['hub'], EV.WEAPON_ATTACK, damagePayload);
-      return;
-    }
-
-    // Healing consumable phase
-    if (_pendingHealItem) {
-      const { item } = _pendingHealItem;
-      _pendingHealItem = null;
-
-      const healAmount = p.result;
-      const effectiveStats = computeEffectiveStats(CHAR);
-      // Healing from 0 wakes the hero and clears death saves (lk-rules5e).
-      Object.assign(CHAR, applyHealing({ ...CHAR, hpMax: effectiveStats.hpMax }, healAmount), { hpMax: CHAR.hpMax });
-      window.CHAR = CHAR;
-      saveChar();
-      renderAll();
-
-      _showPlayerToast(`🧪 ${item.name}: healed ${healAmount} HP`);
-      announceHp(`${item.name} (healing)`);
-      return;
-    }
+    await _afterMyRoll(p);
 
     return;
   }
@@ -1304,9 +1329,13 @@ async function onEvent(ev) {
       if (item) {
         // Gold spent since the interest was declared: the hero cannot pay, so nothing changes hands, and the DM is
         // told (players cannot publish to the DM sidebar: my Hub → the DM's Hub → their sidebar, as for interest).
+        // The winner is told either way (owner, 2026-10-05: nothing said who won or where the item went).
         if (!_addItemToChar(item, 1, p.goldCost || 0)) {
           publishTo(['hub'], 'loot:declined', { campaignId: CAMPAIGN_ID, itemId: p.itemId, itemName: item.name,
             goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '' }).catch(() => {});
+          _showPlayerToast(`You won ${item.name}, but no longer have the ${p.goldCost || 0} gp to pay for it.`);
+        } else {
+          _showPlayerToast(`🎉 You got ${item.name}${p.goldCost ? ` for ${p.goldCost} gp` : ''}! It is in your inventory.`);
         }
         // Clear the pending reward so onInit doesn't add it again as a duplicate (or try a sale that failed again)
         const pr = SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.pendingRewards?.[USER_ID];
@@ -1321,7 +1350,14 @@ async function onEvent(ev) {
     }
     // The sale is settled for everyone who wanted it: the shop shows its buttons again (and the gold left), so a
     // second one can be bought. They stayed on "✓ Interested" until the shop was reopened (rules playtest).
-    if (p.shopId && p.shopId === _activeShopId) _renderShopTab(_activeShopItems || []);
+    if (p.shopId && p.shopId === _activeShopId) {
+      // The DM sends what is left on the shelf: the item sold is gone (or one fewer) on every screen.
+      if (Array.isArray(p.shopItems)) {
+        _activeShopItems = _shopLines(p.shopItems, _activeItemLib);
+        if (_activeShopData) _activeShopData.shop = { ..._activeShopData.shop, items: p.shopItems };
+      }
+      _renderShopTab(_activeShopItems || []);
+    }
     return;
   }
 }

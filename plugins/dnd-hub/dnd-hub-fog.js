@@ -1,9 +1,10 @@
 // dnd-hub-fog.js — fog-of-war rendering, brush tools, fog save/reset
-import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261009a';
+import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261013t';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
-import { computeLitCells } from './dnd-hub-lights.js?v=20261013s';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
+import { computeLitCells, lightPx, getEffectiveRadius } from './dnd-hub-lights.js?v=20261013t';
+import { computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261013t';
 import { fogAlpha } from './dnd-hub-rules.js';
 import { fogBefore, fogAfter } from './dnd-hub-undo.js';
 
@@ -27,11 +28,10 @@ export function renderFog() {
   const ox = (MAP._bgOffset?.x ?? 0) + (MAP.mapData.gridOffsetX || 0);
   const oy = (MAP._bgOffset?.y ?? 0) + (MAP.mapData.gridOffsetY || 0);
   const fogState = MAP.mapData.fogState || {};
-  // Phase 6: cells illuminated by light sources (union'd into visible set below)
-  // A player sees a lit square only along a line of sight (dnd-hub-los.js localSightCells).
-  const allLit = computeLitCells(MAP.mapData.lights || [], MAP.mapData);
-  const sightCells = MAP.isDM ? null : (MAP.localSightCells || new Set());
-  const litCells = sightCells ? new Set([...allLit].filter(c => sightCells.has(c))) : allLit;
+  // The DM's fog clears every lit square. A player's does not work in squares at all: lit areas are cut out below as
+  // the lights' own smooth shapes, clipped to what the player's heroes can see. Squares gave the fog staircase edges
+  // and stray black blocks round a lit room (owner, 2026-10-05).
+  const litCells = MAP.isDM ? computeLitCells(MAP.mapData.lights || [], MAP.mapData) : new Set();
   const W = MAP.app.screen.width;
   const H = MAP.app.screen.height;
   const z = MAP.zoom || 1;
@@ -67,17 +67,34 @@ export function renderFog() {
   const endCy   = Math.ceil(((H - panY) / z - oy) / gs) + 1;
 
   // Draw all fog cells first; the polygon cutout below erases the visible area.
+  // A player's squares go through a soft blur: the remembered (explored) area is kept in squares, and its edge was a
+  // hard staircase. What a player sees NOW is the smooth cutout, so a square the DM's screen marks 'visible' counts
+  // as explored here — it used to punch a square hole the round vision did not match.
+  const player = !MAP.isDM;
+  let cellCtx = ctx;
+  if (player) {
+    let bc = MAP._fogCellCanvas;
+    if (!bc || bc.width !== W || bc.height !== H) { bc = document.createElement('canvas'); bc.width = W; bc.height = H; MAP._fogCellCanvas = bc; }
+    cellCtx = bc.getContext('2d');
+    cellCtx.clearRect(0, 0, W, H);
+  }
   for (let cy = startCy; cy <= endCy; cy++) {
     for (let cx = startCx; cx <= endCx; cx++) {
-      // Lit cells are always clear — treat as visible regardless of fogState
+      // Lit cells are always clear (the DM's screen) — treat as visible regardless of fogState
       if (litCells.has(`${cx},${cy}`)) continue;
-      const state = fogState[`${cx},${cy}`] ?? 'unexplored';
+      let state = fogState[`${cx},${cy}`] ?? 'unexplored';
+      if (player && state === 'visible') state = 'explored';
       const alpha = fogAlpha(state, MAP.isDM);
       if (!alpha) continue; // 'visible' — no fog
-      ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+      cellCtx.fillStyle = `rgba(0,0,0,${alpha})`;
       // +0.5px overlap prevents hairline gaps between adjacent cells at non-integer zoom
-      ctx.fillRect(wx2sx(ox + cx * gs), wy2sy(oy + cy * gs), cellPx + 0.5, cellPx + 0.5);
+      cellCtx.fillRect(wx2sx(ox + cx * gs), wy2sy(oy + cy * gs), cellPx + 0.5, cellPx + 0.5);
     }
+  }
+  if (player) {
+    ctx.filter = `blur(${Math.max(2, Math.min(cellPx * 0.35, 18)).toFixed(1)}px)`;
+    ctx.drawImage(MAP._fogCellCanvas, 0, 0);
+    ctx.filter = 'none';
   }
 
   // ── Vision cutout — smooth visibility polygon ────────────────────────────────
@@ -116,10 +133,37 @@ export function renderFog() {
           vctx.fill();
         }
 
-        // Lit cells added as rects on top (same canvas → same union).
-        for (const key of litCells) {
-          const [lcx, lcy] = key.split(',').map(Number);
-          vctx.fillRect(wx2sx(ox + lcx * gs), wy2sy(oy + lcy * gs), cellPx + 0.5, cellPx + 0.5);
+        // Lit areas: each light's own shape (stopped by walls), clipped to what my heroes can see from where they
+        // stand — a lit room behind a wall stays dark. Same canvas → same union with the vision.
+        const lights = MAP.mapData.lights || [];
+        if (lights.length && MAP.localSightPolys?.length) {
+          let lc = MAP._litCanvas;
+          if (!lc || lc.width !== W || lc.height !== H) { lc = document.createElement('canvas'); lc.width = W; lc.height = H; MAP._litCanvas = lc; }
+          const lctx = lc.getContext('2d');
+          lctx.clearRect(0, 0, W, H);
+          lctx.fillStyle = 'black';
+          const fill = (c, poly) => {
+            c.beginPath();
+            c.moveTo(wx2sx(poly[0].x), wy2sy(poly[0].y));
+            for (let i = 1; i < poly.length; i++) c.lineTo(wx2sx(poly[i].x), wy2sy(poly[i].y));
+            c.closePath(); c.fill();
+          };
+          const walls = sightBlockers(MAP.mapData);
+          for (const raw of lights) {
+            const l = lightPx(raw);
+            const poly = computeVisibilityPolygon(l.x, l.y, getEffectiveRadius(l), walls);
+            if (poly.length >= 3) fill(lctx, poly);
+          }
+          lctx.globalCompositeOperation = 'destination-in';
+          const sc = MAP._sightCanvas && MAP._sightCanvas.width === W && MAP._sightCanvas.height === H
+            ? MAP._sightCanvas : (MAP._sightCanvas = Object.assign(document.createElement('canvas'), { width: W, height: H }));
+          const sctx = sc.getContext('2d');
+          sctx.clearRect(0, 0, W, H);
+          sctx.fillStyle = 'black';
+          for (const poly of MAP.localSightPolys) fill(sctx, poly);
+          lctx.drawImage(sc, 0, 0);
+          lctx.globalCompositeOperation = 'source-over';
+          vctx.drawImage(lc, 0, 0);
         }
 
         // ── Step 2: inward-only blur on maskCanvas ──────────────────────────────

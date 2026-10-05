@@ -1,8 +1,8 @@
 // dnd-hub-templates.js — AoE template placement, rendering, and broadcast
-import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261009a';
+import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261013t';
 import { genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261011b';
+import { EV } from './dnd-hub-event-types.js?v=20261013t';
 
 // 6 preset colors (PIXI hex + CSS hex pairs)
 export const TEMPLATE_COLORS = [
@@ -70,7 +70,8 @@ export function showTemplatePicker() {
     'padding:12px;z-index:9000;display:flex;flex-direction:column;gap:10px;min-width:220px;' +
     'box-shadow:0 8px 32px rgba(0,0,0,.6)';
   panel.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:var(--lk-gold);letter-spacing:.05em">PLACE TEMPLATE</div>' +
+    '<div style="display:flex;align-items:center;font-size:11px;font-weight:700;color:var(--lk-gold);letter-spacing:.05em">PLACE TEMPLATE' +
+      '<button onclick="destroyTemplatePicker()" title="Close (Esc)" aria-label="Close" style="margin-left:auto;background:none;border:none;color:var(--lk-muted);font-size:16px;cursor:pointer;line-height:1">&times;</button></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="tmpl-shape-btns">' +
       ['circle','cone','line','cube'].map(t =>
         `<button id="tmpl-shape-${t}" onclick="selectTemplateShape('${t}')" ` +
@@ -94,6 +95,9 @@ export function showTemplatePicker() {
     '<div style="font-size:10px;color:rgba(255,255,255,.4)" id="tmpl-hint">Click a shape, then click-drag on map</div>';
   document.body.appendChild(panel);
 }
+
+/** A shape is chosen and the next drag on the map places it. */
+export const templatePending = () => !!_pendingType;
 
 export function destroyTemplatePicker() {
   document.getElementById('template-picker')?.remove();
