@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013v';
+import { EV } from './dnd-hub-event-types.js?v=20261013w';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
@@ -312,18 +312,24 @@ export async function resolveContest(contestKey) {
 }
 
 /** A shop sale the winner could not pay for: the item goes back on its shelf (the sale took it off). */
+const _restocked = new Set(); // declined sales already put back (the message can arrive twice)
 export async function restockDeclined(p) {
-  const camp = _state.serverData?.campaigns?.[_state.dmCampaignId];
-  const shop = p.shopId ? camp?.shops?.[p.shopId] : null;
+  const key = p.eid || `${p.shopId}|${p.slotId}|${p.userId}|${p.itemId}`;
+  if (_restocked.has(key)) return;
+  _restocked.add(key);
+  const shop = p.shopId ? shopOf(p.shopId) : null;
   if (!shop) return;
   shop.items = shop.items || [];
   const line = shop.items.find(si => si.slotId === p.slotId);
   if (line) line.qty = (line.qty ?? 1) + 1;
   else shop.items.push({ slotId: p.slotId || genId(), itemId: p.itemId, price: p.goldCost || 0, qty: 1 });
-  if (_state.dmCampaign?.shops) _state.dmCampaign.shops[shop.id] = shop;
+  _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
 }
+
+/** A shop as the Shops tab holds it — the one copy every change goes through (then copied to the campaign). */
+function shopOf(shopId) { return _state.dmCampaign?.shops?.[shopId] || null; }
 
 export async function handleContestResult(p) {
   const contestKey = p.contestKey;
@@ -347,7 +353,7 @@ export async function handleContestResult(p) {
   ];
 
   // A shop sells what it has: one fewer of that line, gone at none (it stayed for sale forever, owner 2026-10-05).
-  const shop = contest.source === 'shop' && contest.shopId ? camp.shops?.[contest.shopId] : null;
+  const shop = contest.source === 'shop' && contest.shopId ? shopOf(contest.shopId) : null;
   if (shop) {
     const slotId = contest.slotId || String(contestKey).replace('shop_' + contest.shopId + '_', '');
     const line = (shop.items || []).find(si => si.slotId === slotId);
@@ -355,7 +361,7 @@ export async function handleContestResult(p) {
       line.qty = Math.max(0, (line.qty ?? 1) - 1);
       if (!line.qty) shop.items = shop.items.filter(si => si !== line);
     }
-    if (_state.dmCampaign?.shops) _state.dmCampaign.shops[shop.id] = shop;
+    camp.shops = _state.dmCampaign.shops;
   }
 
   // Mark claimed on the token if this is a loot contest

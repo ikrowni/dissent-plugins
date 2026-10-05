@@ -1,15 +1,15 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261013v';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261013w';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261013v';
-import { renderFog } from './dnd-hub-fog.js?v=20261013v';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013v';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013v';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013v';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013v';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013v';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261013v';
+import { EV } from './dnd-hub-event-types.js?v=20261013w';
+import { renderFog } from './dnd-hub-fog.js?v=20261013w';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261013w';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261013w';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261013w';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261013w';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261013w';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261013w';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
@@ -140,6 +140,9 @@ export function renderTokens() {
 
   // A condition the DM put on my hero plays its effect on my screen (dnd-hub-condition-fx.js).
   if (!MAP.isDM) noticeMyConditions(mapData.tokens[`player_${userId}`]);
+  // A rebuilt sprite starts out visible: settle who this player sees and who faces whom now, not at the next fog
+  // redraw (a rebuilt monster in the dark was shown, and auto-targeted, until then).
+  applyPlayerSight(); applyFacing();
 
   // Reposition active-turn ring to match rebuilt sprite
   if (MAP.activeTurnTokenId) {
