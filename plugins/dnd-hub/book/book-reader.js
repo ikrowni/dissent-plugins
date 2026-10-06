@@ -80,11 +80,14 @@ function draw() {
     return;
   }
   const b = R.books[R.book] || R.books[0];
-  const tabs = [['story', 'Story', b.story.length], ['images', 'Maps & art', (b.images || []).length], ['monsters', 'Monsters', b.monsters.length], ['items', 'Items', b.items.length]];
+  // Maps and art are two tabs (owner, 2026-10-06): a DM looking for a map should not scroll past fifty paintings.
+  const ofKind = k => (b.images || []).filter(p => (p.kind === 'map') === (k === 'map'));
+  const tabs = [['story', 'Story', b.story.length], ['maps', 'Maps', ofKind('map').length], ['art', 'Art', ofKind('art').length],
+    ['monsters', 'Monsters', b.monsters.length], ['items', 'Items', b.items.length]];
   el.innerHTML = head + `
     ${R.books.length > 1 ? `<div class="bk-books">${R.books.map((x, i) => `<button aria-pressed="${i === R.book}" onclick="bookPanelBook(${i})">${esc(x.title)}</button>`).join('')}</div>` : `<div class="bk-panel-title">${esc(b.title)}</div>`}
     <div class="bk-tabs small">${tabs.map(([k, l, n]) => `<button aria-selected="${R.tab === k}" ${n ? '' : 'disabled'} onclick="bookPanelTab('${k}')">${l} <span>${n}</span></button>`).join('')}</div>
-    <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'images' ? picturesView(b) : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
+    <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'maps' || R.tab === 'art' ? picturesView(b, R.tab === 'maps' ? 'map' : 'art') : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
   // The real pages need room: the panel widens while it shows them.
   el.classList.toggle('wide', R.tab === 'story' && hasPages());
   if (R.tab === 'story' && hasPages()) fillPage(b, R.view);
@@ -123,13 +126,13 @@ function listView(list, kind) {
 const pageButton = (kind, e) => (e.page && bookDocs(book())[e.doc || 0]
   ? ` <button class="btn btn-ghost btn-sm" onclick="bookShowPage('${kind}','${esc(e.id)}')">Show the page</button>` : '');
 
-// ── Maps & art ───────────────────────────────────────────────────────────────────────────────────────────────
+// ── Maps, Art ───────────────────────────────────────────────────────────────────────────────────────────────
 const _thumbs = new Map(); // picture file id → object URL (this session)
 // A picture from a PDF is known by its page; a loose one (a card deck, a handout folder) by its set and name.
 const picLabel = p => (p.page ? `page ${p.page}` : [p.group, p.title].filter(Boolean).join(' · ') || 'picture');
-function picturesView(b) {
+function picturesView(b, kind) {
   // The book's own pictures first, then each set (folder) under its name: a 40-card deck stays together.
-  const pics = [...(b.images || [])].sort((x, y) => (x.page ? 0 : 1) - (y.page ? 0 : 1) || String(x.group || '').localeCompare(String(y.group || '')));
+  const pics = [...(b.images || [])].filter(p => (p.kind === 'map') === (kind === 'map')).sort((x, y) => (x.page ? 0 : 1) - (y.page ? 0 : 1) || String(x.group || '').localeCompare(String(y.group || '')));
   queueMicrotask(() => pics.forEach(p => loadThumb(p)));
   let lastSet = null;
   const setHead = p => {
@@ -138,14 +141,16 @@ function picturesView(b) {
     lastSet = set;
     return set ? `<div class="bk-set-head">${esc(set)}</div>` : '';
   };
-  return `<p class="bk-help">A map becomes the table's map for everyone; art pops up on the players' screens.</p>
+  const map = kind === 'map';
+  return `<p class="bk-help">${map ? 'A map becomes the table\'s map for everyone.' : 'Art pops up on the players\' screens.'} Draw a box on any page
+      in Story (✂ Cut out) to add more.</p>
     <div class="bk-grid small">${pics.map(p => `${setHead(p)}<div class="bk-pic kept">
       <div class="bk-pic-img" data-pic="${esc(p.id)}">${_thumbs.get(p.id) ? `<img src="${_thumbs.get(p.id)}" alt="${esc(p.title)}">` : '<span>…</span>'}</div>
-      <div class="bk-pic-foot"><span>${p.kind === 'map' ? 'Map' : 'Art'} · ${esc(picLabel(p))}</span></div>
+      <div class="bk-pic-foot"><span>${esc(p.title && !/^Page \d+ picture$/.test(p.title) ? `${p.title} · ${picLabel(p)}` : picLabel(p))}</span></div>
       <div class="bk-pic-actions">
-        <button class="btn btn-gold btn-sm" onclick="bookUseMap('${esc(p.id)}')">Use as the map</button>
-        <button class="btn btn-ghost btn-sm" onclick="bookShowPicture('${esc(p.id)}')">Show the players</button></div>
-    </div>`).join('') || '<div class="bk-empty">This book has no pictures.</div>'}</div>`;
+        <button class="btn ${map ? 'btn-gold' : 'btn-ghost'} btn-sm" onclick="bookUseMap('${esc(p.id)}')">Use as the map</button>
+        <button class="btn ${map ? 'btn-ghost' : 'btn-gold'} btn-sm" onclick="bookShowPicture('${esc(p.id)}')">Show the players</button></div>
+    </div>`).join('') || `<div class="bk-empty">This book has no ${map ? 'maps' : 'art'} yet.</div>`}</div>`;
 }
 // Pictures are known by their own id: several can share one file (a pack, book-picture-pack.js).
 async function loadThumb(p) {
