@@ -4,8 +4,8 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014t';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014t';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014u';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014u';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { rememberPdf } from './book-pdf.js';
@@ -14,7 +14,9 @@ import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBoo
 import { planPictureFiles } from './book-picture-pack.js';
 import { savePages, pagesLine } from './book-pages.js';
 import { snippetUrls, closeSnippets } from './book-snippets.js';
-import { SORT_OPTIONS, kindFromChoice } from './book-images.js';
+import { SORT_OPTIONS, kindFromChoice, paintedPage } from './book-images.js';
+import { parseBook } from './book-parse.js';
+import { readScannedPages } from './book-ocr.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Index'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -52,10 +54,10 @@ function listView() {
       <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Your library</div></div>
     <label class="bk-drop" id="bk-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
       ondrop="event.preventDefault();this.classList.remove('over');bookDrop(event)">
-      <input type="file" accept="application/pdf,.pdf,.zip,application/zip,.lkpack,image/*" multiple onchange="bookPickFiles(this.files)" hidden>
+      <input type="file" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.zip,application/zip,.lkpack,image/*" multiple onchange="bookPickFiles(this.files)" hidden>
       <div class="bk-drop-icon">${icon('book-open', { size: 34 })}</div>
       <b>Import a book</b>
-      <span>Drop an adventure or rules PDF here, or click to choose one. Its monsters, spells, magic items and story
+      <span>Drop an adventure or rules PDF (or a Word file of monsters) here, or click to choose one. Its monsters, spells, magic items and story
         become usable at your table. A whole download works too: a <b>.zip</b>, several PDFs at once (the book and its
         maps), or a folder with picture sets like a card deck. A <b>.lkpack</b> copy of a book you saved opens as well.</span>
       <small>Only import books you own. The files stay on your computer; only what you keep is saved, and only you can read it.</small>
@@ -195,6 +197,63 @@ function bundleNotes(nt) {
   return parts.length ? `<p class="bk-help bk-notes">${parts.join(' ')}</p>` : '';
 }
 
+// A PDF with no text layer at all (pictures of pages nobody read: Volo's Guide to Baldur's Gate II) gives nothing to
+// find. Our OCR can read every page on this computer: a few seconds a page, so it is offered, not done.
+const SECONDS_A_PAGE = 5; // measured 2026-10-06: 3 pages of Volo's Guide in 19 s, the reader's start included
+function noTextNotice() {
+  return (S.pdfs || []).map((p, d) => (p.noText && !S.ocrDone?.[d] ? `<p class="bk-help bk-scan">⚠ <b>${esc(p.name)} has no text in it:</b> its
+      pages are pictures that were never read, so nothing could be found and every page is listed as a picture.
+      <button class="btn btn-gold btn-sm" onclick="bookReadPages(${d})">Read its pages</button>
+      <small>about ${Math.max(1, Math.round(p.pages * SECONDS_A_PAGE / 60))} minutes, on this computer; nothing is sent anywhere</small></p>` : '')).join('');
+}
+
+/** Read every page of PDF `d` with our OCR and find what is in it, in place of what its (missing) text layer gave. */
+export async function bookReadPages(d) {
+  const pdf = S?.pdfs?.[d];
+  if (!pdf || S.mode !== 'review') return;
+  const back = S, ctrl = new AbortController();
+  S = { mode: 'reading', file: pdf.name, page: 0, pages: pdf.pages, ctrl, phase: 'Getting our reader ready…' };
+  render();
+  try {
+    const all = Array.from({ length: pdf.pages }, (_, i) => i + 1);
+    const r = await readScannedPages(pdf.blob, [], { pages: all, signal: ctrl.signal,
+      onProgress: (k, m) => { S.page = k; S.pages = m; S.phase = `Reading page ${k} of ${m}…`; updateProgress(); } });
+    S = back;
+    applyReadPages(S, d, parseBook(r.lines, { scanned: true }), r.lines);
+  } catch (e) {
+    S = back;
+    if (e?.name !== 'AbortError') S.notice = `The pages could not be read (${e?.message || e}).`;
+  }
+  render();
+}
+
+// What a PDF's pages gave, in place of its finds; whole-page pictures over a page of text are pages, not pictures.
+function applyReadPages(st, d, found, lines) {
+  const chars = {};
+  for (const l of lines) chars[l.page] = (chars[l.page] || 0) + l.text.replace(/\s+/g, '').length;
+  for (const [k] of KINDS) {
+    if (k === 'images') continue;
+    const taken = new Set(st.parsed[k].filter(e => (e.doc || 0) !== d).map(e => e.id));
+    const fresh = (found[k] || []).map(e => {
+      let id = e.id, n = 1;
+      while (taken.has(id)) id = `${e.id}-${++n}`;
+      taken.add(id);
+      return { ...e, id, doc: d };
+    });
+    st.parsed[k] = [...st.parsed[k].filter(e => (e.doc || 0) !== d), ...fresh];
+    st.keep[k] = new Set([...[...st.keep[k]].filter(id => st.parsed[k].some(e => e.id === id && (e.doc || 0) !== d)),
+      ...fresh.filter(e => k === 'story' || e.confidence === 'sure').map(e => e.id)]);
+  }
+  const before = st.parsed.images.length;
+  st.parsed.images = st.parsed.images.filter(e => !((e.doc || 0) === d && e.fullPage && paintedPage({ fullPage: true, pageChars: chars[e.page] || 0 })));
+  for (const id of [...st.keep.images]) if (!st.parsed.images.some(e => e.id === id)) st.keep.images.delete(id);
+  st.parsed.scanned = true;
+  st.ocrDone = { ...(st.ocrDone || {}), [d]: true };
+  st.notice = `Read ${Object.keys(chars).length} pages: ${countOf(st, 'story', d)} index lines, ${countOf(st, 'monsters', d)} creatures; `
+    + `${before - st.parsed.images.length} pages of text are no longer listed as pictures.`;
+}
+const countOf = (st, k, d) => st.parsed[k].filter(e => (e.doc || 0) === d).length;
+
 function meta(k, e) {
   if (k === 'monsters') return [`CR ${crText(e.cr)}`, [e.size, e.type].filter(Boolean).join(' '), e.hp ? `${e.hp} HP` : ''].filter(Boolean).join(' · ');
   if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
@@ -258,13 +317,15 @@ function reviewView() {
       <div class="screen-title lk-title">${icon('book-open', { size: 18 })} Review the book</div>
       <span style="margin-left:auto;color:var(--lk-muted);font-size:12px">${S.notes ? readSummary(S) : S.pages ? `${S.pages} pages read` : 'From a saved copy'}</span></div>
     ${S.notes ? bundleNotes(S.notes) : ''}
+    ${noTextNotice()}
+    ${S.notice ? `<div class="bk-notice">${esc(S.notice)}</div>` : ''}
     <p class="bk-help">Everything below was found in the book. The ones we're sure of are already ticked. Click one to
       check it against what we read. Untick anything you don't want; ⚠ marks the ones to look at.</p>
     ${S.parsed.scanned ? `<p class="bk-help bk-scan">⚠ <b>This book is a scanned copy.</b> Its pages are pictures, and the words were
       read from them by a machine, with mistakes.${S.parsed.ocr?.pages ? ` We read its ${S.parsed.ocr.pages} stat-block pages again with our own reader.`
         : S.parsed.ocr?.error ? ` Our own reader could not run (${esc(S.parsed.ocr.error)}), so this is the scan's own text.` : ''}
-      Nothing is ticked: check each find against the page, fix a name or a number under <i>Look</i>, and leave out
-      anything that came out garbled.</p>` : ''}
+      Only creatures whose numbers check out (hit points match their hit dice) are ticked. Check the rest against the
+      page, fix a name or a number under <i>Look</i>, and leave out anything that came out garbled.</p>` : ''}
     <div class="bk-tabs" role="tablist">${KINDS.map(([kk, label]) => `<button role="tab" aria-selected="${kk === k}" onclick="bookTab('${kk}')"
       ${S.parsed[kk].length ? '' : 'disabled'}>${label} <span>${S.keep[kk].size}/${S.parsed[kk].length}</span></button>`).join('')}</div>
     <div class="bk-tools">

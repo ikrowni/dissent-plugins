@@ -17,7 +17,8 @@ export function isScanned(lines) {
 }
 
 const SIZES = 'Tiny|Small|Medium|Large|Huge|Gargantuan';
-const SIZE_SCAN = new RegExp(`^(${SIZES})\\s+([a-z]+(?: [a-z]+)?)\\s*(?:\\(([^)]*)\\))?\\s*,\\s*(.*)$`, 'i');
+// The alignment is optional: 2021-style books print only "Huge Plant" (Van Richten's Guide to Ravenloft).
+const SIZE_SCAN = new RegExp(`^(${SIZES})\\s+([a-z]+(?: [a-z]+)?)\\s*(?:\\(([^)]*)\\))?\\s*(?:,\\s*(.*))?$`, 'i');
 const ALIGN = /\b(unaligned|any(?: [a-z-]+)? alignment|(?:lawful|neutral|chaotic) (?:good|neutral|evil)|neutral)\b/i;
 
 /** Leading OCR junk off a line: quotes, dashes, stray marks ("“Armor Class 15", "_ Challenge 11"). */
@@ -27,7 +28,7 @@ export const clean = t => String(t).replace(/^[^A-Za-z0-9]+/, '').trim();
 export function scanSize(text) {
   const m = clean(text).match(SIZE_SCAN);
   if (!m) return null;
-  return { size: m[1], type: m[2], subtype: m[3] || null, alignment: (m[4].match(ALIGN) || [])[1] || '' };
+  return { size: m[1], type: m[2], subtype: m[3] || null, alignment: ((m[4] || '').match(ALIGN) || [])[1] || '' };
 }
 
 const SMALL = new Set(['of', 'the', 'a', 'an', 'and', 'to', 'in', 'on', 'with', 'von', 'van', 'de']);
@@ -125,12 +126,39 @@ export const isScoreHeader = t => (String(t).match(/\b(STR|DEX|CON|INT|WIS|CHA)\
  * The six ability scores after a header, from the next one or two lines, or null. Only the number before each
  * "(" is used (a modifier's "+" often reads as a 4), and only when all six are there and between 1 and 30.
  */
+/**
+ * The lines holding a scan's scores, from the lines under its "STR DEX …" header: the header can be split ("STR DEX CON
+ * INT WIS" then "CHA" alone, Ravenloft), so lines of ability names only are skipped; the next two are the scores.
+ */
+export const scoreRows = texts => texts.filter(x => !/^\W*(?:(?:STR|DEX|CON|INT|WIS|CHA)\W*)+$/i.test(x)).slice(0, 2);
+
 export function scanScores(texts) {
   for (let n = 1; n <= Math.min(2, texts.length); n++) {
-    const nums = [...texts.slice(0, n).join(' ').matchAll(/(\d{1,2})\s*\(/g)].map(x => +x[1]);
-    if (nums.length >= 6) return nums.slice(0, 6).every(v => v >= 1 && v <= 30) ? nums.slice(0, 6) : null;
+    // A score, maybe OCR marks ("=14. (+2)"), then its modifier in brackets.
+    const found = [...texts.slice(0, n).join(' ').matchAll(/(\d{1,2})[\s.,:;'"=~_|-]*\(\s*([+\-–—−~]?)\s*(\d{1,2})?/g)]
+      .map(x => ({ v: +x[1], mod: x[3] == null ? null : (/[-–—−~]/.test(x[2]) ? -x[3] : +x[3]) }));
+    if (found.length < 6) continue;
+    const six = found.slice(0, 6);
+    if (!six.every(f => f.v >= 1 && f.v <= 30)) return null;
+    // A stat block's modifier is (score − 10) / 2 rounded down: most of the six must agree, or this is not a score row.
+    const agree = six.filter(f => f.mod != null && f.mod === Math.floor((f.v - 10) / 2)).length;
+    return agree >= 4 || six.every(f => f.mod == null) ? six.map(f => f.v) : null;
   }
-  return null;
+  return looseScores(texts.slice(0, 2).join(' '));
+}
+
+// The OCR reads "(" and "+" as 4 in a scanned score row (Ravenloft: "10440)" is 10 (+0), "1341)" 13 (+1), "12(41)"
+// 12 (+1)). Each token is read loosely, and the row counts only if every modifier then agrees with its score.
+function looseScores(text) {
+  const out = [];
+  for (const tok of text.split(/\s+/)) {
+    const m = tok.replace(/[^\d()+\-–—−~]/g, '').match(/^(\d{1,2})[(4]?([+\-–—−~4]?)(\d)\)$/);
+    if (!m) continue;
+    const v = +m[1], mod = /[-–—−~]/.test(m[2]) ? -m[3] : +m[3];
+    if (v < 1 || v > 30 || mod !== Math.floor((v - 10) / 2)) return null;
+    out.push(v);
+  }
+  return out.length === 6 ? out : null;
 }
 
 /** An "ACTIONS" / "Legendary Actions" heading, any case, with OCR marks around it: the section key, or null. */

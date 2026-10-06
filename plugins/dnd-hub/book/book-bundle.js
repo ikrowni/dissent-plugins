@@ -20,11 +20,12 @@ export const niceName = file => base(file).replace(/\.[a-z0-9]+$/i, '').replace(
  * smallest first, so the book itself (not a 900 MB maps pack) is read and shown first.
  */
 export function planBundle(items) {
-  const out = { pdfs: [], images: [], packs: [], skipped: [] };
+  const out = { pdfs: [], docs: [], images: [], packs: [], skipped: [] };
   for (const it of items) {
     const p = String(it.path || '').replace(/\\/g, '/');
     if (JUNK.test(p)) continue;
     if (/\.pdf$/i.test(p)) out.pdfs.push(it);
+    else if (/\.docx$/i.test(p)) out.docs.push(it); // a Word file (book-docx.js): its stat blocks and pictures
     else if (IMAGE.test(p)) out.images.push({ ...it, group: niceName(folder(p)), name: niceName(p) });
     else if (/\.lkpack$/i.test(p)) out.packs.push(it);
     else out.skipped.push(it);
@@ -36,7 +37,8 @@ export function planBundle(items) {
 
 /** A book's title from its bundle: the zip's or folder's name, else the first PDF's. */
 export function bundleTitle(sourceName, plan) {
-  const t = niceName(sourceName || '') || (plan.pdfs[0] ? niceName(plan.pdfs[0].path) : '');
+  const first = plan.pdfs[0] || plan.docs?.[0];
+  const t = niceName(sourceName || '') || (first ? niceName(first.path) : '');
   return t.slice(0, 80) || 'Imported book';
 }
 

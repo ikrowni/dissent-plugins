@@ -1,7 +1,7 @@
 // plugins/dnd-hub/book/book-scan.test.js — a scanned book: one font, OCR noise. Invented text, in the shapes a real
 // scan produced (2026-10-04): noise between name and size line, junk on names, "+" read as 4, merged columns.
 import { describe, it, expect } from 'vitest';
-import { isScanned, isScanHeading, scanName, scanSize, textEntry, scanScores, scoresFitHp } from './book-scan.js';
+import { isScanned, isScanHeading, scoreRows, scanName, scanSize, textEntry, scanScores, scoresFitHp } from './book-scan.js';
 import { findMonsters } from './book-monsters.js';
 import { parseBook } from './book-parse.js';
 import { findStory } from './book-story.js';
@@ -74,7 +74,7 @@ describe('scanned books', () => {
     expect(m.special_abilities[0].desc).not.toMatch(/lamplighter/); // the sidebar is not the trait's text
     expect(m.actions.map(a => a.name)).toEqual(['Multiattack', 'Claw']);
     expect(m.actions[1].attack_bonus).toBe(4);
-    expect(m.confidence).toBe('unsure');
+    expect(m.confidence).toBe('sure'); // every number checks itself (HP = dice average, CON = dice bonus): ticked since 2026-10-06
     expect(m.problems).toEqual(['read from a scan']);
   });
   it('a second creature’s numbers end a block instead of replacing its own', () => {
@@ -110,3 +110,34 @@ describe('a keyed area on a scan', () => {
   });
 });
 
+// Van Richten's Guide to Ravenloft (owner's Internet Archive scan, 2026-10-06): every one of its 36 creatures came out
+// "size not read", 22 "ability scores not read".
+describe('a 2021-style scan', () => {
+  it('a size line with no alignment ("Huge Plant") is read', () => {
+    expect(scanSize('Huge Plant')).toEqual({ size: 'Huge', type: 'Plant', subtype: null, alignment: '' });
+    expect(scanSize('Medium Undead, Typically Chaotic Evil')).toMatchObject({ size: 'Medium', type: 'Undead', alignment: 'Chaotic Evil' });
+  });
+  it('a score row with OCR marks between the scores is read', () => {
+    expect(scanScores(['18 (+4) 8 (-1) 20 (+5) 14 (+2) =14. (+2) ~—-18 (+4)'])).toEqual([18, 8, 20, 14, 14, 18]);
+  });
+  it('six numbers whose modifiers mostly disagree are not scores', () => {
+    expect(scanScores(['18 (+0) 8 (+3) 20 (-2) 14 (+5) 14 (-1) 18 (+1)'])).toBe(null);
+  });
+});
+
+describe('a score row whose "(" and "+" the OCR read as 4', () => {
+  it('"8(-1) 10440) 9(-1)" / "1341) 1140) 12(41)" is 8 10 9 13 11 12 (each modifier agrees)', () => {
+    expect(scanScores(['8(-1) 10440) 9(-1)', '1341) 1140) 12(41)'])).toEqual([8, 10, 9, 13, 11, 12]);
+  });
+  it('garbage stays unread', () => {
+    expect(scanScores(['16(43)a. 14 G2yrent5 2). 41.5) 10-0) cers)'])).toBe(null);
+  });
+});
+
+describe('a score header split over two lines', () => {
+  it('"CHA" alone under "STR DEX CON INT WIS" is skipped: the next two lines are the scores', () => {
+    const rows = scoreRows(['CHA', '8(-1) 10440) 9(-1)', '1341) 1140) 12(41)', 'Senses passive Perception 10']);
+    expect(rows).toEqual(['8(-1) 10440) 9(-1)', '1341) 1140) 12(41)']);
+    expect(scanScores(rows)).toEqual([8, 10, 9, 13, 11, 12]);
+  });
+});

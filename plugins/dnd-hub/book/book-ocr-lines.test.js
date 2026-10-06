@@ -48,3 +48,13 @@ describe('OCR lines are measured from the top', () => {
     expect(l).toMatchObject({ page: 3, x: 50, y: 100, w: 50, fromTop: true }); // (160 + 40 − 100) / 2
   });
 });
+
+describe('replacePages for a PDF with no text layer', () => {
+  it('every page read by OCR comes in, in page order', () => {
+    const l = (page, text) => ({ page, text });
+    expect(replacePages([], new Map([[2, [l(2, 'b')]], [1, [l(1, 'a')]]])).map(x => x.text)).toEqual(['a', 'b']);
+    expect(replacePages([l(1, 'old1'), l(3, 'old3')], new Map([[2, [l(2, 'new2')]], [3, [l(3, 'new3')]]])).map(x => x.text))
+      .toEqual(['old1', 'new2', 'new3']);
+  });
+});
+

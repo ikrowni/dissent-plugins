@@ -3,13 +3,13 @@ import { levelupPick, levelupRoll, levelupRollDie, levelupAbility, levelupBack, 
 import { toggleWeatherPanel, setWeather } from './dnd-hub-weather.js';
 import { bindPopoverDismiss } from './dnd-hub-popovers.js';
 bindPopoverDismiss();
-import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete, bookExport, bookPicKind, bookPicShow, bookEdit, bookPickFiles, bookDrop, bookAiSort } from './book/book-screens.js';
+import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete, bookExport, bookPicKind, bookPicShow, bookEdit, bookPickFiles, bookDrop, bookAiSort, bookReadPages } from './book/book-screens.js';
 import { toggleBookPanel, bookPanelTab, bookPanelBook, bookPanelSection, bookViewGo, bookViewPage, bookViewDoc, bookViewZoom, bookViewToc, bookShowPage, bookCutStart, bookPanelFilter, bookPanelOpen, bookShareSection, bookAddMonster, bookAddItem, bookUseHere, bookUseMap, bookShowPicture } from './book/book-reader.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
-import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261014t';
-import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261014t';
+import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261014u';
+import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261014u';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261014t';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261014u';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { gearOpt, gearPick, gearBuy, gearShopTab, gearMode } from './dnd-hub-gear-view.js';
@@ -17,36 +17,36 @@ import { setUndoAppliers, undoMap, redoMap, rebaseUndo, refreshUndoButtons } fro
 import { UNDO_APPLIERS } from './dnd-hub-undo-apply.js';
 import { toggleDicePanel, diceLookPreset, diceLookColor, diceLookFinish, diceLookTry } from './dnd-hub-dice-panel.js';
 import { loadMyLook } from './dnd-hub-dice-look.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261014t';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261014t';
-import { setZoom } from './dnd-hub-canvas.js?v=20261014t';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261014u';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261014u';
+import { setZoom } from './dnd-hub-canvas.js?v=20261014u';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261014t';
-import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261014t';
+} from './dnd-hub-screens.js?v=20261014u';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261014u';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20261014t';
-import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261014t';
-import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014t';
-import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261014t';
+} from './dnd-hub-map-bg.js?v=20261014u';
+import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261014u';
+import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261014u';
+import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261014u';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
   selectBackground, renderCCEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261014t';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261014t';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261014t';
-import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261014t';
-import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014t';
-import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014t';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014t';
+} from './dnd-hub-char-steps.js?v=20261014u';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261014u';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261014u';
+import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261014u';
+import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261014u';
+import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261014u';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014u';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
-         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261014t';
+         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261014u';
 
 // Render static lobby screen HTML (all other screens render on navigate)
 renderLobbyScreen();
@@ -111,7 +111,7 @@ window.quickPickHero = quickPickHero; window.quickStepByStep = quickStepByStep; 
 window.toggleGuides = toggleGuides;
 window.toggleWeatherPanel = toggleWeatherPanel; window.setWeather = setWeather;
 // Books (book/book-screens.js, book/book-reader.js).
-window.showLibrary = showLibrary; window.bookPickFile = bookPickFile; window.bookCancel = bookCancel; window.bookTab = bookTab; window.bookFilter = bookFilter; window.bookKeep = bookKeep; window.bookKeepAll = bookKeepAll; window.bookPeek = bookPeek; window.bookTitle = bookTitle; window.bookPlace = bookPlace; window.bookSave = bookSave; window.bookAttach = bookAttach; window.bookDelete = bookDelete; window.bookExport = bookExport; window.bookPicKind = bookPicKind; window.bookPicShow = bookPicShow; window.bookEdit = bookEdit; window.bookPickFiles = bookPickFiles; window.bookDrop = bookDrop; window.bookAiSort = bookAiSort; window.toggleBookPanel = toggleBookPanel; window.bookPanelTab = bookPanelTab; window.bookPanelBook = bookPanelBook; window.bookPanelSection = bookPanelSection; window.bookViewGo = bookViewGo; window.bookViewPage = bookViewPage; window.bookViewDoc = bookViewDoc; window.bookViewZoom = bookViewZoom; window.bookViewToc = bookViewToc; window.bookShowPage = bookShowPage; window.bookCutStart = bookCutStart; window.bookPanelFilter = bookPanelFilter; window.bookPanelOpen = bookPanelOpen; window.bookShareSection = bookShareSection; window.bookAddMonster = bookAddMonster; window.bookAddItem = bookAddItem; window.bookUseHere = bookUseHere; window.bookUseMap = bookUseMap; window.bookShowPicture = bookShowPicture;
+window.showLibrary = showLibrary; window.bookPickFile = bookPickFile; window.bookCancel = bookCancel; window.bookTab = bookTab; window.bookFilter = bookFilter; window.bookKeep = bookKeep; window.bookKeepAll = bookKeepAll; window.bookPeek = bookPeek; window.bookTitle = bookTitle; window.bookPlace = bookPlace; window.bookSave = bookSave; window.bookAttach = bookAttach; window.bookDelete = bookDelete; window.bookExport = bookExport; window.bookPicKind = bookPicKind; window.bookPicShow = bookPicShow; window.bookEdit = bookEdit; window.bookPickFiles = bookPickFiles; window.bookDrop = bookDrop; window.bookAiSort = bookAiSort; window.bookReadPages = bookReadPages; window.toggleBookPanel = toggleBookPanel; window.bookPanelTab = bookPanelTab; window.bookPanelBook = bookPanelBook; window.bookPanelSection = bookPanelSection; window.bookViewGo = bookViewGo; window.bookViewPage = bookViewPage; window.bookViewDoc = bookViewDoc; window.bookViewZoom = bookViewZoom; window.bookViewToc = bookViewToc; window.bookShowPage = bookShowPage; window.bookCutStart = bookCutStart; window.bookPanelFilter = bookPanelFilter; window.bookPanelOpen = bookPanelOpen; window.bookShareSection = bookShareSection; window.bookAddMonster = bookAddMonster; window.bookAddItem = bookAddItem; window.bookUseHere = bookUseHere; window.bookUseMap = bookUseMap; window.bookShowPicture = bookShowPicture;
 // The Hero Forge's guided steps (dnd-hub-forge-shape*.js).
 window.shapePick = shapePick; window.shapeScore = shapeScore; window.shapeScores = shapeScores; window.shapeHalfElf = shapeHalfElf; window.shapeSkill = shapeSkill; window.shapeExtraSkill = shapeExtraSkill; window.shapeCantrip = shapeCantrip; window.shapeSpell = shapeSpell; window.shapeText = shapeText; window.shapeNewName = shapeNewName; window.shapeNext = shapeNext; window.shapeBack = shapeBack; window.shapeFinish = shapeFinish; window.forgeShowQuick = forgeShowQuick;
 window.startSampleAdventure = startSampleAdventure;

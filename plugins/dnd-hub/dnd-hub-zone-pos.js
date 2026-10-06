@@ -2,9 +2,9 @@
 // Sound zones are stored in squares (x, y, radius: dnd-hub-audio-zones.js), and the sheet plays them. It used to be
 // sent the token's map position in pixels and compared it with the zone's squares, so a player heard a zone only
 // within a few pixels of its centre: in practice never (rules playtest, 2026-10-04).
-import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261014t';
+import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261014u';
 import { localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014t';
+import { EV } from './dnd-hub-event-types.js?v=20261014u';
 
 /** Map position (px) → squares, the way a sound zone's centre is stored. Pure apart from MAP. */
 export function toSquares(x, y, md = MAP.mapData) {

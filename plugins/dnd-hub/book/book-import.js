@@ -10,6 +10,7 @@ import { readScannedPages } from './book-ocr.js';
 import { listZip, entryBlob } from './book-zip.js';
 import { planBundle, bundleTitle, mergeParsed, niceName } from './book-bundle.js';
 import { fitWithin, guessKind } from './book-images.js';
+import { docxLines, docxRels } from './book-docx.js';
 
 const isZip = f => /\.zip$/i.test(f.name) || /zip/.test(f.type || '');
 const TYPES = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp' };
@@ -30,6 +31,35 @@ export async function bundleItems(files) {
     }
   }
   return { items, label: label || (files.length === 1 ? files[0].name : '') };
+}
+
+/**
+ * A Word file (.docx: a zip) → what parseBook finds in it, and its pictures, each named after the creature above it
+ * (book-docx.js). No pages, so no index: a Word manual gives creatures, spells, items and pictures.
+ */
+async function readDocx(blob, name, notes) {
+  const entries = await listZip(blob);
+  const text = async path => { const e = entries.find(x => x.name === path); return e ? (await entryBlob(blob, e, 'text/xml')).text() : ''; };
+  const xml = await text('word/document.xml');
+  if (!xml) throw new Error('it has no word/document.xml');
+  const { lines, pictures } = docxLines(xml);
+  const rels = docxRels(await text('word/_rels/document.xml.rels'));
+  const parsed = parseBook(lines, { scanned: false });
+  parsed.story = [];
+  parsed.images = [];
+  const used = new Set(), named = {};
+  for (const p of pictures) {
+    const path = rels[p.rid], e = path && entries.find(x => x.name === path);
+    if (!e || used.has(path)) continue;
+    used.add(path);
+    try {
+      const pic = await picture(await entryBlob(blob, e, typeOf(path)));
+      named[p.name] = (named[p.name] || 0) + 1;
+      parsed.images.push({ id: `docx-${parsed.images.length + 1}`, page: 0, width: pic.width, height: pic.height,
+        kind: guessKind(pic.width, pic.height), name: named[p.name] > 1 ? `${p.name} ${named[p.name]}` : p.name, group: name, blob: pic.blob });
+    } catch { notes.failed.push({ name: `${name}: ${path.split('/').pop()}`, why: 'a picture this browser cannot open' }); }
+  }
+  return parsed;
 }
 
 /** A loose picture as a WebP no bigger than 4096 px a side: { blob, width, height }. */
@@ -54,7 +84,7 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
   const { items, label } = await bundleItems(files);
   const plan = planBundle(items);
   const notes = { read: [], failed: [], skipped: plan.skipped.map(s => s.path), left: { mask: 0, blank: 0, background: 0, page: 0 } };
-  if (!plan.pdfs.length && !plan.images.length) {
+  if (!plan.pdfs.length && !plan.docs.length && !plan.images.length) {
     throw new Error(plan.packs.length ? 'A .lkpack copy opens on its own: drop it in by itself.' : 'There is no PDF or picture in that to import.');
   }
   const parts = [];
@@ -85,13 +115,25 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
       parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, group: plan.pdfs.length > 1 ? name : '' }));
       for (const k of Object.keys(notes.left)) notes.left[k] += doc.left?.[k] || 0;
       parts.push({ parsed, source: name });
-      pdfs.push({ name, blob, pages: doc.pages, fingerprint: doc.fingerprint, boxes: doc.boxes || {} });
-      notes.read.push({ name, pages: doc.pages, scanned: parsed.scanned });
+      pdfs.push({ name, blob, pages: doc.pages, fingerprint: doc.fingerprint, boxes: doc.boxes || {}, noText: !!doc.noText });
+      notes.read.push({ name, pages: doc.pages, scanned: parsed.scanned, noText: !!doc.noText });
       pages += doc.pages;
-      docTitle ||= doc.title || '';
+      // A title that is a file name ("CVR_FT.pdf", a printer's job name) is no title: the file's own name is used.
+      if (!/\.(pdf|indd|docx?|qxp)$/i.test(doc.title || '') && /\s/.test((doc.title || '').trim())) docTitle ||= doc.title;
     } catch (e) {
       if (e?.name === 'AbortError') throw e;
       notes.failed.push({ name, why: e instanceof ScanError ? 'a scan with no text in it' : String(e?.message || e) });
+    }
+  }
+  // Word files after every PDF: a find's `doc` is its part's place, and the PDFs' places are their page pictures'.
+  for (const [n, it] of plan.docs.entries()) {
+    const name = niceName(it.path);
+    try {
+      progress({ file: n + 1, files: plan.docs.length, name, phase: `Reading ${name}…` });
+      parts.push({ parsed: await readDocx(await it.get(), name, notes), source: name });
+      notes.read.push({ name, pages: 0, docx: true });
+    } catch (e) {
+      notes.failed.push({ name, why: `not a Word file this can read (${e?.message || e})` });
     }
   }
   const merged = mergeParsed(parts);

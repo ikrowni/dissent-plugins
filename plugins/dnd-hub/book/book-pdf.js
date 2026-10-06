@@ -85,7 +85,10 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
     const outline = await readOutline(doc).catch(() => []);
     // `fingerprint`: the reader checks a PDF the DM picks again (for sharp cut-outs) is this one.
     // `boxes`: where each real picture (not a whole page) sits on its page, for the reader's box tool.
-    return { lines, images, left, outline, boxes, pages: doc.numPages, title: meta?.info?.Title || '', fingerprint: doc.fingerprints?.[0] || null };
+    // `noText`: (almost) no text layer — a scan never read by a machine (Volo's Guide to Baldur's Gate II): the review
+    // offers to read its pages with our OCR (book-screens.js bookReadPages).
+    return { lines, images, left, outline, boxes, pages: doc.numPages, title: meta?.info?.Title || '', fingerprint: doc.fingerprints?.[0] || null,
+      noText: chars < doc.numPages * 40 };
   } finally {
     doc.destroy();
   }

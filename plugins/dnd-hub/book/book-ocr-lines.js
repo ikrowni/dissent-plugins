@@ -54,13 +54,12 @@ export function tsvToLines(tsv, page, scale) {
 
 /** The book's lines with `pages` replaced by what was read again; pages read again keep their place. */
 export function replacePages(lines, byPage) {
-  const out = [];
-  const done = new Set();
-  for (const l of lines) {
-    if (!byPage.has(l.page)) { out.push(l); continue; }
-    if (!done.has(l.page)) { out.push(...byPage.get(l.page)); done.add(l.page); }
-  }
-  return out;
+  // Page by page: a page read again replaces its lines; a page only OCR has (a PDF with no text layer at all, whose
+  // every page is read) comes in at its place.
+  const own = new Map();
+  for (const l of lines) { if (!own.has(l.page)) own.set(l.page, []); own.get(l.page).push(l); }
+  const pages = [...new Set([...own.keys(), ...byPage.keys()])].sort((a, b) => a - b);
+  return pages.flatMap(p => byPage.get(p) || own.get(p));
 }
 
 /**

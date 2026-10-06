@@ -78,3 +78,13 @@ describe('book-bundle', () => {
     expect(m.images.map(x => x.doc)).toEqual([1]);
   });
 });
+
+describe('a Word file in a bundle', () => {
+  it('is read as a book of its own (book-docx.js), not left out', () => {
+    const plan = planBundle([{ path: 'Arcane Ascension Monster Manual.docx', size: 39e6 }, { path: 'notes.txt', size: 1 }]);
+    expect(plan.docs.map(d => d.path)).toEqual(['Arcane Ascension Monster Manual.docx']);
+    expect(plan.skipped.map(d => d.path)).toEqual(['notes.txt']);
+    expect(bundleTitle('Arcane Ascension Monster Manual.docx', plan)).toBe('Arcane Ascension Monster Manual');
+  });
+});
+

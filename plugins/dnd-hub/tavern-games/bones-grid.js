@@ -3,8 +3,8 @@
 // The rules are in bones-grid-rules.js. Here: drawing, the turn loop, and the hero's tricks. Intelligence (the
 // game's stat) gives rerolls (a dim hero hands the HOST one instead); Sleight of Hand lets a hero palm a die once a
 // game and set its face, if the DM allows cheating, against the host's eye (ctx.tryCheat). See dnd-hub-tavern-games.js.
-import { emptyBoard, place, moveValue, hostMove, winner, rerolls, boardScore, columnScore, openColumns, ROWS } from './bones-grid-rules.js?v=20261014t';
-import { clack, crack, rattle, chime } from './tavern-sfx.js?v=20261014t';
+import { emptyBoard, place, moveValue, hostMove, winner, rerolls, boardScore, columnScore, openColumns, ROWS } from './bones-grid-rules.js?v=20261014u';
+import { clack, crack, rattle, chime } from './tavern-sfx.js?v=20261014u';
 
 const BARKS = {
   start: ['Bones on the table. You first.', 'Three columns, friend. Choose well.', 'Let\'s see what your hands can do.'],
@@ -24,7 +24,7 @@ const d6 = () => 1 + Math.floor(Math.random() * 6);
 
 function loadCss() {
   if (document.getElementById('bg-css')) return;
-  const l = Object.assign(document.createElement('link'), { id: 'bg-css', rel: 'stylesheet', href: new URL('./bones-grid.css?v=20261014t', import.meta.url).href });
+  const l = Object.assign(document.createElement('link'), { id: 'bg-css', rel: 'stylesheet', href: new URL('./bones-grid.css?v=20261014u', import.meta.url).href });
   document.head.appendChild(l);
 }
 

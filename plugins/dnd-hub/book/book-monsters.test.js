@@ -1,6 +1,6 @@
 // plugins/dnd-hub/book/book-monsters.test.js
 import { describe, it, expect } from 'vitest';
-import { findMonsters } from './book-monsters.js';
+import { findMonsters, withProblems, hpIsDiceAverage } from './book-monsters.js';
 import { L, H, MUDLING } from './book-fixtures.js';
 
 describe('findMonsters', () => {
@@ -79,6 +79,32 @@ describe('the challenge line', () => {
   it('a missing challenge line is still a problem', () => {
     const [m] = findMonsters(MUDLING.filter(l => l.runs[0]?.text !== 'Challenge'));
     expect(m.problems).toContain('no challenge rating');
+  });
+});
+
+// A scanned block is ticked when it checks itself (owner, 2026-10-06: Ravenloft came out 0/36 ticked).
+describe('a scanned stat block that checks itself', () => {
+  const base = { scan: true, size: 'Huge', ac: 16, hp: 92, hp_dice: '8d12+40', str: 18, dex: 8, con: 20, int: 14, wis: 14, cha: 18,
+    cr: 7, actions: [{ name: 'Vine' }] };
+  it('hit points are the average of the hit dice', () => {
+    expect(hpIsDiceAverage(92, '8d12 + 40')).toBe(true);
+    expect(hpIsDiceAverage(7, '2d8 - 2')).toBe(true);
+    expect(hpIsDiceAverage(9, '2d8')).toBe(true);
+    expect(hpIsDiceAverage(93, '8d12+40')).toBe(false);
+    expect(hpIsDiceAverage(92, null)).toBe(false);
+  });
+  it('everything read and both checks pass: ticked, still noted as a scan', () => {
+    const m = withProblems(base);
+    expect(m.confidence).toBe('sure');
+    expect(m.problems).toEqual(['read from a scan']);
+  });
+  it('a misread number (HP not the dice average, or CON not the dice bonus) stays unticked', () => {
+    expect(withProblems({ ...base, hp: 82 }).confidence).toBe('unsure');
+    expect(withProblems({ ...base, con: 12 }).confidence).toBe('unsure');
+  });
+  it('anything else missing stays unticked', () => {
+    expect(withProblems({ ...base, size: null }).confidence).toBe('unsure');
+    expect(withProblems({ ...base, actions: [] }).confidence).toBe('unsure');
   });
 });
 

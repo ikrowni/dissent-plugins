@@ -49,11 +49,12 @@ async function engine() {
  * `lines` (from a scan's own text layer) with the stat-block pages read again. `onProgress(done, total)`;
  * `signal` stops between pages. Returns { lines, pages } (pages = how many were read again).
  */
-export async function readScannedPages(source, lines, { onProgress, signal } = {}) {
+export async function readScannedPages(source, lines, { onProgress, signal, pages: only = null } = {}) {
   const lib = await pdfjs();
   const doc = await openPdf(lib, source, { wasmUrl: url('./vendor/pdfjs/wasm/') });
   try {
-    const pages = pagesToRead(lines, doc.numPages);
+    // `only`: these pages (a PDF with no text layer at all is read whole); else the stat-block pages its text layer shows.
+    const pages = only || pagesToRead(lines, doc.numPages);
     if (!pages.length) return { lines, pages: 0 };
     onProgress?.(0, pages.length);
     const { core, api } = await engine();

@@ -3,7 +3,7 @@
 // lines; it ends at the next block or at a heading bigger than "Actions". Each monster carries `confidence`
 // ('sure' | 'unsure'), the `problems` that made it unsure, and `lines` [first, last] for the review screen.
 
-import { isScanned, isScanAc, scanBlockHead, isScanHeading, scoresFitHp, scanName, scanSize, clean, textEntry, isScoreHeader, scanScores,
+import { isScanned, isScanAc, scanBlockHead, isScanHeading, scoresFitHp, scanName, scanSize, clean, textEntry, isScoreHeader, scanScores, scoreRows,
   sectionHeading } from './book-scan.js';
 
 const SIZE_RE = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+([a-z][a-z ]*?)(?:\s*\(([^)]+)\))?\s*,\s*([a-z][a-z0-9 ()%,.-]*)$/i;
@@ -180,7 +180,7 @@ function readBlock(lines, start, last, scan = null) {
     if ((mm = t.match(/^Speed\s+(.+)/))) { m.speed = speedOf(mm[1]); continue; }
     if (scan && isScoreHeader(t)) {
       scored = true;
-      const nums = scanScores(lines.slice(i + 1, Math.min(last, i + 2) + 1).map(l => l.text)) || [];
+      const nums = scanScores(scoreRows(lines.slice(i + 1, Math.min(last, i + 4) + 1).map(l => l.text))) || [];
       ABIL.forEach((a, k) => { m[a] = nums[k] ?? null; });
       continue;
     }
@@ -287,7 +287,19 @@ export function withProblems(m) {
   if (ABIL.some(a => m[a] == null)) problems.push('ability scores not read');
   if (m.cr == null && !m.noCr) problems.push('no challenge rating');
   if (!m.actions.length) problems.push('no actions');
-  return { ...m, confidence: problems.length ? 'unsure' : 'sure', problems };
+  // A scan's reading is ticked only when it checks itself (owner, 2026-10-06: a whole scanned book came out unticked):
+  // nothing else missing, the hit points are the average of the hit dice, and Constitution gives the dice's bonus.
+  // "read from a scan" stays on it as a note.
+  const checked = m.scan && problems.length === 1 && hpIsDiceAverage(m.hp, m.hp_dice) && scoresFitHp(m.con, m.hp_dice);
+  return { ...m, confidence: problems.length && !checked ? 'unsure' : 'sure', problems };
+}
+
+/** Whether `hp` is the average of `dice` ("8d12+40" → 92), the way every stat block prints it. False when unreadable. */
+export function hpIsDiceAverage(hp, dice) {
+  const d = String(dice || '').replace(/\s+/g, '').replace(/[−–]/g, '-').match(/^(\d+)d(\d+)(?:([+-])(\d+))?$/);
+  if (!d || hp == null) return false;
+  const avg = Math.floor(+d[1] * (+d[2] + 1) / 2 + (d[3] === '-' ? -d[4] : +(d[4] || 0)));
+  return avg === hp;
 }
 
 function speedOf(s) {
