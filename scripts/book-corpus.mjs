@@ -9,6 +9,7 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { pageLines } from '../plugins/dnd-hub/book/book-layout.js';
 import { parseBook } from '../plugins/dnd-hub/book/book-parse.js';
+import { readOutline } from '../plugins/dnd-hub/book/book-outline.js';
 
 const DIR = `${process.env.HOME}/lanternkeep-test-pdfs`;
 const BASE = new URL('./book-corpus-baseline.json', import.meta.url);
@@ -23,7 +24,8 @@ for (const f of readdirSync(DIR).filter(f => f.endsWith('.pdf')).sort()) {
     const page = await doc.getPage(p); const vp = page.getViewport({ scale: 1 });
     lines.push(...pageLines({ items: (await page.getTextContent()).items, width: vp.width, height: vp.height }, p));
   }
-  const b = parseBook(lines);
+  const outline = await readOutline(doc);
+  const b = parseBook(lines, { outline });
   const now = { monsters: b.monsters.length, sureMonsters: b.monsters.filter(m => m.confidence === 'sure').length,
     spells: b.spells.length, sureSpells: b.spells.filter(s => s.confidence === 'sure').length, items: b.items.length, story: b.story.length };
   const was = base[f]?.counts;

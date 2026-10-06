@@ -18,3 +18,4 @@ describe('parseBook', () => {
     expect(twice.monsters.map(m => m.id)).toEqual(['mudling', 'mudling-2']);
   });
 });
+

@@ -77,7 +77,7 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
       }
       progress({ ...base, phase: `Finding monsters, spells, items and story in ${name}…` });
       await new Promise(r => setTimeout(r, 20));
-      const parsed = parseBook(lines, { scanLines });
+      const parsed = parseBook(lines, { scanLines, outline: doc.outline });
       parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, group: plan.pdfs.length > 1 ? name : '' }));
       parts.push({ parsed, source: name });
       notes.read.push({ name, pages: doc.pages, scanned: parsed.scanned });

@@ -1,7 +1,7 @@
 // dnd-master-monsters.js — SRD monster viewer, stat blocks, combat instances
 import { mergeContent } from './lk-book.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014m';
+import { EV } from './dnd-hub-event-types.js?v=20261014n';
 import { applyFilter, filterBarHtml, getFilter, onFilterChange, typesIn, moreLine } from './dnd-master-monster-filter.js';
 
 let SRD_MONSTERS = [];

@@ -16,7 +16,8 @@ export function pageLines(p, pageNo = 1) {
     .filter(it => it && typeof it.str === 'string' && it.str.trim() !== '')
     .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], h: it.height || Math.abs(it.transform[3]) || 0,
       w: widthOf(it), font: it.fontName || '' }))
-    .filter(it => it.y < p.height * (1 - BAND) && it.y > p.height * BAND);
+    .filter(it => it.y < p.height * (1 - BAND) && it.y > p.height * BAND)
+    .filter(drawnOnce());
 
   // Group into rows by y, then split each row at the middle unless one item crosses it.
   items.sort((a, b) => b.y - a.y || a.x - b.x);
@@ -49,6 +50,18 @@ export function pageLines(p, pageNo = 1) {
   const left = {};
   for (const l of out) left[l.col] = Math.min(left[l.col] ?? Infinity, l.x);
   return out.filter(l => !/^\d{1,4}$/.test(l.text)).map(({ col, ...l }) => ({ ...l, indent: l.x > left[col] + 4 }));
+}
+
+// Some books draw a run twice in one spot (an outlined heading: stroke, then fill). Read it once, or every heading
+// comes out doubled ("CreditsCredits", Heliana's Guide to Monster Hunting).
+const SAME_SPOT = 1;
+function drawnOnce() {
+  const seen = [];
+  return it => {
+    if (seen.some(s => s.str === it.str && Math.abs(s.x - it.x) < SAME_SPOT && Math.abs(s.y - it.y) < SAME_SPOT)) return false;
+    seen.push(it);
+    return true;
+  };
 }
 
 function makeLine(its, col, y, page) {

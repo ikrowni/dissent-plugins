@@ -4,21 +4,21 @@
 // shop is drawn, and puts each table's HOST along the bottom. A hero clicks a host to talk (dnd-hub-tavern-talk.js),
 // sits down to play (dnd-hub-tavern-seat.js), and the DM's Hub referees every seat and pays out
 // (dnd-hub-tavern-ref.js). The tavern and its game setups are read from the campaign, never from the event.
-import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014m';
+import { MAP, serverData, userId, setServerData } from './dnd-hub-state.js?v=20261014n';
 import { localPublish } from '../plugin-sdk.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261014m';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261014n';
 import { cleanTavern, cleanSetup, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
-import { loadHubDm } from './dnd-hub-storage.js?v=20261014m';
-import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014m';
+import { loadHubDm } from './dnd-hub-storage.js?v=20261014n';
+import { startTavernScene, startTavernMedia, stopTavernScene } from './dnd-hub-tavern-scene.js?v=20261014n';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
-import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014m';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014m';
-import { renderFog } from './dnd-hub-fog.js?v=20261014m';
+import { clearTokenCache, renderTokens } from './dnd-hub-tokens.js?v=20261014n';
+import { renderWalls } from './dnd-hub-walls.js?v=20261014n';
+import { renderFog } from './dnd-hub-fog.js?v=20261014n';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
-import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014m';
-import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014m';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014m';
+import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014n';
+import { onSeatEvent, leaveTable } from './dnd-hub-tavern-seat.js?v=20261014n';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014n';
 
 /** The open tavern on this screen: { id, campaignId, busy: { hostId: [names] } }, or null. */
 export const TAVERN = { open: null };

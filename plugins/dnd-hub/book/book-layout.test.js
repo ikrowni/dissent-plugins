@@ -6,6 +6,16 @@ const it_ = (x, y, str, h = 9.8, font = 'body') => ({ str, transform: [h, 0, 0, 
 const page = (items, w = 612, h = 792) => ({ items, width: w, height: h });
 
 describe('pageLines', () => {
+  it('text drawn twice in the same place (an outlined heading) is read once', () => {
+    // Heliana's Guide draws every heading twice at one spot: "CreditsCredits", "TheThe Loot TavernLoot Tavern".
+    const lines = pageLines(page([it_(57, 700, 'Credits', 24), it_(57, 700, 'Credits', 24), it_(57, 650, 'Lead Writer:'),
+      it_(120, 650, 'Max'), it_(57.2, 650.1, 'Lead Writer:')]));
+    expect(lines.map(l => l.text)).toEqual(['Credits', 'Lead Writer: Max']);
+  });
+  it('the same word twice on a line, apart, is kept', () => {
+    const [l] = pageLines(page([it_(57, 700, 'very'), it_(90, 700, 'very')]));
+    expect(l.text).toBe('very very');
+  });
   it('reads the left column top to bottom, then the right', () => {
     const lines = pageLines(page([
       it_(328, 700, 'right one'), it_(57, 700, 'left one'), it_(57, 688, 'left two'), it_(328, 688, 'right two'),

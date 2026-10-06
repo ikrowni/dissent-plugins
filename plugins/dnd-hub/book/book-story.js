@@ -6,6 +6,7 @@
 // Section: { id, title, chapter, html, readAloud[], page }.
 import { slug, joinText, bodyFont } from './book-monsters.js';
 import { isScanHeading, scanName, clean, titleCase } from './book-scan.js';
+import { outlineMarks, outlineUsable } from './book-outline.js';
 
 const DANGLING = /\b(of|the|and|to|in|on|at)$/i; // a scanned chapter title cut mid-phrase
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -16,9 +17,11 @@ function mostCommonSize(lines) {
   return +Object.entries(n).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] || 10;
 }
 
+// `outline` (book-outline.js): the PDF's bookmarks. When enough of them match a line, they open the chapters and
+// sections, and every other heading stays inside its section as <h4> (a keyed area still opens its own).
 // `scanned` (book-scan.js): a scan's sizes are machine estimates, different for every heading, so headings are known
 // by their look instead (big capitals): very big or "CHAPTER …" opens a chapter, big a section, the rest are <h4>.
-export function findStory(lines, { scanned = false } = {}) {
+export function findStory(lines, { scanned = false, outline = null } = {}) {
   if (!lines.length) return [];
   const bodySize = mostCommonSize(lines);
   const body = bodyFont(lines.filter(l => Math.abs(l.size - bodySize) < 0.5));
@@ -35,7 +38,9 @@ export function findStory(lines, { scanned = false } = {}) {
   const isArea = t => /^\d{1,3}[A-Z]?\.\s+[A-Z]/.test(t) && t.length <= 60;
   const level = l => (!scanned ? (+l.size.toFixed(1) === chapterSize ? 'chapter' : +l.size.toFixed(1) === sectionSize ? 'section' : 'sub')
     : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
-  const boxed = l => !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && l.runs[0].font !== body;
+  // A scan's fonts are the OCR's guesses, changing line to line, so a box cannot be told from them: none on a scan
+  // (Curse of Strahd came out with ordinary text boxed as read-aloud).
+  const boxed = l => !scanned && !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && l.runs[0].font !== body;
 
   const out = [];
   const used = {};
@@ -57,10 +62,38 @@ export function findStory(lines, { scanned = false } = {}) {
     cur = { id, title, chapter, html: '', readAloud: [], page };
   };
 
+  const marks = outline?.length ? outlineMarks(lines, outline) : new Map();
+  const byOutline = outlineUsable(marks, outline);
+  const skip = new Set(); // the second line of a two-line bookmarked heading
+
   let unfinished = null; // { at, sec, count }: a scanned chapter title waiting for its second half
   for (const [n, l] of lines.entries()) {
+    if (skip.has(n)) continue;
+    const mark = byOutline ? marks.get(n) : null;
+    if (mark?.level === 'sub') {
+      if (mark.span) skip.add(n + 1);
+      flushPara();
+      if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
+      cur.html += `<h4>${esc(mark.title)}</h4>`;
+      continue;
+    }
+    if (mark) {
+      if (mark.span) skip.add(n + 1);
+      if (mark.level === 'chapter' || !chapter) chapter = mark.title; // a section before any chapter is its own
+      open(mark.title, l.page);
+      continue;
+    }
     const t = scanned && isHeading(l) ? (scanName(l.text) || titleCase(clean(l.text))) : l.text.trim();
     if (!t) continue;
+    if (isHeading(l) && byOutline) {
+      // Not bookmarked: a sub-heading, unless it is set as big as the chapters (an appendix the outline left out).
+      if (!scanned && level(l) === 'chapter') { chapter = t; open(t, l.page); continue; }
+      if (isArea(t)) { open(t, l.page); continue; }
+      flushPara();
+      if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
+      cur.html += `<h4>${esc(t)}</h4>`;
+      continue;
+    }
     if (isHeading(l)) {
       const lv = level(l);
       // A scan: a chapter title cut mid-phrase ("Chapter 2: the Lands of" … "Barovia"; "Chapter 3: the Village" …
@@ -86,7 +119,7 @@ export function findStory(lines, { scanned = false } = {}) {
       cur.html += `<h4>${esc(t)}</h4>`;
       continue;
     }
-    if (!cur) open(chapter || 'Introduction', l.page);
+    if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
     const b = boxed(l);
     if (!para || l.indent || para.boxed !== b) { flushPara(); para = { boxed: b, text: t, lines: 1 }; }
     else { para.text = joinText(para.text, t); para.lines++; }

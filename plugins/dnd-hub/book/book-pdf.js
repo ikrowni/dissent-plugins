@@ -6,6 +6,7 @@
 // pdf.js (Apache-2.0) is vendored in vendor/pdfjs/ and loaded only when a DM imports a book.
 import { pageLines } from './book-layout.js';
 import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint } from './book-images.js';
+import { readOutline } from './book-outline.js';
 
 let _pdfjs = null;
 export async function pdfjs() {
@@ -63,7 +64,8 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
     // A book of maps alone has pictures and little text: that is fine. Neither is a scan.
     if (chars < doc.numPages * 40 && !images.length) throw new ScanError();
     const meta = await doc.getMetadata().catch(() => null);
-    return { lines, images, pages: doc.numPages, title: meta?.info?.Title || '' };
+    const outline = await readOutline(doc).catch(() => []);
+    return { lines, images, outline, pages: doc.numPages, title: meta?.info?.Title || '' };
   } finally {
     doc.destroy();
   }

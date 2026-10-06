@@ -3,9 +3,9 @@
 // Click dice to keep them, roll the rest (up to three times), pick a god's boon if you have the favour, and be ready.
 // Then the clash: everyone strikes the next player round the table. Cheating: a loaded die (two extra axes this
 // round) — Sleight of Hand against the host's eye, judged by the DM's Hub.
-import * as R from './rune-dice-rules.js?v=20261014m';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014m';
-import { rattle, clack, thump, chime, crack } from './tavern-sfx.js?v=20261014m';
+import * as R from './rune-dice-rules.js?v=20261014n';
+import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261014n';
+import { rattle, clack, thump, chime, crack } from './tavern-sfx.js?v=20261014n';
 import { icon } from '../lk-icons.js';
 
 const ICON = { axe: 'sword', arrow: 'target', helm: 'crown', shield: 'shield', hand: 'hand' };
@@ -13,7 +13,7 @@ const BARKS = { start: ['Roll your runes. The gods are watching.', 'Six dice. Th
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('rd-css', './rune-dice.css?v=20261014m', import.meta.url);
+  loadCss('rd-css', './rune-dice.css?v=20261014n', import.meta.url);
   const wrap = el('div', 'tk-felt rd');
   wrap.innerHTML = `<div class="rd-top"></div><div class="rd-ring"></div><div class="rd-clash" aria-live="polite"></div>
     <div class="rd-mine"><div class="rd-dice"></div><div class="rd-boons"></div><div class="tk-row rd-btns"></div><div class="tk-note rd-status" aria-live="polite"></div></div>`;

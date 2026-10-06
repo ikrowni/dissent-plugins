@@ -30,3 +30,12 @@ describe('findStory', () => {
   });
 });
 function H2(t) { return { ...STORY[0], text: t, runs: [{ text: t, font: 'bold' }] }; }
+
+describe('a scan', () => {
+  it('never guesses read-aloud boxes from fonts (a scan\'s fonts are the OCR\'s guesses)', () => {
+    // Curse of Strahd, scanned: ordinary text came out boxed because the text layer's fonts change line to line.
+    const s = findStory(STORY, { scanned: true });
+    expect(s.flatMap(x => x.readAloud)).toEqual([]);
+    expect(s.map(x => x.html).join('')).not.toContain('read-aloud');
+  });
+});

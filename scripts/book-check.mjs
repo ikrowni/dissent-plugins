@@ -6,6 +6,7 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { readFileSync } from 'node:fs';
 import { pageLines } from '../plugins/dnd-hub/book/book-layout.js';
 import { parseBook } from '../plugins/dnd-hub/book/book-parse.js';
+import { readOutline } from '../plugins/dnd-hub/book/book-outline.js';
 
 const file = process.argv[2];
 if (!file) { console.error('usage: node scripts/book-check.mjs <book.pdf>'); process.exit(2); }
@@ -15,8 +16,14 @@ for (let p = 1; p <= doc.numPages; p++) {
   const page = await doc.getPage(p); const vp = page.getViewport({ scale: 1 });
   lines.push(...pageLines({ items: (await page.getTextContent()).items, width: vp.width, height: vp.height }, p));
 }
+const outline = await readOutline(doc); // the bookmarks, as book-pdf.js reads them
 const t = Date.now();
-const b = parseBook(lines);
+const b = parseBook(lines, { outline });
+console.log(`bookmarks: ${outline.length}`);
+if (process.argv.includes('--toc')) {
+  let ch = null;
+  for (const s of b.story) { if (s.chapter !== ch) { ch = s.chapter; console.log(`# ${ch}`); } if (s.title !== s.chapter) console.log(`   ${s.title}  (p${s.page})`); }
+}
 console.log(`${doc.numPages} pages, ${lines.length} lines, parsed in ${Date.now() - t} ms:`, JSON.stringify(b.counts));
 
 const srd = f => JSON.parse(readFileSync(new URL(`../plugins/dnd-hub/dnd-srd/${f}.json`, import.meta.url)));

@@ -10,14 +10,14 @@ import { mergeReadings } from './book-merge.js';
 
 // `scanLines`: a scan read again with our own OCR (book-ocr.js) passes `lines` = the OCR'd book and `scanLines` =
 // the scan's own text; monsters are taken from both (book-merge.js). Nothing else is read twice.
-export function parseBook(lines, { scanLines = null } = {}) {
+export function parseBook(lines, { scanLines = null, outline = null } = {}) {
   const scanned = isScanned(lines);
   const monsters = scanLines ? mergeReadings(findMonsters(lines), findMonsters(scanLines)) : findMonsters(lines);
   const spells = findSpells(lines, spellClasses(lines));
   const items = findItems(lines);
   const claimed = new Set();
   for (const e of [...monsters, ...spells, ...items]) if (e.lines) for (let i = e.lines[0]; i <= e.lines[1]; i++) claimed.add(i);
-  const story = findStory(lines.filter((_, i) => !claimed.has(i)), { scanned });
+  const story = findStory(lines.filter((_, i) => !claimed.has(i)), { scanned, outline });
   // A scan's words were machine-read: nothing from one is "sure" (book-scan.js); the DM looks at each.
   if (scanned) for (const e of [...spells, ...items]) if (e.confidence === 'sure') { e.confidence = 'unsure'; e.problems = ['read from a scan', ...(e.problems || [])]; }
   for (const list of [monsters, spells, items]) uniqueIds(list);
