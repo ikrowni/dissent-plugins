@@ -5,17 +5,17 @@
 import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
-import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014s';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261014s';
-import { EV } from '../dnd-hub-event-types.js?v=20261014s';
+import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014t';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261014t';
+import { EV } from '../dnd-hub-event-types.js?v=20261014t';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { bookDocs } from '../lk-book.js';
 import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
 import { step, typedPage, startOf, nextZoom, entryAt } from './book-view-nav.js';
 import { startCut, stopCut, cutting } from './book-cut.js';
 import { cutActions } from './book-cut-actions.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014s';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014s';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014t';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014t';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 
@@ -120,7 +120,7 @@ function listView(list, kind) {
            ${(e.actions || []).slice(0, 4).map(a => `<p><b><i>${esc(a.name)}.</i></b> ${esc(a.desc.slice(0, 200))}</p>`).join('')}
            <button class="btn btn-gold btn-sm" onclick="bookAddMonster('${esc(e.id)}')">Add to the encounter</button>${pageButton(kind, e)}`
         : `<p>${esc(e.desc.slice(0, 600)).replace(/\n/, '<br>')}</p>
-           <button class="btn btn-gold btn-sm" onclick="bookAddItem('${esc(e.id)}')">${camp()?.items?.[e.id] ? 'In your items ✓' : 'Add to your items'}</button>${pageButton(kind, e)}`}</div>` : ''}</div>`).join('')}</div>`;
+           <button class="btn btn-gold btn-sm" onclick="bookAddItem('${esc(e.id)}')">${camp()?.items?.[e.id] || R.addedItems?.has(e.id) ? 'In your items ✓ (Loot → Items)' : 'Add to your items'}</button>${pageButton(kind, e)}`}</div>` : ''}</div>`).join('')}</div>`;
 }
 // The real page a monster or item was read from, when the book has its pictures.
 const pageButton = (kind, e) => (e.page && bookDocs(book())[e.doc || 0]
@@ -252,12 +252,16 @@ export function bookAddMonster(id) {
   localPublish('dnd-master', EV.BOOK_ADD_MONSTER, { type: EV.BOOK_ADD_MONSTER, campaignId: MAP.campaignId, monsterId: id });
 }
 
-export async function bookAddItem(id) {
+/**
+ * "Add to your items": the DM sidebar adds it (Loot → Items) with its own save. The Hub writing the campaign itself
+ * (before 2026-10-06) left the item invisible in the sidebar, whose next save could drop it again.
+ */
+export function bookAddItem(id) {
   const c = camp(), it = R.books[R.book]?.items.find(x => x.id === id);
-  if (!c || !it || c.items?.[id]) return;
-  c.items = { ...(c.items || {}), [id]: { id, name: it.name, type: it.category === 'Weapon' ? 'weapon' : it.category === 'Armor' ? 'armor' : 'magic',
-    description: it.desc, rarity: it.rarity, effects: [], effectsText: '', source: it.source } };
-  await saveHubDm(serverData);
+  if (!c || !it) return;
+  const { id: iid, name, category, rarity, desc, source } = it;
+  localPublish('dnd-master', EV.BOOK_ADD_ITEM, { type: EV.BOOK_ADD_ITEM, campaignId: c.id, item: { id: iid, name, category, rarity, desc, source } });
+  (R.addedItems ||= new Set()).add(id);
   draw();
 }
 

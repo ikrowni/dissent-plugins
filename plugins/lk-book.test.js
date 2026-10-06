@@ -1,6 +1,6 @@
 // plugins/lk-book.test.js
 import { describe, it, expect } from 'vitest';
-import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName, bookDocs, indexEntry, bookFileIds } from './lk-book.js';
+import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName, bookDocs, indexEntry, bookFileIds, campaignItemFromBook } from './lk-book.js';
 
 const parsed = {
   monsters: [{ id: 'mudling', name: 'Mudling', confidence: 'sure', problems: [], lines: [0, 9], hp: 9 }],
@@ -163,5 +163,24 @@ describe('bookFileIds: every file a book owns (what deleting it removes)', () =>
   });
   it('an old book\'s page packs too', () => {
     expect(bookFileIds({ pages: { count: 2, packs: [{ fileId: 'old', from: 1, to: 2 }] } })).toEqual(['old']);
+  });
+});
+
+describe('campaignItemFromBook: a book\'s magic item as one of the campaign\'s items (DM sidebar → Loot → Items)', () => {
+  const entry = { id: 'lantern-of-small-hours', name: 'Lantern of Small Hours', category: 'Wondrous Item', rarity: 'Rare',
+    desc: 'It shows the way home.', source: { book: 'b1', title: 'The Drowned Bell' }, requires_attunement: true };
+  it('keeps the name, text, rarity and where it came from', () => {
+    expect(campaignItemFromBook(entry)).toEqual({ id: 'lantern-of-small-hours', name: 'Lantern of Small Hours', type: 'magic',
+      description: 'It shows the way home.', rarity: 'Rare', effects: [], effectsText: '', source: { book: 'b1', title: 'The Drowned Bell' } });
+  });
+  it('a weapon, armour or potion keeps its kind', () => {
+    expect(campaignItemFromBook({ ...entry, category: 'Weapon' }).type).toBe('weapon');
+    expect(campaignItemFromBook({ ...entry, category: 'Armor' }).type).toBe('armor');
+    expect(campaignItemFromBook({ ...entry, category: 'Armour' }).type).toBe('armor');
+    expect(campaignItemFromBook({ ...entry, category: 'Potion' }).type).toBe('consumable');
+  });
+  it('nothing without an id and a name', () => {
+    expect(campaignItemFromBook({ name: 'x' })).toBe(null);
+    expect(campaignItemFromBook(null)).toBe(null);
   });
 });

@@ -16,7 +16,7 @@ export function loadCss(id, file, base) {
   if (document.getElementById(id)) return;
   document.head.appendChild(Object.assign(document.createElement('link'), { id, rel: 'stylesheet', href: new URL(file, base).href }));
 }
-export const useKit = () => loadCss('tk-css', './kit.css?v=20261014s', import.meta.url);
+export const useKit = () => loadCss('tk-css', './kit.css?v=20261014t', import.meta.url);
 
 export function el(tag, cls = '', text = '') {
   const e = document.createElement(tag);

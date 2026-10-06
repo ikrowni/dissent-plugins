@@ -1,32 +1,33 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014s';
+import { EV } from './dnd-hub-event-types.js?v=20261014t';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014s';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261014t';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014s';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014t';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems } from './dnd-master-items.js?v=20261014s';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems, addBookItem, itemLibGroup, itemLibSearch } from './dnd-master-items.js?v=20261014t';
+import { campaignItemFromBook } from './lk-book.js';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014s';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261014t';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014s';
-import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014s';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014s';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014s';
+import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014t';
+import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014t';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014t';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014t';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -230,6 +231,11 @@ function onEvent(ev) {
     addMonsterToEncounter(p.monsterId);
     return;
   }
+  // A book's item the DM added from the Hub's Book panel: into this campaign's items (Loot → Items), shown at once.
+  if (p.type === EV.BOOK_ADD_ITEM && p.campaignId === dmCampaignId) {
+    addBookItem(campaignItemFromBook(p.item)).then(() => switchDMTab('items')).catch(e => console.warn('[dnd-master] book item', e));
+    return;
+  }
   // Kept even before this sidebar has picked its campaign (the Hub may answer first); onInit drops another campaign's.
   if (p.type === EV.BOOK_MONSTERS) {
     setBookMonsters(p.monsters, p.campaignId);
@@ -376,6 +382,8 @@ window.onShopMediaSelected  = onShopMediaSelected;
 // Items tab
 window.saveNewItem          = saveNewItem;
 window.deleteItem           = deleteItem;
+window.itemLibGroup         = itemLibGroup;
+window.itemLibSearch        = itemLibSearch;
 window.onItemImgSelected    = onItemImgSelected;
 window.resolveContest       = resolveContest;
 window.addForgeEffect       = addForgeEffect;

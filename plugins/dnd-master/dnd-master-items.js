@@ -1,7 +1,8 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014s';
+import { EV } from './dnd-hub-event-types.js?v=20261014t';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+import { ITEM_GROUPS, groupCounts, filterItems } from './dnd-master-item-filter.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
 import { guarded } from './lk-upload.js';
@@ -75,7 +76,10 @@ export async function renderItemsTab() {
     '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;margin-top:8px;letter-spacing:.05em">ITEM LIBRARY</div>' +
     (items.length === 0
       ? '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">No items created yet</div>'
-      : items.map(it => _itemRow(it)).join('')
+      : '<div id="item-lib-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + _libChips(items) + '</div>' +
+        '<input id="item-lib-search" type="search" placeholder="Search items…" aria-label="Search items" value="' + esc(_libQuery) + '"' +
+        ' oninput="itemLibSearch(this.value)" style="width:100%;margin-bottom:6px;font-size:11px">' +
+        '<div id="item-lib-list">' + _libList(items) + '</div>'
     );
 
   // Re-render effects list after DOM is built
@@ -400,6 +404,35 @@ export async function handleContestResult(p) {
   renderItemsTab();
 }
 
+// The library's kind and search (dnd-master-item-filter.js): changing either redraws the list only, so the forge above
+// keeps what is being typed.
+let _libGroup = 'all', _libQuery = '';
+const _libItems = () => Object.values(_state.dmCampaign?.items || {});
+function _libChips(items) {
+  const n = groupCounts(items);
+  const chip = (g, label) => '<button onclick="itemLibGroup(\'' + g + '\')" aria-pressed="' + (_libGroup === g) + '" style="font-size:10px;padding:2px 8px;border-radius:10px;cursor:pointer;' +
+    (_libGroup === g ? 'background:rgba(212,175,55,.2);color:var(--gold);border:1px solid rgba(212,175,55,.5)' : 'background:none;color:var(--muted);border:1px solid var(--border)') +
+    '">' + label + ' ' + n[g] + '</button>';
+  return chip('all', 'All') + ITEM_GROUPS.filter(([g]) => n[g]).map(([g, label]) => chip(g, label)).join('');
+}
+function _libList(items) {
+  const shown = filterItems(items, _libGroup, _libQuery);
+  return shown.length ? shown.map(it => _itemRow(it)).join('')
+    : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">No items match</div>';
+}
+export function itemLibGroup(g) {
+  _libGroup = g;
+  const items = _libItems();
+  const chips = document.getElementById('item-lib-chips'), list = document.getElementById('item-lib-list');
+  if (chips) chips.innerHTML = _libChips(items);
+  if (list) list.innerHTML = _libList(items);
+}
+export function itemLibSearch(q) {
+  _libQuery = q;
+  const list = document.getElementById('item-lib-list');
+  if (list) list.innerHTML = _libList(_libItems());
+}
+
 function _itemRow(item) {
   const imgHtml = _itemImageUrls[item.id]
     ? '<img src="' + _itemImageUrls[item.id] + '" style="width:24px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">'
@@ -407,7 +440,8 @@ function _itemRow(item) {
   return '<div class="item-row">' +
     imgHtml +
     '<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:10px;background:rgba(212,175,55,.15);color:var(--gold);border:1px solid rgba(212,175,55,.25)">' + esc(item.type) + '</span>' +
-    '<span style="flex:1;font-size:11px;font-weight:600">' + esc(item.name) + '</span>' +
+    '<span style="flex:1;font-size:11px;font-weight:600">' + esc(item.name) +
+      (item.rarity ? ' <span style="font-weight:400;color:var(--muted);font-size:10px">' + esc(String(item.rarity).toLowerCase()) + '</span>' : '') + '</span>' +
     '<button onclick="deleteItem(\'' + item.id + '\')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px" title="Delete">&#x2715;</button>' +
   '</div>';
 }
@@ -483,6 +517,22 @@ export async function saveNewItem() {
   _forgeEffects = [];
   if (btn) { btn.disabled = false; btn.textContent = '&#x2795; Create Item'; }
   renderItemsTab();
+}
+
+/**
+ * A book's item, from the DM's Hub ("Add to your items" in its Book panel: lk-book.js campaignItemFromBook). Added with
+ * this tab's own save, like a forged item, so this sidebar's copy of the campaign holds it (the Hub writing the campaign
+ * itself left it invisible here, and this sidebar's next save would have dropped it). Already there: nothing changes.
+ */
+export async function addBookItem(item) {
+  if (!item?.id || !item.name || !_state?.dmCampaign) return false;
+  if (!_state.dmCampaign.items) _state.dmCampaign.items = {};
+  if (_state.dmCampaign.items[item.id]) return false;
+  _state.dmCampaign.items[item.id] = { ...item, effects: Array.isArray(item.effects) ? item.effects : [], effectsText: '' };
+  _state.serverData.campaigns[_state.dmCampaignId].items = _state.dmCampaign.items;
+  await saveHubDmCompanion(_state.serverData);
+  await _persistDmCatalog();
+  return true;
 }
 
 export async function deleteItem(id) {

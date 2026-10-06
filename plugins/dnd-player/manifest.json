@@ -33,7 +33,7 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "930a3f5e088d3f1c4fc0dbad6f9c787ff90b39147f2b125ce32484ad5ee0d0ab"
+      "sha256": "e007657b4d7b7a1e691a2de035a8129c408b0f1b754c7a19d22a97d7a856c455"
     },
     {
       "url": "dnd-hub-shared-storage.js",
@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "07303a5701379e4d1f46f22f9c0ceb660bf703371027233c1c440d6a0436ca6f"
+      "sha256": "4ee2785969e48293831b102416a93d2ddfbaa97b822e09c40ada68866c37df46"
     },
     {
       "url": "dnd-player-resources.js",
@@ -105,7 +105,7 @@
     },
     {
       "url": "lk-book.js",
-      "sha256": "f5d8b72321147d5786758c98cc3cf383d4b516fa2e4dc47d49feabd565ca6d83"
+      "sha256": "8c20904473b3920c76b833c531160ef9fcd584ca643437ebc5c4138ddd926b6e"
     },
     {
       "url": "lk-bus.js",

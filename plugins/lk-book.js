@@ -57,6 +57,18 @@ export function bookFileIds(book) {
   return [...new Set(ids.filter(id => typeof id === 'string' && id))];
 }
 
+/**
+ * A book's magic item as one of the campaign's items (what the DM sidebar's Loot → Items lists and shops sell). The
+ * Hub hands it to the sidebar, which adds it with its own save (book-reader.js bookAddItem → dnd-master-items.js).
+ */
+export function campaignItemFromBook(e) {
+  if (!e || typeof e.id !== 'string' || !e.id || typeof e.name !== 'string' || !e.name) return null;
+  const c = String(e.category || '').toLowerCase();
+  const type = c === 'weapon' ? 'weapon' : /^armou?r$/.test(c) ? 'armor' : c === 'potion' ? 'consumable' : 'magic';
+  return { id: e.id, name: e.name, type, description: String(e.desc || ''), rarity: e.rarity || '', effects: [], effectsText: '',
+    ...(e.source ? { source: e.source } : {}) };
+}
+
 /** A box on a page, as fractions of the page: four numbers, inside it, not empty. */
 const goodRect = r => Array.isArray(r) && r.length === 4 && r.every(v => typeof v === 'number' && Number.isFinite(v))
   && r[0] >= 0 && r[1] >= 0 && r[2] > 0 && r[3] > 0 && r[0] + r[2] <= 1 + 1e-9 && r[1] + r[3] <= 1 + 1e-9;

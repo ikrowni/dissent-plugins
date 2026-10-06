@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('./dnd-hub-state.js?v=20261014s', () => ({ MAP: {}, serverData: null, userId: 'u', effectiveGs: () => 50 }));
-vi.mock('./dnd-hub-storage.js?v=20261014s', () => ({ saveHubDm: async () => {} }));
+vi.mock('./dnd-hub-state.js?v=20261014t', () => ({ MAP: {}, serverData: null, userId: 'u', effectiveGs: () => 50 }));
+vi.mock('./dnd-hub-storage.js?v=20261014t', () => ({ saveHubDm: async () => {} }));
 vi.mock('./dnd-hub-publish.js', () => ({ realtimePublish: async () => {} }));
 const { pictureAt, resized } = await import('./dnd-hub-pictures.js');
 
