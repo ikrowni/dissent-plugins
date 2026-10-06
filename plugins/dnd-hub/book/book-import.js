@@ -45,24 +45,26 @@ async function picture(blob) {
 
 /**
  * Read a bundle. `progress({ file, files, name, page, pages, phase })` as it goes; `signal` stops between pages.
- * Returns { parsed, title, pages, pdf (the one PDF read, or null), notes: { read: [{ name, pages, scanned }], failed: [{ name, why }], skipped: [path],
- *   left: { mask, blank, background } } } — `left`: what book-pdf.js found was not a picture.
+ * Returns { parsed, title, pages, pdfs, pdf, notes: { read: [{ name, pages, scanned }], failed: [{ name, why }], skipped: [path],
+ *   left: { mask, blank, background, page } } } — `left`: what book-pdf.js found was not a picture (`page`: a whole
+ *   page of text with art behind it). `pdfs`: every PDF read, in `doc` order ({ name, blob, pages, fingerprint }), kept
+ *   (never uploaded) for the page pictures and sharp cut-outs; `pdf`: the only one, when there is just one.
  */
 export async function readBundle(files, { progress = () => {}, signal } = {}) {
   const { items, label } = await bundleItems(files);
   const plan = planBundle(items);
-  const notes = { read: [], failed: [], skipped: plan.skipped.map(s => s.path), left: { mask: 0, blank: 0, background: 0 } };
+  const notes = { read: [], failed: [], skipped: plan.skipped.map(s => s.path), left: { mask: 0, blank: 0, background: 0, page: 0 } };
   if (!plan.pdfs.length && !plan.images.length) {
     throw new Error(plan.packs.length ? 'A .lkpack copy opens on its own: drop it in by itself.' : 'There is no PDF or picture in that to import.');
   }
   const parts = [];
-  let pages = 0, docTitle = '', ocr = null, pdf = null;
+  let pages = 0, docTitle = '', ocr = null;
+  const pdfs = [];
   for (const [n, it] of plan.pdfs.entries()) {
     const name = niceName(it.path), base = { file: n + 1, files: plan.pdfs.length, name };
     try {
       progress({ ...base, phase: `Opening ${name}…` });
       const blob = await it.get();
-      if (plan.pdfs.length === 1) pdf = blob; // kept for the page pictures (book-pages.js): one PDF's pages only
       const doc = await readPdf(blob, { signal, onProgress: (page, total) => progress({ ...base, page, pages: total }) });
       let lines = doc.lines, scanLines = null;
       if (isScanned(lines)) {
@@ -83,6 +85,7 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
       parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, group: plan.pdfs.length > 1 ? name : '' }));
       for (const k of Object.keys(notes.left)) notes.left[k] += doc.left?.[k] || 0;
       parts.push({ parsed, source: name });
+      pdfs.push({ name, blob, pages: doc.pages, fingerprint: doc.fingerprint });
       notes.read.push({ name, pages: doc.pages, scanned: parsed.scanned });
       pages += doc.pages;
       docTitle ||= doc.title || '';
@@ -106,5 +109,5 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
   }
   if (!parts.length && !merged.images.length) throw new Error(notes.failed.map(f => `${f.name}: ${f.why}`).join('; ') || 'Nothing could be read.');
   const title = plan.pdfs.length === 1 && !label.endsWith('.zip') && docTitle ? docTitle.trim().slice(0, 80) : bundleTitle(label, plan);
-  return { parsed: merged, title, pages, notes, pdf };
+  return { parsed: merged, title, pages, notes, pdfs, pdf: pdfs.length === 1 ? pdfs[0].blob : null };
 }

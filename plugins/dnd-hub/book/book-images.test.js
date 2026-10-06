@@ -1,6 +1,7 @@
 // plugins/dnd-hub/book/book-images.test.js
 import { describe, it, expect } from 'vitest';
 import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture } from './book-images.js';
+import { paintedPage, TEXT_PAGE } from './book-images.js';
 
 describe('book images', () => {
   it('decorations are not offered; real pictures are', () => {
@@ -74,5 +75,22 @@ describe('cut-out art and near-empty pictures (Heliana, owner report 2026-10-06)
   });
   it('a picture that is almost all see-through is left out (a tiny swoosh on an empty canvas)', () => {
     expect(notAPicture({ cover: 0.2, stats: { bw: 0.99, edge: 1, spread: 10, clear: 0.97 } })).toBe('blank');
+  });
+});
+
+// Plan 2026-10-06 page reader, measured that day over the 10 corpus PDFs + Heliana: a page under a whole-page picture
+// holds either almost no text (a map, an art plate, a cover: < 600 characters) or a page of it (art painted behind
+// the text: Heliana's pages, a scan's pages). The second is the page itself: the DM boxes the art in the reader.
+describe('a whole-page picture under a page of text is the page, not a picture', () => {
+  it('a map page (a few labels) is still offered', () => {
+    expect(paintedPage({ fullPage: true, pageChars: 167 })).toBe(false); // Heliana p355, a map
+    expect(paintedPage({ fullPage: true, pageChars: TEXT_PAGE - 1 })).toBe(false);
+  });
+  it('a page of text with art painted behind it is not', () => {
+    expect(paintedPage({ fullPage: true, pageChars: TEXT_PAGE })).toBe(true);
+    expect(paintedPage({ fullPage: true, pageChars: 2400 })).toBe(true);
+  });
+  it('a picture that is not the whole page is never this', () => {
+    expect(paintedPage({ fullPage: false, pageChars: 5000 })).toBe(false);
   });
 });

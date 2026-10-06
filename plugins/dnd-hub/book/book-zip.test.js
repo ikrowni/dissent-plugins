@@ -68,12 +68,13 @@ describe('book-bundle', () => {
     expect(bundleTitle('Mud_Manor-Bundle.zip', plan)).toBe('Mud Manor Bundle');
     expect(niceName('Deck/Broken_One.png')).toBe('Broken One');
   });
-  it('merges several PDFs into one book with unique ids, and says where later story came from', () => {
+  it('merges several PDFs into one book with unique ids; each find says which PDF it is from', () => {
     const a = { monsters: [{ id: 'goblin' }, { id: 'goblin-2' }], story: [{ id: 'intro', chapter: 'One' }] };
     const b = { monsters: [{ id: 'goblin' }], story: [{ id: 'intro', chapter: 'Maps' }], images: [{ id: 'p1-1' }] };
     const m = mergeParsed([{ parsed: a, source: 'Book' }, { parsed: b, source: 'Maps Pack' }]);
-    expect(m.monsters.map(x => x.id)).toEqual(['goblin', 'goblin-2', 'goblin-3']);
-    expect(m.story.map(x => [x.id, x.chapter])).toEqual([['intro', 'One'], ['intro-2', 'Maps Pack: Maps']]);
-    expect(m.images.length).toBe(1);
+    expect(m.monsters.map(x => [x.id, x.doc])).toEqual([['goblin', 0], ['goblin-2', 0], ['goblin-3', 1]]);
+    // The reader's PDF switcher names the file: chapter names stay the book's own.
+    expect(m.story.map(x => [x.id, x.chapter, x.doc])).toEqual([['intro', 'One', 0], ['intro-2', 'Maps', 1]]);
+    expect(m.images.map(x => x.doc)).toEqual([1]);
   });
 });

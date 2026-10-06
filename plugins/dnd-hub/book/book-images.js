@@ -19,6 +19,13 @@ export function guessKind(w, h, { mapWord = false, fullPage = false, clear = 0 }
 
 /** Share of the page a picture is drawn over at or above which it is a whole page (a background, or a scan). */
 export const FULL_PAGE = 0.85;
+/**
+ * A whole-page picture on a page holding this much text or more is the page itself (art painted behind the text, or
+ * a scan), not a picture to offer: the reader shows the page and the DM boxes what they want. Measured 2026-10-06 over
+ * the corpus + Heliana: such pages hold < 300 characters (maps, plates, covers; a few to 590) or 650+ (text pages).
+ */
+export const TEXT_PAGE = 600;
+export const paintedPage = ({ fullPage, pageChars = 0 }) => !!fullPage && pageChars >= TEXT_PAGE;
 export const SAMPLE = 64; // pictureStats looks at a SAMPLE×SAMPLE copy
 
 /**

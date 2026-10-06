@@ -42,7 +42,7 @@ export function bundleTitle(sourceName, plan) {
 
 /**
  * Several PDFs' finds as one book: lists joined, each id unique across the whole book ("goblin", "goblin-2"), and
- * story sections from a second PDF on keep their chapter but say which file they came from in it.
+ * every find tagged with `doc`, the index of the PDF it came from in `parts` (its pages are that doc's pages).
  */
 export function mergeParsed(parts) {
   const out = { monsters: [], spells: [], items: [], story: [], images: [] };
@@ -51,16 +51,10 @@ export function mergeParsed(parts) {
     let id = e.id, n = 1;
     while (seen[`${kind}:${id}`]) id = `${e.id}-${++n}`; // "goblin-2" may already be taken by the first PDF
     seen[`${kind}:${id}`] = true;
-    return id === e.id ? e : { ...e, id };
+    return id;
   };
-  parts.forEach(({ parsed, source }, n) => {
-    for (const kind of Object.keys(out)) {
-      for (const e of parsed[kind] || []) {
-        let x = unique(kind, e);
-        if (kind === 'story' && n > 0 && source) x = { ...x, chapter: x.chapter ? `${source}: ${x.chapter}` : source };
-        out[kind].push(x);
-      }
-    }
+  parts.forEach(({ parsed }, doc) => {
+    for (const kind of Object.keys(out)) for (const e of parsed[kind] || []) out[kind].push({ ...e, id: unique(kind, e), doc });
   });
   return out;
 }

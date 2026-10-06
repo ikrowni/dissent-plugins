@@ -1,6 +1,6 @@
 // plugins/lk-book.test.js
 import { describe, it, expect } from 'vitest';
-import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName, bookDocs, indexEntry } from './lk-book.js';
+import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName, bookDocs, indexEntry, bookFileIds } from './lk-book.js';
 
 const parsed = {
   monsters: [{ id: 'mudling', name: 'Mudling', confidence: 'sure', problems: [], lines: [0, 9], hp: 9 }],
@@ -152,5 +152,16 @@ describe('.lkpack cuts', () => {
     const p = fromPack(JSON.stringify({ kind: 'lanternkeep-book', formatVersion: 1, book: { title: 'Old',
       story: [{ id: 's', title: 'S', html: '<p>x</p>' }] } }));
     expect(p.parsed.story.map(s => s.id)).toEqual(['s']);
+  });
+});
+
+describe('bookFileIds: every file a book owns (what deleting it removes)', () => {
+  it('its pictures and every PDF\'s page packs, each once', () => {
+    const book = { images: [{ fileId: 'a' }, { fileId: 'pk', packed: true }, { fileId: 'pk', packed: true }, {}],
+      docs: [{ count: 9, packs: [{ fileId: 'p1', from: 1, to: 9 }] }, { count: 3, packs: [{ fileId: 'p2', from: 1, to: 3 }] }] };
+    expect(bookFileIds(book)).toEqual(['a', 'pk', 'p1', 'p2']);
+  });
+  it('an old book\'s page packs too', () => {
+    expect(bookFileIds({ pages: { count: 2, packs: [{ fileId: 'old', from: 1, to: 2 }] } })).toEqual(['old']);
   });
 });

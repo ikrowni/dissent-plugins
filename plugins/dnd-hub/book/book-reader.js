@@ -182,7 +182,7 @@ function fillPages() {
   for (const img of document.querySelectorAll('#book-panel img[data-page]')) {
     const n = +img.dataset.page, key = `${b.id}:${n}`;
     if (_pageUrls.has(key)) { img.src = _pageUrls.get(key); continue; }
-    loadPage(b, n).then(buf => {
+    loadPage(b, 0, n).then(buf => {
       const url = URL.createObjectURL(new Blob([buf], { type: 'image/webp' }));
       _pageUrls.set(key, url);
       if (img.isConnected) img.src = url;

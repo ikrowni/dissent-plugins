@@ -51,6 +51,12 @@ export function bookDocs(book) {
   return ok(p) ? [{ name: '', count: p.count, fingerprint: null, packs: p.packs }] : [];
 }
 
+/** Every file a book owns besides its own: its pictures and every PDF's page packs, each once. */
+export function bookFileIds(book) {
+  const ids = [...(book?.images || []).map(i => i?.fileId), ...bookDocs(book).flatMap(d => d.packs.map(p => p?.fileId))];
+  return [...new Set(ids.filter(id => typeof id === 'string' && id))];
+}
+
 /** A box on a page, as fractions of the page: four numbers, inside it, not empty. */
 const goodRect = r => Array.isArray(r) && r.length === 4 && r.every(v => typeof v === 'number' && Number.isFinite(v))
   && r[0] >= 0 && r[1] >= 0 && r[2] > 0 && r[3] > 0 && r[0] + r[2] <= 1 + 1e-9 && r[1] + r[3] <= 1 + 1e-9;

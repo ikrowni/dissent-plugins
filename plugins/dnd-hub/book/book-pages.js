@@ -6,10 +6,12 @@
 // ships hand-made versions or simply shows the PDF (Foundry's PDFoundry). The page itself is never wrong, so it is
 // kept beside the text. The PDF is never uploaded, so the pictures are made when the DM saves (the file is still
 // open then): PAGE_WIDTH px wide, WebP, packed into a few files (book-picture-pack.js, the node's 20 uploads a minute).
-// book.pages = { count, packs: [{ fileId, from, to }] }; a page's picture is `page-<n>` in the pack that holds it.
+// One entry per PDF of the import in book.docs (lk-book.js bookDocs; an old book's `pages` is doc 0):
+// { name, count, fingerprint, packs: [{ fileId, from, to }] }; a page's picture is `page-<n>` in the pack that holds it.
 import { pdfjs, openPdf } from './book-pdf.js';
 import { PACK_MAX } from './book-picture-pack.js';
 import { saveBookPack, loadBookPicture } from './book-library.js';
+import { bookDocs } from '../lk-book.js';
 
 export const PAGE_WIDTH = 900, QUALITY = 0.6;
 const EST_BYTES = 90_000; // a 900 px page as WebP, measured roughly; only for the "about N MB" line
@@ -33,44 +35,47 @@ export function sectionPages(story, i, count = Infinity) {
   return out;
 }
 
-/** Where page `n`'s picture is: { fileId, packed, id } for loadBookPicture, or null. */
-export function pagePicture(book, n) {
-  const pack = (book?.pages?.packs || []).find(p => n >= p.from && n <= p.to);
+/** Where page `n` of PDF `doc` has its picture: { fileId, packed, id } for loadBookPicture, or null. */
+export function pagePicture(book, doc, n) {
+  const pack = (bookDocs(book)[doc]?.packs || []).find(p => n >= p.from && n <= p.to);
   return pack ? { fileId: pack.fileId, packed: true, id: pageId(n) } : null;
 }
 
 /** A page's picture as bytes (cached by its pack, book-library.js). */
-export const loadPage = (book, n) => { const p = pagePicture(book, n); return p ? loadBookPicture(p) : Promise.reject(new Error('no picture of that page')); };
+export const loadPage = (book, doc, n) => { const p = pagePicture(book, doc, n); return p ? loadBookPicture(p) : Promise.reject(new Error('no picture of that page')); };
+
+/** A pack's name in its file name: the first PDF's keep the old "pages-<k>", later PDFs say which they are. */
+export const packName = (doc, k) => (doc ? `d${doc + 1}-pages-${k}` : `pages-${k}`);
 
 /**
- * Draw every page of `pdf` (a Blob) and save the pictures beside `book`, in packs. `onProgress(page, pages)`,
- * `onWait(seconds)` while the node's upload limit is waited out, `uploaded(fileId)` for each file saved (so a failed
- * save can remove them). Returns book.pages.
+ * Draw every page of `pdf` (a Blob, PDF number `doc` of the book) and save the pictures beside `book`, in packs.
+ * `onProgress(page, pages)`, `onWait(seconds)` while the node's upload limit is waited out, `uploaded(fileId)` for each
+ * file saved (so a failed save can remove them). Returns that PDF's entry for book.docs: { name, count, fingerprint, packs }.
  */
-export async function savePages(book, pdf, place, { onProgress = () => {}, onWait, uploaded = () => {} } = {}) {
+export async function savePages(book, pdf, place, { onProgress = () => {}, onWait, uploaded = () => {}, doc = 0, name = '', fingerprint = null } = {}) {
   const lib = await pdfjs();
-  const doc = await openPdf(lib, pdf);
+  const pdfDoc = await openPdf(lib, pdf);
   const packs = [];
   let items = [], bytes = 0, from = 1;
   const flush = async to => {
     if (!items.length) return;
-    const fileId = await saveBookPack(book, items, place, `pages-${packs.length + 1}`, onWait);
+    const fileId = await saveBookPack(book, items, place, packName(doc, packs.length + 1), onWait);
     uploaded(fileId);
     packs.push({ fileId, from, to });
     items = []; bytes = 0; from = to + 1;
   };
   try {
-    for (let n = 1; n <= doc.numPages; n++) {
-      const blob = await drawPage(await doc.getPage(n));
+    for (let n = 1; n <= pdfDoc.numPages; n++) {
+      const blob = await drawPage(await pdfDoc.getPage(n));
       if (blob) { items.push({ id: pageId(n), blob }); bytes += blob.size; }
       if (bytes >= PACK_MAX) await flush(n);
-      onProgress(n, doc.numPages);
+      onProgress(n, pdfDoc.numPages);
       await new Promise(r => setTimeout(r, 0)); // the screen stays alive
     }
-    await flush(doc.numPages);
-    return { count: doc.numPages, packs };
+    await flush(pdfDoc.numPages);
+    return { name, count: pdfDoc.numPages, fingerprint, packs };
   } finally {
-    doc.destroy();
+    pdfDoc.destroy();
   }
 }
 

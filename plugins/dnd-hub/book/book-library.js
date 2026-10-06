@@ -6,7 +6,7 @@
 import { request, requestWithTransfer } from '../../plugin-sdk.js';
 import { guarded, uploadFile } from '../lk-upload.js';
 import { packText, unpack, isRateLimited } from './book-picture-pack.js';
-import { bookFileName, bookTitleFromFile, playerPart } from '../lk-book.js';
+import { bookFileName, bookTitleFromFile, playerPart, bookFileIds } from '../lk-book.js';
 
 const _cache = new Map(); // fileId → book
 
@@ -81,8 +81,7 @@ async function paced(op, onWait = () => {}) {
 export async function deleteBook(fileId) {
   const book = await loadBook(fileId).catch(() => null);
   await paced(() => request('files:delete', { fileId }));
-  const ids = [...(book?.images || []).map(i => i.fileId), ...(book?.pages?.packs || []).map(p => p.fileId)]; // pictures, then page pictures
-  for (const id of new Set(ids)) await paced(() => request('files:delete', { fileId: id })).catch(() => {});
+  for (const id of bookFileIds(book)) await paced(() => request('files:delete', { fileId: id })).catch(() => {});
   _cache.delete(fileId);
 }
 
