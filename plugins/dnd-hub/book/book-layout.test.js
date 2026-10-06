@@ -54,3 +54,28 @@ describe('a line knows how wide it is', () => {
     expect(l.w).toBe(43); // 80 + 20 − 57
   });
 });
+
+// Heliana's wide stat blocks (owner report 2026-10-06): the right column starts at x 295 on a 595-point page, just LEFT
+// of the middle (297.5), so splitting at the middle glued right-column words onto left-column lines: "Tar-rasque
+// Actions", "27 (+8) … 10 (+0) creature, it must succe…". The split is where the right column really starts.
+describe('a right column that starts just left of the middle', () => {
+  const W = 595;
+  const right = (y, str) => it_(295, y, str, 9.5);
+  const items = [
+    it_(40, 718, 'Tar-rasque', 16), right(718, 'Actions'),
+    it_(40, 704, 'Gargantuan elemental (titan), unaligned', 9.5), right(704, 'Multiattack.'),
+    it_(39, 688, 'Armour Class 18', 10), right(691, 'Necrotar Tongue, two with its Claws'),
+    it_(40, 632, '27 (+8) 15 (+2) 28 (+9)', 11), right(632, 'creature, it must succeed'),
+    right(620, 'or be grappled'), right(609, 'maw. Until this grapple ends'), right(597, 'the target is restrained'),
+  ];
+  const lines = pageLines(page(items, W, 782));
+  it('the right column\'s words stay in the right column', () => {
+    expect(lines.map(l => l.text)).toEqual(['Tar-rasque', 'Gargantuan elemental (titan), unaligned', 'Armour Class 18',
+      '27 (+8) 15 (+2) 28 (+9)', 'Actions', 'Multiattack.', 'Necrotar Tongue, two with its Claws', 'creature, it must succeed',
+      'or be grappled', 'maw. Until this grapple ends', 'the target is restrained']);
+  });
+  it('a page with nothing starting near the middle still splits at the middle', () => {
+    const ls = pageLines(page([it_(57, 700, 'left'), it_(320, 700, 'right')], 612));
+    expect(ls.map(l => l.text)).toEqual(['left', 'right']);
+  });
+});

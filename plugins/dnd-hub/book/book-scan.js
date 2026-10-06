@@ -85,10 +85,14 @@ export function scanBlockHead(lines, ac, floor = 0) {
 }
 
 /** A name heading in a scan: name-like text set well above body size, and not "ACTIONS" or the STR DEX row. */
+/** A keyed area's key: "12. ", "23A. ", Strahd's "Q12. " (a scan reads its 1 as l or I: "Ql2. "). One real digit. */
+export const AREA_KEY = /^[A-Z]{0,2}[0-9lI]{0,2}\d[A-Z]?\.\s+/;
+
 export function isScanHeading(line) {
   const t = clean(line.text);
   const chapter = /^(chapter|appendix)\b/i.test(t) && t.length <= 60; // "CHAPTER 2: …" has a number in it
-  return line.size >= 11.5 && (chapter || !!scanName(t)) && !isScoreHeader(t)
+  // A keyed area ("Q12. DINING HALL") is a heading by its words; the key's digits are not a stat line's.
+  return line.size >= 11.5 && (chapter || !!scanName(t.replace(AREA_KEY, ''))) && !isScoreHeader(t)
     && !/^(actions|reactions|legendary actions|bonus actions)$/i.test(t.replace(/[^A-Za-z ]+$/, '').trim());
 }
 

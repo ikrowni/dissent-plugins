@@ -5,7 +5,7 @@
 // nothing under it (a heading straight after another) is not an index line either.
 // Entry: { id, title, chapter, page }.
 import { slug } from './book-monsters.js';
-import { isScanHeading, scanName, clean, titleCase } from './book-scan.js';
+import { isScanHeading, scanName, clean, titleCase, AREA_KEY } from './book-scan.js';
 import { outlineMarks, outlineUsable } from './book-outline.js';
 
 const DANGLING = /\b(of|the|and|to|in|on|at)$/i; // a scanned chapter title cut mid-phrase
@@ -32,8 +32,9 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
   const topRepeated = all.find(k => count[k] > 1);
   const sizes = topRepeated == null ? all : all.filter(k => k <= topRepeated); // only once-used sizes ABOVE all others
   const chapterSize = sizes[0], sectionSize = sizes[1];
-  // A keyed area ("12. Master Suite", "23A. Empty Crypt") is always a section of its own: what a DM looks up.
-  const isArea = t => /^\d{1,3}[A-Z]?\.\s+[A-Z]/.test(t) && t.length <= 60;
+  // A keyed area ("12. Master Suite", "23A. Empty Crypt", Strahd's "Q12. Dining Hall") is always a section of its own:
+  // what a DM looks up. A scan reads a key's 1 as l or I ("Ql2."): one real digit is enough.
+  const isArea = t => AREA_KEY.test(t) && /^[A-Z]/.test(t.replace(AREA_KEY, '')) && t.length <= 60;
   const level = l => (!scanned ? (+l.size.toFixed(1) === chapterSize ? 'chapter' : +l.size.toFixed(1) === sectionSize ? 'section' : 'sub')
     : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
   const out = [];
@@ -68,7 +69,8 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
       open(mark.title, l.page);
       continue;
     }
-    const t = scanned && isHeading(l) ? (scanName(l.text) || titleCase(clean(l.text))) : l.text.trim();
+    // A scan's OCR leaves rule marks at a heading's end ("K49. Lounge _", "Shrine of Mother Night |").
+    const t = scanned && isHeading(l) ? (scanName(l.text) || titleCase(clean(l.text))).replace(/[\s_|]+$/, '') : l.text.trim();
     if (!t) continue;
     if (isHeading(l) && byOutline) {
       // Not bookmarked: a sub-heading, unless it is set as big as the chapters (an appendix the outline left out).

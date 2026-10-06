@@ -252,16 +252,28 @@ function readBlock(lines, start, last, scan = null) {
     if (pp) m.senses.passive_perception = +pp[1]; else if (sv) m.senses[sv[1].toLowerCase()] = sv[2];
   }
   m.languages = /^[—–-]$/.test((fields['Languages'] || '').trim()) ? '' : (fields['Languages'] || '');
-  const ch = (fields['Challenge'] || '').match(/^([\d/]+)\s*\(([\d,]+)\s*XP\)/)
-    || (fields['CR'] || '').match(/^([\d/]+)\s*\((?:XP\s*)?([\d,]+)/); // 2024: "CR 1/4 (XP 50; PB +2)"; one says "(700 XP; …)"
-  if (!ch && bf) { const c = bf.cr; m.cr = c.includes('/') ? num(c.split('/')[0]) / num(c.split('/')[1]) : num(c); }
-  if (ch) { m.cr = ch[1].includes('/') ? num(ch[1].split('/')[0]) / num(ch[1].split('/')[1]) : num(ch[1]); m.xp = num(ch[2]); }
+  // "6 (2,300 xp) or 8 (3,900 XP) if paired …": the first is the CR. A misprinted CR ("2o (25,000 XP)") comes from its XP.
+  const ch = (fields['Challenge'] || '').match(/^([\dOo/]+)\s*\(([\d,]+)\s*XP\)/i)
+    || (fields['CR'] || '').match(/^([\dOo/]+)\s*\((?:XP\s*)?([\d,]+)/i); // 2024: "CR 1/4 (XP 50; PB +2)"; one says "(700 XP; …)"
+  const crOf = c => (c.includes('/') ? num(c.split('/')[0]) / num(c.split('/')[1]) : num(c));
+  if (!ch && bf) m.cr = crOf(bf.cr);
+  if (ch) {
+    m.xp = num(ch[2]);
+    m.cr = /^[\d/]+$/.test(ch[1]) ? crOf(ch[1]) : (CR_BY_XP[m.xp] ?? null);
+  }
+  // "Challenge —": a creature with no challenge rating (a familiar, a summon). Not a problem.
+  if (m.cr == null && /^[—–-]/.test((fields['Challenge'] || fields['CR'] || '').trim())) m.noCr = true;
 
   if (scan && m.con != null && !scoresFitHp(m.con, m.hp_dice)) for (const a of ABIL) m[a] = null;
   const out = { ...m, lines: [start, last], page: lines[start].page };
   if (scan) { out.scan = true; out.unnamed = !name; out.farName = !!(name && scan.far); }
   return withProblems(out);
 }
+
+/** The SRD's XP for each challenge rating, the other way round: a misprinted CR is read from its XP. */
+const CR_BY_XP = { 10: 0, 25: 0.125, 50: 0.25, 100: 0.5, 200: 1, 450: 2, 700: 3, 1100: 4, 1800: 5, 2300: 6, 2900: 7, 3900: 8,
+  5000: 9, 5900: 10, 7200: 11, 8400: 12, 10000: 13, 11500: 14, 13000: 15, 15000: 16, 18000: 17, 20000: 18, 22000: 19,
+  25000: 20, 33000: 21, 41000: 22, 50000: 23, 62000: 24, 75000: 25, 90000: 26, 105000: 27, 120000: 28, 135000: 29, 155000: 30 };
 
 /** A monster's `problems` and `confidence`, from its fields (again after two readings of a scan are merged). */
 export function withProblems(m) {
@@ -273,7 +285,7 @@ export function withProblems(m) {
   if (m.ac == null) problems.push('no armour class');
   if (m.hp == null) problems.push('no hit points');
   if (ABIL.some(a => m[a] == null)) problems.push('ability scores not read');
-  if (m.cr == null) problems.push('no challenge rating');
+  if (m.cr == null && !m.noCr) problems.push('no challenge rating');
   if (!m.actions.length) problems.push('no actions');
   return { ...m, confidence: problems.length ? 'unsure' : 'sure', problems };
 }

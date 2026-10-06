@@ -1,7 +1,7 @@
 // plugins/dnd-hub/book/book-scan.test.js — a scanned book: one font, OCR noise. Invented text, in the shapes a real
 // scan produced (2026-10-04): noise between name and size line, junk on names, "+" read as 4, merged columns.
 import { describe, it, expect } from 'vitest';
-import { isScanned, scanName, scanSize, textEntry, scanScores, scoresFitHp } from './book-scan.js';
+import { isScanned, isScanHeading, scanName, scanSize, textEntry, scanScores, scoresFitHp } from './book-scan.js';
 import { findMonsters } from './book-monsters.js';
 import { parseBook } from './book-parse.js';
 import { findStory } from './book-story.js';
@@ -100,3 +100,13 @@ describe('scanned books', () => {
     expect(v.map(x => x.title)).toEqual(['Chapter 3: the Village of Barovia']);
   });
 });
+
+describe('a keyed area on a scan', () => {
+  it('"Q12. DINING HALL" (read as "Ql2.") is a heading; a stat line with numbers is not', () => {
+    const big = text => ({ text, size: 13, runs: [], page: 1, x: 0, y: 0 });
+    expect(isScanHeading(big('Ql2. DINING HALL'))).toBe(true);
+    expect(isScanHeading(big('K20. BELFRY'))).toBe(true);
+    expect(isScanHeading(big('STR 18 (+4) DEX 12'))).toBe(false);
+  });
+});
+

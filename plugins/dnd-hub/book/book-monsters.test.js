@@ -58,3 +58,27 @@ describe('British spelling', () => {
     expect(m.ac).toBe(12);
   });
 });
+
+// Heliana (owner report 2026-10-06): "Challenge 2o (25,000 XP)" (the book's typo), "Challenge 6 (2,300 xp) or 8 (3,900 XP)
+// if paired …", and a warlock's summon with "Challenge —" were all left unticked as "no challenge rating".
+describe('the challenge line', () => {
+  const withChallenge = text => MUDLING.map(l => (l.runs[0]?.text === 'Challenge' ? L(text, { lab: 'Challenge' }) : l));
+  it('lower-case xp, and a second rating for a variant: the first is the CR', () => {
+    const [m] = findMonsters(withChallenge('6 (2,300 xp) or 8 (3,900 XP) if paired with a handler.'));
+    expect(m).toMatchObject({ cr: 6, xp: 2300, confidence: 'sure' });
+  });
+  it('a CR the book misprinted is read from its XP', () => {
+    const [m] = findMonsters(withChallenge('2o (25,000 XP) Proficiency Bonus +6'));
+    expect(m).toMatchObject({ cr: 20, xp: 25000, confidence: 'sure' });
+  });
+  it('"—" is a creature with no challenge rating (a summon), not a problem', () => {
+    const [m] = findMonsters(withChallenge('— Proficiency Bonus +2'));
+    expect(m.cr).toBe(null);
+    expect(m.problems).not.toContain('no challenge rating');
+  });
+  it('a missing challenge line is still a problem', () => {
+    const [m] = findMonsters(MUDLING.filter(l => l.runs[0]?.text !== 'Challenge'));
+    expect(m.problems).toContain('no challenge rating');
+  });
+});
+

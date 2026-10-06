@@ -23,12 +23,12 @@
   },
   "curse-of-strahd.pdf": {
     "counts": {
-      "monsters": 13,
+      "monsters": 15,
       "sureMonsters": 0,
       "spells": 0,
       "sureSpells": 0,
-      "items": 4,
-      "story": 193
+      "items": 5,
+      "story": 336
     },
     "source": "the owner's own scanned copy (never shared); the OCR path is checked in the browser, not here"
   },

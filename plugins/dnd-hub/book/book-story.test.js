@@ -27,3 +27,16 @@ describe('findStory', () => {
   });
 });
 function H2(t) { return { ...STORY[0], text: t, runs: [{ text: t, font: 'bold' }] }; }
+
+describe('keyed areas', () => {
+  const L = (text, size) => ({ ...STORY[1], text, size, runs: [{ text, font: size > 11 ? 'bold' : 'body' }] });
+  const body = t => L(t, 9.8);
+  it('"12.", "23A." and a lettered key ("Q12.", read from a scan as "Ql2.") open a section of their own', () => {
+    const st = findStory([L('Chapter 4: Castle', 18), body('Text.'), L('The Keep', 13.9), body('Text.'), L('Notes', 12), body('More.'),
+      L('12. Master Suite', 12), body('A bed.'), L('23A. Empty Crypt', 12), body('Dust.'), L('Q12. Dining Hall', 12), body('A table.'),
+      L('Ql3. Kitchen', 12), body('Pots.'), L('Chapter 5: Village', 18), body('Text.'), L('Notes', 12), body('More text.')]);
+    expect(st.map(x => x.title)).toEqual(['Chapter 4: Castle', 'The Keep', '12. Master Suite', '23A. Empty Crypt', 'Q12. Dining Hall',
+      'Ql3. Kitchen', 'Chapter 5: Village']);
+  });
+});
+
