@@ -25,11 +25,21 @@ const listOf = async place => {
   return (Array.isArray(files) ? files : files?.files || []).map(f => entryFromFile(f, place)).filter(Boolean);
 };
 
+/**
+ * One entry per book: the newest file. A book saved again (a box kept in it, book-cut-actions.js) is a new file, since
+ * the node cannot overwrite one; if the old one would not delete, the library still lists the book once.
+ */
+export function newestPerBook(entries) {
+  const by = new Map();
+  for (const e of entries) { const o = by.get(e.id); if (!o || String(e.createdAt || '') > String(o.createdAt || '')) by.set(e.id, e); }
+  return [...by.values()];
+}
+
 /** { books: [...], personalError } — personal and this server's books. Personal space may be switched off. */
 export async function listBooks() {
   const [personal, server] = await Promise.allSettled([listOf('personal'), listOf('server')]);
   return {
-    books: [...(personal.value || []), ...(server.value || [])].sort((a, b) => a.title.localeCompare(b.title)),
+    books: newestPerBook([...(personal.value || []), ...(server.value || [])]).sort((a, b) => a.title.localeCompare(b.title)),
     personalError: personal.status === 'rejected' ? String(personal.reason?.message || personal.reason) : null,
   };
 }
@@ -158,11 +168,36 @@ export async function detachBook(camp, bookId) {
   return camp;
 }
 
-/** The DM's full books for a campaign (from the library). A book whose file is gone is left out. */
+/**
+ * The DM's full books for a campaign (from the library). A file that is gone may have been saved again (resaveBook):
+ * the book is then found by its own id and `camp.bookFiles` holds the new file (the caller may save the campaign).
+ * A book deleted from the library is left out.
+ */
 export async function campaignBooks(camp) {
   const out = [];
-  for (const [, fileId] of Object.entries(camp?.bookFiles || {})) {
-    try { out.push(await loadBook(fileId)); } catch { /* deleted from the library */ }
+  let library = null;
+  for (const [bookId, fileId] of Object.entries(camp?.bookFiles || {})) {
+    try { out.push(await loadBook(fileId)); continue; } catch { /* gone: saved again, or deleted */ }
+    try {
+      library ||= (await listBooks()).books;
+      const now = library.find(b => b.id === bookId);
+      if (!now) continue;
+      out.push(await loadBook(now.fileId));
+      camp.bookFiles = { ...camp.bookFiles, [bookId]: now.fileId };
+    } catch { /* unreadable: the campaign plays on without it */ }
   }
   return out;
+}
+
+/**
+ * Save `book` again (the file `oldFileId` held it): a new file where the old one was, then the old one deleted — the
+ * book file only, never its pictures. Returns the new file id. Campaigns still holding the old id find the book by its
+ * id (campaignBooks).
+ */
+export async function resaveBook(oldFileId, book) {
+  const entry = [...await listOf('personal').catch(() => []), ...await listOf('server').catch(() => [])].find(b => b.fileId === oldFileId);
+  const fileId = await saveBook(book, entry?.place || 'server');
+  _cache.delete(oldFileId);
+  await paced(() => request('files:delete', { fileId: oldFileId })).catch(() => { /* listBooks shows the newest */ });
+  return fileId;
 }

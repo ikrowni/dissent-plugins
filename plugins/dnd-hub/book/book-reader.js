@@ -11,8 +11,9 @@ import { EV } from '../dnd-hub-event-types.js?v=20261014r';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { bookDocs } from '../lk-book.js';
 import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
-import { step, typedPage, startOf, nextZoom } from './book-view-nav.js';
+import { step, typedPage, startOf, nextZoom, entryAt } from './book-view-nav.js';
 import { startCut, stopCut, cutting } from './book-cut.js';
+import { cutActions } from './book-cut-actions.js';
 import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014r';
 import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014r';
 import { guarded } from '../lk-upload.js';
@@ -205,8 +206,12 @@ export function bookViewDoc(i) { R.view = { ...R.view, ...step({ doc: i, page: 1
 export function bookViewZoom() { R.view = { ...R.view, zoom: nextZoom(R.view.zoom) }; draw(); }
 export function bookViewToc() { R.view = { ...R.view, toc: !R.view.toc }; draw(); }
 /** The box tool on the page shown (book-cut.js); what a box can become is book-cut-actions.js. */
-export function bookCutStart() { if (R?.view && hasPages()) startCut(book(), R.view, { actions: cutActions() }); }
-const cutActions = () => [];
+export function bookCutStart() {
+  if (!R?.view || !hasPages() || !camp()) return;
+  const b = book();
+  startCut(b, R.view, { actions: cutActions({ book: b, camp: camp(), entry: entryAt(b.story || [], R.view),
+    close: () => { if (document.getElementById('book-panel')) toggleBookPanel(); }, redraw: () => draw() }) });
+}
 
 /** A monster's or item's page, in the page view. */
 export function bookShowPage(kind, id) {

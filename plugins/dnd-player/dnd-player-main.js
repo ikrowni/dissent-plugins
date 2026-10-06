@@ -235,9 +235,25 @@ async function renderPartyJournal() {
     (list.length ? list.map(j =>
       '<details style="margin-bottom:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px">' +
         '<summary style="cursor:pointer;font-size:12px;font-weight:600">' + esc(j.title || 'Untitled') + '</summary>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:6px;white-space:pre-wrap;line-height:1.5">' + esc(j.content || '') + '</div>' +
+        (j.imageFileId ? '<img data-jimg="' + esc(j.imageFileId) + '" alt="' + esc(j.title || '') + '" style="display:block;width:100%;margin-top:6px;border-radius:4px;min-height:40px;background:rgba(255,255,255,.04)">' : '') +
+        (j.content ? '<div style="font-size:11px;color:var(--muted);margin-top:6px;white-space:pre-wrap;line-height:1.5">' + esc(j.content) + '</div>' : '') +
       '</details>').join('')
       : '<div style="font-size:11px;color:var(--muted)">Nothing shared yet. Pages the DM shares appear here.</div>');
+  fillJournalPictures(el);
+}
+
+// A shared picture (a box the DM cut from a book page, book-cut-actions.js) is a campaign file: loaded once a session.
+const _journalPics = new Map(); // file id → Promise<object URL>
+function fillJournalPictures(root) {
+  for (const img of root.querySelectorAll('img[data-jimg]')) {
+    const id = img.dataset.jimg;
+    if (!_journalPics.has(id)) {
+      const p = request('files:loadArrayBuffer', { fileId: id }, 60000).then(r => URL.createObjectURL(new Blob([r.buffer], { type: 'image/webp' })));
+      _journalPics.set(id, p);
+      p.catch(() => _journalPics.delete(id));
+    }
+    _journalPics.get(id).then(url => { if (img.isConnected) img.src = url; }, () => { img.replaceWith(Object.assign(document.createElement('div'), { textContent: 'The picture could not be loaded.', style: 'font-size:11px;color:var(--muted)' })); });
+  }
 }
 
 function selectDie(die) {
@@ -333,7 +349,7 @@ function showHandout(data) {
 function _nextHandout() {
   if (_handoutQueue.length === 0) { _handoutOpen = false; return; }
   _handoutOpen = true;
-  const { title, content } = _handoutQueue.shift();
+  const { title, content, imageFileId } = _handoutQueue.shift();
   document.getElementById('player-handout-overlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'player-handout-overlay';
@@ -342,11 +358,13 @@ function _nextHandout() {
   overlay.innerHTML =
     '<div style="background:var(--lk-raise);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:20px;max-width:340px;width:90%;max-height:75vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.8)">' +
       '<div style="font-size:13px;font-weight:800;color:var(--lk-gold);margin-bottom:10px;border-bottom:1px solid rgba(212,175,55,.25);padding-bottom:8px">\uD83D\uDCDC ' + esc(title) + '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;white-space:pre-wrap">' + esc(content) + '</div>' +
+      (imageFileId ? '<img data-jimg="' + esc(imageFileId) + '" alt="' + esc(title) + '" style="display:block;width:100%;border-radius:6px;min-height:60px;background:rgba(255,255,255,.04)">' : '') +
+      (content ? '<div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;white-space:pre-wrap">' + esc(content) + '</div>' : '') +
       '<button style="margin-top:14px;width:100%;padding:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:6px;color:var(--lk-gold);font-size:11px;font-weight:700;cursor:pointer" id="handout-dismiss-btn">Dismiss' +
         (_handoutQueue.length > 0 ? ' (' + _handoutQueue.length + ' more)' : '') + '</button>' +
     '</div>';
   document.body.appendChild(overlay);
+  fillJournalPictures(overlay);
   document.getElementById('handout-dismiss-btn').onclick = () => {
     overlay.remove();
     _handoutOpen = false;
@@ -1292,7 +1310,8 @@ async function onEvent(ev) {
   if (p.type === 'join:approved' && p.userId === USER_ID && !CAMPAIGN_ID) { onInit({}); return; }
 
   if (p.type === EV.HANDOUT_PUSH && p.campaignId === CAMPAIGN_ID) {
-    showHandout({ title: p.title, content: p.content });
+    showHandout({ title: p.title, content: p.content, imageFileId: p.imageFileId });
+    if (p.journalId) renderPartyJournal().catch(() => {});
     return;
   }
 
