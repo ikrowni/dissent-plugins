@@ -9,13 +9,15 @@ import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014r';
 import { saveHubDm } from '../dnd-hub-storage.js?v=20261014r';
 import { EV } from '../dnd-hub-event-types.js?v=20261014r';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
-import { sectionPages, loadPage } from './book-pages.js';
+import { bookDocs } from '../lk-book.js';
+import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
+import { step, typedPage, startOf, nextZoom } from './book-view-nav.js';
 import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014r';
 import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014r';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 
-let R = null; // { books, book, tab, section, monster, q, library }
+let R = null; // { books, book, tab, section, monster, q, library, view: { doc, page, zoom, toc } }
 const camp = () => serverData?.campaigns?.[MAP.campaignId];
 
 /** Tell this screen's DM sidebar which monsters the campaign's books add. Quiet when there are none. */
@@ -26,9 +28,17 @@ export async function sendBookMonsters(campaignId) {
   localPublish('dnd-master', EV.BOOK_MONSTERS, { type: EV.BOOK_MONSTERS, campaignId, monsters: books.flatMap(b => b.monsters || []) });
 }
 
+// ←/→ turn the page while the panel shows one (book-viewer.js pageKey).
+function onKey(ev) {
+  if (!R || R.tab !== 'story' || !hasPages()) return;
+  const d = pageKey(ev);
+  if (d) { ev.preventDefault(); bookViewGo(d); }
+}
+
 export async function toggleBookPanel() {
   const old = document.getElementById('book-panel');
-  if (old) { old.remove(); R = null; return; }
+  if (old) { old.remove(); R = null; document.removeEventListener('keydown', onKey); return; }
+  document.addEventListener('keydown', onKey);
   const el = document.createElement('div');
   el.id = 'book-panel'; el.className = 'bk-panel';
   document.getElementById('map-root')?.appendChild(el);
@@ -36,12 +46,21 @@ export async function toggleBookPanel() {
   draw();
   R.books = await campaignBooks(camp()).catch(() => []);
   if (!R.books.length) R.library = await listBooks().catch(() => ({ books: [] }));
-  R.section = R.books[0]?.story?.[0]?.id || null;
+  openBook(0);
   draw();
   if (R.books.length) setTimeout(() => guide('dm:book'), 400);
 }
 
 const shared = sid => Object.values(camp()?.journals || {}).some(j => j.source?.section === sid);
+const book = () => R?.books?.[R.book] || R?.books?.[0];
+const hasPages = () => bookDocs(book()).length > 0;
+/** Book `i` of the campaign, open at its first index line. */
+function openBook(i) {
+  R.book = i;
+  const first = R.books[i]?.story?.[0];
+  R.section = first?.id || null;
+  R.view = { ...startOf(first), zoom: R.view?.zoom || 1, toc: R.view?.toc ?? true };
+}
 
 function draw() {
   const el = document.getElementById('book-panel');
@@ -63,32 +82,20 @@ function draw() {
     ${R.books.length > 1 ? `<div class="bk-books">${R.books.map((x, i) => `<button aria-pressed="${i === R.book}" onclick="bookPanelBook(${i})">${esc(x.title)}</button>`).join('')}</div>` : `<div class="bk-panel-title">${esc(b.title)}</div>`}
     <div class="bk-tabs small">${tabs.map(([k, l, n]) => `<button aria-selected="${R.tab === k}" ${n ? '' : 'disabled'} onclick="bookPanelTab('${k}')">${l} <span>${n}</span></button>`).join('')}</div>
     <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'images' ? picturesView(b) : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
-  if (R.pageView) fillPages();
+  // The real pages need room: the panel widens while it shows them.
+  el.classList.toggle('wide', R.tab === 'story' && hasPages());
+  if (R.tab === 'story' && hasPages()) fillPage(b, R.view);
 }
 
-// The index: one line per chapter, and the sections of the chapter being read under it (Heliana has 32 chapters and
-// 164 sections; listing them all at once was the "not organized" index). A chapter's own opening is its line.
+// The story tab: the book's real pages beside its index (book-viewer.js). A book saved before the page reader without
+// page pictures still has its old text: shown as it was, with a word on getting the pages.
 function storyView(b) {
+  if (hasPages()) return pageViewHtml(b, R.view, { mark: id => (shared(id) ? ' <span title="Shared with the players">✓</span>' : '') });
   const i = Math.max(0, b.story.findIndex(x => x.id === R.section));
   const s = b.story[i];
-  const groups = [];
-  for (const x of b.story) {
-    const g = groups[groups.length - 1];
-    if (g && g.chapter === x.chapter) g.items.push(x); else groups.push({ chapter: x.chapter, items: [x] });
-  }
-  const toc = groups.map(g => {
-    const open = g.items.includes(s), subs = g.items.filter(x => x.title !== x.chapter);
-    return `<button class="bk-toc-ch" aria-expanded="${open}" aria-current="${g.items[0] === s && g.items[0].title === g.chapter}"
-        onclick="bookPanelSection('${esc(g.items[0].id)}')">${esc(g.chapter || 'Introduction')}${!open && subs.length ? ` <span>${subs.length}</span>` : ''}</button>`
-      + (open ? subs.map(x => `<button class="bk-toc-s" aria-current="${x === s}" onclick="bookPanelSection('${esc(x.id)}')">${esc(x.title)}${shared(x.id) ? ' <span title="Shared with the players">✓</span>' : ''}</button>`).join('') : '');
-  }).join('');
-  const pages = b.pages?.packs?.length ? sectionPages(b.story, i, b.pages.count) : [];
-  const body = R.pageView && pages.length
-    ? `<div class="bk-real-pages">${pages.map(n => `<figure><img data-page="${n}" alt="Page ${n}"><figcaption>Page ${n}</figcaption></figure>`).join('')}</div>`
-    : `<div class="bk-story">${s?.html || ''}</div>`;
-  return `<div class="bk-reader"><nav class="bk-toc">${toc}</nav>
-    <article class="bk-page">${s ? `<h3>${esc(s.title)}${pages.length ? `<button class="btn btn-ghost btn-sm bk-page-toggle" onclick="bookPanelPageView()"
-        aria-pressed="${!!R.pageView}">${R.pageView ? 'Show the text' : `Show the page${pages.length > 1 ? 's' : ''}`}</button>` : ''}</h3>${body}
+  return `<p class="bk-help">This book was saved before LanternKeep showed the real pages. Import it again to read them.</p>
+    <div class="bk-reader"><nav class="bk-toc">${tocHtml(b.story, s, { mark: id => (shared(id) ? ' <span title="Shared with the players">✓</span>' : '') })}</nav>
+    <article class="bk-page">${s ? `<h3>${esc(s.title)}</h3><div class="bk-story">${s.html || ''}</div>
       <div class="bk-page-actions"><button class="btn btn-gold btn-sm" onclick="bookShareSection('${esc(s.id)}')">${shared(s.id) ? 'Show the players again' : 'Share with the players'}</button>
       <span>${shared(s.id) ? 'In the party journal.' : 'It goes to the party journal and pops up on their map.'}</span></div>` : ''}</article></div>`;
 }
@@ -104,10 +111,13 @@ function listView(list, kind) {
       ${sel === e.id ? `<div class="bk-preview">${kind === 'monster'
         ? `<p><b>AC</b> ${e.ac} · <b>HP</b> ${e.hp} (${esc(e.hp_dice || '')}) · ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(a => `<b>${a.toUpperCase()}</b> ${e[a]}`).join(' ')}</p>
            ${(e.actions || []).slice(0, 4).map(a => `<p><b><i>${esc(a.name)}.</i></b> ${esc(a.desc.slice(0, 200))}</p>`).join('')}
-           <button class="btn btn-gold btn-sm" onclick="bookAddMonster('${esc(e.id)}')">Add to the encounter</button>`
+           <button class="btn btn-gold btn-sm" onclick="bookAddMonster('${esc(e.id)}')">Add to the encounter</button>${pageButton(kind, e)}`
         : `<p>${esc(e.desc.slice(0, 600)).replace(/\n/, '<br>')}</p>
-           <button class="btn btn-gold btn-sm" onclick="bookAddItem('${esc(e.id)}')">${camp()?.items?.[e.id] ? 'In your items ✓' : 'Add to your items'}</button>`}</div>` : ''}</div>`).join('')}</div>`;
+           <button class="btn btn-gold btn-sm" onclick="bookAddItem('${esc(e.id)}')">${camp()?.items?.[e.id] ? 'In your items ✓' : 'Add to your items'}</button>${pageButton(kind, e)}`}</div>` : ''}</div>`).join('')}</div>`;
 }
+// The real page a monster or item was read from, when the book has its pictures.
+const pageButton = (kind, e) => (e.page && bookDocs(book())[e.doc || 0]
+  ? ` <button class="btn btn-ghost btn-sm" onclick="bookShowPage('${kind}','${esc(e.id)}')">Show the page</button>` : '');
 
 // ── Maps & art ───────────────────────────────────────────────────────────────────────────────────────────────
 const _thumbs = new Map(); // picture file id → object URL (this session)
@@ -172,22 +182,32 @@ export async function bookShowPicture(picId) {
 }
 
 export function bookPanelTab(t) { R.tab = t; R.q = ''; draw(); }
-export function bookPanelBook(i) { R.book = i; R.section = R.books[i]?.story?.[0]?.id || null; draw(); }
-export function bookPanelSection(id) { R.section = id; draw(); document.querySelector('#book-panel .bk-page')?.scrollTo?.(0, 0); }
-/** The real page(s) of the book beside a section, instead of its text (book-pages.js). */
-export function bookPanelPageView() { R.pageView = !R.pageView; draw(); }
-const _pageUrls = new Map(); // `${book id}:${page}` → object URL, for the session
-function fillPages() {
-  const b = R?.books?.[R.book] || R?.books?.[0];
-  for (const img of document.querySelectorAll('#book-panel img[data-page]')) {
-    const n = +img.dataset.page, key = `${b.id}:${n}`;
-    if (_pageUrls.has(key)) { img.src = _pageUrls.get(key); continue; }
-    loadPage(b, 0, n).then(buf => {
-      const url = URL.createObjectURL(new Blob([buf], { type: 'image/webp' }));
-      _pageUrls.set(key, url);
-      if (img.isConnected) img.src = url;
-    }).catch(() => { img.replaceWith(Object.assign(document.createElement('div'), { className: 'bk-empty', textContent: `Page ${n} could not be loaded.` })); });
-  }
+export function bookPanelBook(i) { openBook(i); draw(); }
+/** An index line: its page (or, in an old book, its text). */
+export function bookPanelSection(id) {
+  const e = book()?.story?.find(x => x.id === id);
+  R.section = id;
+  if (e) R.view = { ...R.view, ...startOf(e) };
+  draw();
+  document.querySelector('#book-panel .bk-page, #book-panel .bk-view-scroll')?.scrollTo?.(0, 0);
+}
+// The page view's controls (book-viewer.js).
+export function bookViewGo(delta) { R.view = { ...R.view, ...step(R.view, delta, bookDocs(book())) }; draw(); document.getElementById('bk-view-scroll')?.scrollTo?.(0, 0); }
+export function bookViewPage(text) {
+  const n = typedPage(text, bookDocs(book())[R.view.doc]?.count || 0);
+  if (n) R.view = { ...R.view, page: n };
+  draw();
+}
+export function bookViewDoc(i) { R.view = { ...R.view, ...step({ doc: i, page: 1 }, 0, bookDocs(book())) }; draw(); }
+export function bookViewZoom() { R.view = { ...R.view, zoom: nextZoom(R.view.zoom) }; draw(); }
+export function bookViewToc() { R.view = { ...R.view, toc: !R.view.toc }; draw(); }
+/** A monster's or item's page, in the page view. */
+export function bookShowPage(kind, id) {
+  const e = (kind === 'monster' ? book()?.monsters : book()?.items)?.find(x => x.id === id);
+  if (!e) return;
+  R.tab = 'story'; R.q = '';
+  R.view = { ...R.view, ...startOf(e) };
+  draw();
 }
 export function bookPanelFilter(v) { R.q = v; draw(); const i = document.querySelector('#book-panel .bk-search'); i?.focus(); i?.setSelectionRange(v.length, v.length); }
 export function bookPanelOpen(kind, id) { if (kind === 'monster') R.monster = R.monster === id ? null : id; else R.item = R.item === id ? null : id; draw(); }

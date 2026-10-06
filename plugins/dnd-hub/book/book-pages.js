@@ -1,10 +1,9 @@
-// book-pages.js — a picture of every page of a book, saved with it, so the reader can show the real page beside a
-// section ("Show the page").
+// book-pages.js — a picture of every page of a book, saved with it: the reader shows the real pages (book-viewer.js).
 //
 // WHY: no reading of a PDF's text gets every book right — a scan's words are a machine's guesses (Curse of Strahd:
 // "CURSE OF STRABO"), and a designed page loses its layout, sidebars and art. Every VTT that does books well either
 // ships hand-made versions or simply shows the PDF (Foundry's PDFoundry). The page itself is never wrong, so it is
-// kept beside the text. The PDF is never uploaded, so the pictures are made when the DM saves (the file is still
+// what the reader shows. The PDF is never uploaded, so the pictures are made when the DM saves (the file is still
 // open then): PAGE_WIDTH px wide, WebP, packed into a few files (book-picture-pack.js, the node's 20 uploads a minute).
 // One entry per PDF of the import in book.docs (lk-book.js bookDocs; an old book's `pages` is doc 0):
 // { name, count, fingerprint, packs: [{ fileId, from, to }] }; a page's picture is `page-<n>` in the pack that holds it.
@@ -15,7 +14,6 @@ import { bookDocs } from '../lk-book.js';
 
 export const PAGE_WIDTH = 900, QUALITY = 0.6;
 const EST_BYTES = 90_000; // a 900 px page as WebP, measured roughly; only for the "about N MB" line
-const SHOW_MAX = 4;       // pages shown beside one section at most
 
 export const pageId = n => `page-${n}`;
 /** About how many bytes the page pictures of a `pages`-page book take. */
@@ -25,20 +23,6 @@ export const pagesEstimate = pages => pages * EST_BYTES;
 export function pagesLine(pdfs) {
   const n = pdfs.reduce((t, p) => t + (p.pages || 0), 0);
   return `Page pictures: ${n} page${n === 1 ? '' : 's'}${pdfs.length > 1 ? ` in ${pdfs.length} PDFs` : ''}, about ${Math.max(1, Math.round(pagesEstimate(n) / 1e6))} MB`;
-}
-
-/**
- * The pages to show beside section `i` of `story`: from its own page through the page the next section starts on
- * (the section may run onto it), at most SHOW_MAX. The last section shows its own page and the one after.
- */
-export function sectionPages(story, i, count = Infinity) {
-  const s = story?.[i];
-  if (!s?.page) return [];
-  const next = story.slice(i + 1).find(x => x.page)?.page;
-  const end = Math.min(next == null ? s.page + 1 : Math.max(next, s.page), s.page + SHOW_MAX - 1, count);
-  const out = [];
-  for (let n = s.page; n <= end; n++) out.push(n);
-  return out;
 }
 
 /** Where page `n` of PDF `doc` has its picture: { fileId, packed, id } for loadBookPicture, or null. */
