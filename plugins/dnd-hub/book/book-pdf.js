@@ -5,7 +5,7 @@
 // on this thread ("fake worker"). The page loop yields between pages so the screen stays alive and Cancel works.
 // pdf.js (Apache-2.0) is vendored in vendor/pdfjs/ and loaded only when a DM imports a book.
 import { pageLines } from './book-layout.js';
-import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint } from './book-images.js';
+import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture, FULL_PAGE, SAMPLE } from './book-images.js';
 import { readOutline } from './book-outline.js';
 
 let _pdfjs = null;
@@ -46,7 +46,7 @@ export class ScanError extends Error {
 export async function readPdf(source, { onProgress, signal, images: wantImages = true } = {}) {
   const lib = await pdfjs();
   const doc = await openPdf(lib, source);
-  const lines = [], images = [], seen = new Set();
+  const lines = [], images = [], seen = new Set(), left = { mask: 0, blank: 0, background: 0 };
   let chars = 0;
   try {
     for (let p = 1; p <= doc.numPages; p++) {
@@ -56,7 +56,8 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
       const tc = await page.getTextContent();
       for (const it of tc.items) chars += (it.str || '').length;
       lines.push(...pageLines({ items: tc.items, width: vp.width, height: vp.height }, p));
-      if (wantImages) images.push(...await pageImages(lib, page, p, seen).catch(() => []));
+      const mapWord = tc.items.some(it => /\bmaps?\b/i.test(it.str || ''));
+      if (wantImages) images.push(...await pageImages(lib, page, p, seen, { width: vp.width, height: vp.height, mapWord, left }).catch(() => []));
       page.cleanup();
       onProgress?.(p, doc.numPages);
       await new Promise(r => setTimeout(r, 0));
@@ -65,7 +66,7 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
     if (chars < doc.numPages * 40 && !images.length) throw new ScanError();
     const meta = await doc.getMetadata().catch(() => null);
     const outline = await readOutline(doc).catch(() => []);
-    return { lines, images, outline, pages: doc.numPages, title: meta?.info?.Title || '' };
+    return { lines, images, left, outline, pages: doc.numPages, title: meta?.info?.Title || '' };
   } finally {
     doc.destroy();
   }
@@ -73,15 +74,26 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
 
 /**
  * The pictures on one page worth offering (book-images.js), each once per book: { id, page, width, height, kind,
- * blob } (WebP, at most 4096 px a side). A picture shared between pages lives in commonObjs; a lookup that never
- * answers is given up after 5 s rather than stopping the whole book.
+ * fullPage, blob } (WebP, at most 4096 px a side). A picture shared between pages lives in commonObjs; a lookup
+ * that never answers is given up after 5 s rather than stopping the whole book.
+ * Masks, blank textures and page backgrounds (notAPicture) are counted in `ctx.left`, never encoded: Heliana's Guide
+ * offered 790 "pictures", 511 of them those. Where a picture is drawn is followed through the page's transforms, so a
+ * whole-page one is known (`ctx.width/height`: the page; `ctx.mapWord`: the page says "map").
  */
-async function pageImages(lib, page, pageNo, seen) {
+const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3],
+  m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+async function pageImages(lib, page, pageNo, seen, ctx) {
   const ops = await page.getOperatorList();
   const out = [];
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
   for (let i = 0; i < ops.fnArray.length; i++) {
     const fn = ops.fnArray[i];
+    if (fn === lib.OPS.save) { stack.push(ctm); continue; }
+    if (fn === lib.OPS.restore) { ctm = stack.pop() || ctm; continue; }
+    if (fn === lib.OPS.transform) { ctm = mul(ctm, ops.argsArray[i]); continue; }
     if (fn !== lib.OPS.paintImageXObject && fn !== lib.OPS.paintInlineImageXObject) continue;
+    const cover = (Math.hypot(ctm[0], ctm[1]) * Math.hypot(ctm[2], ctm[3])) / (ctx.width * ctx.height);
     // paintImageXObject's arguments are [name, width, height]: decorations are skipped without fetching them.
     const [arg, aw, ah] = ops.argsArray[i];
     if (aw && ah && !isWorthOffering(aw, ah)) continue;
@@ -91,8 +103,15 @@ async function pageImages(lib, page, pageNo, seen) {
     const fp = fingerprint(img.data ? img : await bitmapPrint(img));
     if (seen.has(fp)) continue;
     seen.add(fp);
-    const blob = await encode(img).catch(() => null);
-    if (blob) out.push({ id: `p${pageNo}-${out.length + 1}`, page: pageNo, width: img.width, height: img.height, kind: guessKind(img.width, img.height), blob });
+    const bmp = await bitmapOf(img).catch(() => null);
+    if (!bmp) continue;
+    const why = notAPicture({ cover, stats: sampleStats(bmp) });
+    if (why) { ctx.left[why]++; if (!img.bitmap) bmp.close?.(); continue; }
+    const fullPage = cover >= FULL_PAGE;
+    const blob = await encode(bmp, img.width, img.height).catch(() => null);
+    if (!img.bitmap) bmp.close?.();
+    if (blob) out.push({ id: `p${pageNo}-${out.length + 1}`, page: pageNo, width: img.width, height: img.height, fullPage,
+      kind: guessKind(img.width, img.height, { mapWord: ctx.mapWord, fullPage }), blob });
   }
   return out;
 }
@@ -117,17 +136,24 @@ function objectOf(page, name) {
   });
 }
 
-async function encode(img) {
-  const { w, h } = fitWithin(img.width, img.height);
+/** The picture as something a canvas can draw: the browser's own bitmap, or one made from pdf.js's pixels. */
+async function bitmapOf(img) {
+  if (img.bitmap) return img.bitmap;
+  const rgba = rgbaFrom(img);
+  if (!rgba) return null;
+  return createImageBitmap(new ImageData(rgba, img.width, img.height));
+}
+
+/** pictureStats of a SAMPLE×SAMPLE copy. */
+function sampleStats(bmp) {
+  const c = new OffscreenCanvas(SAMPLE, SAMPLE), cx = c.getContext('2d');
+  cx.drawImage(bmp, 0, 0, SAMPLE, SAMPLE);
+  return pictureStats(cx.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE);
+}
+
+async function encode(bmp, width, height) {
+  const { w, h } = fitWithin(width, height);
   const canvas = new OffscreenCanvas(w, h);
-  const ctx = canvas.getContext('2d');
-  if (img.bitmap) ctx.drawImage(img.bitmap, 0, 0, w, h);
-  else {
-    const rgba = rgbaFrom(img);
-    if (!rgba) return null;
-    const full = await createImageBitmap(new ImageData(rgba, img.width, img.height));
-    ctx.drawImage(full, 0, 0, w, h);
-    full.close?.();
-  }
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
   return canvas.convertToBlob({ type: 'image/webp', quality: 0.85 });
 }

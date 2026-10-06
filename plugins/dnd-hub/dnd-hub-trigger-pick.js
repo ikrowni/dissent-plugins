@@ -1,6 +1,6 @@
 // dnd-hub-trigger-pick.js — the DM clicks a square on the map to choose where a trigger sits or where a
 // teleporter sends people (owner, 2026-10-05: typing cell numbers was the only way).
-import { MAP, effectiveGs } from './dnd-hub-state.js?v=20261014n';
+import { MAP, effectiveGs } from './dnd-hub-state.js?v=20261014o';
 
 let _cancel = null;
 

@@ -4,13 +4,14 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014n';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014n';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014o';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014o';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { filesFromDrop } from './book-drop.js';
 import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBook, loadBook, saveBookImage, saveBookPack, loadBookPicture } from './book-library.js';
 import { planPictureFiles } from './book-picture-pack.js';
+import { savePages, pagesEstimate } from './book-pages.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -92,18 +93,19 @@ export async function bookPickFiles(list) {
   S = { mode: 'reading', file: label, page: 0, pages: 0, ctrl, phase: 'Opening…' };
   render();
   try {
-    const { parsed, title, pages, notes } = await readBundle(files, { signal: ctrl.signal, progress: p => {
+    const { parsed, title, pages, notes, pdf } = await readBundle(files, { signal: ctrl.signal, progress: p => {
       S.page = p.page || 0; S.pages = p.pages || 0;
       const which = p.files > 1 ? `File ${p.file} of ${p.files}, ${p.name}: ` : '';
       S.phase = p.phase || `${which}page ${p.page} of ${p.pages}`;
       updateProgress();
     } });
-    // Pictures: decorations were left behind by book-pdf.js, so every one offered starts ticked.
+    // Pictures: decorations, masks and page backgrounds were left behind by book-pdf.js, so each one offered starts
+    // ticked — except a whole page (a page with art painted on it, or a scan's page): the DM picks those.
     parsed.images = (parsed.images || []).map(img => ({ ...img, url: URL.createObjectURL(img.blob) }));
     const keep = {};
-    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || k === 'images' || e.confidence === 'sure').map(e => e.id));
+    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage : e.confidence === 'sure')).map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
-      title, place: 'personal', pages, notes, personalError: null };
+      picShow: 'all', title, place: 'personal', pages, notes, pdf, keepPages: !!pdf, personalError: null };
     render();
     listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
   } catch (e) {
@@ -123,7 +125,7 @@ async function openPack(file) {
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
-      title, place: 'personal', pages: null, personalError: null };
+      picShow: 'all', title, place: 'personal', pages: null, personalError: null };
     render();
     listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
   } catch (e) {
@@ -178,6 +180,9 @@ function bundleNotes(nt) {
   const parts = [];
   if (nt.read.length > 1) parts.push(`Read: ${nt.read.map(r => `${esc(r.name)} (${r.pages} pages${r.scanned ? ', a scan' : ''})`).join(', ')}.`);
   if (nt.failed.length) parts.push(`Could not read: ${nt.failed.map(f => `${esc(f.name)} (${esc(f.why)})`).join(', ')}.`);
+  const left = nt.left || {}, nLeft = (left.background || 0) + (left.blank || 0) + (left.mask || 0);
+  if (nLeft) parts.push(`Left out ${[left.background && `${left.background} page backgrounds`, left.blank && `${left.blank} blank textures`,
+    left.mask && `${left.mask} masks`].filter(Boolean).join(', ')}: they are not pictures.`);
   if (nt.skipped.length) parts.push(`Left out (not a PDF or a picture): ${nt.skipped.slice(0, 6).map(p => esc(p.split('/').pop())).join(', ')}${nt.skipped.length > 6 ? ` and ${nt.skipped.length - 6} more` : ''}.`);
   return parts.length ? `<p class="bk-help bk-notes">${parts.join(' ')}</p>` : '';
 }
@@ -212,7 +217,7 @@ function preview(k, e) {
 function reviewView() {
   const k = S.tab, list = S.parsed[k], keep = S.keep[k];
   const q = S.filter.toLowerCase();
-  const shown = list.filter(e => !q || (e.name || e.title || '').toLowerCase().includes(q));
+  const shown = list.filter(e => (!q || (e.name || e.title || '').toLowerCase().includes(q)) && (k !== 'images' || picShown(e)));
   const total = KINDS.reduce((n, [kk]) => n + S.keep[kk].size, 0);
   return `<div class="screen-header">
       <button class="screen-back" onclick="showLibrary()" aria-label="Back">${icon('arrow-left')}</button>
@@ -230,9 +235,9 @@ function reviewView() {
       ${S.parsed[kk].length ? '' : 'disabled'}>${label} <span>${S.keep[kk].size}/${S.parsed[kk].length}</span></button>`).join('')}</div>
     <div class="bk-tools">
       <input type="search" placeholder="Search ${KINDS.find(x => x[0] === k)[1].toLowerCase()}…" value="${esc(S.filter)}" oninput="bookFilter(this.value)" aria-label="Search">
-      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('sure')">Keep the sure ones</button>
-      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('all')">Keep all</button>
-      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('none')">Keep none</button></div>
+      ${k === 'images' ? '' : `<button class="btn btn-ghost btn-sm" onclick="bookKeepAll('sure')">Keep the sure ones</button>`}
+      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('all')">Keep all${k === 'images' && S.picShow !== 'all' ? ' shown' : ''}</button>
+      <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('none')">Keep none${k === 'images' && S.picShow !== 'all' ? ' shown' : ''}</button></div>
     ${k === 'images' ? imageGrid(shown, keep) : `<div class="bk-rows" id="bk-rows">${shown.slice(0, 400).map(e => `<div class="bk-row ${keep.has(e.id) ? 'kept' : ''} ${S.open === e.id ? 'open' : ''}">
         <label class="bk-row-head"><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
           <b>${esc(e.name || e.title)}</b><span>${esc(meta(k, e))}</span>
@@ -246,13 +251,25 @@ function reviewView() {
       <fieldset><legend>Save to</legend>
         <label><input type="radio" name="bk-place" value="personal" ${S.place === 'personal' ? 'checked' : ''} ${S.personalError ? 'disabled' : ''} onchange="bookPlace('personal')"> Your personal library <small>(every server you play on)</small></label>
         <label><input type="radio" name="bk-place" value="server" ${S.place === 'server' ? 'checked' : ''} onchange="bookPlace('server')"> This server <small>(only you can read it)</small></label></fieldset>
+      ${S.pdf && S.pages ? `<label class="bk-keep-pages"><input type="checkbox" ${S.keepPages ? 'checked' : ''} onchange="bookKeepPages(this.checked)">
+        Keep a picture of every page, so you can open the real page beside any section <small>(${S.pages} pages, about
+        ${Math.max(1, Math.round(pagesEstimate(S.pages) / 1e6))} MB${S.parsed.scanned ? ' — recommended for a scan' : ''})</small></label>` : ''}
       <button class="btn btn-gold" id="bk-save" onclick="bookSave()" ${total ? '' : 'disabled'}>Save ${total} thing${total === 1 ? '' : 's'}</button>
       <div class="bk-error" role="alert" id="bk-error"></div></div>`;
 }
 
-// Maps & art: a grid of thumbnails; each picture is kept or not, and is a map or art (the DM decides).
+// Maps & art: a grid of thumbnails; each picture is kept or not, and is a map or art (the DM decides). A big book
+// offers hundreds, so they can be shown by kind: maps, art, or whole pages (art painted onto a page, a scan's page).
+const PIC_SHOW = [['all', 'All', () => true], ['map', 'Maps', e => e.kind === 'map'], ['art', 'Art', e => e.kind === 'art' && !e.fullPage],
+  ['page', 'Full pages', e => !!e.fullPage]];
+const picShown = e => (PIC_SHOW.find(([id]) => id === S.picShow) || PIC_SHOW[0])[2](e);
 function imageGrid(list, keep) {
-  return `<p class="bk-help">Pictures found in the book. A <b>map</b> can become the table's map in one click; <b>art</b> can be shown to the players.</p>
+  const all = S.parsed.images;
+  return `<p class="bk-help">Pictures found in the book. A <b>map</b> can become the table's map in one click; <b>art</b> can be shown to the
+      players. <b>Full pages</b> are whole pages with a picture on them: tick the ones worth keeping.</p>
+    <div class="bk-seg bk-pic-show" role="group" aria-label="Show">${PIC_SHOW.filter(([id, , f]) => id === 'all' || all.some(f)).map(([id, label, f]) =>
+      `<button aria-pressed="${S.picShow === id}" onclick="bookPicShow('${id}')">${label} <span>${all.filter(e => keep.has(e.id) && f(e)).length}/${all.filter(f).length}</span></button>`).join('')}</div>
+    ${!list.length ? '<div class="bk-empty">Nothing here.</div>' : ''}
     <div class="bk-grid">${list.map(e => `<div class="bk-pic ${keep.has(e.id) ? 'kept' : ''}">
       <label><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
         <img src="${esc(e.url)}" alt="${esc(e.name)}" loading="lazy"></label>
@@ -261,6 +278,7 @@ function imageGrid(list, keep) {
     </div>`).join('')}</div>`;
 }
 export function bookPicKind(id, kind) { const e = S.parsed.images.find(x => x.id === id); if (e) { e.kind = kind; render(); } }
+export function bookPicShow(id) { S.picShow = id; render(); }
 
 export function bookTab(k) { S.tab = k; S.open = null; S.filter = ''; render(); }
 export function bookFilter(v) {
@@ -269,6 +287,10 @@ export function bookFilter(v) {
 }
 export function bookKeep(id, on) { const set = S.keep[S.tab]; on ? set.add(id) : set.delete(id); renderKeepCounts(); }
 export function bookKeepAll(mode) {
+  if (S.tab === 'images') { // the pictures shown (one kind): ticked or unticked, the others left as they are
+    for (const e of S.parsed.images.filter(picShown)) mode === 'none' ? S.keep.images.delete(e.id) : S.keep.images.add(e.id);
+    return render();
+  }
   const list = S.parsed[S.tab];
   S.keep[S.tab] = new Set(mode === 'none' ? [] : list.filter(e => mode === 'all' || S.tab === 'story' || S.tab === 'images' || e.confidence === 'sure').map(e => e.id));
   render();
@@ -285,6 +307,7 @@ export function bookEdit(id, field, value) {
 export function bookPeek(id) { S.open = S.open === id ? null : id; render(); }
 export function bookTitle(v) { S.title = v; }
 export function bookPlace(p) { S.place = p; }
+export function bookKeepPages(on) { S.keepPages = !!on; }
 // Ticking a box re-counts without redrawing the list (the list keeps its scroll and focus).
 function renderKeepCounts() {
   const tabs = document.querySelectorAll('.bk-tabs button span');
@@ -324,6 +347,13 @@ export async function bookSave() {
       }
     }
     book.images = saved;
+    if (S.keepPages && S.pdf) {
+      btn.textContent = 'Pictures of the pages: starting…';
+      book.pages = await savePages(book, S.pdf, S.place, {
+        onProgress: (n, of) => { btn.textContent = `Pictures of the pages: ${n} of ${of}…`; },
+        onWait: s => { btn.textContent = `Pictures of the pages: the server takes 20 files a minute, going on in ${s} s…`; },
+        uploaded: id => fileIds.push(id) });
+    }
     btn.textContent = 'Saving the book…';
     const fileId = await saveBook(book, S.place);
     S = { mode: 'saved', book, fileId, place: S.place };

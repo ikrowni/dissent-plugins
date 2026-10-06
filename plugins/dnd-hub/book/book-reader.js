@@ -5,12 +5,13 @@
 import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
-import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014n';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261014n';
-import { EV } from '../dnd-hub-event-types.js?v=20261014n';
+import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014o';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261014o';
+import { EV } from '../dnd-hub-event-types.js?v=20261014o';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014n';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014n';
+import { sectionPages, loadPage } from './book-pages.js';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014o';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014o';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 
@@ -62,19 +63,32 @@ function draw() {
     ${R.books.length > 1 ? `<div class="bk-books">${R.books.map((x, i) => `<button aria-pressed="${i === R.book}" onclick="bookPanelBook(${i})">${esc(x.title)}</button>`).join('')}</div>` : `<div class="bk-panel-title">${esc(b.title)}</div>`}
     <div class="bk-tabs small">${tabs.map(([k, l, n]) => `<button aria-selected="${R.tab === k}" ${n ? '' : 'disabled'} onclick="bookPanelTab('${k}')">${l} <span>${n}</span></button>`).join('')}</div>
     <div class="bk-panel-body">${R.tab === 'story' ? storyView(b) : R.tab === 'images' ? picturesView(b) : R.tab === 'monsters' ? listView(b.monsters, 'monster') : listView(b.items, 'item')}</div>`;
+  if (R.pageView) fillPages();
 }
 
+// The index: one line per chapter, and the sections of the chapter being read under it (Heliana has 32 chapters and
+// 164 sections; listing them all at once was the "not organized" index). A chapter's own opening is its line.
 function storyView(b) {
-  const s = b.story.find(x => x.id === R.section) || b.story[0];
-  let chapter = null;
-  const toc = b.story.map(x => {
-    const head = x.chapter !== chapter ? `<div class="bk-toc-ch">${esc(x.chapter || 'Introduction')}</div>` : '';
-    chapter = x.chapter;
-    return head + (x.title !== x.chapter ? `<button class="bk-toc-s" aria-current="${x.id === s?.id}" onclick="bookPanelSection('${esc(x.id)}')">${esc(x.title)}${shared(x.id) ? ' <span title="Shared with the players">✓</span>' : ''}</button>`
-      : `<button class="bk-toc-s top" aria-current="${x.id === s?.id}" onclick="bookPanelSection('${esc(x.id)}')">Opening${shared(x.id) ? ' <span>✓</span>' : ''}</button>`);
+  const i = Math.max(0, b.story.findIndex(x => x.id === R.section));
+  const s = b.story[i];
+  const groups = [];
+  for (const x of b.story) {
+    const g = groups[groups.length - 1];
+    if (g && g.chapter === x.chapter) g.items.push(x); else groups.push({ chapter: x.chapter, items: [x] });
+  }
+  const toc = groups.map(g => {
+    const open = g.items.includes(s), subs = g.items.filter(x => x.title !== x.chapter);
+    return `<button class="bk-toc-ch" aria-expanded="${open}" aria-current="${g.items[0] === s && g.items[0].title === g.chapter}"
+        onclick="bookPanelSection('${esc(g.items[0].id)}')">${esc(g.chapter || 'Introduction')}${!open && subs.length ? ` <span>${subs.length}</span>` : ''}</button>`
+      + (open ? subs.map(x => `<button class="bk-toc-s" aria-current="${x === s}" onclick="bookPanelSection('${esc(x.id)}')">${esc(x.title)}${shared(x.id) ? ' <span title="Shared with the players">✓</span>' : ''}</button>`).join('') : '');
   }).join('');
+  const pages = b.pages?.packs?.length ? sectionPages(b.story, i, b.pages.count) : [];
+  const body = R.pageView && pages.length
+    ? `<div class="bk-real-pages">${pages.map(n => `<figure><img data-page="${n}" alt="Page ${n}"><figcaption>Page ${n}</figcaption></figure>`).join('')}</div>`
+    : `<div class="bk-story">${s?.html || ''}</div>`;
   return `<div class="bk-reader"><nav class="bk-toc">${toc}</nav>
-    <article class="bk-page">${s ? `<h3>${esc(s.title)}</h3><div class="bk-story">${s.html}</div>
+    <article class="bk-page">${s ? `<h3>${esc(s.title)}${pages.length ? `<button class="btn btn-ghost btn-sm bk-page-toggle" onclick="bookPanelPageView()"
+        aria-pressed="${!!R.pageView}">${R.pageView ? 'Show the text' : `Show the page${pages.length > 1 ? 's' : ''}`}</button>` : ''}</h3>${body}
       <div class="bk-page-actions"><button class="btn btn-gold btn-sm" onclick="bookShareSection('${esc(s.id)}')">${shared(s.id) ? 'Show the players again' : 'Share with the players'}</button>
       <span>${shared(s.id) ? 'In the party journal.' : 'It goes to the party journal and pops up on their map.'}</span></div>` : ''}</article></div>`;
 }
@@ -160,6 +174,21 @@ export async function bookShowPicture(picId) {
 export function bookPanelTab(t) { R.tab = t; R.q = ''; draw(); }
 export function bookPanelBook(i) { R.book = i; R.section = R.books[i]?.story?.[0]?.id || null; draw(); }
 export function bookPanelSection(id) { R.section = id; draw(); document.querySelector('#book-panel .bk-page')?.scrollTo?.(0, 0); }
+/** The real page(s) of the book beside a section, instead of its text (book-pages.js). */
+export function bookPanelPageView() { R.pageView = !R.pageView; draw(); }
+const _pageUrls = new Map(); // `${book id}:${page}` → object URL, for the session
+function fillPages() {
+  const b = R?.books?.[R.book] || R?.books?.[0];
+  for (const img of document.querySelectorAll('#book-panel img[data-page]')) {
+    const n = +img.dataset.page, key = `${b.id}:${n}`;
+    if (_pageUrls.has(key)) { img.src = _pageUrls.get(key); continue; }
+    loadPage(b, n).then(buf => {
+      const url = URL.createObjectURL(new Blob([buf], { type: 'image/webp' }));
+      _pageUrls.set(key, url);
+      if (img.isConnected) img.src = url;
+    }).catch(() => { img.replaceWith(Object.assign(document.createElement('div'), { className: 'bk-empty', textContent: `Page ${n} could not be loaded.` })); });
+  }
+}
 export function bookPanelFilter(v) { R.q = v; draw(); const i = document.querySelector('#book-panel .bk-search'); i?.focus(); i?.setSelectionRange(v.length, v.length); }
 export function bookPanelOpen(kind, id) { if (kind === 'monster') R.monster = R.monster === id ? null : id; else R.item = R.item === id ? null : id; draw(); }
 

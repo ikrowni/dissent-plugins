@@ -77,11 +77,12 @@ async function paced(op, onWait = () => {}) {
   }
 }
 
-/** Delete a book and its pictures (each picture file once: a pack holds many). One that will not delete is left. */
+/** Delete a book, its pictures and its page pictures (each file once: a pack holds many). One that will not delete is left. */
 export async function deleteBook(fileId) {
   const book = await loadBook(fileId).catch(() => null);
   await paced(() => request('files:delete', { fileId }));
-  for (const id of new Set((book?.images || []).map(i => i.fileId))) await paced(() => request('files:delete', { fileId: id })).catch(() => {});
+  const ids = [...(book?.images || []).map(i => i.fileId), ...(book?.pages?.packs || []).map(p => p.fileId)]; // pictures, then page pictures
+  for (const id of new Set(ids)) await paced(() => request('files:delete', { fileId: id })).catch(() => {});
   _cache.delete(fileId);
 }
 

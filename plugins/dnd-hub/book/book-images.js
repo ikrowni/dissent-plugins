@@ -5,8 +5,64 @@
 export const MIN_SIDE = 300, MIN_AREA = 160_000;
 export const isWorthOffering = (w, h) => Math.min(w, h) >= MIN_SIDE && w * h >= MIN_AREA;
 
-/** A first guess, the DM decides: big and roughly landscape or square is a map; tall is art. */
-export const guessKind = (w, h) => (w >= 1000 && w / h >= 0.8 ? 'map' : 'art');
+/**
+ * A first guess, the DM decides. A picture on a page that says "map" is a map (it finds 6 of the 8 maps in
+ * Heliana's Guide, where size finds none); a whole page with no such word is art; otherwise big and roughly
+ * landscape or square is a map, tall is art.
+ */
+export function guessKind(w, h, { mapWord = false, fullPage = false } = {}) {
+  if (mapWord) return 'map';
+  if (fullPage) return 'art';
+  return w >= 1000 && w / h >= 0.8 ? 'map' : 'art';
+}
+
+/** Share of the page a picture is drawn over at or above which it is a whole page (a background, or a scan). */
+export const FULL_PAGE = 0.85;
+export const SAMPLE = 64; // pictureStats looks at a SAMPLE×SAMPLE copy
+
+/**
+ * What a small copy of a picture looks like: `edge` (mean brightness change between neighbours, 0–255), `bw` (share
+ * of pixels that are near-black or near-white and colourless), `spread` (standard deviation of brightness), `clear`
+ * (share of see-through pixels).
+ * `rgba`: Uint8ClampedArray of w×h×4.
+ */
+export function pictureStats(rgba, w, h) {
+  const lum = new Float32Array(w * h);
+  let bw = 0, sum = 0, clear = 0;
+  for (let i = 0; i < w * h; i++) {
+    const r = rgba[i * 4], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2];
+    if (rgba[i * 4 + 3] < 200) clear++;
+    const y = 0.299 * r + 0.587 * g + 0.114 * b;
+    lum[i] = y; sum += y;
+    if ((y < 24 || y > 232) && Math.max(r, g, b) - Math.min(r, g, b) < 24) bw++;
+  }
+  const mean = sum / (w * h);
+  let edge = 0, n = 0, varSum = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    varSum += (lum[i] - mean) ** 2;
+    if (x + 1 < w) { edge += Math.abs(lum[i] - lum[i + 1]); n++; }
+    if (y + 1 < h) { edge += Math.abs(lum[i] - lum[i + w]); n++; }
+  }
+  return { edge: n ? edge / n : 0, bw: bw / (w * h), spread: Math.sqrt(varSum / (w * h)), clear: clear / (w * h) };
+}
+
+/**
+ * Pictures that are not pictures, left out of the offer (null = a real picture):
+ *  'mask'       — solid black and white: a stencil the PDF paints through (Heliana's stat-block frames, ~92% pure
+ *                 black/white with soft edges). Cut-out art is as black but see-through, so it is not one.
+ *  'blank'      — almost one flat colour: a paper texture.
+ *  'background' — a whole page with little on it: the parchment behind the text (Heliana: one per page, 412 of them).
+ */
+export function notAPicture({ cover = 0, stats }) {
+  if (!stats) return null;
+  if (stats.bw >= MASK_BW && (stats.clear ?? 0) < 0.2) return 'mask';
+  if (stats.spread < BLANK_SPREAD && stats.edge < BLANK_EDGE) return 'blank';
+  if (cover >= FULL_PAGE && stats.edge < BACKGROUND_EDGE) return 'background';
+  return null;
+}
+// Measured on Heliana's Guide (2026-10-06): see book-images.test.js.
+export const MASK_BW = 0.9, BLANK_SPREAD = 8, BLANK_EDGE = 2, BACKGROUND_EDGE = 7;
 
 /** Fit w×h within `max` on its longer side, keeping the shape. */
 export function fitWithin(w, h, max = 4096) {
