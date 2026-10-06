@@ -154,3 +154,10 @@
 .bk-folder u{color:var(--lk-gold)}
 .bk-notes{font-size:12px}
 .bk-set-head{grid-column:1/-1;font-family:var(--lk-title-font, inherit);color:var(--lk-gold);font-size:13px;letter-spacing:.06em;margin:8px 0 2px}
+
+.bk-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:820px){.bk-compare{grid-template-columns:1fr}}
+.bk-snippet{margin:0;position:sticky;top:0}
+.bk-snippet img{display:block;width:100%;border-radius:6px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.bk-snippet figcaption,.bk-snip-cap{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--lk-gold);margin-bottom:6px}
+.bk-snip-body{font-size:12px;color:var(--lk-muted)}
