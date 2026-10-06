@@ -11,10 +11,10 @@ import { readBundle } from './book-import.js';
 import { filesFromDrop } from './book-drop.js';
 import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBook, loadBook, saveBookImage, saveBookPack, loadBookPicture } from './book-library.js';
 import { planPictureFiles } from './book-picture-pack.js';
-import { savePages, pagesEstimate } from './book-pages.js';
+import { savePages, pagesLine } from './book-pages.js';
 import { snippetUrls, closeSnippets } from './book-snippets.js';
 
-const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Story'], ['images', 'Maps & art']];
+const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Index'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
 const root = () => document.getElementById('screen-library');
 const myCampaigns = () => Object.values(serverData?.campaigns || {}).filter(c => c.dmUserId === userId);
@@ -96,20 +96,20 @@ export async function bookPickFiles(list) {
   S = { mode: 'reading', file: label, page: 0, pages: 0, ctrl, phase: 'Opening…' };
   render();
   try {
-    const { parsed, title, pages, notes, pdf } = await readBundle(files, { signal: ctrl.signal, progress: p => {
+    const { parsed, title, pages, notes, pdfs } = await readBundle(files, { signal: ctrl.signal, progress: p => {
       S.page = p.page || 0; S.pages = p.pages || 0;
       const which = p.files > 1 ? `File ${p.file} of ${p.files}, ${p.name}: ` : '';
       S.phase = p.phase || `${which}page ${p.page} of ${p.pages}`;
       updateProgress();
     } });
-    // Pictures: decorations, masks and page backgrounds were left behind by book-pdf.js, so each one offered starts
-    // ticked — except a whole page of art (art painted onto a page, or a scan's page): the DM picks those. A whole page
-    // that is a map stays ticked: Heliana's battle maps are whole pages, and leaving them out lost every map.
+    // Pictures: decorations, masks, page backgrounds and pages of text with art behind them were left behind by
+    // book-pdf.js, so each one offered starts ticked — except a whole-page picture that is not a map (a cover, an art
+    // plate): the DM picks those. A whole-page map stays ticked: Heliana's battle maps are whole pages.
     parsed.images = (parsed.images || []).map(({ thumb, ...img }) => ({ ...img, url: URL.createObjectURL(thumb || img.blob) }));
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage || e.kind === 'map' : e.confidence === 'sure')).map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
-      picShow: 'all', title, place: 'personal', pages, notes, pdf, keepPages: !!pdf, personalError: null };
+      picShow: 'all', title, place: 'personal', pages, notes, pdfs, personalError: null };
     render();
     listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
   } catch (e) {
@@ -129,7 +129,7 @@ async function openPack(file) {
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
-      picShow: 'all', title, place: 'personal', pages: null, personalError: null };
+      picShow: 'all', title, place: 'personal', pages: null, pdfs: [], personalError: null };
     render();
     listBooks().then(r => { if (S?.mode === 'review') { S.personalError = r.personalError; if (r.personalError) S.place = 'server'; render(); } }).catch(() => {});
   } catch (e) {
@@ -187,6 +187,7 @@ function bundleNotes(nt) {
   const left = nt.left || {}, nLeft = (left.background || 0) + (left.blank || 0) + (left.mask || 0);
   if (nLeft) parts.push(`Left out ${[left.background && `${left.background} page backgrounds`, left.blank && `${left.blank} blank textures`,
     left.mask && `${left.mask} masks`].filter(Boolean).join(', ')}: they are not pictures.`);
+  if (left.page) parts.push(`${left.page} pages of text with art behind them are not offered as pictures: in the reader, draw a box on any page to cut out a map or art.`);
   if (nt.skipped.length) parts.push(`Left out (not a PDF or a picture): ${nt.skipped.slice(0, 6).map(p => esc(p.split('/').pop())).join(', ')}${nt.skipped.length > 6 ? ` and ${nt.skipped.length - 6} more` : ''}.`);
   return parts.length ? `<p class="bk-help bk-notes">${parts.join(' ')}</p>` : '';
 }
@@ -196,12 +197,12 @@ function meta(k, e) {
   if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
   if (k === 'items') return `${e.category}, ${String(e.rarity || '').toLowerCase()}`;
   if (k === 'images') return `${e.kind === 'map' ? 'Map' : 'Art'} · ${picWhere(e)}`;
-  return `${e.chapter && e.chapter !== e.title ? `${e.chapter} · ` : ''}${wordCount(e.html)} words${e.readAloud?.length ? ` · ${e.readAloud.length} read-aloud` : ''}`;
+  // An index line: where it starts (and in which PDF, when there are several).
+  return [e.chapter && e.chapter !== e.title ? e.chapter : '', e.page ? `page ${e.page}` : '', (S.pdfs?.length > 1 && S.pdfs[e.doc || 0]?.name) || ''].filter(Boolean).join(' · ');
 }
 // A picture from a PDF says its page; a loose one its set (folder) and name ("Oracle Deck · Card 03").
 const picWhere = e => (e.page ? `${e.group ? `${e.group}, ` : ''}page ${e.page}` : [e.group, e.name].filter(Boolean).join(' · '));
 const crText = cr => cr == null ? '?' : cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr);
-const wordCount = html => String(html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
 
 function preview(k, e) {
   // Monsters: the numbers and the name can be put right here (a scan misreads them; a "?" was not read at all).
@@ -215,13 +216,17 @@ function preview(k, e) {
     ${[...(e.special_abilities || []), ...(e.actions || [])].slice(0, 6).map(a => `<p><b><i>${esc(a.name)}.</i></b> ${esc(a.desc.slice(0, 220))}${a.desc.length > 220 ? '…' : ''}</p>`).join('')}`;
   if (k === 'spells') return `<p><b>Casting time</b> ${esc(e.casting_time)} · <b>Range</b> ${esc(e.range)} · <b>Duration</b> ${esc(e.duration)}${e.classes?.length ? ` · ${esc(e.classes.join(', '))}` : ''}</p><p>${esc(e.desc.slice(0, 600))}${e.desc.length > 600 ? '…' : ''}</p>`;
   if (k === 'items') return `<p>${esc(e.desc.slice(0, 700)).replace(/\n/, '<br>')}${e.desc.length > 700 ? '…' : ''}</p>`;
-  return `<div class="bk-story">${e.html}</div>`; // generated by book-story.js: escaped text in <p>/<h4>/<blockquote>
+  // An index line: its name can be put right (a scan's headings are machine-read); untick to leave it out.
+  return `<label class="bk-edit bk-edit-name"><b>Name</b><input value="${esc(e.title)}" maxlength="80" aria-label="Name"
+      oninput="bookEdit('${esc(e.id)}','title',this.value)"></label>
+    <p class="bk-help">The reader opens the real page at this line. Untick it to leave it out of the index.</p>`;
 }
 
 // Look: the real page beside what was read (spec 2026-10-06 on-device AI, step 1). Only while the review still has
-// the one PDF it read (a multi-file import or a saved copy has none) and the find knows where it sat (src).
+// the PDF it was read from (a saved copy has none) and the find knows where it sat (src).
+const pdfOf = e => S.pdfs?.[e.doc || 0]?.blob || null;
 function compare(k, e) {
-  if (k === 'story' || !S.pdf || !e.src?.length) return preview(k, e);
+  if (k === 'story' || !pdfOf(e) || !e.src?.length) return preview(k, e);
   return `<div class="bk-compare">
     <figure class="bk-snippet"><figcaption>What the book says</figcaption><div id="bk-snip" class="bk-snip-body">Opening the page…</div></figure>
     <div class="bk-entered"><div class="bk-snip-cap">What we entered</div>${preview(k, e)}</div></div>`;
@@ -231,7 +236,7 @@ async function fillSnippet() {
   const k = S?.tab, e = S?.parsed?.[k]?.find(x => x.id === S.open);
   if (!e || !document.getElementById('bk-snip')) return;
   try {
-    const urls = await snippetUrls(S.pdf, `${k}:${e.id}`, e.src);
+    const urls = await snippetUrls(pdfOf(e), `${k}:${e.id}`, e.src);
     const el = document.getElementById('bk-snip'); // the DM may have opened another find meanwhile
     if (el && S.open === e.id) el.innerHTML = urls.length ? urls.map(u => `<img src="${u}" alt="The page this was read from">`).join('') : 'Not found on the page.';
   } catch {
@@ -277,9 +282,7 @@ function reviewView() {
       <fieldset><legend>Save to</legend>
         <label><input type="radio" name="bk-place" value="personal" ${S.place === 'personal' ? 'checked' : ''} ${S.personalError ? 'disabled' : ''} onchange="bookPlace('personal')"> Your personal library <small>(every server you play on)</small></label>
         <label><input type="radio" name="bk-place" value="server" ${S.place === 'server' ? 'checked' : ''} onchange="bookPlace('server')"> This server <small>(only you can read it)</small></label></fieldset>
-      ${S.pdf && S.pages ? `<label class="bk-keep-pages"><input type="checkbox" ${S.keepPages ? 'checked' : ''} onchange="bookKeepPages(this.checked)">
-        <span>Keep a picture of every page, so you can open the real page beside any section <small>(${S.pages} pages, about
-        ${Math.max(1, Math.round(pagesEstimate(S.pages) / 1e6))} MB${S.parsed.scanned ? ' — recommended for a scan' : ''})</small></span></label>` : ''}
+      ${S.pdfs?.length ? `<p class="bk-help bk-keep-pages">${esc(pagesLine(S.pdfs))}: the reader shows the real pages.</p>` : ''}
       <button class="btn btn-gold" id="bk-save" onclick="bookSave()" ${total ? '' : 'disabled'}>Save ${total} thing${total === 1 ? '' : 's'}</button>
       <div class="bk-error" role="alert" id="bk-error"></div></div>`;
 }
@@ -292,7 +295,8 @@ const picShown = e => (PIC_SHOW.find(([id]) => id === S.picShow) || PIC_SHOW[0])
 function imageGrid(list, keep) {
   const all = S.parsed.images;
   return `<p class="bk-help">Pictures found in the book. A <b>map</b> can become the table's map in one click; <b>art</b> can be shown to the
-      players. <b>Full pages</b> are whole pages with a picture on them: tick the ones worth keeping.</p>
+      players. <b>Full pages</b> are whole-page pictures (a map, a cover, an art plate): tick the ones worth keeping.
+      For anything else, draw a box on its page in the reader.</p>
     <div class="bk-seg bk-pic-show" role="group" aria-label="Show">${PIC_SHOW.filter(([id, , f]) => id === 'all' || all.some(f)).map(([id, label, f]) =>
       `<button aria-pressed="${S.picShow === id}" onclick="bookPicShow('${id}')">${label} <span>${all.filter(e => keep.has(e.id) && f(e)).length}/${all.filter(f).length}</span></button>`).join('')}</div>
     ${!list.length ? '<div class="bk-empty">Nothing here.</div>' : ''}
@@ -323,6 +327,7 @@ export function bookKeepAll(mode) {
 }
 /** A number or the name put right in the review (Look). Typing does not redraw, so the field keeps its focus. */
 export function bookEdit(id, field, value) {
+  if (field === 'title') { const x = S?.parsed?.story?.find(y => y.id === id); if (x && value.trim()) x.title = value.trim().slice(0, 80); return; }
   const e = S?.parsed?.monsters?.find(x => x.id === id);
   if (!e) return;
   if (field === 'name') { if (value.trim()) e.name = value.trim(); return; }
@@ -333,7 +338,6 @@ export function bookEdit(id, field, value) {
 export function bookPeek(id) { S.open = S.open === id ? null : id; render(); }
 export function bookTitle(v) { S.title = v; }
 export function bookPlace(p) { S.place = p; }
-export function bookKeepPages(on) { S.keepPages = !!on; }
 // Ticking a box re-counts without redrawing the list (the list keeps its scroll and focus).
 function renderKeepCounts() {
   const tabs = document.querySelectorAll('.bk-tabs button span');
@@ -373,12 +377,15 @@ export async function bookSave() {
       }
     }
     book.images = saved;
-    if (S.keepPages && S.pdf) {
-      btn.textContent = 'Pictures of the pages: starting…';
-      book.pages = await savePages(book, S.pdf, S.place, {
-        onProgress: (n, of) => { btn.textContent = `Pictures of the pages: ${n} of ${of}…`; },
-        onWait: s => { btn.textContent = `Pictures of the pages: the server takes 20 files a minute, going on in ${s} s…`; },
-        uploaded: id => fileIds.push(id) });
+    // Every PDF's pages (the reader shows the real pages): one docs entry each, in the order finds say (`doc`).
+    book.docs = [];
+    for (const [doc, pdf] of (S.pdfs || []).entries()) {
+      const which = S.pdfs.length > 1 ? ` (${pdf.name}, PDF ${doc + 1} of ${S.pdfs.length})` : '';
+      btn.textContent = `Pictures of the pages${which}: starting…`;
+      book.docs.push(await savePages(book, pdf.blob, S.place, { doc, name: pdf.name, fingerprint: pdf.fingerprint,
+        onProgress: (n, of) => { btn.textContent = `Pictures of the pages${which}: ${n} of ${of}…`; },
+        onWait: s => { btn.textContent = `Pictures of the pages${which}: the server takes 20 files a minute, going on in ${s} s…`; },
+        uploaded: id => fileIds.push(id) }));
     }
     btn.textContent = 'Saving the book…';
     const fileId = await saveBook(book, S.place);
@@ -397,7 +404,7 @@ function savedView() {
   return `<div class="bk-saved">
     <div class="bk-saved-seal">${icon('book-open', { size: 46 })}</div>
     <div class="lk-title" style="font-size:20px">${esc(b.title)} is in your library</div>
-    <p>${[['monsters', 'monsters'], ['spells', 'spells'], ['items', 'magic items'], ['story', 'story sections'], ['images', 'maps and pictures']]
+    <p>${[['monsters', 'monsters'], ['spells', 'spells'], ['items', 'magic items'], ['story', 'index lines'], ['images', 'maps and pictures']]
       .filter(([k]) => (b[k] || []).length).map(([k, w]) => `${b[k].length} ${w}`).join(' · ')}</p>
     ${myCampaigns().length ? `<div class="section-label">Use it in a campaign</div>
       <div class="bk-camps">${myCampaigns().map(c => `<button class="btn btn-ghost" onclick="bookAttach('${esc(S.fileId)}','${esc(c.id)}', true)">${esc(c.name)}</button>`).join('')}</div>` : ''}

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('./book-pdf.js', () => ({ pdfjs: vi.fn(), openPdf: vi.fn() }));
 vi.mock('./book-library.js', () => ({ saveBookPack: vi.fn(), loadBookPicture: vi.fn() }));
-const { sectionPages, pagePicture, pageId, packName } = await import('./book-pages.js');
+const { sectionPages, pagePicture, pageId, packName, pagesLine } = await import('./book-pages.js');
 
 const story = [{ page: 5 }, { page: 5 }, { page: 7 }, { page: 30 }, { page: 31 }];
 
@@ -43,4 +43,10 @@ describe('packName', () => {
     expect(packName(0, 1)).toBe('pages-1');
     expect(packName(1, 2)).toBe('d2-pages-2');
   });
+});
+
+describe('pagesLine: what saving the page pictures costs, said before saving', () => {
+  it('one PDF', () => expect(pagesLine([{ pages: 400 }])).toBe('Page pictures: 400 pages, about 36 MB'));
+  it('several PDFs add up', () => expect(pagesLine([{ pages: 100 }, { pages: 12 }])).toBe('Page pictures: 112 pages in 2 PDFs, about 10 MB'));
+  it('a small book is at least 1 MB', () => expect(pagesLine([{ pages: 1 }])).toBe('Page pictures: 1 page, about 1 MB'));
 });

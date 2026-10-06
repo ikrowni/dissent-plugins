@@ -21,6 +21,12 @@ export const pageId = n => `page-${n}`;
 /** About how many bytes the page pictures of a `pages`-page book take. */
 export const pagesEstimate = pages => pages * EST_BYTES;
 
+/** The review's line for the PDFs it will save pages of ([{ pages }]): "Page pictures: 412 pages, about 37 MB". */
+export function pagesLine(pdfs) {
+  const n = pdfs.reduce((t, p) => t + (p.pages || 0), 0);
+  return `Page pictures: ${n} page${n === 1 ? '' : 's'}${pdfs.length > 1 ? ` in ${pdfs.length} PDFs` : ''}, about ${Math.max(1, Math.round(pagesEstimate(n) / 1e6))} MB`;
+}
+
 /**
  * The pages to show beside section `i` of `story`: from its own page through the page the next section starts on
  * (the section may run onto it), at most SHOW_MAX. The last section shows its own page and the one after.
