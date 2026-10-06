@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('./dnd-hub-state.js?v=20261014q', () => ({ MAP: {} }));
+vi.mock('./dnd-hub-state.js?v=20261014r', () => ({ MAP: {} }));
 const { createHistory, fogCells, describe: words, PARTS } = await import('./dnd-hub-undo.js');
 
 const map = () => ({ walls: [], doors: {}, lights: [], pins: [], audioZones: [], triggers: [], tokens: { a: { x: 1 } } });

@@ -47,11 +47,11 @@
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "5f032e9a6834381feeebf87ea3cd3dd3b229b7297f57044494752900e45d3df6"
+      "sha256": "f3db335841059369ee176df703bed17baba713e1a58d33776af658816601440a"
     },
     {
       "url": "dnd-master-games.js",
-      "sha256": "e92f781f4a7a8bbc7626b3a0c9a401bc81ece74d8da430ff7a31abb9da8bfa42"
+      "sha256": "5204fd1d8171c1f2729652b0d24a31389a8034a67e631dfce182484e015eeccd"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -63,19 +63,19 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "f4b8b2d248f2d06268acbfd6eef986f851e9cc968f74be38b7ada4f06035e182"
+      "sha256": "45d6c912f9041d2dca44a1f767599f9e4d5f9de9a314916b7b62df17be32fcdc"
     },
     {
       "url": "dnd-master-items.js",
-      "sha256": "b476f4bc54ff6a331d21f1893c66e674988d51a94faea74ed07688b15e8f0e69"
+      "sha256": "c8968b9a0b7a5fa229602e3f71223e234e5a40e3f961311dd71d68d27944dcf0"
     },
     {
       "url": "dnd-master-journals.js",
-      "sha256": "e7388ad64117af203e4db858e61af2ce43ad34f17433a7143d36aee5c74c9334"
+      "sha256": "97558e050d92c3f56bb60385948611002e4749e8f2e3d724eba1a4c75e2f9d7d"
     },
     {
       "url": "dnd-master-levels.js",
-      "sha256": "d5b489de4ef03e76eafa5deb203899b7d2281d95ac725e65f414e69a7d5157b3"
+      "sha256": "eb44050b784301b89d98d7e5d201004ebe94f95f30bcb316522d54543313986a"
     },
     {
       "url": "dnd-master-logs.js",
@@ -83,11 +83,11 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "f08e98f602b4d7853c155ec2a19f262bc95ee5c3b260fa02a4591eb8556e1c95"
+      "sha256": "aa0b11c38644da2128ed56a88b235881c6cf28f2f2ea544a318864ed37b00d0f"
     },
     {
       "url": "dnd-master-maps.js",
-      "sha256": "071b583a0c0e70d3562a98165c3c4d1e68cac265aaa240203e8f7c8df18eeae7"
+      "sha256": "de125a692e0b748ea7437a1e217b1f6445107722e998a31f1e0297d861cd1e29"
     },
     {
       "url": "dnd-master-monster-filter.js",
@@ -95,7 +95,7 @@
     },
     {
       "url": "dnd-master-monsters.js",
-      "sha256": "d85ecdde978a56b5b962787978b17ad2cdc784d257f81eb78b19dd846dbd70c4"
+      "sha256": "7652a1f6a5965fbafd9c240d0437453656e52c59a9d113c7b272cd9aefe539d9"
     },
     {
       "url": "dnd-master-notes.js",
@@ -115,7 +115,7 @@
     },
     {
       "url": "dnd-master-scenes.js",
-      "sha256": "482992724f2d0ec2fa817be0edb8dfdb6d19a87b7f2b9a97fbb29a47452dba50"
+      "sha256": "cf5e6392776258bbee03bf276eed80a78d627d78730dbe8aa159c3e082b80ee5"
     },
     {
       "url": "dnd-master-sections.js",
@@ -127,19 +127,19 @@
     },
     {
       "url": "dnd-master-session.js",
-      "sha256": "79c18b04abe328ea497efffb710b575217f3c8d6178900733415e83be5cf0d0b"
+      "sha256": "dabb41f5a2382d56e7465216559fb4aa9247516041763972931c39182f0e90b3"
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "8697e36be42d4b4f1719f415ed5ac33c0781250974a3b68be69addaba6d4864f"
+      "sha256": "2b3142c5c7502123e22369291d79bd4443ce38564492bc05676dafac0418df82"
     },
     {
       "url": "dnd-master-shops.js",
-      "sha256": "e45bc168450ed9eb2594e35afd2c13bdf0f95b6fa6d02bcd16af50536fbc9c75"
+      "sha256": "ef35b397e9f8c5a1510d7924d498d7db4f10f80d980914d65e98f474c9fb6d4e"
     },
     {
       "url": "dnd-master-sounds.js",
-      "sha256": "86e70832785c00147977eb5970f2e9592edf9697ad926d0194532a10bce95c0a"
+      "sha256": "669fbb97d057abb03323f5a97517b42d481e847a603675a0d3fc36eaa7f42fef"
     },
     {
       "url": "dnd-master-styles.css",
@@ -147,7 +147,7 @@
     },
     {
       "url": "dnd-master-taverns.js",
-      "sha256": "66313cc4fb895ff931e004650ecb8df9e9c3f5d6125b67a0285941c85082c639"
+      "sha256": "2a9a14a4464b94e7d72e9a49da115cab3927beed26f0c1eaa8e975455d77d2fa"
     },
     {
       "url": "dnd-master-triggers.js",
@@ -175,7 +175,7 @@
     },
     {
       "url": "lk-book.js",
-      "sha256": "d87be66256f2f2de01621838b7bc6aeb6e7ee76eac2e65db4acf0c31ab79ba55"
+      "sha256": "48b5a28230917e679299db1fde7d2c20035fbacf0a3426577d732d1bc184e313"
     },
     {
       "url": "lk-bus.js",

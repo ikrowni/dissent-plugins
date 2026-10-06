@@ -3,9 +3,9 @@
 // Press (Space, click or tap) while the marker is in the bright band to push; miss and you give ground. Strength
 // widens the band. Cheating: lift your elbow off the pad for a sudden heave (Sleight of Hand vs the host's eye).
 // Rules: arm-wrestle-rules.js.
-import { bandWidth, markerAt, press, nextBand, lean, clampP, boutResult, HOST_HEAVE, TIME_LIMIT } from './arm-wrestle-rules.js?v=20261014q';
-import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014q';
-import { thump, chime, buzz, tick } from './tavern-sfx.js?v=20261014q';
+import { bandWidth, markerAt, press, nextBand, lean, clampP, boutResult, HOST_HEAVE, TIME_LIMIT } from './arm-wrestle-rules.js?v=20261014r';
+import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014r';
+import { thump, chime, buzz, tick } from './tavern-sfx.js?v=20261014r';
 
 const BARKS = {
   start: ['Elbows on the table. On three.', 'Don\'t blink.', 'Hope that arm\'s not just for show.'],
