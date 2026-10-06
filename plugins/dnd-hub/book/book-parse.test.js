@@ -1,17 +1,16 @@
 // plugins/dnd-hub/book/book-parse.test.js
 import { describe, it, expect } from 'vitest';
 import { parseBook } from './book-parse.js';
+import { findStory } from './book-story.js';
 import { MUDLING, SPELLS, ITEMS, STORY } from './book-fixtures.js';
 
 describe('parseBook', () => {
   const lines = [...STORY, ...MUDLING, ...SPELLS, ...ITEMS];
   const b = parseBook(lines);
-  it('finds each kind once, and leaves the story what nobody claimed', () => {
+  it('finds each kind once; the index is made only from what nobody claimed', () => {
     expect(b.counts).toMatchObject({ monsters: 1, spells: 2, items: 2, unsure: 0 });
-    const storyText = b.story.map(s => s.html).join(' ');
-    expect(storyText).not.toContain('Armor Class');
-    expect(storyText).not.toContain('Casting Time');
-    expect(storyText).toContain('Brinemoor');
+    // A stat block's, spell's or item's own headings never become index lines.
+    expect(b.story.map(s => s.title)).toEqual(findStory(STORY).map(s => s.title));
   });
   it('makes ids unique within a book', () => {
     const twice = parseBook([...MUDLING, ...MUDLING]);

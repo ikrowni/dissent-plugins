@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { findStory } from './book-story.js';
 import { STORY } from './book-fixtures.js';
 
+// The reader shows the real pages (plan 2026-10-06 page reader): findStory is the book's INDEX, never its text.
 describe('findStory', () => {
   const s = findStory(STORY);
   it('splits chapters into sections by heading size; smaller headings stay inside', () => {
@@ -11,18 +12,14 @@ describe('findStory', () => {
       ['Chapter 1: The Drowned Bell', 'Arriving in Brinemoor'],
       ['Chapter 2: Under the Waves', 'Chapter 2: Under the Waves'],
     ]);
-    expect(s[1].html).toContain('<h4>The Harbour Master</h4>');
   });
-  it('keeps paragraphs: an indented line starts a new one', () => {
-    expect(s[0].html).toBe('<p>The village of Brinemoor has not heard its bell in a hundred years.</p><p>Last night, it rang.</p>');
+  it('an index line is where a section starts, and nothing of its text', () => {
+    for (const x of s) expect(Object.keys(x).sort()).toEqual(['chapter', 'id', 'page', 'title']);
   });
-  it('marks boxed read-aloud text (a run of lines in their own font) and lists it', () => {
-    expect(s[1].readAloud).toEqual(['Fog rolls off the water. Somewhere below the waves, a bell tolls once.']);
-    expect(s[1].html).toContain('<blockquote class="read-aloud">Fog rolls off the water.');
-  });
-  it('escapes text', () => {
-    const [x] = findStory([H2('Notes'), { ...STORY[1], text: 'a <b> & c', runs: [{ text: 'a <b> & c', font: 'body' }] }]);
-    expect(x.html).toBe('<p>a &lt;b&gt; &amp; c</p>');
+  it('a heading with nothing under it before the next is not an index line', () => {
+    const empty = { ...STORY[4], text: 'Empty Room', runs: [{ text: 'Empty Room', font: 'bold' }] };
+    const st = findStory([...STORY.slice(0, 4), empty, ...STORY.slice(4)]);
+    expect(st.map(x => x.title)).toEqual(s.map(x => x.title));
   });
   it('ids are unique and stable', () => {
     expect(new Set(s.map(x => x.id)).size).toBe(3);
@@ -30,23 +27,3 @@ describe('findStory', () => {
   });
 });
 function H2(t) { return { ...STORY[0], text: t, runs: [{ text: t, font: 'bold' }] }; }
-
-describe('a scan', () => {
-  it('never guesses read-aloud boxes from fonts (a scan\'s fonts are the OCR\'s guesses)', () => {
-    // Curse of Strahd, scanned: ordinary text came out boxed because the text layer's fonts change line to line.
-    const s = findStory(STORY, { scanned: true });
-    expect(s.flatMap(x => x.readAloud)).toEqual([]);
-    expect(s.map(x => x.html).join('')).not.toContain('read-aloud');
-  });
-});
-
-describe('body text set in two fonts', () => {
-  it('a line wholly in the body\'s second font is not a read-aloud box (Heliana alternates two body fonts)', () => {
-    const P = (t, font) => ({ text: t, size: 9.8, runs: [{ text: t, font }], page: 1, x: 57, y: 0 });
-    const mixed = t => ({ text: t + ' more', size: 9.8, runs: [{ text: t, font: 'f6' }, { text: 'more', font: 'f7' }], page: 1, x: 57, y: 0 });
-    const lines = [H2('Hunting'), P('one line in the main font', 'f6'), mixed('a line in both'), P('a whole line in the second font, long enough to be a box of read-aloud text', 'f7'),
-      P('back in the main font', 'f6'), mixed('both again'), P('main', 'f6'), P('main again', 'f6')];
-    const [s] = findStory(lines);
-    expect(s.readAloud).toEqual([]);
-  });
-});

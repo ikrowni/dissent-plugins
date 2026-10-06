@@ -1,15 +1,14 @@
-// book-story.js — a book's running text (what no stat block, spell or item claimed) → story sections. Pure.
-// Headings are lines clearly taller than the body text. The tallest size is the chapter; the next size starts a
-// section; smaller headings stay inside their section as <h4>. An indented line starts a paragraph. Boxed read-aloud
-// text (lines set wholly in a font of their own) becomes a <blockquote class="read-aloud"> and is also listed in
-// `readAloud`. Text only: everything is escaped.
-// Section: { id, title, chapter, html, readAloud[], page }.
-import { slug, joinText, bodyFont } from './book-monsters.js';
+// book-story.js — a book's running text (what no stat block, spell or item claimed) → the book's INDEX. Pure.
+// The reader shows the real pages (plan 2026-10-06 page reader), so only where each chapter and section starts is
+// kept, never its text. Headings are lines clearly taller than the body text: the tallest size is the chapter, the
+// next size starts a section, smaller headings stay inside their section (they are not index lines). A section with
+// nothing under it (a heading straight after another) is not an index line either.
+// Entry: { id, title, chapter, page }.
+import { slug } from './book-monsters.js';
 import { isScanHeading, scanName, clean, titleCase } from './book-scan.js';
 import { outlineMarks, outlineUsable } from './book-outline.js';
 
 const DANGLING = /\b(of|the|and|to|in|on|at)$/i; // a scanned chapter title cut mid-phrase
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function mostCommonSize(lines) {
   const n = {};
@@ -18,13 +17,12 @@ function mostCommonSize(lines) {
 }
 
 // `outline` (book-outline.js): the PDF's bookmarks. When enough of them match a line, they open the chapters and
-// sections, and every other heading stays inside its section as <h4> (a keyed area still opens its own).
+// sections, and every other heading stays inside its section (a keyed area still opens its own).
 // `scanned` (book-scan.js): a scan's sizes are machine estimates, different for every heading, so headings are known
-// by their look instead (big capitals): very big or "CHAPTER …" opens a chapter, big a section, the rest are <h4>.
+// by their look instead (big capitals): very big or "CHAPTER …" opens a chapter, big a section, the rest stay inside.
 export function findStory(lines, { scanned = false, outline = null } = {}) {
   if (!lines.length) return [];
   const bodySize = mostCommonSize(lines);
-  const body = bodyFont(lines.filter(l => Math.abs(l.size - bodySize) < 0.5));
   const isHeading = scanned ? isScanHeading : l => l.size > bodySize + 0.9 && l.text.length <= 90;
   // Heading sizes, biggest first, leaving out sizes used once that are bigger than any repeated one: a cover title ("DEATH HOUSE",
   // 63 pt) is not the chapter level, and taking it for one flattened a whole adventure into two sections.
@@ -38,37 +36,18 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
   const isArea = t => /^\d{1,3}[A-Z]?\.\s+[A-Z]/.test(t) && t.length <= 60;
   const level = l => (!scanned ? (+l.size.toFixed(1) === chapterSize ? 'chapter' : +l.size.toFixed(1) === sectionSize ? 'section' : 'sub')
     : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
-  // A scan's fonts are the OCR's guesses, changing line to line, so a box cannot be told from them: none on a scan
-  // (Curse of Strahd came out with ordinary text boxed as read-aloud).
-  // A font the body mixes into its own lines is body too: Heliana sets its text in two fonts, line by line, and a line
-  // wholly in the second one came out as a read-aloud box.
-  const bodyFonts = new Set([body]), together = {};
-  for (const l of lines) {
-    const fonts = new Set((l.runs || []).map(r => r.font));
-    if (fonts.has(body) && fonts.size > 1) for (const f of fonts) if (f !== body) together[f] = (together[f] || 0) + 1;
-  }
-  for (const [f, n] of Object.entries(together)) if (n >= 2) bodyFonts.add(f);
-  const boxed = l => !scanned && !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && !bodyFonts.has(l.runs[0].font);
-
   const out = [];
   const used = {};
-  let chapter = '', cur = null, para = null; // para: { boxed, text }
-  const flushPara = () => {
-    if (!para || !cur) { para = null; return; }
-    if (para.boxed && (para.lines > 1 || para.text.length >= 60)) {
-      cur.html += `<blockquote class="read-aloud">${esc(para.text)}</blockquote>`;
-      cur.readAloud.push(para.text);
-    } else cur.html += `<p>${esc(para.text)}</p>`;
-    para = null;
-  };
+  let chapter = '', cur = null; // cur.has: something (text or a sub-heading) sits under it
   const open = (title, page) => {
-    flushPara();
-    if (cur && cur.html) out.push(cur);
+    if (cur?.has) out.push(cur);
     let id = slug(`${chapter} ${title}`) || 'section';
     used[id] = (used[id] || 0) + 1;
     if (used[id] > 1) id += `-${used[id]}`;
-    cur = { id, title, chapter, html: '', readAloud: [], page };
+    cur = { id, title, chapter, page, has: false };
   };
+  // Text or a sub-heading: it belongs to the open section (an opening with none yet is the chapter's introduction).
+  const under = page => { if (!cur) { chapter ||= 'Introduction'; open(chapter, page); } cur.has = true; };
 
   const marks = outline?.length ? outlineMarks(lines, outline) : new Map();
   const byOutline = outlineUsable(marks, outline);
@@ -80,9 +59,7 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
     const mark = byOutline ? marks.get(n) : null;
     if (mark?.level === 'sub') {
       if (mark.span) skip.add(n + 1);
-      flushPara();
-      if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
-      cur.html += `<h4>${esc(mark.title)}</h4>`;
+      under(l.page);
       continue;
     }
     if (mark) {
@@ -97,9 +74,7 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
       // Not bookmarked: a sub-heading, unless it is set as big as the chapters (an appendix the outline left out).
       if (!scanned && level(l) === 'chapter') { chapter = t; open(t, l.page); continue; }
       if (isArea(t)) { open(t, l.page); continue; }
-      flushPara();
-      if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
-      cur.html += `<h4>${esc(t)}</h4>`;
+      under(l.page);
       continue;
     }
     if (isHeading(l)) {
@@ -122,17 +97,12 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
         continue;
       }
       if (lv === 'section') { open(t, l.page); continue; }
-      flushPara();
       if (!cur) open(t, l.page);
-      cur.html += `<h4>${esc(t)}</h4>`;
+      cur.has = true;
       continue;
     }
-    if (!cur) { chapter ||= 'Introduction'; open(chapter, l.page); }
-    const b = boxed(l);
-    if (!para || l.indent || para.boxed !== b) { flushPara(); para = { boxed: b, text: t, lines: 1 }; }
-    else { para.text = joinText(para.text, t); para.lines++; }
+    under(l.page);
   }
-  flushPara();
-  if (cur && cur.html) out.push(cur);
-  return out;
+  if (cur?.has) out.push(cur);
+  return out.map(({ has, ...e }) => e);
 }

@@ -96,7 +96,6 @@ describe('scanned books', () => {
     const st = findStory(lines, { scanned: true });
     expect(st.map(x => [x.chapter, x.title])).toEqual([['Chapter 2: the Marsh', 'Chapter 2: the Marsh'],
       ['Chapter 2: the Marsh', 'The Causeway'], ['Chapter 2: the Marsh', 'Old Mill']]);
-    expect(st[2].html).toContain('<h4>Wheel Room</h4>');
     const v = findStory([S('CHAPTER 3: THE VILLAGE', { size: 17.2 }), S('Smoke rises.'), S('OF BAROVIA', { size: 17.4 }), S('Doors are shut.')], { scanned: true });
     expect(v.map(x => x.title)).toEqual(['Chapter 3: the Village of Barovia']);
   });

@@ -83,7 +83,6 @@ describe('book-wide sizes and adventures', () => {
       L('2. Hall', { size: 15 }), L('Dark.'), L('2A. Closet', { size: 12 }), L('Coats.')]);
     expect(st.map(s => s.title)).toEqual(['THE MUD MANOR', 'Credits', 'Mud Manor', 'Areas of the Manor', '1. Porch', '2. Hall', '2A. Closet']);
     expect(st.find(s => s.title === 'Credits').chapter).toBe('Credits'); // the 24 pt headings are the chapters
-    expect(st.find(s => s.title === '1. Porch').html).toContain('<h4>Loose Board</h4>');
     expect(st.find(s => s.title === '2. Hall').chapter).toBe('Mud Manor');
   });
 });

@@ -31,7 +31,6 @@ describe('the PDF bookmarks are the index', () => {
       ['Monster Hunting', 'Tracking'],
       ['Monster Hunting', 'Harvesting'],
     ]);
-    expect(s[0].html).toContain('<h4>L FIGURE STANDS SILHOUETTED AGAINST THE</h4>');
   });
 
   it('a bookmark matches its heading loosely (numbering, case, punctuation)', () => {
@@ -105,8 +104,6 @@ describe('how deep the index goes', () => {
     const s = findStory(lines, { outline });
     expect(s.map(x => [x.chapter, x.title])).toEqual([
       ['Part II: Creating a Character', 'Part II: Creating a Character'], ['Chapter 1. Classes', 'Chapter 1. Classes'], ['Chapter 1. Classes', 'Adept']]);
-    expect(s[2].html).toContain('<h4>Class Features</h4>');
-    expect(s[2].html).toContain('<h4>Hit Points</h4>');
   });
 
   it('an outline that starts below the top is read from its own top', () => {
