@@ -8,6 +8,7 @@ import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=2026101
 import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014r';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
+import { rememberPdf } from './book-pdf.js';
 import { filesFromDrop } from './book-drop.js';
 import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBook, loadBook, saveBookImage, saveBookPack, loadBookPicture } from './book-library.js';
 import { planPictureFiles } from './book-picture-pack.js';
@@ -105,6 +106,7 @@ export async function bookPickFiles(list) {
     // Pictures: decorations, masks, page backgrounds and pages of text with art behind them were left behind by
     // book-pdf.js, so each one offered starts ticked — except a whole-page picture that is not a map (a cover, an art
     // plate): the DM picks those. A whole-page map stays ticked: Heliana's battle maps are whole pages.
+    for (const p of pdfs) rememberPdf(p.fingerprint, p.blob); // the reader cuts boxes from them, sharp, this session
     parsed.images = (parsed.images || []).map(({ thumb, ...img }) => ({ ...img, url: URL.createObjectURL(thumb || img.blob) }));
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage || e.kind === 'map' : e.confidence === 'sure')).map(e => e.id));

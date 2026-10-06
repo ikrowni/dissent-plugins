@@ -12,6 +12,7 @@ import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-li
 import { bookDocs } from '../lk-book.js';
 import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
 import { step, typedPage, startOf, nextZoom } from './book-view-nav.js';
+import { startCut, stopCut, cutting } from './book-cut.js';
 import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014r';
 import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014r';
 import { guarded } from '../lk-upload.js';
@@ -30,14 +31,14 @@ export async function sendBookMonsters(campaignId) {
 
 // ←/→ turn the page while the panel shows one (book-viewer.js pageKey).
 function onKey(ev) {
-  if (!R || R.tab !== 'story' || !hasPages()) return;
+  if (!R || R.tab !== 'story' || !hasPages() || cutting()) return;
   const d = pageKey(ev);
   if (d) { ev.preventDefault(); bookViewGo(d); }
 }
 
 export async function toggleBookPanel() {
   const old = document.getElementById('book-panel');
-  if (old) { old.remove(); R = null; document.removeEventListener('keydown', onKey); return; }
+  if (old) { stopCut(); old.remove(); R = null; document.removeEventListener('keydown', onKey); return; }
   document.addEventListener('keydown', onKey);
   const el = document.createElement('div');
   el.id = 'book-panel'; el.className = 'bk-panel';
@@ -65,6 +66,7 @@ function openBook(i) {
 function draw() {
   const el = document.getElementById('book-panel');
   if (!el || !R) return;
+  stopCut(); // the page is drawn again: a box on the old one goes
   const head = `<div class="bk-panel-head">${icon('book-open', { size: 16 })}<span class="lk-title">Book</span>
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleBookPanel()" aria-label="Close">${icon('x', { size: 14 })}</button></div>`;
   if (R.books == null) { el.innerHTML = head + '<div class="bk-empty">Opening the book…</div>'; return; }
@@ -90,7 +92,8 @@ function draw() {
 // The story tab: the book's real pages beside its index (book-viewer.js). A book saved before the page reader without
 // page pictures still has its old text: shown as it was, with a word on getting the pages.
 function storyView(b) {
-  if (hasPages()) return pageViewHtml(b, R.view, { mark: id => (shared(id) ? ' <span title="Shared with the players">✓</span>' : '') });
+  if (hasPages()) return pageViewHtml(b, R.view, { mark: id => (shared(id) ? ' <span title="Shared with the players">✓</span>' : ''),
+    tools: '<button class="btn btn-ghost btn-sm" onclick="bookCutStart()" title="Draw a box round a map, art or a handout">✂ Cut out</button>' });
   const i = Math.max(0, b.story.findIndex(x => x.id === R.section));
   const s = b.story[i];
   return `<p class="bk-help">This book was saved before LanternKeep showed the real pages. Import it again to read them.</p>
@@ -201,6 +204,10 @@ export function bookViewPage(text) {
 export function bookViewDoc(i) { R.view = { ...R.view, ...step({ doc: i, page: 1 }, 0, bookDocs(book())) }; draw(); }
 export function bookViewZoom() { R.view = { ...R.view, zoom: nextZoom(R.view.zoom) }; draw(); }
 export function bookViewToc() { R.view = { ...R.view, toc: !R.view.toc }; draw(); }
+/** The box tool on the page shown (book-cut.js); what a box can become is book-cut-actions.js. */
+export function bookCutStart() { if (R?.view && hasPages()) startCut(book(), R.view, { actions: cutActions() }); }
+const cutActions = () => [];
+
 /** A monster's or item's page, in the page view. */
 export function bookShowPage(kind, id) {
   const e = (kind === 'monster' ? book()?.monsters : book()?.items)?.find(x => x.id === id);

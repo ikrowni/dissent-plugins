@@ -126,7 +126,22 @@
 .bk-view-where{font-family:var(--lk-title);color:#f3e3b5;font-size:13px;margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
 .bk-view-tools{display:flex;gap:6px}
 .bk-view-scroll{flex:1;min-height:0;overflow:auto;padding:10px 0;outline:none}
-.bk-view-scroll img{display:block;margin:0 auto;max-width:none;min-height:300px;border-radius:4px;background:rgba(255,255,255,.04);box-shadow:0 2px 14px rgba(0,0,0,.45)}
+.bk-view-page{position:relative;margin:0 auto;overflow:hidden;border-radius:4px;box-shadow:0 2px 14px rgba(0,0,0,.45)}
+.bk-view-page img{display:block;width:100%;min-height:300px;background:rgba(255,255,255,.04);user-select:none;-webkit-user-drag:none}
+/* The box tool (book-cut.js): outside the box is dimmed; eight handles; suggestions are dashed. */
+.bk-cut-layer{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+.bk-cut-box{position:absolute;outline:2px solid var(--lk-gold);box-shadow:0 0 0 9999px rgba(0,0,0,.5);cursor:move}
+.bk-cut-h{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;background:var(--lk-gold);border:2px solid #1a140e;border-radius:3px}
+.bk-cut-h[data-h=nw]{left:0;top:0;cursor:nwse-resize}.bk-cut-h[data-h=n]{left:50%;top:0;cursor:ns-resize}.bk-cut-h[data-h=ne]{left:100%;top:0;cursor:nesw-resize}
+.bk-cut-h[data-h=w]{left:0;top:50%;cursor:ew-resize}.bk-cut-h[data-h=e]{left:100%;top:50%;cursor:ew-resize}
+.bk-cut-h[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.bk-cut-h[data-h=s]{left:50%;top:100%;cursor:ns-resize}.bk-cut-h[data-h=se]{left:100%;top:100%;cursor:nwse-resize}
+.bk-cut-sug{position:absolute;outline:2px dashed rgba(224,181,82,.8);background:rgba(224,181,82,.08);cursor:pointer}
+.bk-cut-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;padding-top:6px}
+.bk-cut-note{font-size:11.5px;color:var(--lk-muted)}
+.bk-cut-note.sharp{color:#9fd49a}
+.bk-cut-look{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.8);display:grid;place-items:center;padding:20px}
+.bk-cut-look img{max-width:100%;max-height:calc(100vh - 80px);box-shadow:0 4px 30px rgba(0,0,0,.6)}
+.bk-cut-look p{color:var(--lk-text);font-size:12px;text-align:center;margin:8px 0 0}
 @media (max-width:700px){.bk-view{grid-template-columns:1fr}.bk-reader{grid-template-columns:1fr}.bk-toc{max-height:160px;border-right:0;border-bottom:1px solid var(--lk-line)}}
 @media (prefers-reduced-motion:reduce){.bk-drop-icon,.bk-reading-book,.bk-saved-seal,.bk-book,.bk-preview,.bk-panel{animation:none!important}}
 /* Pictures (review grid and the Book panel). */

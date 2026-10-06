@@ -35,6 +35,18 @@ export async function openPdf(lib, source, { wasmUrl } = {}) {
     rangeChunkSize: 1 << 20 }).promise;
 }
 
+// The PDFs the DM has open this session, by pdf.js fingerprint: the import's (book-screens.js), or one picked again in
+// the reader. A box cut from one is drawn from the PDF itself, sharp (book-cut.js). Kept in memory only: never uploaded.
+const _session = new Map();
+export const rememberPdf = (fingerprint, blob) => { if (fingerprint && blob) _session.set(fingerprint, blob); };
+export const rememberedPdf = fingerprint => (fingerprint && _session.get(fingerprint)) || null;
+
+/** A PDF's pdf.js fingerprint and page count, read without its pages (to check a PDF the DM picks again). */
+export async function pdfIdentity(blob) {
+  const doc = await openPdf(await pdfjs(), blob);
+  try { return { fingerprint: doc.fingerprints?.[0] || null, pages: doc.numPages }; } finally { doc.destroy(); }
+}
+
 export class ScanError extends Error {
   constructor() { super('This PDF has no text in it (a scan, or pictures of pages). Book import can only read PDFs with real text.'); }
 }

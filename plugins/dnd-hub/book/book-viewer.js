@@ -25,7 +25,7 @@ export function tocHtml(story, current, { onClick = 'bookPanelSection', mark = (
 }
 
 /** The page view for `book` at `view`. Its picture is filled in by fillPage() once the HTML is on screen. */
-export function pageViewHtml(book, view, { mark } = {}) {
+export function pageViewHtml(book, view, { mark, tools = '' } = {}) {
   const docs = bookDocs(book), d = docs[view.doc] || docs[0];
   // Several PDFs: the index lists the one being read (the switcher picks the PDF).
   const story = (book.story || []).filter(e => docs.length < 2 || (e.doc || 0) === view.doc);
@@ -44,10 +44,10 @@ export function pageViewHtml(book, view, { mark } = {}) {
         <button class="btn btn-ghost btn-sm" onclick="bookViewGo(1)" ${view.page >= (d?.count || 1) ? 'disabled' : ''} aria-label="Next page">›</button>
         <button class="btn btn-ghost btn-sm" onclick="bookViewZoom()" title="Zoom">${icon('zoom-in', { size: 14 })} ${zoomLabel}</button>
         <span class="bk-view-where">${current ? esc(current.title) : ''}</span>
-        <span class="bk-view-tools" id="bk-view-tools"></span>
+        <span class="bk-view-tools" id="bk-view-tools">${tools}</span>
       </div>
       <div class="bk-view-scroll" id="bk-view-scroll" tabindex="0" aria-label="Page ${view.page}">
-        <img id="bk-view-img" alt="Page ${view.page}" style="width:${Math.round((view.zoom || 1) * 100)}%">
+        <div class="bk-view-page" id="bk-view-page" style="width:${Math.round((view.zoom || 1) * 100)}%"><img id="bk-view-img" alt="Page ${view.page}"></div>
       </div>
     </div></div>`;
 }
