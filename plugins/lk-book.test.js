@@ -90,3 +90,10 @@ describe('.lkpack pictures', () => {
     expect(back.parsed.images).toEqual([{ id: 'p2-1', page: 2, width: 1600, height: 1200, kind: 'map', name: 'Page 2 picture', dataB64: 'QUJD' }]);
   });
 });
+
+describe('working data stays out of a saved book', () => {
+  it('src (where an entry sat on the page) is not saved', () => {
+    const book = makeBook({ title: 'T', id: 'b', parsed: { monsters: [{ id: 'm', name: 'M', src: [{ page: 1 }], lines: [0, 1] }] } });
+    expect(book.monsters[0].src).toBeUndefined();
+  });
+});

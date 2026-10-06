@@ -8,7 +8,7 @@
 
 export const BOOK_FORMAT = 1;
 const KINDS = ['monsters', 'spells', 'items', 'story'];
-const WORKING = ['confidence', 'problems', 'lines'];
+const WORKING = ['confidence', 'problems', 'lines', 'src'];
 
 /** The book the DM saves. `keep`: kind → ids kept (a kind not named keeps everything). */
 export function makeBook({ title, parsed, keep = {}, id, now = new Date().toISOString() }) {

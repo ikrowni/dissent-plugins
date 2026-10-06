@@ -19,3 +19,13 @@ describe('parseBook', () => {
   });
 });
 
+
+describe('where each find came from', () => {
+  it('monsters, spells and items carry the page regions of their lines (src)', () => {
+    const b = parseBook([...STORY, ...MUDLING, ...SPELLS, ...ITEMS]);
+    for (const e of [...b.monsters, ...b.spells, ...b.items]) {
+      expect(e.src?.length).toBeGreaterThan(0);
+      expect(e.src[0]).toMatchObject({ page: 1 });
+    }
+  });
+});

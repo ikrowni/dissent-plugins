@@ -7,14 +7,20 @@ import { findItems } from './book-items.js';
 import { findStory } from './book-story.js';
 import { isScanned } from './book-scan.js';
 import { mergeReadings } from './book-merge.js';
+import { entryRegions } from './book-snippet-geom.js';
 
 // `scanLines`: a scan read again with our own OCR (book-ocr.js) passes `lines` = the OCR'd book and `scanLines` =
 // the scan's own text; monsters are taken from both (book-merge.js). Nothing else is read twice.
 export function parseBook(lines, { scanLines = null, outline = null } = {}) {
   const scanned = isScanned(lines);
-  const monsters = scanLines ? mergeReadings(findMonsters(lines), findMonsters(scanLines)) : findMonsters(lines);
-  const spells = findSpells(lines, spellClasses(lines));
-  const items = findItems(lines);
+  // Where each find sat on its page (book-snippet-geom.js): the review shows that part of the real page beside it.
+  // Taken against the lines it was found in: a scan's second reading has its own lines.
+  const withSrc = arr => e => ({ ...e, src: entryRegions(arr, e.lines) });
+  const monsters = scanLines
+    ? mergeReadings(findMonsters(lines).map(withSrc(lines)), findMonsters(scanLines).map(withSrc(scanLines)))
+    : findMonsters(lines).map(withSrc(lines));
+  const spells = findSpells(lines, spellClasses(lines)).map(withSrc(lines));
+  const items = findItems(lines).map(withSrc(lines));
   const claimed = new Set();
   for (const e of [...monsters, ...spells, ...items]) if (e.lines) for (let i = e.lines[0]; i <= e.lines[1]; i++) claimed.add(i);
   const story = findStory(lines.filter((_, i) => !claimed.has(i)), { scanned, outline });
