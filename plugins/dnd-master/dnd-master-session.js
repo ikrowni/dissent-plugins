@@ -1,6 +1,6 @@
 // dnd-master-session.js — Start session / End session at the top of Run (spec 2026-10-03 §6). Decisions live in
 // dnd-master-session-rules.js; this file draws the bar and the two windows and writes the campaign records.
-import { EV } from './dnd-hub-event-types.js?v=20261014r';
+import { EV } from './dnd-hub-event-types.js?v=20261014s';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
 import { esc, genId } from '../plugin-sdk.js';

@@ -113,7 +113,19 @@
     },
     {
       "url": "book/book-bundle.js",
-      "sha256": "cb8d82d1ba7f08ea4ff66f009296061e971824d4d9661b8069840e0bae960ff0"
+      "sha256": "10b6a3722adc9b8e0cca783e79861aa2578000a4d96ca7360d47e6c186a2b2da"
+    },
+    {
+      "url": "book/book-cut-actions.js",
+      "sha256": "27c16ecb49d65b0ea16bca1f614407f65fd02210aa6203166c6a5b9a4b5a3be0"
+    },
+    {
+      "url": "book/book-cut-geom.js",
+      "sha256": "bcfab361406f25977bc78980db0b94910f013522fda4c42034c0d8cf50ad452d"
+    },
+    {
+      "url": "book/book-cut.js",
+      "sha256": "6ce71f5179b24a921a2549063ae02dbfbc83777e4aa233b31fb7760e5dd85a2f"
     },
     {
       "url": "book/book-drop.js",
@@ -125,11 +137,11 @@
     },
     {
       "url": "book/book-images.js",
-      "sha256": "11b7a09b5fbe6159f3b5eb3db21bc8bcfd11d1c9ff9119e80b565f66e081e769"
+      "sha256": "9931de8fcd6469723f8c6d40fde34317fa9b33f6b108ae9b00bc2e4539fc24a1"
     },
     {
       "url": "book/book-import.js",
-      "sha256": "e49da935b0913bb707bb963061f30c404992286aeae0c15bb9e5e94d7b9e00d6"
+      "sha256": "61455856f506cc542573c5f33616932aaeeb0f67ee312f5986cc9cf732568c71"
     },
     {
       "url": "book/book-items.js",
@@ -141,7 +153,7 @@
     },
     {
       "url": "book/book-library.js",
-      "sha256": "2922b0fc489d6451981cd43a9a93168957f4fc29bde044f94f1ad4f3092e3da8"
+      "sha256": "d6f4b983c10e528b14427ceac110927e1e2013cc22a4dc444f277d1051e7fc02"
     },
     {
       "url": "book/book-merge.js",
@@ -165,7 +177,7 @@
     },
     {
       "url": "book/book-pages.js",
-      "sha256": "6a0fa8e83792921fa0ff88f4db0943e74b53251a5375391789fd0dc1e2cad733"
+      "sha256": "294d71abeae105b66936ef71789440ce232eae4d70a7aa7dff68e81463aa5b3a"
     },
     {
       "url": "book/book-parse.js",
@@ -173,7 +185,7 @@
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "611cbdf05fcad1d8f8e20aebf87ce8b240fb67dbe2d27448bc28b0f59e716202"
+      "sha256": "3c9fb24ab26393dd2d65559fecdfb15665f5287e0c92af419b0fa700e6e6108d"
     },
     {
       "url": "book/book-picture-pack.js",
@@ -181,7 +193,7 @@
     },
     {
       "url": "book/book-reader.js",
-      "sha256": "aed012306b170bdbf378b7ef10b4e7466168ed17886d0fe5a831c764dcaf0857"
+      "sha256": "74216709d618baf8d293b9f3adcf3f620012f6314c80150160f14f485d6f273c"
     },
     {
       "url": "book/book-scan.js",
@@ -189,7 +201,7 @@
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "5f8ee38eb55c271a65c74e0a1df561d05b6ab4294b1f0241461864c3f328476c"
+      "sha256": "020d1916f81f1238629a5615c3a6bf088cb9bf2ee7b694227aefd269d9c50acc"
     },
     {
       "url": "book/book-snippet-geom.js",
@@ -197,11 +209,11 @@
     },
     {
       "url": "book/book-snippets.js",
-      "sha256": "4f142c6fde58fef5879d5934d47108a7b5a08c405ef9c78a0928911fcc62a300"
+      "sha256": "f752f5f865c3a938e98120c9c689927f6fc240ce0f737c2dd97618324f1f1985"
     },
     {
       "url": "book/book-spells-in-play.js",
-      "sha256": "6b21d794446fbffecc94ff4bacd9f1f8d1b5f79b77c3e7ba333331de1fedc2ce"
+      "sha256": "2b25b7fbbb75e2e084ad2ecbb2ebb45b865739b771d1e809a44ae4cc86728e39"
     },
     {
       "url": "book/book-spells.js",
@@ -209,7 +221,15 @@
     },
     {
       "url": "book/book-story.js",
-      "sha256": "5681b56ec12750264fc84f66a1d4ac6e8a12788df89ba931363dfdeddf7aeb50"
+      "sha256": "bdb6f70a457ec773e361e4a556c371489b0a8d744d82a83405f136529085e9c5"
+    },
+    {
+      "url": "book/book-view-nav.js",
+      "sha256": "27eee04b464980b6e19b32b4ce92ceba082ebb41f1c2504e79367abb55ec2030"
+    },
+    {
+      "url": "book/book-viewer.js",
+      "sha256": "bf802c6e49335614cccb71c75c1f9effc7f37df063458d38b9123b3d3b42be15"
     },
     {
       "url": "book/book-zip.js",
@@ -217,7 +237,7 @@
     },
     {
       "url": "book/book.css",
-      "sha256": "506b3c7959d2317f64fca086ee9d4f15bae90a283e4ea54c7604db814c2b4232"
+      "sha256": "18263cd1190ceba407e5934b244d8db363018d9a95db51777a87081bff7f9b3b"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -233,11 +253,11 @@
     },
     {
       "url": "dnd-hub-audio-zones.js",
-      "sha256": "5e7ab6f58459a7c6cc8290330d060cbc1343d6dac3415a6214f621aae511f501"
+      "sha256": "fe9370cdc80bc316a20c9582b85755dfae1495be121979e2fe5ed95307b0b963"
     },
     {
       "url": "dnd-hub-canvas.js",
-      "sha256": "39a84c9208d72b474fe892e24e6c59c27657dc33be80dcaf86f851b576dbddcc"
+      "sha256": "fce8b7f1cb1d007735716deb74c8eb301daa771f93b6feea81bc4fe8a994690a"
     },
     {
       "url": "dnd-hub-char-format.js",
@@ -245,11 +265,11 @@
     },
     {
       "url": "dnd-hub-char-steps.js",
-      "sha256": "b95fdc127a877b5c92f993600a64e8ee4fc324014b9a815d437e797722b440a5"
+      "sha256": "f795ad74058dae7c768740656d7012253dbb8ef8ab05fec20fa7a312f2bb5300"
     },
     {
       "url": "dnd-hub-char.js",
-      "sha256": "0034b0bbd52cb72fd0eda100fa3123d0b5c5e9e918a277f4b71fbab2bb99c912"
+      "sha256": "2976604832f7bbe234434c8eb9e9ffdd5c857530b5222aac987429545e9109b9"
     },
     {
       "url": "dnd-hub-client-id.js",
@@ -257,7 +277,7 @@
     },
     {
       "url": "dnd-hub-combat.js",
-      "sha256": "7a0a70ad1563906997596d4e20e934fb5d937ac514260b2be8df6216c5a7324b"
+      "sha256": "f3a12e89a5c7e723761ea7d2db3e0394bb2561449f56996a4bb185c5ec6ea40b"
     },
     {
       "url": "dnd-hub-condition-fx.js",
@@ -273,7 +293,7 @@
     },
     {
       "url": "dnd-hub-dice-panel.js",
-      "sha256": "df8727ee1f010145997058d93120177adff3395553cc3c86e7715f7f82e8f2ac"
+      "sha256": "1a70b413d7fd38be0e4ed700f01fbb53e4265f1545da4603276f65b9915ffeed"
     },
     {
       "url": "dnd-hub-dice.js",
@@ -293,7 +313,7 @@
     },
     {
       "url": "dnd-hub-events.js",
-      "sha256": "bbfdd2ffc7c8a717e1505a9e106f6939f42f5e00a14137341fc747987cd5968f"
+      "sha256": "06bdcc7fa4ed00c54761011c2877d13c8b873e0e732a5f9ca1c2720dd82611a4"
     },
     {
       "url": "dnd-hub-file-url.js",
@@ -301,7 +321,7 @@
     },
     {
       "url": "dnd-hub-fog.js",
-      "sha256": "c00945a23d1ff0e6a89f411771ce9e856579eef68ade2f9b90ba7ce00fa1263d"
+      "sha256": "811620297dd874bca0bbbfb40ef4e11bf398a9d6869b929d99d73b9a6ac9b898"
     },
     {
       "url": "dnd-hub-forge-fx.js",
@@ -333,7 +353,7 @@
     },
     {
       "url": "dnd-hub-forge.js",
-      "sha256": "614d1880c3fd6f15bb53f1ca6ff52a96bfbe33986de8a26c45bfab57bd07d53d"
+      "sha256": "80441d2bdff56ba118f78e8f322e28fe5d1b2b7296732c35ac281979290298df"
     },
     {
       "url": "dnd-hub-frame.js",
@@ -341,7 +361,7 @@
     },
     {
       "url": "dnd-hub-fx-combat.js",
-      "sha256": "a56b49df406a42719df4fafe2e991c65995e2d35d945a12ae497e9de0bebeb7d"
+      "sha256": "2921d8c8df24c3cc3022373745496b1235ed32e5fe4ce813093c2da2d61367b4"
     },
     {
       "url": "dnd-hub-gear-view.js",
@@ -349,7 +369,7 @@
     },
     {
       "url": "dnd-hub-grid.js",
-      "sha256": "41d8772744c5536932768bf9c6012cf0da51f635837f721cbf2d80e2ab294bee"
+      "sha256": "52edf4e4a3a0eb7f4ebcee0aec57259ebfae99949c08abd1058f7bfd99ad492e"
     },
     {
       "url": "dnd-hub-guide.js",
@@ -357,7 +377,7 @@
     },
     {
       "url": "dnd-hub-initiative.js",
-      "sha256": "6569f187d1fdbe8a1ae39866f9ac140eb4804e561090335314e68f353df88f37"
+      "sha256": "5aedabf97bda6bd1da4f6455b0c00bba862c270f1c641f03f53dddd4cbf672f4"
     },
     {
       "url": "dnd-hub-levelup-view.js",
@@ -365,23 +385,23 @@
     },
     {
       "url": "dnd-hub-levelup.js",
-      "sha256": "4bf7286c2f718358d942ece0e985fd66553c180f779062dbbb318a0a86528ca4"
+      "sha256": "c9f5320976beda83a676f7e1e227312a40e5f03c05f16ee1991b1b3c7a311e57"
     },
     {
       "url": "dnd-hub-lights.js",
-      "sha256": "253269bc8d16f3f483fff9cc4bde1589d035aeabbbd7b2bd6fb6bada02d02091"
+      "sha256": "bea471a75f42fa46bb7cd6df4a2ca7e8d4d04920f25865688aa47e824aad475b"
     },
     {
       "url": "dnd-hub-los.js",
-      "sha256": "2e0382e81998f13b1dffe065e22dcba32ae0d9042a1cc1cfbd3600c3c62ffc60"
+      "sha256": "b150805f60cc46fba655cceedf21442458e64052258ecc050896553f7d4af433"
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "682ef19079b42b904bab587d8cfbef4bf581244e969a4ffd7361975805e868bc"
+      "sha256": "43351b02fe7c2dd0bf25a96df15fea2df4ae755b349b1c2e5ce6bc9f0b99ae34"
     },
     {
       "url": "dnd-hub-map-bg.js",
-      "sha256": "650bd47e69dd5d259819f01210490a3b4866346d735e1a1200b960abc405f849"
+      "sha256": "c3e5db90f15dd400d2dfe72fdeb2ff32e30cd03a85e26f851b6ada91a3d219c8"
     },
     {
       "url": "dnd-hub-movement.js",
@@ -397,7 +417,7 @@
     },
     {
       "url": "dnd-hub-pictures.js",
-      "sha256": "805fd3a593b6135b4721928bf9fe326e3bacd9a1c347323f3bda1ef9e490ce50"
+      "sha256": "a3aaed498e6cb0478f2c62691df9e1f9bdaeaeccc4a7f4b2d4092275d4bc8750"
     },
     {
       "url": "dnd-hub-pin-travel.js",
@@ -405,15 +425,15 @@
     },
     {
       "url": "dnd-hub-pins.js",
-      "sha256": "57169c1d96f138bd0e502486c155b9c63ef7824cc110086457e66f3d4b4d50d1"
+      "sha256": "160cf26ece4b68765ad312d10867dcd6cb3396fca615fd2a9b45a911dd086250"
     },
     {
       "url": "dnd-hub-popovers.js",
-      "sha256": "a36aef77ff8b308bdb19698b33e28b37bd13298c46d8cbc81ea5018c06b934e6"
+      "sha256": "c32d94bc04a1fb87acfe1440cd4a6532ee794bba3ccda5b4719e356c68ae7dd1"
     },
     {
       "url": "dnd-hub-publish.js",
-      "sha256": "86233b5206585c9e0d25153af536829c60a97b0ac7f2959da28161ab4c286bf1"
+      "sha256": "ea7b3083e584f4448829dff4b1c316b7db3efd1a7644f6c623b767a6b82b0607"
     },
     {
       "url": "dnd-hub-quick.js",
@@ -421,7 +441,7 @@
     },
     {
       "url": "dnd-hub-ruler.js",
-      "sha256": "68af0d5b2766f3a01f0dc2e0f5f26a75fd147c24a1d8ae11debfe954fb9a3df5"
+      "sha256": "edac8ece7490e8954671f5590f2140604fa8738af018c4a09d5a54869bb4fd2b"
     },
     {
       "url": "dnd-hub-rules.js",
@@ -429,11 +449,11 @@
     },
     {
       "url": "dnd-hub-sample.js",
-      "sha256": "4ce676d2fb9da92b42be54e1726c0a8c43199558f17295c85f4a60c2df731d50"
+      "sha256": "f8922fc6c82b76745eb5a775c4942c8cfecd68ddd16aa1844fda2d17a88a337e"
     },
     {
       "url": "dnd-hub-screens.js",
-      "sha256": "981996df27f86119c136ca02058214aac118fbff0afaab494157c78ac38003a4"
+      "sha256": "fb54a0f725c0e94cbadf041d887f6ee962123a23acbe3a973302901a320db743"
     },
     {
       "url": "dnd-hub-shop-scene.js",
@@ -441,7 +461,7 @@
     },
     {
       "url": "dnd-hub-spatial.js",
-      "sha256": "c40adf1e82cdd02e41cd937f762a191a578a51208fd7431fd300093c09529150"
+      "sha256": "82e88270babc673e5ddf8cf9bb761b201f02e57491594b73d6b05102e01fe3fc"
     },
     {
       "url": "dnd-hub-starting-gear.js",
@@ -461,11 +481,11 @@
     },
     {
       "url": "dnd-hub-tavern-games.js",
-      "sha256": "6c8e6a9cb727c6e7ffe44dbdd96d1ddaf68812ac069a735c40383089bdbc9509"
+      "sha256": "6bb54da62d46e6f9d275851523540034e6bcbded1814027fd702990ebc95bdfe"
     },
     {
       "url": "dnd-hub-tavern-ref.js",
-      "sha256": "0e3dcea3cdc6943dab07df0183ea7b85ef27e81e493c29c1e7cb313311fe544f"
+      "sha256": "48b0cadc9c26280f23c838f3e021b2037baca48d8b4348488f53c9b9e6746347"
     },
     {
       "url": "dnd-hub-tavern-scene.js",
@@ -473,15 +493,15 @@
     },
     {
       "url": "dnd-hub-tavern-seat.js",
-      "sha256": "8f731c8054b123a051ae51c8000c3fb62b4826f2c7e95a78fe5104e9dd1f064c"
+      "sha256": "b36428b9981105e30869336ea44cc2a1000ad50d2d054c321c719488cd83c9a1"
     },
     {
       "url": "dnd-hub-tavern-table.js",
-      "sha256": "6ecfefd9d5d6c643bc3a89c8d91348a550203fc293e3b5dc383823e5bccfd791"
+      "sha256": "a8792eda214735451f4fac0169bd5ad3f5c4d852bfea727ed50f89482dc7a308"
     },
     {
       "url": "dnd-hub-tavern-talk.js",
-      "sha256": "40d5cfa71b57ecf043c0db6de0f9b8f33694d46b3a00b9464a6d09efb88cb48f"
+      "sha256": "cfb063c4fd043b962c7dbeecbb9b85989b9acd47e1980015b0427cd02dc85ecf"
     },
     {
       "url": "dnd-hub-tavern.css",
@@ -489,43 +509,43 @@
     },
     {
       "url": "dnd-hub-tavern.js",
-      "sha256": "a2b9933a487b4c91d3e61afda733867e7d9fed491133229d5351fe958045b9cd"
+      "sha256": "238760631d5095a551db5e10a2a8d2a959dace989af4a81fe81030d327f6a61f"
     },
     {
       "url": "dnd-hub-templates.js",
-      "sha256": "18f4a6cc3c6c99f1ebd54fdd2fcb8a52dd34bc726b52e0eab21ce1ad335e15ca"
+      "sha256": "b0842a92f626fb414953db1f74730b7b1cdf63871510ee4a77b36d81fc5f0ee9"
     },
     {
       "url": "dnd-hub-tokens.js",
-      "sha256": "eb2f62a0b9bf3272f6a096da5ed53075dcc08e152b2b9d065b3febb3e52a04fe"
+      "sha256": "b73f53c0172e9d4cb9b51b7cf89d4e1cf6338fc79929daec8a45d51e1285548d"
     },
     {
       "url": "dnd-hub-travel.js",
-      "sha256": "af65c18f96ee80e90cfbe3055d5a83229c0650da6cd0caa4b9ad59428dbc0c53"
+      "sha256": "7123bd1b706f4826632a476715219a1468c14735f4f9594ab7887c805a1f43c9"
     },
     {
       "url": "dnd-hub-trigger-pick.js",
-      "sha256": "426f37991cddb5c5d5511227a0630f9bedc0e0b0382f85e6b3779d20039da865"
+      "sha256": "ab48d8fe537ffd46a242d780fb368baefd2b8c1ecf7decf56c8be5193daacb6c"
     },
     {
       "url": "dnd-hub-triggers.js",
-      "sha256": "1189955ac8d8918cf87a3846f94b33dbfcc9a4869b91fbc4c3e9de4edd724153"
+      "sha256": "bfe219bc922e566f348a1c98ad4a0c02ceaf34e46383b734a16782874d15130b"
     },
     {
       "url": "dnd-hub-turn-move.js",
-      "sha256": "55d659f26e73f15a6956f84fa51f2a60d3303b960d7ee220a17e88ec887a3d0d"
+      "sha256": "239d0da4e3a3e55b37a36ff676e2877e9e1ef1e7302bc643c83939cfc019cc4d"
     },
     {
       "url": "dnd-hub-undo-apply.js",
-      "sha256": "e5b65b40f133495fc873c25006499d53a1d83abb6f0e9e90a3f83951499a87fe"
+      "sha256": "4fa434672db7e996f8e185bc6098a267ca1acfe60b7573904030887b9323e168"
     },
     {
       "url": "dnd-hub-undo.js",
-      "sha256": "e856e58c5800365407d6bbd114e523fa1c85fd42d1c2b53b4f672759ef2610ea"
+      "sha256": "4ff68ee452cf52c13b0981e67b727a0f12626f454c3b4c7fe4cc7d303d35fca0"
     },
     {
       "url": "dnd-hub-walls.js",
-      "sha256": "4f9e3643dfbf252e5fcdcc99bf1d8d7e3f9886c9c00121c4c084d3a130786133"
+      "sha256": "c731e5a4c71b25d5ce25cf4ad5298a338d9ab87d8e3d17b245cac7e8ca07c537"
     },
     {
       "url": "dnd-hub-weather-model.js",
@@ -533,11 +553,11 @@
     },
     {
       "url": "dnd-hub-weather.js",
-      "sha256": "71873fc0f561eb8181864076d82154d5f3b2ffb4ef25503f738e2cc012a3a2b6"
+      "sha256": "dda6df5b3b3a509e747e85a007bde052e4d120ec64b56245104e73c74778ecd9"
     },
     {
       "url": "dnd-hub-zone-pos.js",
-      "sha256": "68ec65ac923252279da3bab918f6aea2fda59de2808c4482128f0151dabe336a"
+      "sha256": "f30fcaed498562737af7f64e92077a870d255e8339e93e8787b3ffba91aea20b"
     },
     {
       "url": "dnd-srd/backgrounds.json",
@@ -589,7 +609,7 @@
     },
     {
       "url": "lk-book.js",
-      "sha256": "48b5a28230917e679299db1fde7d2c20035fbacf0a3426577d732d1bc184e313"
+      "sha256": "f5d8b72321147d5786758c98cc3cf383d4b516fa2e4dc47d49feabd565ca6d83"
     },
     {
       "url": "lk-bus.js",
@@ -653,7 +673,7 @@
     },
     {
       "url": "tavern-games/arm-wrestle.js",
-      "sha256": "3720c13747f742bf8f22fe17aba0cbdc3c2022c8f9d683034b24f45288cefef8"
+      "sha256": "a8ec2f102d91d45b9d2e3940c2e456e25733f7a29f559c753b051d4da1c8bd27"
     },
     {
       "url": "tavern-games/beetle-derby-rules.js",
@@ -665,7 +685,7 @@
     },
     {
       "url": "tavern-games/beetle-derby.js",
-      "sha256": "cf8399aa2e3f2cf2e5d2f0b8373523640a4bb2817cff3258b777ad2fd371419d"
+      "sha256": "50cfe509e6388b7b3f69c5380fe0917777efe7346b25085b97b0aec85d4c7d76"
     },
     {
       "url": "tavern-games/bluff-bones-rules.js",
@@ -677,7 +697,7 @@
     },
     {
       "url": "tavern-games/bluff-bones.js",
-      "sha256": "f1ad76e90789fcc11efd76062243efd430e45cb7f94988c4d3d0a6d28565376f"
+      "sha256": "89401563b760dacee92d291c998789b8b3542a6b8afc5fefaf8571ed02271866"
     },
     {
       "url": "tavern-games/bones-grid-rules.js",
@@ -689,7 +709,7 @@
     },
     {
       "url": "tavern-games/bones-grid.js",
-      "sha256": "1001b83db3d8d80c56932a54fcc0e1ba444e293ff6420a45a37d0293f0c435f3"
+      "sha256": "a360703ba7eedab0e8e3580f3a8c2db7df4b60b6aecefd7edc8b9e451b986486"
     },
     {
       "url": "tavern-games/dagger-toss-rules.js",
@@ -697,7 +717,7 @@
     },
     {
       "url": "tavern-games/dagger-toss.js",
-      "sha256": "4d795077378fb9796a17e6ea94e437a552940ed26be65fa3d0a4e87bb2decd55"
+      "sha256": "007b3416b8fabab97478d5f688b647a8337892ab1821867842dfe23f282c4589"
     },
     {
       "url": "tavern-games/fillet-rules.js",
@@ -705,7 +725,7 @@
     },
     {
       "url": "tavern-games/fillet.js",
-      "sha256": "17f29f2d4494087164de09eed6095f201351cdfb71af5aaeedb6a1a5636a4e7f"
+      "sha256": "bee1a14ae23c8262a8ca79d0e5018457ff56ae5f4b0c66db2c4ba7af6d24b4c0"
     },
     {
       "url": "tavern-games/hearthlane-rules.js",
@@ -717,7 +737,7 @@
     },
     {
       "url": "tavern-games/hearthlane.js",
-      "sha256": "d6a3a122cd137fd6e729fba7fb5b0cee15612de157bf2116c6394b5462430ef3"
+      "sha256": "adeb780200ab5e86f4d017c3bfc7be33c9f77a85e697da0be1bc6a44dabc8f82"
     },
     {
       "url": "tavern-games/kit.css",
@@ -725,7 +745,7 @@
     },
     {
       "url": "tavern-games/kit.js",
-      "sha256": "a86ddabab125baccfe186579e10b34d057ae2b0682679bc6d025e811df5726f1"
+      "sha256": "6180530bc39cf39e30f00e8eeee7cfbbe2c2460ec0f4bb94d94d489638ce7adc"
     },
     {
       "url": "tavern-games/last-standing-rules.js",
@@ -737,7 +757,7 @@
     },
     {
       "url": "tavern-games/last-standing.js",
-      "sha256": "39edf65b361e607a5727bbf35cc9a4db84c48f115288ee7723c61331468572a4"
+      "sha256": "4d36747eedc2cfd3df57d63cc2db9e5bb247dfeb3fa130dff04f22cb1eed3b9e"
     },
     {
       "url": "tavern-games/rune-dice-rules.js",
@@ -749,7 +769,7 @@
     },
     {
       "url": "tavern-games/rune-dice.js",
-      "sha256": "ca1288a3ccaea0629e793ea701e8c0c6d70554e43a57b2761fc9cee741522e7c"
+      "sha256": "a29184ca812a3548d9045e3bf9f589db0357540cc6ab2e123d86f9fcf4969c88"
     },
     {
       "url": "tavern-games/table-runner.js",
@@ -769,7 +789,7 @@
     },
     {
       "url": "tavern-games/twenty.js",
-      "sha256": "67b57652445e9632ec57730e128097772be13cc838a0bfe1ad55728f61145e26"
+      "sha256": "bcea3ba66cb7d7584eeeb4ea36274b51e577a274c9955d8bc123f306be9223f0"
     },
     {
       "url": "vendor/cannon-es.js",
