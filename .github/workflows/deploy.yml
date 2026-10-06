@@ -77,6 +77,11 @@ jobs:
       - name: No unmirrorable imports
         run: node scripts/check-plugin-imports.mjs
 
+      # A named import of something a module no longer exports stops that plugin's whole module graph in the
+      # browser (the D&D Hub would not start), and no unit test loads the entry files.
+      - name: Every named import is exported
+        run: node scripts/check-named-imports.mjs
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh

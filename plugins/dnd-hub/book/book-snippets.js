@@ -1,6 +1,6 @@
 // book-snippets.js — "what the book says": the part of the real page a find was read from, as pictures, for the
 // review's Look (spec 2026-10-06 on-device AI, step 1). Made only when the DM opens a find, from the PDF the review
-// still holds (S.pdf); never saved. One PDF open at a time; closeSnippets() when the review ends.
+// still holds (the PDF the find came from); never saved. One PDF open at a time; closeSnippets() when the review ends.
 import { pdfjs, openPdf } from './book-pdf.js';
 import { toPageRect } from './book-snippet-geom.js';
 
