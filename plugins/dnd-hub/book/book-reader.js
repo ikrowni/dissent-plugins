@@ -5,13 +5,13 @@
 import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
-import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014o';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261014o';
-import { EV } from '../dnd-hub-event-types.js?v=20261014o';
+import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261014p';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261014p';
+import { EV } from '../dnd-hub-event-types.js?v=20261014p';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { sectionPages, loadPage } from './book-pages.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014o';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014o';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014p';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014p';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 

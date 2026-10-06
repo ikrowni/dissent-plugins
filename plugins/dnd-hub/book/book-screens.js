@@ -4,8 +4,8 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014o';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014o';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014p';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014p';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { filesFromDrop } from './book-drop.js';
@@ -101,7 +101,7 @@ export async function bookPickFiles(list) {
     } });
     // Pictures: decorations, masks and page backgrounds were left behind by book-pdf.js, so each one offered starts
     // ticked — except a whole page (a page with art painted on it, or a scan's page): the DM picks those.
-    parsed.images = (parsed.images || []).map(img => ({ ...img, url: URL.createObjectURL(img.blob) }));
+    parsed.images = (parsed.images || []).map(({ thumb, ...img }) => ({ ...img, url: URL.createObjectURL(thumb || img.blob) }));
     const keep = {};
     for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage : e.confidence === 'sure')).map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
@@ -252,8 +252,8 @@ function reviewView() {
         <label><input type="radio" name="bk-place" value="personal" ${S.place === 'personal' ? 'checked' : ''} ${S.personalError ? 'disabled' : ''} onchange="bookPlace('personal')"> Your personal library <small>(every server you play on)</small></label>
         <label><input type="radio" name="bk-place" value="server" ${S.place === 'server' ? 'checked' : ''} onchange="bookPlace('server')"> This server <small>(only you can read it)</small></label></fieldset>
       ${S.pdf && S.pages ? `<label class="bk-keep-pages"><input type="checkbox" ${S.keepPages ? 'checked' : ''} onchange="bookKeepPages(this.checked)">
-        Keep a picture of every page, so you can open the real page beside any section <small>(${S.pages} pages, about
-        ${Math.max(1, Math.round(pagesEstimate(S.pages) / 1e6))} MB${S.parsed.scanned ? ' — recommended for a scan' : ''})</small></label>` : ''}
+        <span>Keep a picture of every page, so you can open the real page beside any section <small>(${S.pages} pages, about
+        ${Math.max(1, Math.round(pagesEstimate(S.pages) / 1e6))} MB${S.parsed.scanned ? ' — recommended for a scan' : ''})</small></span></label>` : ''}
       <button class="btn btn-gold" id="bk-save" onclick="bookSave()" ${total ? '' : 'disabled'}>Save ${total} thing${total === 1 ? '' : 's'}</button>
       <div class="bk-error" role="alert" id="bk-error"></div></div>`;
 }
@@ -272,7 +272,7 @@ function imageGrid(list, keep) {
     ${!list.length ? '<div class="bk-empty">Nothing here.</div>' : ''}
     <div class="bk-grid">${list.map(e => `<div class="bk-pic ${keep.has(e.id) ? 'kept' : ''}">
       <label><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
-        <img src="${esc(e.url)}" alt="${esc(e.name)}" loading="lazy"></label>
+        <img src="${esc(e.url)}" alt="${esc(e.name)}" loading="lazy" decoding="async"></label>
       <div class="bk-pic-foot"><span>${esc(picWhere(e))} · ${e.width}×${e.height}</span>
         <div class="bk-seg" role="group" aria-label="Map or art">${['map', 'art'].map(kind => `<button aria-pressed="${e.kind === kind}" onclick="bookPicKind('${esc(e.id)}','${kind}')">${kind === 'map' ? 'Map' : 'Art'}</button>`).join('')}</div></div>
     </div>`).join('')}</div>`;

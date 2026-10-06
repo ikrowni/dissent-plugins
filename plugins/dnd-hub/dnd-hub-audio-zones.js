@@ -1,9 +1,9 @@
 // dnd-hub-audio-zones.js — ambient audio zone rendering and editing (Phase 7)
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014o';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261014p';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014o';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261014o';
+import { EV } from './dnd-hub-event-types.js?v=20261014p';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261014p';
 
 import { guarded } from './lk-upload.js';
 import { CLIENT_ID } from './dnd-hub-client-id.js';

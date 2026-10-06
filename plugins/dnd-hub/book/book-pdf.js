@@ -5,7 +5,7 @@
 // on this thread ("fake worker"). The page loop yields between pages so the screen stays alive and Cancel works.
 // pdf.js (Apache-2.0) is vendored in vendor/pdfjs/ and loaded only when a DM imports a book.
 import { pageLines } from './book-layout.js';
-import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture, FULL_PAGE, SAMPLE } from './book-images.js';
+import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture, FULL_PAGE, SAMPLE, THUMB } from './book-images.js';
 import { readOutline } from './book-outline.js';
 
 let _pdfjs = null;
@@ -109,9 +109,10 @@ async function pageImages(lib, page, pageNo, seen, ctx) {
     if (why) { ctx.left[why]++; if (!img.bitmap) bmp.close?.(); continue; }
     const fullPage = cover >= FULL_PAGE;
     const blob = await encode(bmp, img.width, img.height).catch(() => null);
+    const thumb = blob && await encode(bmp, img.width, img.height, THUMB, 0.7).catch(() => null);
     if (!img.bitmap) bmp.close?.();
     if (blob) out.push({ id: `p${pageNo}-${out.length + 1}`, page: pageNo, width: img.width, height: img.height, fullPage,
-      kind: guessKind(img.width, img.height, { mapWord: ctx.mapWord, fullPage }), blob });
+      kind: guessKind(img.width, img.height, { mapWord: ctx.mapWord, fullPage }), blob, ...(thumb ? { thumb } : {}) });
   }
   return out;
 }
@@ -151,9 +152,9 @@ function sampleStats(bmp) {
   return pictureStats(cx.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE);
 }
 
-async function encode(bmp, width, height) {
-  const { w, h } = fitWithin(width, height);
+async function encode(bmp, width, height, max = 4096, quality = 0.85) {
+  const { w, h } = fitWithin(width, height, max);
   const canvas = new OffscreenCanvas(w, h);
   canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
-  return canvas.convertToBlob({ type: 'image/webp', quality: 0.85 });
+  return canvas.convertToBlob({ type: 'image/webp', quality });
 }

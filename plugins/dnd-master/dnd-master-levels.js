@@ -1,7 +1,7 @@
 // dnd-master-levels.js — the DM levels heroes up (milestone) or gives XP (experience). The campaign record is the
 // authority (spec 2026-10-03 growing your hero §2); every screen hears level:grant.
 import { publishTo } from './lk-bus.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014o';
+import { EV } from './dnd-hub-event-types.js?v=20261014p';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { rule } from './lk-table-rules.js';
 import { allowedLevel, xpShare } from './lk-levelling.js';

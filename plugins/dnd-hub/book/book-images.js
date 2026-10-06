@@ -64,6 +64,9 @@ export function notAPicture({ cover = 0, stats }) {
 // Measured on Heliana's Guide (2026-10-06): see book-images.test.js.
 export const MASK_BW = 0.9, BLANK_SPREAD = 8, BLANK_EDGE = 2, BACKGROUND_EDGE = 7;
 
+/** The grid's thumbnails are this wide at most: hundreds of full pictures decoding at once stalled the review (Heliana). */
+export const THUMB = 360;
+
 /** Fit w×h within `max` on its longer side, keeping the shape. */
 export function fitWithin(w, h, max = 4096) {
   const k = Math.min(1, max / Math.max(w, h));
