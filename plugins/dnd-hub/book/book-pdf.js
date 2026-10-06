@@ -105,14 +105,15 @@ async function pageImages(lib, page, pageNo, seen, ctx) {
     seen.add(fp);
     const bmp = await bitmapOf(img).catch(() => null);
     if (!bmp) continue;
-    const why = notAPicture({ cover, stats: sampleStats(bmp) });
+    const stats = sampleStats(bmp);
+    const why = notAPicture({ cover, stats });
     if (why) { ctx.left[why]++; if (!img.bitmap) bmp.close?.(); continue; }
     const fullPage = cover >= FULL_PAGE;
     const blob = await encode(bmp, img.width, img.height).catch(() => null);
     const thumb = blob && await encode(bmp, img.width, img.height, THUMB, 0.7).catch(() => null);
     if (!img.bitmap) bmp.close?.();
     if (blob) out.push({ id: `p${pageNo}-${out.length + 1}`, page: pageNo, width: img.width, height: img.height, fullPage,
-      kind: guessKind(img.width, img.height, { mapWord: ctx.mapWord, fullPage }), blob, ...(thumb ? { thumb } : {}) });
+      kind: guessKind(img.width, img.height, { mapWord: ctx.mapWord, fullPage, clear: stats.clear }), blob, ...(thumb ? { thumb } : {}) });
   }
   return out;
 }

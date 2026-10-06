@@ -66,3 +66,13 @@ describe('pictures that are not pictures (measured on Heliana\'s Guide, 2026-10-
     expect(guessKind(2000, 1500)).toBe('map');
   });
 });
+
+describe('cut-out art and near-empty pictures (Heliana, owner report 2026-10-06)', () => {
+  it('a see-through cut-out is art, however big and wide (creatures were labelled maps)', () => {
+    expect(guessKind(1184, 840, { clear: 0.64 })).toBe('art');
+    expect(guessKind(1184, 840, { clear: 0.64, mapWord: true })).toBe('art');
+  });
+  it('a picture that is almost all see-through is left out (a tiny swoosh on an empty canvas)', () => {
+    expect(notAPicture({ cover: 0.2, stats: { bw: 0.99, edge: 1, spread: 10, clear: 0.97 } })).toBe('blank');
+  });
+});

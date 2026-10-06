@@ -4,8 +4,8 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014p';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014p';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014q';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014q';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { filesFromDrop } from './book-drop.js';
@@ -100,10 +100,11 @@ export async function bookPickFiles(list) {
       updateProgress();
     } });
     // Pictures: decorations, masks and page backgrounds were left behind by book-pdf.js, so each one offered starts
-    // ticked — except a whole page (a page with art painted on it, or a scan's page): the DM picks those.
+    // ticked — except a whole page of art (art painted onto a page, or a scan's page): the DM picks those. A whole page
+    // that is a map stays ticked: Heliana's battle maps are whole pages, and leaving them out lost every map.
     parsed.images = (parsed.images || []).map(({ thumb, ...img }) => ({ ...img, url: URL.createObjectURL(thumb || img.blob) }));
     const keep = {};
-    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage : e.confidence === 'sure')).map(e => e.id));
+    for (const [k] of KINDS) keep[k] = new Set(parsed[k].filter(e => k === 'story' || (k === 'images' ? !e.fullPage || e.kind === 'map' : e.confidence === 'sure')).map(e => e.id));
     S = { mode: 'review', parsed, keep, tab: KINDS.find(([k]) => parsed[k].length)?.[0] || 'story', open: null, filter: '',
       picShow: 'all', title, place: 'personal', pages, notes, pdf, keepPages: !!pdf, personalError: null };
     render();

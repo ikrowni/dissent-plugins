@@ -40,7 +40,15 @@ export function findStory(lines, { scanned = false, outline = null } = {}) {
     : /^chapter\b/i.test(clean(l.text)) || l.size >= 17 ? 'chapter' : l.size >= 13 ? 'section' : 'sub');
   // A scan's fonts are the OCR's guesses, changing line to line, so a box cannot be told from them: none on a scan
   // (Curse of Strahd came out with ordinary text boxed as read-aloud).
-  const boxed = l => !scanned && !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && l.runs[0].font !== body;
+  // A font the body mixes into its own lines is body too: Heliana sets its text in two fonts, line by line, and a line
+  // wholly in the second one came out as a read-aloud box.
+  const bodyFonts = new Set([body]), together = {};
+  for (const l of lines) {
+    const fonts = new Set((l.runs || []).map(r => r.font));
+    if (fonts.has(body) && fonts.size > 1) for (const f of fonts) if (f !== body) together[f] = (together[f] || 0) + 1;
+  }
+  for (const [f, n] of Object.entries(together)) if (n >= 2) bodyFonts.add(f);
+  const boxed = l => !scanned && !isHeading(l) && (l.runs || []).length > 0 && l.runs.every(r => r.font === l.runs[0].font) && !bodyFonts.has(l.runs[0].font);
 
   const out = [];
   const used = {};

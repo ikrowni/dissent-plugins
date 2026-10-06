@@ -39,3 +39,14 @@ describe('a scan', () => {
     expect(s.map(x => x.html).join('')).not.toContain('read-aloud');
   });
 });
+
+describe('body text set in two fonts', () => {
+  it('a line wholly in the body\'s second font is not a read-aloud box (Heliana alternates two body fonts)', () => {
+    const P = (t, font) => ({ text: t, size: 9.8, runs: [{ text: t, font }], page: 1, x: 57, y: 0 });
+    const mixed = t => ({ text: t + ' more', size: 9.8, runs: [{ text: t, font: 'f6' }, { text: 'more', font: 'f7' }], page: 1, x: 57, y: 0 });
+    const lines = [H2('Hunting'), P('one line in the main font', 'f6'), mixed('a line in both'), P('a whole line in the second font, long enough to be a box of read-aloud text', 'f7'),
+      P('back in the main font', 'f6'), mixed('both again'), P('main', 'f6'), P('main again', 'f6')];
+    const [s] = findStory(lines);
+    expect(s.readAloud).toEqual([]);
+  });
+});

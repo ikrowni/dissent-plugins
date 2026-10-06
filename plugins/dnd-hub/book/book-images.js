@@ -10,7 +10,8 @@ export const isWorthOffering = (w, h) => Math.min(w, h) >= MIN_SIDE && w * h >= 
  * Heliana's Guide, where size finds none); a whole page with no such word is art; otherwise big and roughly
  * landscape or square is a map, tall is art.
  */
-export function guessKind(w, h, { mapWord = false, fullPage = false } = {}) {
+export function guessKind(w, h, { mapWord = false, fullPage = false, clear = 0 } = {}) {
+  if (clear > CUTOUT_CLEAR) return 'art'; // a see-through cut-out (a creature) is never a map, however big and wide
   if (mapWord) return 'map';
   if (fullPage) return 'art';
   return w >= 1000 && w / h >= 0.8 ? 'map' : 'art';
@@ -51,18 +52,19 @@ export function pictureStats(rgba, w, h) {
  * Pictures that are not pictures, left out of the offer (null = a real picture):
  *  'mask'       — solid black and white: a stencil the PDF paints through (Heliana's stat-block frames, ~92% pure
  *                 black/white with soft edges). Cut-out art is as black but see-through, so it is not one.
- *  'blank'      — almost one flat colour: a paper texture.
+ *  'blank'      — almost one flat colour (a paper texture), or almost all see-through.
  *  'background' — a whole page with little on it: the parchment behind the text (Heliana: one per page, 412 of them).
  */
 export function notAPicture({ cover = 0, stats }) {
   if (!stats) return null;
+  if ((stats.clear ?? 0) >= EMPTY_CLEAR) return 'blank'; // almost all see-through: a swoosh on an empty canvas
   if (stats.bw >= MASK_BW && (stats.clear ?? 0) < 0.2) return 'mask';
   if (stats.spread < BLANK_SPREAD && stats.edge < BLANK_EDGE) return 'blank';
   if (cover >= FULL_PAGE && stats.edge < BACKGROUND_EDGE) return 'background';
   return null;
 }
 // Measured on Heliana's Guide (2026-10-06): see book-images.test.js.
-export const MASK_BW = 0.9, BLANK_SPREAD = 8, BLANK_EDGE = 2, BACKGROUND_EDGE = 7;
+export const MASK_BW = 0.9, BLANK_SPREAD = 8, BLANK_EDGE = 2, BACKGROUND_EDGE = 7, CUTOUT_CLEAR = 0.2, EMPTY_CLEAR = 0.9;
 
 /** The grid's thumbnails are this wide at most: hundreds of full pictures decoding at once stalled the review (Heliana). */
 export const THUMB = 360;

@@ -12,7 +12,7 @@ const SIZE_RE = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\s+([a-z][a-z ]*?)(?:
 const LABELS = ['Saving Throws', 'Skills', 'Damage Vulnerabilities', 'Damage Resistances', 'Damage Immunities',
   'Condition Immunities', 'Senses', 'Languages', 'Challenge',
   'Resistances', 'Vulnerabilities', 'Immunities', 'Gear', 'CR'];
-const AC_RE = /^(?:Armor Class|AC)\s+(\d+)(?:\s*\(([^)]+)\))?/;     // 2014 "Armor Class 15 (…)", 2024 "AC 15 Initiative +2 (12)"
+const AC_RE = /^(?:Armou?r Class|AC)\s+(\d+)(?:\s*\(([^)]+)\))?/;     // 2014 "Armor Class 15 (…)", 2024 "AC 15 Initiative +2 (12)"
 const HP_RE = /^(?:Hit Points|HP)\s+(\d+)(?:\s*\(([^)]+)\))?/;
 const SCORES_2024 = /\b(Str|Dex|Con|Int|Wis|Cha)\s*(\d+)\s+([+−–-]\d+)\s+([+−–-]?\d+)/gi; // score, modifier, save
 // "Traits" heads the traits in 2024 books (SRD 5.2); taken for a chapter heading, it ended every block there.
@@ -172,7 +172,7 @@ function readBlock(lines, start, last, scan = null) {
     let mm;
     // A scan: a second Armor Class / Hit Points / Challenge / score row is another creature's (two columns run
     // together), so this block ends there rather than taking its numbers.
-    if (scan && ((m.ac != null && /^Armor Class\s*\d/.test(t)) || (m.hp != null && /^Hit Points\s*\d/.test(t))
+    if (scan && ((m.ac != null && /^Armou?r Class\s*\d/.test(t)) || (m.hp != null && /^Hit Points\s*\d/.test(t))
       || (m.cr != null && /^Challenge\s*[\d/]/.test(t)) || (scored && isScoreHeader(t)))) break;
     // The first one only: an action's wrapped text can start "AC 10, 5 hit points" (the ettercap's webbing).
     if (m.ac == null && (mm = t.match(AC_RE))) { m.ac = +mm[1]; m.ac_type = mm[2] || null; continue; }

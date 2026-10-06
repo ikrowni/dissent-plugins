@@ -48,3 +48,13 @@ describe('findMonsters', () => {
     expect(findMonsters([H('Notes'), L('Large crowds, as a rule, are noisy')])).toEqual([]);
   });
 });
+
+describe('British spelling', () => {
+  it('"Armour Class" starts a stat block too (Heliana\'s Guide: every monster was missed)', () => {
+    const uk = MUDLING.map(l => l.runs[0]?.text === 'Armor Class'
+      ? { ...l, text: l.text.replace('Armor Class', 'Armour Class'), runs: l.runs.map(r => r.text === 'Armor Class' ? { ...r, text: 'Armour Class' } : r) } : l);
+    const [m] = findMonsters(uk);
+    expect(m?.name).toBe('Mudling');
+    expect(m.ac).toBe(12);
+  });
+});

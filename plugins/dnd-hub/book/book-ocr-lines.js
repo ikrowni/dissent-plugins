@@ -9,7 +9,7 @@
 export function pagesToRead(lines, pageCount) {
   const hit = new Set();
   // Not "Challenge": it is everywhere in an adventure's prose (96 pages of Curse of Strahd, against 20 with blocks).
-  for (const l of lines) if (/Armor\s*C[l1]ass\s*\d|Hit\s*Po[il1ı]nts\s*\d|STR\s+DEX\s+CON/i.test(l.text)) hit.add(l.page);
+  for (const l of lines) if (/Armou?r\s*C[l1]ass\s*\d|Hit\s*Po[il1ı]nts\s*\d|STR\s+DEX\s+CON/i.test(l.text)) hit.add(l.page);
   const out = new Set();
   for (const p of hit) { out.add(p); if (p + 1 <= pageCount) out.add(p + 1); }
   return [...out].sort((a, b) => a - b);
