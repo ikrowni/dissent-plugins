@@ -209,7 +209,10 @@ export function bookViewToc() { R.view = { ...R.view, toc: !R.view.toc }; draw()
 export function bookCutStart() {
   if (!R?.view || !hasPages() || !camp()) return;
   const b = book();
-  startCut(b, R.view, { actions: cutActions({ book: b, camp: camp(), entry: entryAt(b.story || [], R.view),
+  // Where the PDF itself put pictures on this page (saved at import): dashed boxes to take in one click.
+  const good = r => Array.isArray(r) && r.length === 4 && r.every(v => typeof v === 'number' && v >= 0 && v <= 1) && r[2] > 0 && r[3] > 0;
+  const suggestions = (bookDocs(b)[R.view.doc]?.boxes?.[R.view.page] || []).filter(good).map(rect => ({ rect }));
+  startCut(b, R.view, { suggestions, actions: cutActions({ book: b, camp: camp(), entry: entryAt(b.story || [], R.view),
     close: () => { if (document.getElementById('book-panel')) toggleBookPanel(); }, redraw: () => draw() }) });
 }
 

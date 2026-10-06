@@ -94,3 +94,43 @@ describe('a whole-page picture under a page of text is the page, not a picture',
     expect(paintedPage({ fullPage: false, pageChars: 5000 })).toBe(false);
   });
 });
+
+import { boxOnPage, SORT_OPTIONS, kindFromChoice } from './book-images.js';
+// Where a picture sits on its page: pdf.js draws an image into the unit square under the current transform; the page's
+// own viewport turns PDF points into top-down page pixels (it knows the page's offset and rotation).
+describe('boxOnPage', () => {
+  const W = 600, H = 800;
+  const flip = (x, y) => [x, H - y]; // a plain page: PDF y runs up, the page's runs down
+  it('a picture drawn 300×200 at (100, 400) in PDF points', () => {
+    const r = boxOnPage([300, 0, 0, 200, 100, 400], flip, W, H);
+    [100 / W, 200 / H, 300 / W, 200 / H].forEach((v, i) => expect(r[i]).toBeCloseTo(v, 6));
+  });
+  it('a flipped or rotated transform gives the same box (the four corners decide)', () => {
+    const r = boxOnPage([300, 0, 0, -200, 100, 600], flip, W, H);
+    [100 / W, 200 / H, 300 / W, 200 / H].forEach((v, i) => expect(r[i]).toBeCloseTo(v, 6));
+  });
+  it('a picture running off the page is cut at its edge; one wholly off it is none', () => {
+    const r = boxOnPage([300, 0, 0, 200, 450, 700], flip, W, H);
+    expect(r[0] + r[2]).toBeCloseTo(1, 6);
+    expect(r[1]).toBe(0);
+    expect(boxOnPage([100, 0, 0, 100, 900, 100], flip, W, H)).toBe(null);
+  });
+});
+
+// Measured 2026-10-06 on the owner's Heliana (43 whole-page pictures labelled by eye, SigLIP 8-bit, CPU): these
+// wordings get map-vs-not right 42/43 (the miss: an advert made of map pictures); single vague words got 31/43.
+describe('the AI sort', () => {
+  it('three options of several wordings each, inside the engine\'s limits', () => {
+    expect(SORT_OPTIONS.length).toBe(3);
+    for (const o of SORT_OPTIONS) {
+      expect(o.length).toBeGreaterThan(1);
+      expect(o.length).toBeLessThanOrEqual(8);
+      for (const w of o) expect(w.length).toBeLessThanOrEqual(60);
+    }
+  });
+  it('a map is a map; art is art; an advert or a text page is art, left out', () => {
+    expect(kindFromChoice(0)).toEqual({ kind: 'map', keep: true });
+    expect(kindFromChoice(1)).toEqual({ kind: 'art', keep: true });
+    expect(kindFromChoice(2)).toEqual({ kind: 'art', keep: false });
+  });
+});

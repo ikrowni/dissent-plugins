@@ -5,7 +5,7 @@
 // on this thread ("fake worker"). The page loop yields between pages so the screen stays alive and Cancel works.
 // pdf.js (Apache-2.0) is vendored in vendor/pdfjs/ and loaded only when a DM imports a book.
 import { pageLines } from './book-layout.js';
-import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture, paintedPage, FULL_PAGE, SAMPLE, THUMB } from './book-images.js';
+import { isWorthOffering, guessKind, fitWithin, rgbaFrom, fingerprint, pictureStats, notAPicture, paintedPage, boxOnPage, FULL_PAGE, SAMPLE, THUMB } from './book-images.js';
 import { readOutline } from './book-outline.js';
 
 let _pdfjs = null;
@@ -59,6 +59,7 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
   const lib = await pdfjs();
   const doc = await openPdf(lib, source);
   const lines = [], images = [], seen = new Set(), left = { mask: 0, blank: 0, background: 0, page: 0 };
+  const boxes = {}, verdicts = new Map(); // page → [[x, y, w, h]] where its pictures sit; picture → a real picture?
   let chars = 0;
   try {
     for (let p = 1; p <= doc.numPages; p++) {
@@ -70,7 +71,10 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
       for (const it of tc.items) { chars += (it.str || '').length; pageChars += (it.str || '').trim().length; }
       lines.push(...pageLines({ items: tc.items, width: vp.width, height: vp.height }, p));
       const mapWord = tc.items.some(it => /\bmaps?\b/i.test(it.str || ''));
-      if (wantImages) images.push(...await pageImages(lib, page, p, seen, { width: vp.width, height: vp.height, mapWord, pageChars, left }).catch(() => []));
+      const pageBoxes = [];
+      if (wantImages) images.push(...await pageImages(lib, page, p, seen, { width: vp.width, height: vp.height, mapWord, pageChars, left,
+        toPage: (x, y) => vp.convertToViewportPoint(x, y), boxes: pageBoxes, verdicts }).catch(() => []));
+      if (pageBoxes.length) boxes[p] = pageBoxes;
       page.cleanup();
       onProgress?.(p, doc.numPages);
       await new Promise(r => setTimeout(r, 0));
@@ -80,7 +84,8 @@ export async function readPdf(source, { onProgress, signal, images: wantImages =
     const meta = await doc.getMetadata().catch(() => null);
     const outline = await readOutline(doc).catch(() => []);
     // `fingerprint`: the reader checks a PDF the DM picks again (for sharp cut-outs) is this one.
-    return { lines, images, left, outline, pages: doc.numPages, title: meta?.info?.Title || '', fingerprint: doc.fingerprints?.[0] || null };
+    // `boxes`: where each real picture (not a whole page) sits on its page, for the reader's box tool.
+    return { lines, images, left, outline, boxes, pages: doc.numPages, title: meta?.info?.Title || '', fingerprint: doc.fingerprints?.[0] || null };
   } finally {
     doc.destroy();
   }
@@ -117,13 +122,16 @@ async function pageImages(lib, page, pageNo, seen, ctx) {
     const img = typeof arg === 'object' ? arg : await objectOf(page, arg);
     if (!img || !isWorthOffering(img.width, img.height)) continue;
     const fp = fingerprint(img.data ? img : await bitmapPrint(img));
-    if (seen.has(fp)) continue;
+    const box = () => { if (cover < FULL_PAGE && ctx.boxes) { const b = boxOnPage(ctm, ctx.toPage, ctx.width, ctx.height); if (b) ctx.boxes.push(b.map(v => +v.toFixed(4))); } };
+    if (seen.has(fp)) { if (ctx.verdicts?.get(fp)) box(); continue; } // the same picture again: offered once, boxed on every page
     seen.add(fp);
     const bmp = await bitmapOf(img).catch(() => null);
     if (!bmp) continue;
     const stats = sampleStats(bmp);
     const why = notAPicture({ cover, stats });
+    ctx.verdicts?.set(fp, !why);
     if (why) { ctx.left[why]++; if (!img.bitmap) bmp.close?.(); continue; }
+    box();
     const fullPage = cover >= FULL_PAGE;
     const blob = await encode(bmp, img.width, img.height).catch(() => null);
     const thumb = blob && await encode(bmp, img.width, img.height, THUMB, 0.7).catch(() => null);

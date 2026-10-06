@@ -47,7 +47,7 @@ async function picture(blob) {
  * Read a bundle. `progress({ file, files, name, page, pages, phase })` as it goes; `signal` stops between pages.
  * Returns { parsed, title, pages, pdfs, pdf, notes: { read: [{ name, pages, scanned }], failed: [{ name, why }], skipped: [path],
  *   left: { mask, blank, background, page } } } — `left`: what book-pdf.js found was not a picture (`page`: a whole
- *   page of text with art behind it). `pdfs`: every PDF read, in `doc` order ({ name, blob, pages, fingerprint }), kept
+ *   page of text with art behind it). `pdfs`: every PDF read, in `doc` order ({ name, blob, pages, fingerprint, boxes }), kept
  *   (never uploaded) for the page pictures and sharp cut-outs; `pdf`: the only one, when there is just one.
  */
 export async function readBundle(files, { progress = () => {}, signal } = {}) {
@@ -85,7 +85,7 @@ export async function readBundle(files, { progress = () => {}, signal } = {}) {
       parsed.images = (doc.images || []).map(img => ({ ...img, name: `Page ${img.page} picture`, group: plan.pdfs.length > 1 ? name : '' }));
       for (const k of Object.keys(notes.left)) notes.left[k] += doc.left?.[k] || 0;
       parts.push({ parsed, source: name });
-      pdfs.push({ name, blob, pages: doc.pages, fingerprint: doc.fingerprint });
+      pdfs.push({ name, blob, pages: doc.pages, fingerprint: doc.fingerprint, boxes: doc.boxes || {} });
       notes.read.push({ name, pages: doc.pages, scanned: parsed.scanned });
       pages += doc.pages;
       docTitle ||= doc.title || '';

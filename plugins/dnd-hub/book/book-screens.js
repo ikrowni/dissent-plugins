@@ -14,6 +14,7 @@ import { listBooks, saveBook, deleteBook, deleteFiles, campaignsUsing, attachBoo
 import { planPictureFiles } from './book-picture-pack.js';
 import { savePages, pagesLine } from './book-pages.js';
 import { snippetUrls, closeSnippets } from './book-snippets.js';
+import { SORT_OPTIONS, kindFromChoice } from './book-images.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Index'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -299,17 +300,54 @@ function imageGrid(list, keep) {
   return `<p class="bk-help">Pictures found in the book. A <b>map</b> can become the table's map in one click; <b>art</b> can be shown to the
       players. <b>Full pages</b> are whole-page pictures (a map, a cover, an art plate): tick the ones worth keeping.
       For anything else, draw a box on its page in the reader.</p>
+    <div class="bk-ai-sort"><button class="btn btn-ghost btn-sm" onclick="bookAiSort()" ${S.aiSort?.busy ? 'disabled' : ''}>✨ Sort with on-device AI</button>
+      <span id="bk-ai-note">${esc(S.aiSort?.note || 'Windows desktop app: your PC sorts these into maps and art. Nothing is sent anywhere.')}</span></div>
     <div class="bk-seg bk-pic-show" role="group" aria-label="Show">${PIC_SHOW.filter(([id, , f]) => id === 'all' || all.some(f)).map(([id, label, f]) =>
       `<button aria-pressed="${S.picShow === id}" onclick="bookPicShow('${id}')">${label} <span>${all.filter(e => keep.has(e.id) && f(e)).length}/${all.filter(f).length}</span></button>`).join('')}</div>
     ${!list.length ? '<div class="bk-empty">Nothing here.</div>' : ''}
     <div class="bk-grid">${list.map(e => `<div class="bk-pic ${keep.has(e.id) ? 'kept' : ''}">
       <label><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
         <img src="${esc(e.url)}" alt="${esc(e.name)}" loading="lazy" decoding="async"></label>
-      <div class="bk-pic-foot"><span>${esc(picWhere(e))} · ${e.width}×${e.height}</span>
+      <div class="bk-pic-foot"><span>${esc(picWhere(e))} · ${e.width}×${e.height}${e.ai ? ' · <b title="Sorted by the on-device AI">AI</b>' : ''}</span>
         <div class="bk-seg" role="group" aria-label="Map or art">${['map', 'art'].map(kind => `<button aria-pressed="${e.kind === kind}" onclick="bookPicKind('${esc(e.id)}','${kind}')">${kind === 'map' ? 'Map' : 'Art'}</button>`).join('')}</div></div>
     </div>`).join('')}</div>`;
 }
-export function bookPicKind(id, kind) { const e = S.parsed.images.find(x => x.id === id); if (e) { e.kind = kind; render(); } }
+export function bookPicKind(id, kind) { const e = S.parsed.images.find(x => x.id === id); if (e) { e.kind = kind; e.ai = false; render(); } }
+
+/**
+ * "Sort with on-device AI": each picture to the plugin capability `ai.choose` (the DM's PC answers: Windows desktop
+ * app; spec 2026-10-06 §6–7) with SORT_OPTIONS. A map is ticked, an advert or a text page unticked, art left as the DM
+ * had it. Nothing changes when it is not available; the line says why. The DM can still change every picture.
+ */
+export async function bookAiSort() {
+  const pics = (S?.parsed?.images || []).filter(e => e.blob);
+  if (!pics.length || S.aiSort?.busy) return;
+  S.aiSort = { busy: true, note: 'Asking your PC…' };
+  render();
+  const note = t => { S.aiSort.note = t; const el = document.getElementById('bk-ai-note'); if (el) el.textContent = t; };
+  let maps = 0, out = 0, done = 0;
+  for (const e of pics) {
+    let r = null;
+    for (let tries = 0; !r; tries++) {
+      try { r = await request('ai.choose', { image: e.blob, options: SORT_OPTIONS }, 15 * 60000); } catch (err) {
+        const msg = String(err?.message || err);
+        if (/a minute/.test(msg) && tries < 3) { note(`Sorting… ${done} of ${pics.length} (a short pause)`); await new Promise(res => setTimeout(res, 30000)); continue; }
+        // The app's refusals (dissent-client dispatch.ts): not granted / not declared, or an app too old to know the action.
+        S.aiSort = { busy: false, note: /not granted|no longer declared/.test(msg) ? 'LanternKeep has not been allowed to use on-device AI on this server yet.'
+          : /unknown action/.test(msg) ? 'Update the Dissent app to use on-device AI.' : `On-device AI could not run (${msg}).` };
+        return render();
+      }
+    }
+    if (S?.mode !== 'review') return;
+    if (!r.available) { S.aiSort = { busy: false, note: `On-device AI is not available: ${r.why}.` }; return render(); }
+    const k = kindFromChoice(r.choice);
+    e.kind = k.kind; e.ai = true;
+    if (!k.keep) { S.keep.images.delete(e.id); out++; } else if (k.kind === 'map') { S.keep.images.add(e.id); maps++; }
+    note(`Sorting… ${++done} of ${pics.length}`);
+  }
+  S.aiSort = { busy: false, note: `Sorted ${done} pictures on your PC: ${maps} maps; ${out} left out (adverts, pages of text). Change any you disagree with.` };
+  render();
+}
 export function bookPicShow(id) { S.picShow = id; render(); }
 
 export function bookTab(k) { S.tab = k; S.open = null; S.filter = ''; render(); }
@@ -384,10 +422,11 @@ export async function bookSave() {
     for (const [doc, pdf] of (S.pdfs || []).entries()) {
       const which = S.pdfs.length > 1 ? ` (${pdf.name}, PDF ${doc + 1} of ${S.pdfs.length})` : '';
       btn.textContent = `Pictures of the pages${which}: starting…`;
-      book.docs.push(await savePages(book, pdf.blob, S.place, { doc, name: pdf.name, fingerprint: pdf.fingerprint,
+      const boxes = pdf.boxes && Object.keys(pdf.boxes).length ? { boxes: pdf.boxes } : {}; // where its pictures sit (box tool)
+      book.docs.push({ ...boxes, ...await savePages(book, pdf.blob, S.place, { doc, name: pdf.name, fingerprint: pdf.fingerprint,
         onProgress: (n, of) => { btn.textContent = `Pictures of the pages${which}: ${n} of ${of}…`; },
         onWait: s => { btn.textContent = `Pictures of the pages${which}: the server takes 20 files a minute, going on in ${s} s…`; },
-        uploaded: id => fileIds.push(id) }));
+        uploaded: id => fileIds.push(id) }) });
     }
     btn.textContent = 'Saving the book…';
     const fileId = await saveBook(book, S.place);

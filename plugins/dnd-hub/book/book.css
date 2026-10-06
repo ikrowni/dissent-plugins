@@ -183,3 +183,6 @@
 .bk-snippet img{display:block;width:100%;border-radius:6px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
 .bk-snippet figcaption,.bk-snip-cap{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--lk-gold);margin-bottom:6px}
 .bk-snip-body{font-size:12px;color:var(--lk-muted)}
+.bk-ai-sort{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+#bk-ai-note{font-size:12px;color:var(--lk-muted)}
+.bk-pic-foot b{color:var(--lk-gold);font-size:10px;letter-spacing:.05em}

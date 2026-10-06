@@ -120,3 +120,32 @@ export function fingerprint(img) {
   for (let i = 0; i < d.length; i += step) { h ^= d[i]; h = Math.imul(h, 16777619); }
   return `${img.width}x${img.height}:${(h >>> 0).toString(36)}`;
 }
+
+/**
+ * Where a picture sits on its page, as [x, y, w, h] fractions of the page (top-down), or null when it is off the page.
+ * `ctm`: the transform pdf.js draws the picture's unit square with; `toPage(x, y)`: PDF points → page pixels (the
+ * page's viewport at scale 1, which knows its offset and rotation); `W`×`H`: the page in those pixels. The box tool
+ * offers these as boxes to take in one click (book-cut.js suggestions).
+ */
+export function boxOnPage(ctm, toPage, W, H) {
+  const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => toPage(ctm[0] * u + ctm[2] * v + ctm[4], ctm[1] * u + ctm[3] * v + ctm[5]));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.max(0, Math.min(...xs)), x1 = Math.min(W, Math.max(...xs));
+  const y0 = Math.max(0, Math.min(...ys)), y1 = Math.min(H, Math.max(...ys));
+  if (x1 <= x0 || y1 <= y0) return null;
+  return [x0 / W, y0 / H, (x1 - x0) / W, (y1 - y0) / H];
+}
+
+/**
+ * "Sort with on-device AI" (the review's Maps & art): what the picture model chooses between, several wordings each.
+ * Measured 2026-10-06 on the owner's Heliana (43 whole-page pictures labelled by eye, SigLIP 8-bit): map-vs-not right
+ * 42/43, the miss an advert made of map pictures; single vague words ("a map" / "art" / "text") got 31/43. The third
+ * option caught the adverts and the QR appendix page.
+ */
+export const SORT_OPTIONS = [
+  ['a top-down battle map with a grid', 'a map of a dungeon seen from above', 'a fantasy region map', 'an overhead map of a building floor plan'],
+  ['a painted illustration of a fantasy creature', 'a fantasy character portrait', 'a drawing of a monster', 'an illustration of an item or weapon'],
+  ['a page of printed text', 'an advertisement page with QR codes'],
+];
+/** What the sort's answer means for a picture: map, art, or (an advert, a page of text) art left out. */
+export const kindFromChoice = i => (i === 0 ? { kind: 'map', keep: true } : { kind: 'art', keep: i !== 2 });

@@ -17,7 +17,8 @@
     "members:read",
     "identity",
     "voice",
-    "bot:post"
+    "bot:post",
+    "ai:choose"
   ],
   "allowed_fetch_domains": [],
   "config_schema": null,
@@ -137,11 +138,11 @@
     },
     {
       "url": "book/book-images.js",
-      "sha256": "9931de8fcd6469723f8c6d40fde34317fa9b33f6b108ae9b00bc2e4539fc24a1"
+      "sha256": "973a09fbdf0ec968f63e00b85ba89a0b0a5a6aa6fd15f756edfc55874f2bf8e6"
     },
     {
       "url": "book/book-import.js",
-      "sha256": "61455856f506cc542573c5f33616932aaeeb0f67ee312f5986cc9cf732568c71"
+      "sha256": "23e4af1b408b003fc87d5da0f2912f24ca18726b729c1f6a7af1ad13323af9ca"
     },
     {
       "url": "book/book-items.js",
@@ -185,7 +186,7 @@
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "3c9fb24ab26393dd2d65559fecdfb15665f5287e0c92af419b0fa700e6e6108d"
+      "sha256": "7d97280aa37ef64898b97dcf1eecda0878634625d6403773684924c9c87ace65"
     },
     {
       "url": "book/book-picture-pack.js",
@@ -193,7 +194,7 @@
     },
     {
       "url": "book/book-reader.js",
-      "sha256": "74216709d618baf8d293b9f3adcf3f620012f6314c80150160f14f485d6f273c"
+      "sha256": "bfdd85518b9423c4e4d144c143aeb5d740c2178046b9560d7aab4d4d2882e38d"
     },
     {
       "url": "book/book-scan.js",
@@ -201,7 +202,7 @@
     },
     {
       "url": "book/book-screens.js",
-      "sha256": "020d1916f81f1238629a5615c3a6bf088cb9bf2ee7b694227aefd269d9c50acc"
+      "sha256": "55ea7ec851ef0b88c8ed7136b2f31efb560e9445e024ab0a1d41aec3446b6b77"
     },
     {
       "url": "book/book-snippet-geom.js",
@@ -237,7 +238,7 @@
     },
     {
       "url": "book/book.css",
-      "sha256": "98c8a0f1c7b70a1d834afcdeafbc13baa2a45be5ee1c8a719a21a93a806ad814"
+      "sha256": "093539111f10ccec62a0188ae61136a535697c4ea131a4a2da74844c6098b04d"
     },
     {
       "url": "dnd-campaign-merge.js",
@@ -397,7 +398,7 @@
     },
     {
       "url": "dnd-hub-main.js",
-      "sha256": "43351b02fe7c2dd0bf25a96df15fea2df4ae755b349b1c2e5ce6bc9f0b99ae34"
+      "sha256": "cfffba5f3af6c24a975d8a4a3225b199947ca105c506f2a16dd4344de374849c"
     },
     {
       "url": "dnd-hub-map-bg.js",
