@@ -1,6 +1,6 @@
 // plugins/lk-book.test.js
 import { describe, it, expect } from 'vitest';
-import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName } from './lk-book.js';
+import { makeBook, playerPart, mergeContent, BOOK_FORMAT, bookFileName, bookTitleFromFile, toPack, fromPack, packFileName, bookDocs, indexEntry } from './lk-book.js';
 
 const parsed = {
   monsters: [{ id: 'mudling', name: 'Mudling', confidence: 'sure', problems: [], lines: [0, 9], hp: 9 }],
@@ -95,5 +95,62 @@ describe('working data stays out of a saved book', () => {
   it('src (where an entry sat on the page) is not saved', () => {
     const book = makeBook({ title: 'T', id: 'b', parsed: { monsters: [{ id: 'm', name: 'M', src: [{ page: 1 }], lines: [0, 1] }] } });
     expect(book.monsters[0].src).toBeUndefined();
+  });
+});
+
+// Format 2 (plan 2026-10-06 page reader): the story is an INDEX into the real pages, page pictures live per PDF in
+// `docs`, and a picture may be a box the DM cut from a page.
+describe('format 2: the story is an index', () => {
+  it('a story entry keeps only its title, chapter and where it is', () => {
+    const b = makeBook({ title: 'T', id: 'b', parsed: { story: [
+      { id: 's1', title: 'The Docks', chapter: 'Chapter 1', html: '<p>long text</p>', readAloud: ['x'], page: 12, doc: 1 },
+      { id: 's2', title: 'Intro', chapter: '', page: 3 }] } });
+    expect(BOOK_FORMAT).toBe(2);
+    expect(b.story).toEqual([
+      { id: 's1', title: 'The Docks', chapter: 'Chapter 1', doc: 1, page: 12 },
+      { id: 's2', title: 'Intro', chapter: '', doc: 0, page: 3 }]);
+  });
+  it('indexEntry drops a page that is not a whole positive number', () => {
+    expect(indexEntry({ id: 'a', title: 'A', page: 'x' })).toEqual({ id: 'a', title: 'A', chapter: '', doc: 0 });
+    expect(indexEntry({ id: 'a', title: 'A', page: 0, doc: -1 })).toEqual({ id: 'a', title: 'A', chapter: '', doc: 0 });
+  });
+  it('players still get only spells and items: no index, no pictures', () => {
+    const p = playerPart({ ...makeBook({ title: 'T', parsed, id: 'b1' }), images: [{ id: 'c1' }], docs: [{ count: 1 }] });
+    expect(Object.keys(p).sort()).toEqual(['formatVersion', 'id', 'items', 'spells', 'title']);
+  });
+});
+
+describe('bookDocs: where a book\'s page pictures are', () => {
+  const packs = [{ fileId: 'f1', from: 1, to: 40 }];
+  it('format 2: its docs, leaving out broken ones', () => {
+    const docs = [{ name: 'Part 1', count: 40, fingerprint: 'abc', packs }, { name: 'bad' }, null];
+    expect(bookDocs({ docs })).toEqual([{ name: 'Part 1', count: 40, fingerprint: 'abc', packs }]);
+  });
+  it('an old book with page pictures reads as one doc', () => {
+    expect(bookDocs({ pages: { count: 40, packs } })).toEqual([{ name: '', count: 40, fingerprint: null, packs }]);
+  });
+  it('a book without page pictures has none', () => {
+    expect(bookDocs({})).toEqual([]);
+    expect(bookDocs(null)).toEqual([]);
+  });
+});
+
+describe('.lkpack cuts', () => {
+  const cut = { id: 'cut-1', fileId: 'f9', doc: 1, page: 7, rect: [0.1, 0.2, 0.5, 0.4], source: 'cut', width: 2048, height: 1200, kind: 'map', title: 'The docks' };
+  it('a cut keeps its page, doc and box through a copy', () => {
+    const back = fromPack(toPack({ ...makeBook({ title: 'T', parsed, id: 'b' }), images: [cut] }, { 'cut-1': 'QUJD' }));
+    expect(back.parsed.images).toEqual([{ id: 'cut-1', page: 7, width: 2048, height: 1200, kind: 'map', name: 'The docks',
+      dataB64: 'QUJD', doc: 1, rect: [0.1, 0.2, 0.5, 0.4], source: 'cut' }]);
+  });
+  it('a box that is not inside the page is dropped, with its picture', () => {
+    for (const rect of [[0.6, 0, 0.5, 0.5], [0, 0, 0, 0.5], [-0.1, 0, 0.5, 0.5], [0, 0, 'x', 1], [0, 0, 1]]) {
+      const back = fromPack(toPack({ title: 'T', id: 'b', images: [{ ...cut, rect }] }, { 'cut-1': 'QUJD' }));
+      expect(back.parsed.images, JSON.stringify(rect)).toEqual([]);
+    }
+  });
+  it('a format-1 copy still opens', () => {
+    const p = fromPack(JSON.stringify({ kind: 'lanternkeep-book', formatVersion: 1, book: { title: 'Old',
+      story: [{ id: 's', title: 'S', html: '<p>x</p>' }] } }));
+    expect(p.parsed.story.map(s => s.id)).toEqual(['s']);
   });
 });

@@ -2,11 +2,16 @@
 // entries into the rules lists. ⚠️ SOURCE; vendored by scripts/vendor-shared.mjs. Pure.
 // Plan: dissent/docs/superpowers/plans/2026-10-04-lanternkeep-book-import.md (stage B).
 //
-// A book file holds everything (monsters, spells, items, story) and is PRIVATE to the DM (personal or this server).
+// A book file holds everything (monsters, spells, items, the index, pictures) and is PRIVATE to the DM (personal or
+// this server).
 // A campaign using it gets a copy of the PLAYER part only (spells, items): monsters and story stay with the DM
 // until revealed (a revealed section becomes a shared journal page).
 
-export const BOOK_FORMAT = 1;
+// Format 2 (plan dissent/docs/superpowers/plans/2026-10-06-lanternkeep-page-reader.md): the reader shows the REAL
+// pages, so the story is only an index into them ({ id, title, chapter, doc, page }); page pictures live per PDF in
+// `docs` (an old book's `pages` reads as doc 0, see bookDocs); a picture may be a box cut from a page (`rect`).
+// Format-1 books and copies still open.
+export const BOOK_FORMAT = 2;
 const KINDS = ['monsters', 'spells', 'items', 'story'];
 const WORKING = ['confidence', 'problems', 'lines', 'src'];
 
@@ -16,6 +21,7 @@ export function makeBook({ title, parsed, keep = {}, id, now = new Date().toISOS
   for (const k of KINDS) {
     const want = keep[k] ? new Set(keep[k]) : null;
     book[k] = (parsed?.[k] || []).filter(e => e && (!want || want.has(e.id))).map(e => {
+      if (k === 'story') return indexEntry(e);
       const out = { ...e };
       for (const w of WORKING) delete out[w];
       if (k !== 'story') out.source = { book: id, title: book.title };
@@ -24,6 +30,30 @@ export function makeBook({ title, parsed, keep = {}, id, now = new Date().toISOS
   }
   return book;
 }
+
+const whole = (n, min) => Number.isInteger(n) && n >= min;
+
+/** A line of the book's index: where a chapter or section starts. Its text is the page itself. */
+export function indexEntry(e) {
+  const out = { id: String(e.id), title: String(e.title ?? ''), chapter: String(e.chapter ?? ''), doc: whole(e.doc, 0) ? e.doc : 0 };
+  if (whole(e.page, 1)) out.page = e.page;
+  return out;
+}
+
+/**
+ * Where a book's page pictures are: [{ name, count, fingerprint, packs: [{ fileId, from, to }] }], one per PDF.
+ * The one reader of page locations: an old book's `pages` is doc 0; a book without page pictures has none.
+ */
+export function bookDocs(book) {
+  const ok = d => d && whole(d.count, 1) && Array.isArray(d.packs);
+  if (Array.isArray(book?.docs)) return book.docs.filter(ok);
+  const p = book?.pages;
+  return ok(p) ? [{ name: '', count: p.count, fingerprint: null, packs: p.packs }] : [];
+}
+
+/** A box on a page, as fractions of the page: four numbers, inside it, not empty. */
+const goodRect = r => Array.isArray(r) && r.length === 4 && r.every(v => typeof v === 'number' && Number.isFinite(v))
+  && r[0] >= 0 && r[1] >= 0 && r[2] > 0 && r[3] > 0 && r[0] + r[2] <= 1 + 1e-9 && r[1] + r[3] <= 1 + 1e-9;
 
 /** What every player of a campaign using the book may read at once. */
 export function playerPart(book) {
@@ -95,10 +125,13 @@ export function fromPack(text) {
   const ok = e => e && typeof e === 'object' && typeof e.id === 'string' && typeof (e.name ?? e.title) === 'string';
   const list = k => (Array.isArray(j.book[k]) ? j.book[k] : []).filter(ok).map(e => ({ ...e }));
   const images = (Array.isArray(j.book.images) ? j.book.images : [])
-    .filter(i => i && typeof i.id === 'string' && typeof i.data === 'string' && i.data.length)
+    .filter(i => i && typeof i.id === 'string' && typeof i.data === 'string' && i.data.length && (i.rect == null || goodRect(i.rect)))
     .map(i => ({ id: i.id, page: +i.page || 0, width: +i.width || 0, height: +i.height || 0,
       kind: i.kind === 'map' ? 'map' : 'art', name: String(i.title || `Page ${i.page} picture`), dataB64: i.data,
-      ...(typeof i.group === 'string' && i.group ? { group: i.group.slice(0, 80) } : {}) }));
+      ...(typeof i.group === 'string' && i.group ? { group: i.group.slice(0, 80) } : {}),
+      ...(whole(i.doc, 0) ? { doc: i.doc } : {}),
+      ...(i.rect ? { rect: i.rect.slice() } : {}),
+      ...(['cut', 'found', 'loose'].includes(i.source) ? { source: i.source } : {}) }));
   return { title: String(j.book.title || 'Imported book').slice(0, 80),
     parsed: { monsters: list('monsters'), spells: list('spells'), items: list('items'), story: list('story'), images } };
 }
