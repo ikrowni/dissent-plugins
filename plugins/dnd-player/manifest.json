@@ -37,7 +37,7 @@
     },
     {
       "url": "dnd-hub-shared-storage.js",
-      "sha256": "57beb4cbce3c5f163795a95a6f9612fb180c859bb379b76c9ffe06223c4f6c18"
+      "sha256": "f11e31aa190d7ee5a2237988da5649476a203d5074c8be4c4dad1df77bb6dd73"
     },
     {
       "url": "dnd-player-combat.js",
@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "d7c59e0935fce6fa8d8076064976a173c80554a1cce378dea9d4332afc1d349e"
+      "sha256": "284d200890ba58c319976ccb1d7fea71979ddcd51c24b73c3909c3eb16444aa3"
     },
     {
       "url": "dnd-player-resources.js",
@@ -113,7 +113,7 @@
     },
     {
       "url": "lk-campaign-index.js",
-      "sha256": "28c3e4cdf5ec3a615f003e530de142b580ff8f159210fdc34ebd16ac9a8dde51"
+      "sha256": "8f1c34ddef1f944267fd08375bc159bcb041adf791517095e06561fe9f34d07f"
     },
     {
       "url": "lk-content-pack.js",

@@ -17,7 +17,7 @@
 import { storageGetCompanion, storageSetCompanion } from './plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
-import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged } from './lk-campaign-index.js';
+import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged, deletedIdsOf, deletedForIndex } from './lk-campaign-index.js';
 
 const HUB = 'dnd-hub';
 
@@ -36,6 +36,7 @@ export const cachedIndexIds = () => (_indexIds ? [..._indexIds] : null);
 // 🔴 A sidebar reads only the campaigns its user runs or plays in (lk-campaign-index.js; same rules as
 // dnd-hub/dnd-hub-storage.js). `_skipped` = listed but unread; saves keep them in the index.
 const _skipped = new Set();
+const _deleted = new Set(); // campaigns the index says were deleted (lk-campaign-index.js): never read, never written back
 let _summaries = {};
 let _indexRest = null;
 
@@ -76,8 +77,10 @@ export async function loadHubDmCompanion() {
     _summaries = idx.summaries && typeof idx.summaries === 'object' ? idx.summaries : {};
     _indexRest = JSON.stringify(idx.rest ?? {});
     _skipped.clear();
+    for (const id of deletedIdsOf(idx)) _deleted.add(id);
     const campaigns = {};
     for (const id of idx.campaignIds) {
+      if (_deleted.has(id)) continue;
       if (!needsCampaign(_summaries, id, _me)) { _skipped.add(id); _lastSeen.delete(id); continue; }
       const pub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
       if (!pub) continue;
@@ -160,6 +163,7 @@ async function saveNow(data) {
     // the Hub or another player changed since this sidebar loaded.
     const baseJson = _lastSeen.get(id);
     const merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, JSON.parse(json));
+    if (!merged) continue; // deleted on the Hub: not written back
     _lastSeen.set(id, JSON.stringify(merged));
     // What the screen changed WHILE this save was out is kept: merged over the stored result, not overwritten by it
     // (it was: a host added during a slow save vanished). Left unsaved here; the next save writes it.
@@ -178,18 +182,28 @@ async function saveNow(data) {
   if (idsSame && restJson === _indexRest && !summariesChanged(written, _summaries)) return;
   const fresh = await storageGetCompanion(HUB, 'hub-index', 'server');
   const freshOk = !!fresh && Array.isArray(fresh.campaignIds);
-  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], []);
+  if (freshOk) for (const id of deletedIdsOf(fresh)) _deleted.add(id);
+  const deletedIds = deletedForIndex([..._deleted], []);
+  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], [], deletedIds);
   const summaries = summariesForIndex(ids, written, freshOk ? (fresh.summaries || {}) : null);
-  await storageSetCompanion(HUB, 'hub-index', 'server', { campaignIds: ids, rest, summaries });
+  await storageSetCompanion(HUB, 'hub-index', 'server', { campaignIds: ids, rest, summaries, deletedIds });
   _indexIds = [...ids];
   _summaries = summaries;
   _indexRest = restJson;
   for (const id of ids) if (!(id in campaigns)) _skipped.add(id);
 }
 
+/** Whether campaign `id` was deleted, asking the index when this sidebar does not know yet (one read, rare). */
+async function isDeleted(id) {
+  if (!_deleted.has(id)) for (const d of deletedIdsOf(await storageGetCompanion(HUB, 'hub-index', 'server'))) _deleted.add(d);
+  return _deleted.has(id);
+}
+
 /** Merge one campaign with what is stored and write it (the DM's screen: both records); returns the merged whole. */
 async function writeCampaign(id, base, local) {
   const remotePub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
+  // Gone: deleted on the Hub, or a failed read (both read as null). Only a deletion the index records skips the write.
+  if (base && !remotePub && await isDeleted(id)) return null;
   if (!isCampaignDm(local, _me)) {
     const merged = mergeCampaign(base, withoutStubs(local), remotePub);
     await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', merged);

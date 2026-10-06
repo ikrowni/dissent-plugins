@@ -15,7 +15,7 @@
 import { storageGet, storageSet } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
-import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged } from './lk-campaign-index.js';
+import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged, deletedIdsOf, deletedForIndex } from './lk-campaign-index.js';
 import { noteSave } from './dnd-hub-undo.js';
 
 export const HUB_LEGACY_KEY = 'hub-dm';
@@ -37,6 +37,7 @@ let _indexIds = null;
 // unread; a save keeps them in the index (they are not deletions). `_summaries`/`_indexRest` = what the index said
 // at our last read or write, so a save that changes nothing in it does not write it.
 const _skipped = new Set();
+const _deleted = new Set(); // campaigns the index says were deleted (lk-campaign-index.js): never read, never written back
 let _summaries = {};
 let _indexRest = null;
 
@@ -92,11 +93,13 @@ export async function loadHubDm() {
     _summaries = idx.summaries && typeof idx.summaries === 'object' ? idx.summaries : {};
     _indexRest = JSON.stringify(idx.rest ?? {});
     _skipped.clear();
+    for (const id of deletedIdsOf(idx)) _deleted.add(id);
     const campaigns = {};
     let moveOut = false;
     const keepJoined = new Set(_joined); // the open campaign stays joined across a reload of the list
     _joined.clear();
     for (const id of idx.campaignIds) {
+      if (_deleted.has(id)) continue;
       if (!needsCampaign(_summaries, id, _me)) { _skipped.add(id); _lastWritten.delete(id); continue; }
       const pub = await storageGet(hubCampKey(id));
       if (!pub) continue; // shard missing — skip rather than resurrect a stub
@@ -212,6 +215,7 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
     const baseJson = _lastWritten.get(id);
     const localNow = JSON.parse(JSON.stringify(camp)); // what this save merges and writes
     const merged = await _writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, localNow);
+    if (!merged) continue; // deleted on another screen: not written back
     const mergedJson = JSON.stringify(merged);
     _lastWritten.set(id, mergedJson);
     if (mergedJson !== JSON.stringify(localNow)) {
@@ -239,15 +243,24 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
   if (idsSame && restJson === _indexRest && !summariesChanged(written, _summaries)) return;
   const fresh = await storageGet(HUB_INDEX_KEY);
   const freshOk = !!fresh && Array.isArray(fresh.campaignIds);
-  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], removed);
+  if (freshOk) for (const id of deletedIdsOf(fresh)) _deleted.add(id);
+  const deletedIds = deletedForIndex([..._deleted], removed);
+  for (const id of removed) _deleted.add(id);
+  const ids = idsForIndex(nextIds, freshOk ? fresh.campaignIds : [], removed, deletedIds);
   const summaries = summariesForIndex(ids, written, freshOk ? (fresh.summaries || {}) : null);
-  await storageSet(HUB_INDEX_KEY, { campaignIds: ids, rest, summaries });
+  await storageSet(HUB_INDEX_KEY, { campaignIds: ids, rest, summaries, deletedIds });
   _indexIds = [...ids];
   _summaries = summaries;
   _indexRest = restJson;
   // A campaign another screen created since our load is listed now but unread here: kept by later saves, never
   // counted as removed by a deletion. The next load decides whether to read it.
   for (const id of ids) if (!(id in campaigns)) _skipped.add(id);
+}
+
+/** Whether campaign `id` was deleted, asking the index when this screen does not know yet (one read, rare). */
+async function _isDeleted(id) {
+  if (!_deleted.has(id)) for (const d of deletedIdsOf(await storageGet(HUB_INDEX_KEY))) _deleted.add(d);
+  return _deleted.has(id);
 }
 
 /**
@@ -257,6 +270,9 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
  */
 async function _writeCampaign(id, base, localNow) {
   const remotePub = await storageGet(hubCampKey(id));
+  // Its record is gone: deleted on another screen, or a failed read (the SDK returns null for both). Only a deletion
+  // the index records skips the write; anything else is written as before.
+  if (base && !remotePub && await _isDeleted(id)) return null;
   if (!isCampaignDm(localNow, _me)) {
     const merged = mergeCampaign(base, withoutStubs(localNow), remotePub);
     await storageSet(hubCampKey(id), merged);

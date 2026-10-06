@@ -120,3 +120,56 @@ describe('a sidebar reads only the campaigns its user is in (lk-campaign-index.j
     expect(JSON.parse(store.get('hub-index')).summaries.two.members).toEqual(['charlie']);
   });
 });
+
+describe('a deleted campaign stays deleted (hub-index deletedIds)', () => {
+  // The DM deletes a campaign on the Hub while a sidebar or player sheet still holds it. The sidebar's next save
+  // used to put it back in the index ("refusing to drop … a failed read"), so it came back for everyone
+  // (tavern playtest 2026-10-05: two swept campaigns had to be swept again on the next run).
+  const seed = () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a', 'b'], rest: {} }));
+    store.set('hub-camp-a', JSON.stringify({ id: 'a', n: 1 }));
+    store.set('hub-camp-b', JSON.stringify({ id: 'b', n: 1 }));
+  };
+  const hubDeletes = id => {
+    const idx = JSON.parse(store.get('hub-index'));
+    store.set('hub-index', JSON.stringify({ ...idx, campaignIds: idx.campaignIds.filter(x => x !== id), deletedIds: [id] }));
+    store.delete('hub-camp-' + id);
+  };
+
+  it('a sidebar save after the Hub deleted a campaign does not put it back', async () => {
+    seed();
+    const data = await mod.loadHubDmCompanion();
+    hubDeletes('b');
+    data.campaigns.a.n = 2;
+    await mod.saveHubDmCompanion(data);
+    const idx = JSON.parse(store.get('hub-index'));
+    expect(idx.campaignIds).toEqual(['a']);
+    expect(idx.deletedIds).toEqual(['b']); // kept for the next writer
+  });
+
+  it('an edit to the deleted campaign itself does not write it back', async () => {
+    seed();
+    const data = await mod.loadHubDmCompanion();
+    hubDeletes('b');
+    data.campaigns.b.n = 2;
+    await mod.saveHubDmCompanion(data);
+    expect(store.has('hub-camp-b')).toBe(false);
+    expect(JSON.parse(store.get('hub-index')).campaignIds).toEqual(['a']);
+  });
+
+  it('a failed read of a campaign nobody deleted still saves the edit', async () => {
+    seed();
+    const data = await mod.loadHubDmCompanion();
+    failReads.add('hub-camp-a');
+    data.campaigns.a.n = 2;
+    await mod.saveHubDmCompanion(data);
+    expect(JSON.parse(store.get('hub-camp-a')).n).toBe(2);
+  });
+
+  it('a load skips a deleted campaign whose record survived', async () => {
+    seed();
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a', 'b'], deletedIds: ['b'], rest: {} }));
+    const data = await mod.loadHubDmCompanion();
+    expect(Object.keys(data.campaigns)).toEqual(['a']);
+  });
+});

@@ -3,9 +3,9 @@
 // On your turn raise the bid (how many of a face under ALL the cups) or call "Liar!". Insight reads the tells.
 // Cheating: peek under the next cup (Sleight of Hand vs the host's eye, judged by the DM's Hub).
 // Rules: bluff-bones-rules.js. Note: every screen receives the table's state; the view shows only your own dice.
-import * as R from './bluff-bones-rules.js?v=20261014l';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, dieHtml, esc } from './kit.js?v=20261014l';
-import { rattle, clack, chime, buzz, thump } from './tavern-sfx.js?v=20261014l';
+import * as R from './bluff-bones-rules.js?v=20261014m';
+import { useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, dieHtml, esc } from './kit.js?v=20261014m';
+import { rattle, clack, chime, buzz, thump } from './tavern-sfx.js?v=20261014m';
 
 const WORD = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const FACE = ['', 'ones', 'twos', 'threes', 'fours', 'fives', 'sixes'];
@@ -14,7 +14,7 @@ const BARKS = { start: ['Cups down. Lie well.', 'Everyone lies at this table. So
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('bb-css', './bluff-bones.css?v=20261014l', import.meta.url);
+  loadCss('bb-css', './bluff-bones.css?v=20261014m', import.meta.url);
   const wrap = el('div', 'tk-felt bb');
   wrap.innerHTML = `<div class="bb-top"></div><div class="bb-cups"></div><div class="bb-bid" aria-live="polite"></div>
     <div class="bb-mine"><div class="bb-dice"></div><div class="bb-hint"></div><div class="bb-controls"></div><div class="tk-note bb-status" aria-live="polite"></div></div>`;

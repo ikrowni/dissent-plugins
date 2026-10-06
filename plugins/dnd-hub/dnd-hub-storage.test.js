@@ -313,3 +313,43 @@ describe('a load reads only the campaigns this user is in (lk-campaign-index.js)
     expect(JSON.parse(store.get('hub-index')).summaries.theirs.members).toEqual(['bob']);
   });
 });
+
+describe('a deleted campaign stays deleted (hub-index deletedIds)', () => {
+  const seed = () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a', 'b'], rest: {} }));
+    store.set('hub-camp-a', JSON.stringify({ id: 'a', n: 1 }));
+    store.set('hub-camp-b', JSON.stringify({ id: 'b', n: 1 }));
+  };
+
+  it('deleting records the campaign in deletedIds', async () => {
+    seed();
+    const data = await mod.loadHubDm();
+    delete data.campaigns.b;
+    await mod.saveHubDm(data, { allowRemovals: true });
+    const idx = JSON.parse(store.get('hub-index'));
+    expect(idx.campaignIds).toEqual(['a']);
+    expect(idx.deletedIds).toEqual(['b']);
+  });
+
+  it("another screen's Hub that still holds the campaign does not put it back", async () => {
+    seed();
+    const bob = await mod.loadHubDm();                 // Bob's Hub loaded both
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a'], deletedIds: ['b'], rest: {} })); // the DM deleted b
+    store.delete('hub-camp-b');
+    bob.campaigns.b.n = 2;                             // Bob moves a token in b
+    bob.campaigns.a.n = 2;
+    bob.rest2 = 1;                                     // and something forces an index write
+    await mod.saveHubDm(bob);
+    const idx = JSON.parse(store.get('hub-index'));
+    expect(idx.campaignIds).toEqual(['a']);
+    expect(idx.deletedIds).toEqual(['b']);
+    expect(store.has('hub-camp-b')).toBe(false);
+  });
+
+  it('a load skips a deleted campaign whose record survived', async () => {
+    seed();
+    store.set('hub-index', JSON.stringify({ campaignIds: ['a', 'b'], deletedIds: ['b'], rest: {} }));
+    const data = await mod.loadHubDm();
+    expect(Object.keys(data.campaigns)).toEqual(['a']);
+  });
+});

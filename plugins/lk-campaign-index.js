@@ -58,10 +58,25 @@ export function summariesForIndex(ids, written, fresh) {
  * The campaign ids a save writes: ours, plus any the fresh index has that this screen did not remove (a
  * campaign created on another screen since we loaded must not be dropped by our save).
  */
-export function idsForIndex(ours, freshIds, removed) {
-  const out = [...ours];
-  for (const id of freshIds || []) if (!out.includes(id) && !removed.includes(id)) out.push(id);
+export function idsForIndex(ours, freshIds, removed, deleted = []) {
+  const out = ours.filter(id => !deleted.includes(id));
+  for (const id of freshIds || []) if (!out.includes(id) && !removed.includes(id) && !deleted.includes(id)) out.push(id);
   return out;
+}
+
+// 🔴 DELETED CAMPAIGNS. Every writer keeps any campaign it still holds, because a failed read looks exactly like an
+// empty list (see dnd-hub-storage.js saveHubDm). So a deletion was undone by the next save of ANY screen that had the
+// campaign loaded — a DM sidebar, a player sheet, another player's Hub (tavern playtest, 2026-10-05: swept campaigns
+// came back). The Hub now records each deletion in the index's `deletedIds`, and every writer leaves those out.
+// Campaign ids are never reused, so a recorded deletion is safe to keep; the oldest fall off past DELETED_MAX.
+export const DELETED_MAX = 200;
+
+/** The campaign ids an index says were deleted. */
+export const deletedIdsOf = idx => (Array.isArray(idx?.deletedIds) ? idx.deletedIds : []);
+
+/** The deletedIds a save writes: what was known (the fresh index, or this screen's last copy), plus this save's removals. */
+export function deletedForIndex(known, removed) {
+  return [...known.filter(id => !removed.includes(id)), ...removed].slice(-DELETED_MAX);
 }
 
 /** True when the written campaigns' summaries differ from what the index last said (so it must be rewritten). */
