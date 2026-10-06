@@ -17,7 +17,8 @@ export function pagesToRead(lines, pageCount) {
 
 /**
  * Tesseract's TSV (level 5 rows = words, grouped by block / paragraph / line) → lines in book-layout.js's shape:
- * { text, size, runs: [{ text, font: 'ocr' }], page, x, y, indent }. `scale` = pixels per PDF point of the
+ * { text, size, runs: [{ text, font: 'ocr' }], page, x, y, w, fromTop, indent } — `y` is the line's TOP, measured from the
+ * top of the page (`fromTop`), unlike pdf.js lines (book-layout.js). `scale` = pixels per PDF point of the
  * picture read. A line's size is its median word height in points over WORD_EM (a word box spans about this much
  * of the font size), so headings and body text land near the sizes the scan's own layer reports.
  */
@@ -30,9 +31,9 @@ export function tsvToLines(tsv, page, scale) {
     const text = c.slice(11).join('\t').trim();
     if (!text || +c[10] < 0) continue;
     const key = `${c[2]}.${c[3]}.${c[4]}`;
-    const g = groups.get(key) || { words: [], heights: [], left: Infinity, top: Infinity, block: +c[2], par: +c[3] };
+    const g = groups.get(key) || { words: [], heights: [], left: Infinity, top: Infinity, right: -Infinity, block: +c[2], par: +c[3] };
     g.words.push(text); g.heights.push(+c[9]);
-    g.left = Math.min(g.left, +c[6]); g.top = Math.min(g.top, +c[7]);
+    g.left = Math.min(g.left, +c[6]); g.top = Math.min(g.top, +c[7]); g.right = Math.max(g.right, +c[6] + +c[8]);
     groups.set(key, g);
   }
   const out = [];
@@ -41,7 +42,8 @@ export function tsvToLines(tsv, page, scale) {
     const h = [...g.heights].sort((a, b) => a - b)[Math.floor(g.heights.length / 2)];
     const text = g.words.join(' ');
     const line = { text, size: +(h / scale / WORD_EM).toFixed(1), runs: [{ text, font: 'ocr' }], page,
-      x: +(g.left / scale).toFixed(1), y: +(g.top / scale).toFixed(1), indent: false };
+      x: +(g.left / scale).toFixed(1), y: +(g.top / scale).toFixed(1), w: +((g.right - g.left) / scale).toFixed(1),
+      fromTop: true, indent: false };
     // A paragraph's first line, set in from the one before it in the same column, is an indent.
     line.indent = !!prev && prev.par !== `${g.block}.${g.par}` && Math.abs(line.x - prev.x) < 40 && line.x - prev.x > 3;
     out.push(line);

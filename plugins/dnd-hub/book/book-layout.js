@@ -2,7 +2,7 @@
 // Pure: no pdf.js here; book-pdf.js feeds it. Two-column pages read the left column, then the right; a line that
 // crosses the middle (a chapter heading, a full-width table) is read where it stands and splits the columns above
 // and below it. Running headers, footers and bare page numbers are dropped.
-// Each line: { text, size, runs: [{ text, font }], page, x, y }.
+// Each line: { text, size, runs: [{ text, font }], page, x, w (width), y (baseline, from the page's bottom) }.
 
 const BAND = 0.055;     // top and bottom share of the page that holds running headers and footers
 const Y_TOL = 2.2;      // items within this many points vertically are one line
@@ -77,7 +77,9 @@ function makeLine(its, col, y, page) {
     prevEnd = it.x + it.w;
   }
   for (const r of runs) r.text = clean(r.text);
-  return { text: clean(text), size: Math.max(...its.map(i => i.h)), runs, page, x: its[0].x, y, col };
+  const last = its[its.length - 1];
+  return { text: clean(text), size: Math.max(...its.map(i => i.h)), runs, page, x: its[0].x,
+    w: +(last.x + last.w - its[0].x).toFixed(1), y, col };
 }
 
 // Soft hyphens and the typographic hyphens some books use ("non-\u00ad\u2010lawful") become one plain hyphen.

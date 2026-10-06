@@ -39,3 +39,12 @@ describe('black and white before OCR', () => {
     expect([...blackAndWhite(px)]).toEqual([0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 255]);
   });
 });
+
+describe('OCR lines are measured from the top', () => {
+  it('carry fromTop and their width', () => {
+    // level 5 = word: level page block par line word left top width height conf text
+    const tsv = ['5\t1\t1\t1\t1\t1\t100\t200\t50\t20\t96\tHello', '5\t1\t1\t1\t1\t2\t160\t200\t40\t20\t96\tthere'].join('\n');
+    const [l] = tsvToLines(tsv, 3, 2);
+    expect(l).toMatchObject({ page: 3, x: 50, y: 100, w: 50, fromTop: true }); // (160 + 40 − 100) / 2
+  });
+});

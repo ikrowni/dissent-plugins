@@ -45,3 +45,12 @@ describe('pageLines', () => {
     expect(l.text).toBe('some-');
   });
 });
+
+describe('a line knows how wide it is', () => {
+  it('w runs from the first item to the end of the last', () => {
+    // it_ gives no width, so pdf.js-like width falls back to str.length × h × 0.5: 'abcd' at h 10 → 20 points.
+    const [l] = pageLines(page([it_(57, 700, 'ab', 10), it_(80, 700, 'abcd', 10)]));
+    expect(l.x).toBe(57);
+    expect(l.w).toBe(43); // 80 + 20 − 57
+  });
+});
