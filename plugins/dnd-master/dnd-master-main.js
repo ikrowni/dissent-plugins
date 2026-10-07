@@ -12,7 +12,9 @@ import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
 import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset } from './dnd-master-settings.js?v=20261014v';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
-import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack } from './dnd-master-actors.js';
+import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack,
+  editActor, cancelEditActor, placeActorOnMap, renderActorsTabKeep, getCustomActors } from './dnd-master-actors.js';
+import { setActorTalkState } from './dnd-master-actor-talk.js?v=20261014v';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
   addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems, addBookItem, itemLibGroup, itemLibSearch } from './dnd-master-items.js?v=20261014v';
@@ -187,6 +189,7 @@ async function onInit(data) {
   setSettingsState(sharedState);
   setMapsState(sharedState);
   setActorsState(sharedState);
+  setActorTalkState(sharedState);
   setItemsState(sharedState);
   setShopsState(sharedState);
   setTavernsState(sharedState);
@@ -339,6 +342,7 @@ window.__dmInitiative = () => getInitiativeState();
 window.__dmItems = () => currentItems(); // what the Items and Shops tabs hold, which is what the DM sees
 window.__dmShops = () => currentShops();
 window.__dmTaverns = () => currentTaverns();
+window.__dmActors = () => getCustomActors();
 window.__dmGameSetups = () => currentGameSetups();
 window.__lootContests = () => lootContests();
 window.updateHP            = updateHP;
@@ -370,6 +374,10 @@ window.saveNewActor         = saveNewActor;
 window.deleteActor          = deleteActor;
 window.addPendingAttack     = addPendingAttack;
 window.removePendingAttack  = removePendingAttack;
+window.editActor            = editActor;
+window.cancelEditActor      = cancelEditActor;
+window.placeActorOnMap      = placeActorOnMap;
+window.renderActorsTabKeep  = renderActorsTabKeep;
 // Shops tab
 window.saveNewShop          = saveNewShop;
 window.deleteShop           = deleteShop;

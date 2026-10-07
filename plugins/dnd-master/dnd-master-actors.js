@@ -1,9 +1,15 @@
-// dnd-master-actors.js — Actors tab: custom NPC/monster builder
-import { storageSetCompanion, esc, genId } from '../plugin-sdk.js';
-import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
+// dnd-master-actors.js — Actors tab: the DM's own NPCs and monsters.
+//
+// An NPC can run a tavern game (owner, 2026-10-07): it carries `setupId` (a game setup from the Games tab), `greeting`
+// and `portraitFileId`, and "Place on map" stands its token on the active map, where heroes right-click it to talk.
+import { esc, genId } from '../plugin-sdk.js';
+import { uploadCampaignFile } from './dnd-master-shops.js?v=20261014v';
+import { saveActors, placeNpcs } from './dnd-master-actor-talk.js?v=20261014v';
+import { gameType } from './lk-tavern.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingAttacks = [];
+let _editingId = null;
 
 export function setActorsState(state) { _state = state; }
 
@@ -11,133 +17,168 @@ export function getCustomActors() {
   return Object.values(_state.dmCampaign?.customActors || {});
 }
 
+const BLANK = { name: '', cr: '1', type: 'npc', size: 'medium', ac: 13, hp: 20, speed: 30,
+  str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, setupId: '', greeting: '', portraitFileId: null };
+
 export function renderActorsTab() {
   const el = document.getElementById('tab-actors');
   if (!el) return;
   const actors = getCustomActors();
+  const editing = _editingId ? _state.dmCampaign.customActors?.[_editingId] : null;
   el.innerHTML =
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.05em">CUSTOM ACTORS</div>' +
-    _actorForm() +
-    '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;margin-top:8px;letter-spacing:.05em">ACTOR LIBRARY</div>' +
-    (actors.length === 0
-      ? '<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px">No custom actors yet</div>'
-      : actors.map(a => _actorRow(a)).join('')
-    );
+    '<div class="lk-sec">' + (editing ? 'EDIT ' + esc(editing.name).toUpperCase() : 'CUSTOM ACTORS') + '</div>' +
+    _actorForm(editing || BLANK) +
+    '<div class="lk-sec" style="margin-top:8px">ACTOR LIBRARY</div>' +
+    (actors.length ? actors.map(_actorRow).join('') : '<div class="lk-empty">No custom actors yet</div>');
 }
 
 const CR_OPTIONS = ['0','1/8','1/4','1/2','1','2','3','4','5','6','7','8','9','10',
   '11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30'];
 const SIZES = ['tiny','small','medium','large','huge','gargantuan'];
+const ABILITIES = ['str','dex','con','int','wis','cha'];
 
-function _actorForm() {
-  const atkRows = _pendingAttacks.map((a, i) =>
-    '<div class="atk-row">' +
-      '<span style="flex:1">' + esc(a.name) + '</span>' +
+function _attackRows() {
+  return _pendingAttacks.map((a, i) =>
+    '<div class="atk-row"><span style="flex:1">' + esc(a.name) + '</span>' +
       '<span style="color:var(--gold);font-size:10px">+' + a.bonus + '</span>' +
       '<span style="color:var(--muted);font-size:10px;margin-left:4px">' + esc(a.damage) + '</span>' +
-      '<button onclick="removePendingAttack(' + i + ')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;margin-left:4px">&#x2715;</button>' +
-    '</div>'
-  ).join('');
+      '<button onclick="removePendingAttack(' + i + ')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;margin-left:4px">&#x2715;</button></div>'
+  ).join('') || '<div style="font-size:10px;color:var(--muted);padding:4px 0">No attacks added</div>';
+}
 
+function _actorForm(a) {
+  const opt = (v, label, cur) => '<option value="' + esc(v) + '"' + (String(cur) === String(v) ? ' selected' : '') + '>' + esc(label) + '</option>';
+  const setups = Object.values(_state.dmCampaign?.gameSetups || {});
   return '<div class="actor-form">' +
-    '<label>Name</label><input id="actor-name" placeholder="Goblin Shaman">' +
-    '<label>CR</label>' +
-    '<select id="actor-cr">' + CR_OPTIONS.map(c => '<option>' + c + '</option>').join('') + '</select>' +
-    '<label>Type</label>' +
-    '<select id="actor-type"><option value="npc">NPC</option><option value="monster">Monster</option></select>' +
-    '<label>Size</label>' +
-    '<select id="actor-size">' + SIZES.map(s => '<option value="' + s + '">' + s[0].toUpperCase() + s.slice(1) + '</option>').join('') + '</select>' +
+    '<label>Name</label><input id="actor-name" placeholder="Goblin Shaman" value="' + esc(a.name) + '">' +
+    '<label>CR</label><select id="actor-cr">' + CR_OPTIONS.map(c => opt(c, c, a.cr)).join('') + '</select>' +
+    '<label>Type</label><select id="actor-type" onchange="renderActorsTabKeep()">' + opt('npc', 'NPC', a.type) + opt('monster', 'Monster', a.type) + '</select>' +
+    '<label>Size</label><select id="actor-size">' + SIZES.map(s => opt(s, s[0].toUpperCase() + s.slice(1), a.size)).join('') + '</select>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px">' +
-      _iField('actor-ac',    'AC',         '13') +
-      _iField('actor-hp',    'HP',         '20') +
-      _iField('actor-speed', 'Speed (ft)', '30') +
-    '</div>' +
-    '<label>Ability Scores (STR DEX CON INT WIS CHA)</label>' +
-    '<div class="ability-grid">' +
-    ['actor-str','actor-dex','actor-con','actor-int','actor-wis','actor-cha']
-      .map(id => '<input class="num-input" id="' + id + '" type="number" value="10" min="1" max="30">').join('') +
-    '</div>' +
-    '<label>Attacks</label>' +
-    '<div id="actor-atk-list">' + (atkRows || '<div style="font-size:10px;color:var(--muted);padding:4px 0">No attacks added</div>') + '</div>' +
+      _iField('actor-ac', 'AC', a.ac) + _iField('actor-hp', 'HP', a.hp) + _iField('actor-speed', 'Speed (ft)', a.speed) + '</div>' +
+    '<label>Ability Scores (STR DEX CON INT WIS CHA)</label><div class="ability-grid">' +
+      ABILITIES.map(k => '<input class="num-input" id="actor-' + k + '" type="number" value="' + (a[k] ?? 10) + '" min="1" max="30">').join('') + '</div>' +
+    (a.type === 'npc'
+      ? '<div class="actor-talk"><label>Runs a game</label><select id="actor-game">' +
+          opt('', setups.length ? 'No game — just talks' : 'No game (set one up in the Games tab)', a.setupId || '') +
+          setups.map(s => opt(s.id, s.name + ' (' + (gameType(s.type)?.name || '') + ')', a.setupId || '')).join('') + '</select>' +
+        '<label>What they say</label><textarea id="actor-greeting" rows="2" maxlength="300" placeholder="Fancy a game of bones, stranger?">' + esc(a.greeting || '') + '</textarea>' +
+        '<label>Portrait' + (a.portraitFileId ? ' (has one — pick a file to change it)' : '') + '</label><input id="actor-portrait" type="file" accept="image/*" style="font-size:10px"></div>'
+      : '') +
+    '<label>Attacks</label><div id="actor-atk-list">' + _attackRows() + '</div>' +
     '<div style="display:grid;grid-template-columns:2fr 1fr 2fr;gap:4px;margin-top:4px">' +
-      '<input id="atk-name"   class="search-input" style="margin:0" placeholder="Slam">' +
-      '<input id="atk-bonus"  class="num-input"    type="number" value="3" style="width:100%" title="+attack bonus">' +
-      '<input id="atk-damage" class="search-input" style="margin:0" placeholder="1d6+2">' +
-    '</div>' +
+      '<input id="atk-name" class="search-input" style="margin:0" placeholder="Slam">' +
+      '<input id="atk-bonus" class="num-input" type="number" value="3" style="width:100%" title="+attack bonus">' +
+      '<input id="atk-damage" class="search-input" style="margin:0" placeholder="1d6+2"></div>' +
     '<button class="btn btn-ghost" onclick="addPendingAttack()" style="width:100%;margin-top:4px;font-size:10px">+ Add Attack</button>' +
-    '<button class="btn btn-gold"  onclick="saveNewActor()"    style="width:100%;margin-top:8px">&#x2795; Create Actor</button>' +
+    '<button id="actor-save" class="btn btn-gold" onclick="saveNewActor()" style="width:100%;margin-top:8px">' + (_editingId ? 'Save changes' : '&#x2795; Create Actor') + '</button>' +
+    (_editingId ? '<button class="btn btn-ghost" onclick="cancelEditActor()" style="width:100%;margin-top:4px;font-size:10px">Cancel</button>' : '') +
   '</div>';
 }
 
-function _iField(id, label, placeholder) {
-  return '<div><label>' + label + '</label><input id="' + id + '" type="number" value="' + placeholder + '" min="0"></div>';
+function _iField(id, label, value) {
+  return '<div><label>' + label + '</label><input id="' + id + '" type="number" value="' + esc(String(value ?? '')) + '" min="0"></div>';
 }
 
 function _actorRow(a) {
-  return '<div class="actor-row">' +
-    '<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:10px;background:rgba(212,175,55,.15);color:var(--gold);border:1px solid rgba(212,175,55,.25)">CR ' + esc(a.cr) + '</span>' +
-    '<span style="flex:1;font-size:11px;font-weight:600">' + esc(a.name) + '</span>' +
-    '<span style="font-size:9px;color:var(--muted)">' + esc(a.type) + ' \xb7 ' + a.hp + 'hp</span>' +
-    '<button onclick="deleteActor(\'' + a.id + '\')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px" title="Delete">&#x2715;</button>' +
+  const game = a.type === 'npc' && a.setupId ? _state.dmCampaign.gameSetups?.[a.setupId] : null;
+  return '<div class="actor-row" data-actor="' + a.id + '">' +
+    '<span class="lk-badge gold">CR ' + esc(a.cr) + '</span>' +
+    '<span style="flex:1;font-size:11px;font-weight:600">' + esc(a.name) +
+      (game ? ' <span style="font-weight:400;color:var(--muted)">· 🎲 ' + esc(game.name) + '</span>' : '') + '</span>' +
+    '<span style="font-size:9px;color:var(--muted)">' + esc(a.type) + ' · ' + a.hp + 'hp</span>' +
+    (a.type === 'npc' ? '<button class="icon-x" onclick="placeActorOnMap(\'' + a.id + '\')" title="Stand ' + esc(a.name) + ' on the map that is open now">📍</button>' : '') +
+    '<button class="icon-x" onclick="editActor(\'' + a.id + '\')" title="Edit">✎</button>' +
+    '<button class="icon-x" onclick="deleteActor(\'' + a.id + '\')" title="Delete">&#x2715;</button>' +
   '</div>';
+}
+
+/** Re-draw the form keeping what the DM has typed (switching NPC ↔ Monster shows or hides the NPC fields). */
+export function renderActorsTabKeep() {
+  const draft = _readForm(); // the stored actor only changes on Save
+  const editing = _editingId ? _state.dmCampaign.customActors?.[_editingId] : null;
+  const form = document.querySelector('#tab-actors .actor-form');
+  if (form) form.outerHTML = _actorForm({ ...BLANK, ...(editing || {}), ...draft });
+}
+
+function _readForm() {
+  const v = id => document.getElementById(id)?.value;
+  const n = (id, d) => parseInt(v(id)) || d;
+  return {
+    name: (v('actor-name') || '').trim(), cr: v('actor-cr') || '1', type: v('actor-type') || 'npc', size: v('actor-size') || 'medium',
+    ac: n('actor-ac', 13), hp: n('actor-hp', 20), speed: n('actor-speed', 30),
+    ...Object.fromEntries(ABILITIES.map(k => [k, n('actor-' + k, 10)])),
+    ...(document.getElementById('actor-game') ? {
+      setupId: v('actor-game') || '', greeting: (v('actor-greeting') || '').trim().slice(0, 300) } : {}),
+  };
 }
 
 export function addPendingAttack() {
   const name   = document.getElementById('atk-name')?.value.trim();
-  const bonus  = parseInt(document.getElementById('atk-bonus')?.value)  || 0;
+  const bonus  = parseInt(document.getElementById('atk-bonus')?.value) || 0;
   const damage = document.getElementById('atk-damage')?.value.trim();
   if (!name || !damage) { alert('Attack name and damage are required.'); return; }
   _pendingAttacks.push({ name, bonus, damage });
-  // Re-render just the attacks section without full tab re-render
-  const list = document.getElementById('actor-atk-list');
-  if (list) list.innerHTML = _pendingAttacks.map((a, i) =>
-    '<div class="atk-row">' +
-      '<span style="flex:1">' + esc(a.name) + '</span>' +
-      '<span style="color:var(--gold);font-size:10px">+' + a.bonus + '</span>' +
-      '<span style="color:var(--muted);font-size:10px;margin-left:4px">' + esc(a.damage) + '</span>' +
-      '<button onclick="removePendingAttack(' + i + ')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;margin-left:4px">&#x2715;</button>' +
-    '</div>'
-  ).join('');
-  document.getElementById('atk-name').value   = '';
+  document.getElementById('actor-atk-list').innerHTML = _attackRows();
+  document.getElementById('atk-name').value = '';
   document.getElementById('atk-damage').value = '';
 }
 
 export function removePendingAttack(i) {
   _pendingAttacks.splice(i, 1);
-  renderActorsTab(); // full re-render to rebuild attack list with corrected indices
+  document.getElementById('actor-atk-list').innerHTML = _attackRows();
 }
 
 export async function saveNewActor() {
-  const name = document.getElementById('actor-name')?.value.trim();
-  if (!name) { alert('Actor name is required.'); return; }
-  const actor = {
-    id:      genId(), name,
-    cr:      document.getElementById('actor-cr')?.value    || '1',
-    type:    document.getElementById('actor-type')?.value  || 'npc',
-    size:    document.getElementById('actor-size')?.value  || 'medium',
-    ac:      parseInt(document.getElementById('actor-ac')?.value)    || 13,
-    hp:      parseInt(document.getElementById('actor-hp')?.value)    || 20,
-    speed:   parseInt(document.getElementById('actor-speed')?.value) || 30,
-    str:     parseInt(document.getElementById('actor-str')?.value)   || 10,
-    dex:     parseInt(document.getElementById('actor-dex')?.value)   || 10,
-    con:     parseInt(document.getElementById('actor-con')?.value)   || 10,
-    int:     parseInt(document.getElementById('actor-int')?.value)   || 10,
-    wis:     parseInt(document.getElementById('actor-wis')?.value)   || 10,
-    cha:     parseInt(document.getElementById('actor-cha')?.value)   || 10,
-    attacks: [..._pendingAttacks],
-  };
+  const form = _readForm();
+  if (!form.name) { alert('Actor name is required.'); return; }
+  const btn = document.getElementById('actor-save');
+  const file = document.getElementById('actor-portrait')?.files?.[0];
+  let portraitFileId;
+  if (file) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    portraitFileId = await uploadCampaignFile(file, { maxSide: 1024 });
+    if (!portraitFileId) { if (btn) { btn.disabled = false; btn.textContent = 'Save'; } return; }
+  }
+  const old = _editingId ? _state.dmCampaign.customActors?.[_editingId] : null;
+  const actor = { ...(old || {}), ...form, id: old?.id || genId(), attacks: [..._pendingAttacks],
+    ...(portraitFileId ? { portraitFileId } : {}) };
+  if (actor.type !== 'npc') { delete actor.setupId; delete actor.greeting; }
   _pendingAttacks = [];
-  if (!_state.dmCampaign.customActors) _state.dmCampaign.customActors = {};
-  _state.dmCampaign.customActors[actor.id] = actor;
-  _state.serverData.campaigns[_state.dmCampaignId].customActors = _state.dmCampaign.customActors;
-  await saveHubDmCompanion(_state.serverData);
+  _editingId = null;
+  (_state.dmCampaign.customActors ||= {})[actor.id] = actor;
+  renderActorsTab(); // drawn first, saved after (see dnd-master-taverns.js)
+  await saveActors();
+}
+
+export function editActor(id) {
+  const a = _state.dmCampaign.customActors?.[id];
+  if (!a) return;
+  _editingId = id;
+  _pendingAttacks = [...(a.attacks || [])];
   renderActorsTab();
+  document.getElementById('actor-name')?.scrollIntoView({ block: 'center' });
+}
+
+export function cancelEditActor() {
+  _editingId = null;
+  _pendingAttacks = [];
+  renderActorsTab();
+}
+
+export async function placeActorOnMap(id) {
+  const a = _state.dmCampaign.customActors?.[id];
+  if (!a) return;
+  const placed = await placeNpcs([id]);
+  if (placed === false) alert('Open a map first (Maps tab), then place ' + a.name + '.');
+  else if (!placed.length) alert(a.name + ' is already on this map.');
 }
 
 export async function deleteActor(id) {
   if (!_state.dmCampaign.customActors?.[id]) return;
   delete _state.dmCampaign.customActors[id];
-  _state.serverData.campaigns[_state.dmCampaignId].customActors = _state.dmCampaign.customActors;
-  await saveHubDmCompanion(_state.serverData);
+  for (const t of Object.values(_state.dmCampaign.taverns || {})) t.npcIds = (t.npcIds || []).filter(x => x !== id);
+  if (_editingId === id) _editingId = null;
   renderActorsTab();
+  await saveActors();
 }
