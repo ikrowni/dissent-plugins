@@ -124,6 +124,7 @@ const VENDORED = [
   // Taverns and their games — the game list, the DM's settings, the money and cheating maths.
   { source: "lk-tavern.js", targets: ["dnd-hub/lk-tavern.js", "dnd-master/lk-tavern.js"] },
   { source: "lk-schedule.js", targets: ["dnd-hub/lk-schedule.js", "dnd-master/lk-schedule.js"] },
+  { source: "lk-safety.js", targets: ["dnd-hub/lk-safety.js"] },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",

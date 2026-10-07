@@ -17,7 +17,8 @@
 // Pure: no storage, no DOM.
 
 // bookFiles: the DM's library file per attached book (private; players get only the player part's copy).
-const TOP_SECRET = ['dmNotes', 'encounters', 'scenes', 'bookFiles'];
+// safetyByUser: who asked for which lines and veils (lk-safety.js) — the table sees only the combined, nameless list.
+const TOP_SECRET = ['dmNotes', 'encounters', 'scenes', 'bookFiles', 'safetyByUser'];
 const clone = v => JSON.parse(JSON.stringify(v));
 const isSharedJournal = j => j?.visibility === 'player';
 const isSharedPin = p => p?.visible === 'all';

@@ -4,8 +4,8 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261015b';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261015b';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261015c';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261015c';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { rememberPdf } from './book-pdf.js';

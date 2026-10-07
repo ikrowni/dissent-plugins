@@ -6,48 +6,49 @@ bindPopoverDismiss();
 import { showLibrary, bookPickFile, bookCancel, bookTab, bookFilter, bookKeep, bookKeepAll, bookPeek, bookTitle, bookPlace, bookSave, bookAttach, bookDelete, bookExport, bookPicKind, bookPicShow, bookEdit, bookPickFiles, bookDrop, bookAiSort, bookAiScores, bookReadPages } from './book/book-screens.js';
 import { toggleBookPanel, bookPanelTab, bookPanelBook, bookPanelSection, bookViewGo, bookViewPage, bookViewDoc, bookViewZoom, bookViewToc, bookShowPage, bookCutStart, bookPanelFilter, bookPanelOpen, bookShareSection, bookAddMonster, bookAddItem, bookUseHere, bookUseMap, bookShowPicture } from './book/book-reader.js';
 import { handleSDKMessage } from '../plugin-sdk.js';
-import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261015b';
-import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261015b';
+import { CC, MAP, showScreen, serverData } from './dnd-hub-state.js?v=20261015c';
+import { setOnRemoteMerged } from './dnd-hub-storage.js?v=20261015c';
 import { showCredits } from './dnd-hub-credits.js';
-import { onInit, onEvent } from './dnd-hub-events.js?v=20261015b';
+import { onInit, onEvent } from './dnd-hub-events.js?v=20261015c';
 import { quickPickHero, quickStepByStep, quickPlay, quickChange, forgeSelect, forgeChoose, forgeBack, forgeToggleMute, shapePick, shapeScore, shapeScores, shapeHalfElf, shapeSkill, shapeExtraSkill, shapeCantrip, shapeSpell, shapeText, shapeNewName, shapeNext, shapeBack, shapeFinish, forgeShowQuick } from './dnd-hub-forge.js';
 import { startSampleAdventure } from './dnd-hub-sample.js';
 import { gearOpt, gearPick, gearBuy, gearShopTab, gearMode } from './dnd-hub-gear-view.js';
 import { setUndoAppliers, undoMap, redoMap, rebaseUndo, refreshUndoButtons } from './dnd-hub-undo.js';
 import { UNDO_APPLIERS } from './dnd-hub-undo-apply.js';
 import { toggleDicePanel, diceLookPreset, diceLookColor, diceLookFinish, diceLookTry } from './dnd-hub-dice-panel.js';
-import { toggleSchedulePanel, scheduleTick } from './dnd-hub-schedule.js?v=20261015b';
+import { toggleSchedulePanel, scheduleTick } from './dnd-hub-schedule.js?v=20261015c';
+import { toggleSafetyPanel, tapX } from './dnd-hub-safety.js?v=20261015c';
 import { loadMyLook } from './dnd-hub-dice-look.js';
-import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261015b';
-import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261015b';
-import { setZoom } from './dnd-hub-canvas.js?v=20261015b';
+import { onFinishRegister, ccBack, ccNext } from './dnd-hub-char.js?v=20261015c';
+import { confirmDeleteCampaign, cancelDeleteCampaign, deleteCampaign, toggleGuides } from './dnd-hub-screens.js?v=20261015c';
+import { setZoom } from './dnd-hub-canvas.js?v=20261015c';
 import {
   enterCampaignAsPlayer, enterCampaignAsDM,
   showDMPortal, showJoinScreen, showCampaignWizard, createCampaign, requestJoin,
   renderLobbyScreen,
-} from './dnd-hub-screens.js?v=20261015b';
-import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261015b';
+} from './dnd-hub-screens.js?v=20261015c';
+import { setTool, toggleEditMode, toggleDMFog, renderWalls } from './dnd-hub-walls.js?v=20261015c';
 import {
   triggerMapUpload, handleMapUpload, setGridSettings,
   toggleGridPanel, toggleVTTPanel, onVTTFileSelected, onVTTVideoSelected, runVTTImport,
-} from './dnd-hub-map-bg.js?v=20261015b';
-import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261015b';
-import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015b';
-import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261015b';
+} from './dnd-hub-map-bg.js?v=20261015c';
+import { resetFog, renderFog } from './dnd-hub-fog.js?v=20261015c';
+import { renderLights, startFlicker, stopFlicker, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015c';
+import { updateAndBroadcastFog } from './dnd-hub-los.js?v=20261015c';
 import {
   selectRace, selectSubrace, renderRaceDetails, selectClass, renderSubclassOptions, toggleClassSkill, toggleExtraSkill, setHalfElfBonus,
   selectAbilityMethod, renderAbilityMethodUI, adjustPB, rollAllAbilities,
   selectBackground, renderCCEquipment, toggleSpell,
   triggerPortraitUpload, handlePortraitUpload,
-} from './dnd-hub-char-steps.js?v=20261015b';
-import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015b';
-import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261015b';
-import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261015b';
-import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261015b';
-import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261015b';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261015b';
+} from './dnd-hub-char-steps.js?v=20261015c';
+import { startRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015c';
+import { destroyContextMenu, renderTokens, placePartyTokens } from './dnd-hub-tokens.js?v=20261015c';
+import { renderPins, showPinDialog } from './dnd-hub-pins.js?v=20261015c';
+import { renderAudioZones, saveZonesAndBroadcast } from './dnd-hub-audio-zones.js?v=20261015c';
+import { renderTriggers, saveTriggersAndBroadcast } from './dnd-hub-triggers.js?v=20261015c';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261015c';
 import { showTemplatePicker, destroyTemplatePicker, selectTemplateShape, selectTemplateColor,
-         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261015b';
+         clearAllTemplates, clearMyTemplates, renderTemplates } from './dnd-hub-templates.js?v=20261015c';
 
 // Render static lobby screen HTML (all other screens render on navigate)
 renderLobbyScreen();
@@ -69,6 +70,7 @@ setUndoAppliers(UNDO_APPLIERS);
 window.undoMap = undoMap; window.redoMap = redoMap;
 // Each player's dice skin (dnd-hub-dice-look.js): loaded once, sent with every roll.
 window.toggleSchedulePanel = toggleSchedulePanel; window.scheduleTick = scheduleTick;
+window.toggleSafetyPanel = toggleSafetyPanel; window.tapX = tapX;
 window.toggleDicePanel = toggleDicePanel; window.diceLookPreset = diceLookPreset; window.diceLookColor = diceLookColor;
 window.diceLookFinish = diceLookFinish; window.diceLookTry = diceLookTry;
 loadMyLook();

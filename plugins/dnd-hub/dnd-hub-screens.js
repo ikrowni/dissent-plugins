@@ -1,19 +1,20 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015b';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015c';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015b';
-import { startSchedule } from './dnd-hub-schedule.js?v=20261015b';
+import { EV } from './dnd-hub-event-types.js?v=20261015c';
+import { startSchedule } from './dnd-hub-schedule.js?v=20261015c';
+import { startSafety } from './dnd-hub-safety.js?v=20261015c';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015b';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261015b';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261015b';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015c';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261015c';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261015c';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015b';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015c';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -459,6 +460,8 @@ export async function renderCampaignView(campaignId, isDM) {
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
           <button class="map-tool-btn" id="btn-next-session" onclick="toggleSchedulePanel()" title="Next session">${icon('calendar-clock')}Next</button>
+          <button class="map-tool-btn" id="btn-safety" onclick="toggleSafetyPanel()" title="Table safety: lines and veils">${icon('shield-alert')}Safety</button>
+          ${isDM ? '' : `<button class="map-tool-btn" id="btn-safety-x" onclick="tapX()" title="X: move the scene on. No reason needed; nobody sees who tapped it." aria-label="X: move the scene on">${icon('octagon-x')}X</button>`}
           <button class="map-tool-btn" id="btn-dice-look" onclick="toggleDicePanel()" title="Your dice: pick a skin or your own colours">${icon('dices')}Dice</button>
           <button class="map-tool-btn" id="btn-guides" onclick="toggleGuides()" title="Guides: short tips the first time something happens" aria-pressed="true">${icon('lantern')}Guide</button>
           <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out" aria-label="Zoom out">${icon('zoom-out')}</button>
@@ -539,6 +542,7 @@ export async function renderCampaignView(campaignId, isDM) {
     </div>
   `;
   startSchedule(); // the 📅 button, the answers, the day-before reminder (dnd-hub-schedule.js)
+  startSafety().catch(() => {}); // my lines and veils, sent again for the DM's Hub (dnd-hub-safety.js)
 
   await initPixiApp();
   initKeyboardHandlers();

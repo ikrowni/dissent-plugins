@@ -26,6 +26,12 @@ const camp = () => ({
 });
 
 describe('splitCampaign', () => {
+  it('keeps who asked for which lines and veils with the DM; the nameless list stays public', () => {
+    const { pub, sec } = splitCampaign({ dmUserId: 'dm', safety: { lines: ['Gore'], veils: [] }, safetyByUser: { u1: { topics: { gore: 'line' } } } });
+    expect(pub.safetyByUser).toBeUndefined();
+    expect(pub.safety).toEqual({ lines: ['Gore'], veils: [] });
+    expect(sec.safetyByUser.u1.topics.gore).toBe('line');
+  });
   it('moves every secret kind out of the public record', () => {
     const { pub, sec } = splitCampaign(camp());
     expect(pub.dmNotes).toBeUndefined();
