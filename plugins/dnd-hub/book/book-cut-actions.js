@@ -4,11 +4,11 @@
 // The players only ever get a campaign copy of the picture: the book file stays the DM's alone.
 import { requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
-import { serverData, userId } from '../dnd-hub-state.js?v=20261014x';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261014x';
-import { EV } from '../dnd-hub-event-types.js?v=20261014x';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014x';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014x';
+import { serverData, userId } from '../dnd-hub-state.js?v=20261014y';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261014y';
+import { EV } from '../dnd-hub-event-types.js?v=20261014y';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261014y';
+import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261014y';
 import { guarded } from '../lk-upload.js';
 import { listBooks, saveBookImage, resaveBook, deleteFiles } from './book-library.js';
 

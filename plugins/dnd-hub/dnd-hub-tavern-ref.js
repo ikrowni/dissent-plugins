@@ -5,14 +5,14 @@
 // against the DM's setup, and answers (`tavern:seated`). When the game ends (`tavern:result`) the house settles it
 // with lk-tavern.js `settle` — from the setup the seat was taken under — and pays (`tavern:payout`, to the hero's
 // sheet). The sender is the node's sender_id (dnd-hub-events.js onEvent), so a hero only sits or reports for themselves.
-import { MAP, serverData } from './dnd-hub-state.js?v=20261014x';
+import { MAP, serverData } from './dnd-hub-state.js?v=20261014y';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { PLAYABLE, stakeProblem, settle, gameType } from './lk-tavern.js';
-import { setBusy } from './dnd-hub-tavern.js?v=20261014x';
-import { talkFor, setupOf, actorOf, npcTokenHere, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014x';
-import { tableFor, tableAt, closeTables } from './dnd-hub-tavern-table.js?v=20261014x';
-import { showTriggerToast } from './dnd-hub-triggers.js?v=20261014x';
+import { setBusy } from './dnd-hub-tavern.js?v=20261014y';
+import { talkFor, setupOf, actorOf, npcTokenHere, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014y';
+import { tableFor, tableAt, closeTables } from './dnd-hub-tavern-table.js?v=20261014y';
+import { showTriggerToast } from './dnd-hub-triggers.js?v=20261014y';
 
 let _ref = null; // { seats: { seatId: {...} }, plays: { 'user:actor': n }, out: Set<userId> }
 const house = () => (_ref ||= { seats: {}, plays: {}, out: new Set() });
@@ -35,10 +35,10 @@ const log = message => localPublish('dnd-master', 'tavern:log', { type: 'tavern:
 const heroName = (userId, fallback) => fallback || serverData?.campaigns?.[MAP.campaignId]?.characters?.[userId]?.name || 'A hero';
 
 function announceBusy() {
-  const busy = {};
-  for (const s of Object.values(_ref?.seats || {})) (busy[s.hostId] ||= []).push(s.name);
-  setBusy(busy);
-  tell('tavern:busy', { busy });
+  const busy = {}, users = {}; // names to show; user ids to tell who is at a table (two heroes can share a name)
+  for (const s of Object.values(_ref?.seats || {})) { (busy[s.hostId] ||= []).push(s.name); (users[s.hostId] ||= []).push(s.userId); }
+  setBusy(busy, users);
+  tell('tavern:busy', { busy, users });
 }
 
 /** Why this hero may not sit at this NPC's table now; null when they may. */

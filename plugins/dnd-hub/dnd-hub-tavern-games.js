@@ -6,24 +6,24 @@
 // `send`/`onMessage` for games the whole table plays). A new game = a loader here + its id in lk-tavern.js PLAYABLE.
 
 export const GAME_LOADERS = {
-  'bones-grid': () => import('./tavern-games/bones-grid.js?v=20261014x'),
-  'dagger-toss': () => import('./tavern-games/dagger-toss.js?v=20261014x'),
-  'twenty': () => import('./tavern-games/twenty.js?v=20261014x'),
-  'arm-wrestle': () => import('./tavern-games/arm-wrestle.js?v=20261014x'),
-  'fillet': () => import('./tavern-games/fillet.js?v=20261014x'),
-  'hearthlane': () => import('./tavern-games/hearthlane.js?v=20261014x'),
-  'rune-dice': () => import('./tavern-games/rune-dice.js?v=20261014x'),
-  'bluff-bones': () => import('./tavern-games/bluff-bones.js?v=20261014x'),
-  'beetle-derby': () => import('./tavern-games/beetle-derby.js?v=20261014x'),
-  'last-standing': () => import('./tavern-games/last-standing.js?v=20261014x'),
+  'bones-grid': () => import('./tavern-games/bones-grid.js?v=20261014y'),
+  'dagger-toss': () => import('./tavern-games/dagger-toss.js?v=20261014y'),
+  'twenty': () => import('./tavern-games/twenty.js?v=20261014y'),
+  'arm-wrestle': () => import('./tavern-games/arm-wrestle.js?v=20261014y'),
+  'fillet': () => import('./tavern-games/fillet.js?v=20261014y'),
+  'hearthlane': () => import('./tavern-games/hearthlane.js?v=20261014y'),
+  'rune-dice': () => import('./tavern-games/rune-dice.js?v=20261014y'),
+  'bluff-bones': () => import('./tavern-games/bluff-bones.js?v=20261014y'),
+  'beetle-derby': () => import('./tavern-games/beetle-derby.js?v=20261014y'),
+  'last-standing': () => import('./tavern-games/last-standing.js?v=20261014y'),
 };
 
 /** The rules of each whole-table game, which the DM's Hub runs (dnd-hub-tavern-table.js). */
 export const TABLE_RULES = {
-  'rune-dice': () => import('./tavern-games/rune-dice-rules.js?v=20261014x'),
-  'bluff-bones': () => import('./tavern-games/bluff-bones-rules.js?v=20261014x'),
-  'beetle-derby': () => import('./tavern-games/beetle-derby-rules.js?v=20261014x'),
-  'last-standing': () => import('./tavern-games/last-standing-rules.js?v=20261014x'),
+  'rune-dice': () => import('./tavern-games/rune-dice-rules.js?v=20261014y'),
+  'bluff-bones': () => import('./tavern-games/bluff-bones-rules.js?v=20261014y'),
+  'beetle-derby': () => import('./tavern-games/beetle-derby-rules.js?v=20261014y'),
+  'last-standing': () => import('./tavern-games/last-standing-rules.js?v=20261014y'),
 };
 
 export async function loadGame(type) {

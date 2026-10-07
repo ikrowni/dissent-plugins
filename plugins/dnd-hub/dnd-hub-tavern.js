@@ -5,19 +5,19 @@
 // the NPC stands (dnd-hub-tavern-ref.js). A TAVERN is the DM's NPCs on a map of their choosing with a sound: the DM's
 // sidebar has already put the NPCs on the map (dnd-master-taverns.js); `tavern:open` switches every screen to that
 // map and plays the sound. The drawn tavern scene and the row of hosts are gone (owner, 2026-10-07).
-import { MAP, userId } from './dnd-hub-state.js?v=20261014x';
+import { MAP, userId } from './dnd-hub-state.js?v=20261014y';
 import { localPublish } from '../plugin-sdk.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261014x';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261014y';
 import { cleanTavern, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
 import { moveToast } from './dnd-hub-turn-move.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261014x';
-import { openTalk, closeTalk, setHero, myHero } from './dnd-hub-tavern-talk.js?v=20261014x';
-import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261014x';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014x';
-import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014x';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261014y';
+import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261014y';
+import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261014y';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014y';
+import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014y';
 
 /** open: the loaded tavern { id, mapId } or null. busy: who is playing with which NPC, { actorId: [names] }. */
 export const TAVERN = { open: null, busy: {} };
@@ -40,7 +40,7 @@ export async function handleTavernEvent(p) {
       return;
     case 'tavern:npcs': return setNpcTalk(p);       // the DM changed an NPC or a game
     case 'tavern:hero': return setHero(p);           // my sheet answered: my purse and my numbers
-    case 'tavern:busy': return setBusy(p.busy || {}); // the DM's Hub says who is playing with whom
+    case 'tavern:busy': return setBusy(p.busy || {}, p.users || {}); // the DM's Hub says who is playing with whom
   }
   if (MAP.isDM) await refereeEvent(p);
   await onSeatEvent(p);
@@ -102,14 +102,14 @@ export async function medal(host) {
 }
 
 /** Who is playing with whom. A whole-table game that just started calls every other hero over to join. */
-export function setBusy(busy) {
+export function setBusy(busy, users = {}) {
   const before = TAVERN.busy;
   TAVERN.busy = busy;
   if (MAP.isDM) return;
   for (const [actorId, names] of Object.entries(busy)) {
     if (!names?.length || before[actorId]?.length) continue;
     const host = talkFor(actorId), g = gameType(setupOf(host)?.type);
-    if (!host || g?.mode !== 'table' || seatedAt() || names.includes(myHero()?.name)) continue;
+    if (!host || g?.mode !== 'table' || seatedAt() || users[actorId]?.includes(userId)) continue;
     joinCall(`${host.name} is starting ${g.name} — right-click them to join`);
   }
 }
