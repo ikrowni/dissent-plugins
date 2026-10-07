@@ -3,10 +3,11 @@
 //
 // The DM asks and picks in the sidebar (dnd-master-schedule.js), which sends `schedule:set`. The DM's own Hub posts
 // the question and the chosen time to the channel (the Hub holds `bot:post`; the sidebar does not). Each player's
-// answer is their own server key (lk-schedule.js voteKey) plus a `schedule:vote` event for screens already open.
+// answer is their own server key (lk-schedule.js voteKey) plus a `schedule:vote` event for screens already open;
+// the DM's Hub hands that on to the DM sidebar (a player has no consent to publish to dnd-master).
 // The reminder a day before is posted by whichever screen of the table is open then: the first to claim it.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015a';
-import { esc, request, storageGet, storageSet } from '../plugin-sdk.js';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015b';
+import { esc, request, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { icon } from './lk-icons.js';
 import { cleanNextSession, cleanVote, voteKey, tally, chosenOption, reminderDue, untilText, dmTimeText, postText } from './lk-schedule.js';
@@ -84,7 +85,7 @@ export async function scheduleTick(optionId, on) {
   _votes[userId] = vote;
   drawPanel(); syncScheduleButton();
   await storageSet(voteKey(MAP.campaignId, ns.id, userId), vote, 'server');
-  await publishTo(['master'], 'schedule:vote', { type: 'schedule:vote', campaignId: MAP.campaignId, ...vote, fromUserId: userId });
+  await publishTo([], 'schedule:vote', { type: 'schedule:vote', campaignId: MAP.campaignId, ...vote, fromUserId: userId });
 }
 
 /** `schedule:set` (DM only, dnd-hub-events.js) and `schedule:vote`. */
@@ -105,6 +106,8 @@ export async function handleScheduleEvent(p) {
   } else if (p.type === 'schedule:vote') {
     const v = cleanVote(p, question());
     if (v && p.fromUserId) _votes[p.fromUserId] = v;
+    // A player cannot reach the DM sidebar themselves (no consent to that plugin): the DM's Hub passes it on.
+    if (v && MAP.isDM) localPublish('dnd-master', 'schedule:vote', p);
   }
   drawPanel(); syncScheduleButton();
 }
