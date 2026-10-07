@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015i';
+import { EV } from './dnd-hub-event-types.js?v=20261015j';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { ITEM_GROUPS, groupCounts, filterItems } from './dnd-master-item-filter.js';
 import { appendLogEntry } from './dnd-master-logs.js';

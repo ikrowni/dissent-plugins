@@ -43,19 +43,19 @@
     },
     {
       "url": "dnd-master-actor-talk.js",
-      "sha256": "ec50cf68466a6bc3c3170e3a06a969c18e778de03d8d923cca93d2d7fa39adc6"
+      "sha256": "f00357414f3ca3df8aa82c0ba8c8996d69f8945927f07f1a3a23cf444f4b567f"
     },
     {
       "url": "dnd-master-actors.js",
-      "sha256": "8b03d03a6eed0a8de8772370c6f3451b42ab333aa1570c4e30f7b768e0d658af"
+      "sha256": "693c2a8bf420c6846c375c3c01cb57d1aac903aeb048d1a1a7d08bab81768a02"
     },
     {
       "url": "dnd-master-encounter.js",
-      "sha256": "2e0d792a4a4e3972334ec6d147fe6c54810bcc5f126018481c3d0e816e4c35e2"
+      "sha256": "0bf3908f97d3183f33f89296c5a13c9e6764fbadf3e1d8a5cad037dabaf44d1b"
     },
     {
       "url": "dnd-master-games.js",
-      "sha256": "a4fc806801b248394a58476d3e1afa6c00cf5690bcdcc47de16b10de2a6a6992"
+      "sha256": "fa5454307ddf55eed2a1c2e79f7cc9028fda4a69f4769441b7eeb1765570ffe2"
     },
     {
       "url": "dnd-master-homebrew.js",
@@ -67,7 +67,7 @@
     },
     {
       "url": "dnd-master-initiative.js",
-      "sha256": "fd9da6eec612d0ab8aabb14b0687a2937c1fe3a49149fceda2c1f9c9990e4b34"
+      "sha256": "36c957798c38c8197e9f7972ccd1e7d4e4ace420164448dd4b571b80b6239f2e"
     },
     {
       "url": "dnd-master-item-filter.js",
@@ -75,15 +75,15 @@
     },
     {
       "url": "dnd-master-items.js",
-      "sha256": "20be904408ca6435bbc2299223ce431feae22dab3e1eda6e4d88da01d9b1bc18"
+      "sha256": "a25ffc2e4a6b7ba4fe06c5326ad519073cbde4cc86a8e334107b030b41d50e69"
     },
     {
       "url": "dnd-master-journals.js",
-      "sha256": "4804eea95d0ca3088e564199d05dc6a268f8283b6f23f0ba6fe013dedbed5dbe"
+      "sha256": "c9eda7502285a0f612af22771b38e4f63566c29a67fb31fde29918cc9031a0f6"
     },
     {
       "url": "dnd-master-levels.js",
-      "sha256": "be20765d848bff3a150e2fe67d3d0fca187ffa0eaab554089925cffab8fd5083"
+      "sha256": "4bb622b8e60d92567bf2d58cab8c6ed5bcc71f1ba18267ffb52540f4d8808c97"
     },
     {
       "url": "dnd-master-logs.js",
@@ -91,11 +91,11 @@
     },
     {
       "url": "dnd-master-main.js",
-      "sha256": "95e105902f34c79e607880cfee879678e3a955be8ba1e798a0bc0a8296c7d172"
+      "sha256": "33d2ca7cfba532fd09722315fba8b79e24c4a2fad51ecde1d604a43a53c90165"
     },
     {
       "url": "dnd-master-maps.js",
-      "sha256": "116f31e84de58cb9114064f139b43d8f7e9791adf225468fe859ab357596157c"
+      "sha256": "52a9f3a29eb10ea9403ce73d27e79bc8ac868c2c6459b0db03339f19c0147349"
     },
     {
       "url": "dnd-master-monster-filter.js",
@@ -103,7 +103,7 @@
     },
     {
       "url": "dnd-master-monsters.js",
-      "sha256": "b251cb0939a4344ce9beb5aa6f206268ff037ad2edf968906ddfc8626d09a14d"
+      "sha256": "b762d62669ba6dcbf3a9b5dcd1f7571a6dbd5fe165bdd755298964b15c39d0bb"
     },
     {
       "url": "dnd-master-notes.js",
@@ -127,7 +127,7 @@
     },
     {
       "url": "dnd-master-scenes.js",
-      "sha256": "b588237700edca2568f4ab44ac01878d660a3c4ae7c8e980609d70b00215d98c"
+      "sha256": "2dbde7e5cc153572d2ea112cf31ce782a90b44a317989e3574fac4057f814e86"
     },
     {
       "url": "dnd-master-schedule.js",
@@ -143,19 +143,19 @@
     },
     {
       "url": "dnd-master-session.js",
-      "sha256": "f4574cba285d69fe9337d4a5edd86a04412096ee2ae2f54deda80d99fb9074f1"
+      "sha256": "2b1c662c22f63dc7ce4503ced6da806803cc797a1697ffa8e8ef3f36a01904f6"
     },
     {
       "url": "dnd-master-settings.js",
-      "sha256": "28e7e75dda2c9aecb901290d2994acb56cb940638efc3a7d088117fbba4fa014"
+      "sha256": "703f1dda030cbec6fb9b5047e5aa3ea0334244b324012a0877c64bec0a5f8660"
     },
     {
       "url": "dnd-master-shops.js",
-      "sha256": "de923e3133833e91c32457d7b05d45fdb4299c46bf316075ef06ef0418147aed"
+      "sha256": "43b6a3c8da314df6a05aeddee4d9c7190467060c328e71aa544128217ea6193e"
     },
     {
       "url": "dnd-master-sounds.js",
-      "sha256": "e905ec50de144e29308bb6e09087474031639ce3299332740dee71d2beab7d13"
+      "sha256": "60ee1434cf485cfb91455238b12569b8b5b1fa62087c319d22eca00e9fce1f53"
     },
     {
       "url": "dnd-master-styles.css",
@@ -163,7 +163,7 @@
     },
     {
       "url": "dnd-master-taverns.js",
-      "sha256": "a8d6f832cac75021ec7781e05dac61d9c25e1c94109cdd73f4cc71e0c799cef4"
+      "sha256": "034d59e74df721dcc50586c9ccd319c351562f138038f60e537679db44a97c63"
     },
     {
       "url": "dnd-master-triggers.js",
@@ -239,7 +239,7 @@
     },
     {
       "url": "lk-table-rules.js",
-      "sha256": "11537104bd7d4493a73b699057f4a6b9c6d3c7215e8c36e44249a68f87c1f184"
+      "sha256": "4cdc2afa616c2f22354e9af87fa4b61905e39e7f612ef5f5d4d7aed22bd8ff19"
     },
     {
       "url": "lk-tavern.js",

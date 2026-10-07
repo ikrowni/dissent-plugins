@@ -2,9 +2,9 @@
 //
 // Intelligence brings more side cards; cheating marks the deck so you can see the next card (Sleight of Hand vs the
 // host's eye). Rules: twenty-rules.js.
-import { TARGET, MAX_CARDS, newDeck, sideDeck, sideCount, total, sideValue, setResult, hostPlay, gameResult } from './twenty-rules.js?v=20261015i';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261015i';
-import { tick, chime, buzz, clack } from './tavern-sfx.js?v=20261015i';
+import { TARGET, MAX_CARDS, newDeck, sideDeck, sideCount, total, sideValue, setResult, hostPlay, gameResult } from './twenty-rules.js?v=20261015j';
+import { useKit, loadCss, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261015j';
+import { tick, chime, buzz, clack } from './tavern-sfx.js?v=20261015j';
 
 const BARKS = {
   start: ['Twenty, friend. Not twenty-one. Twenty.', 'Cards on the table. Keep your side deck close.'],
@@ -15,7 +15,7 @@ const BARKS = {
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('tw-css', './twenty.css?v=20261015i', import.meta.url);
+  loadCss('tw-css', './twenty.css?v=20261015j', import.meta.url);
   const wrap = el('div', 'tk-felt tw');
   wrap.innerHTML = `
     <div class="tw-side host"><div class="tw-who"><b></b><div class="tw-sets"></div></div><div class="tw-total">0</div><div class="tw-table"></div></div>

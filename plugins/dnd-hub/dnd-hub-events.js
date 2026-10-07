@@ -1,50 +1,50 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261015i';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261015j';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
 import { floatHp, secretRoll } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015i';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261015i';
+import { EV } from './dnd-hub-event-types.js?v=20261015j';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261015j';
 import { startShopScene, stopShopScene, startShopMedia } from './dnd-hub-shop-scene.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261015i';
-import { handleTavernEvent, closeTavernHere, TAVERN, setTavernMapLoader } from './dnd-hub-tavern.js?v=20261015i';
-import { handleScheduleEvent } from './dnd-hub-schedule.js?v=20261015i';
-import { handleSafetyEvent } from './dnd-hub-safety.js?v=20261015i';
-import { handleStageEvent } from './dnd-hub-stage.js?v=20261015i';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261015j';
+import { handleTavernEvent, closeTavernHere, TAVERN, setTavernMapLoader } from './dnd-hub-tavern.js?v=20261015j';
+import { handleScheduleEvent } from './dnd-hub-schedule.js?v=20261015j';
+import { handleSafetyEvent } from './dnd-hub-safety.js?v=20261015j';
+import { handleStageEvent } from './dnd-hub-stage.js?v=20261015j';
 import { playConditionFx } from './dnd-hub-condition-fx.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261015i';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261015i';
+import { renderGrid } from './dnd-hub-grid.js?v=20261015j';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261015j';
 import { syncTurn, commitPath, refereeMove, moveToast, limitingTurnId } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015i';
-import { renderFog } from './dnd-hub-fog.js?v=20261015i';
-import { renderWalls } from './dnd-hub-walls.js?v=20261015i';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261015i';
-import { loadSRD } from './dnd-hub-char.js?v=20261015i';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261015i';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261015i';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015j';
+import { renderFog } from './dnd-hub-fog.js?v=20261015j';
+import { renderWalls } from './dnd-hub-walls.js?v=20261015j';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261015j';
+import { loadSRD } from './dnd-hub-char.js?v=20261015j';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261015j';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack, applyMastery } from './dnd-hub-combat.js?v=20261015j';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261015i';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261015i';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261015j';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261015j';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261015i';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261015i';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261015i';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261015i';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261015i';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261015i';
+import { renderLights } from './dnd-hub-lights.js?v=20261015j';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261015j';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261015j';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261015j';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261015j';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261015j';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261015i';
+import { setView } from './dnd-hub-canvas.js?v=20261015j';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -551,7 +551,7 @@ export async function handleMapEvent(p) {
         }
         const ups = [advMode === 'adv', pre.adv].filter(Boolean).length, downs = [advMode === 'dis', pre.dis].filter(Boolean).length;
         advMode = ups && downs ? null : ups ? 'adv' : downs ? 'dis' : null; // one of each cancels out (SRD)
-        const why = [pre.flanked && 'flanking: advantage', pre.far && 'long range: disadvantage',
+        const why = [pre.vexed && 'Vex: advantage', pre.flanked && 'flanking: advantage', pre.far && 'long range: disadvantage',
           pre.crowded && 'an enemy next to you: disadvantage'].filter(Boolean).join(' · ');
         if (why) showCombatToast(why);
       }
@@ -565,6 +565,9 @@ export async function handleMapEvent(p) {
       const total = usedRolls.reduce((a, b) => a + b, 0) + mod;
       const natural = sides === 20 && usedRolls.length === 1 ? usedRolls[0] : null;
       const verdict = rollType === 'attack' && natural != null ? judgeAttack(total, natural, rollerId) : null;
+      // Weapon mastery (2024 Table rule): what the mastered weapon adds rides in the verdict every screen shows.
+      const mastered = verdict && p.weapon?.mastery ? await applyMastery(p.weapon.mastery, verdict, rollerId) : null;
+      if (mastered) verdict.text += ` · ${mastered}`;
       if (rollType === 'damage') await applyPendingDamage(rollerId, total);
       const payload = {
         type: EV.DICE_ROLL, userId: rollerId,

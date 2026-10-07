@@ -6,7 +6,9 @@ import { setCampaignGetter, setSheetState, setInventoryImageUrls, renderAll, ren
   toggleInspiration, doShortRest, doLongRest, toggleEquipped,
   rollAbilityCheck, rollSkillCheck, debounceSaveNotes,
   toggleFeatureExpand, saveFeatureDesc,
-  computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem } from './dnd-player-sheet.js';
+  computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem,
+  heroMasteries, masteryOn, toggleMastery } from './dnd-player-sheet.js';
+import { masteryFor } from './lk-mastery.js';
 import { setSpellState, setBookParts, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
          castSpell, setConcentration, clearConcentration } from './dnd-player-spells.js';
 import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData, setNeedsInitiativeRoll } from './dnd-player-combat.js';
@@ -27,7 +29,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015i';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015j';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -965,7 +967,9 @@ function weaponAttack(equipIdx) {
 
   setDiceRollLabel(`${item.name} — Attack`, toHitMod);
   // The Hub checks reach, the turn and attacks left before it throws (dnd-hub-combat.js preAttack).
-  rollDice('attack', { reach: weaponReach(item), perAction: attacksPerAction(CHAR.features) });
+  // Weapon mastery (2024 Table rule): the Hub applies Graze and Vex and tells the table the rest (lk-mastery.js).
+  const hero = { ...(effectiveChar() || CHAR), masteries: heroMasteries(CHAR) };
+  rollDice('attack', { reach: weaponReach(item), perAction: attacksPerAction(CHAR.features), mastery: masteryFor(hero, item, masteryOn()) });
 }
 
 /**
@@ -1562,6 +1566,7 @@ window.useConsumable        = useConsumable;
 window.removeInventoryItem  = removeInventoryItem;
 window.openCharEdit        = openCharEdit;
 window.weaponAttack        = weaponAttack;
+window.toggleMastery       = toggleMastery;
 window.weaponRollDamage    = weaponRollDamage;
 window.rollInitiativeNow   = rollInitiativeNow;
 window.useConsumable       = useConsumable;

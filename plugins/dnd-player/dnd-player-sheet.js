@@ -5,7 +5,8 @@ import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { allowedLevel } from './lk-levelling.js';
 import { featureDesc } from './lk-features.js';
-import { rule } from './lk-table-rules.js';
+import { rule, edition } from './lk-table-rules.js';
+import { MASTERY_OF, MASTERIES, masteryCount, defaultMasteries } from './lk-mastery.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
   armorClass, weaponProfile } from './lk-rules5e.js';
 
@@ -283,6 +284,35 @@ export function effectLabel(e) {
   }
 }
 
+/** Weapon mastery (2024, a Table rule): on for this table, and how many kinds this hero masters. */
+export const masteryOn = () => edition(_getCampaign()?.settings, 'weaponMastery');
+/** The hero's mastered weapons: chosen ones, else the weapons in their pack (lk-mastery.js defaultMasteries). */
+export function heroMasteries(c = _char) {
+  if (!c) return [];
+  return Array.isArray(c.masteries) ? c.masteries : defaultMasteries(c, (c.equipment || []).map(i => i.id));
+}
+export async function toggleMastery(id) {
+  if (!_char || !MASTERY_OF[id]) return;
+  const list = heroMasteries();
+  const max = masteryCount(_char.class, _char.level);
+  if (list.includes(id)) _char.masteries = list.filter(x => x !== id);
+  else if (list.length < max) _char.masteries = [...list, id];
+  else { alert(`You master ${max} kinds of weapon. Untick one first.`); return; }
+  await _saveChar();
+  renderInventory();
+}
+
+function _masteryLine(item) {
+  const kind = masteryOn() && MASTERY_OF[item.id];
+  if (!kind) return '';
+  const max = masteryCount(_char?.class, _char?.level);
+  const mine = heroMasteries().includes(item.id);
+  return `<div style="font-size:9px;color:${mine ? 'var(--dnd-gold)' : 'var(--muted)'};margin-top:2px" title="${esc(MASTERIES[kind].desc)}">` +
+    `✦ ${esc(MASTERIES[kind].name)}${mine ? ' — mastered' : ''}` +
+    (max ? ` <button onclick="window.toggleMastery('${esc(item.id)}')" style="font-size:9px;padding:0 5px;margin-left:4px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer">${mine ? 'Unmaster' : 'Master'}</button>` : '') +
+    '</div>';
+}
+
 function _invItemCard(item, idx) {
   const effects = Array.isArray(item.effects) ? item.effects : [];
   // Any weapon can attack: SRD weapons with the hero's own to-hit and damage, DM-forged ones as forged (audit G2).
@@ -295,7 +325,7 @@ function _invItemCard(item, idx) {
       ).join('');
     }
     if (profile) {
-      return `<div style="font-size:9px;color:var(--muted);margin-top:2px">⚔️ ${profile.toHit >= 0 ? '+' : ''}${profile.toHit} to hit · ${esc(profile.damage)} ${esc(profile.damageType)}</div>`;
+      return `<div style="font-size:9px;color:var(--muted);margin-top:2px">⚔️ ${profile.toHit >= 0 ? '+' : ''}${profile.toHit} to hit · ${esc(profile.damage)} ${esc(profile.damageType)}</div>` + _masteryLine(item);
     }
     if (item.effectsText) {
       return `<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc(item.effectsText)}</div>`;

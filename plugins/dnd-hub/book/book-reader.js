@@ -5,17 +5,17 @@
 import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
-import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261015i';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261015i';
-import { EV } from '../dnd-hub-event-types.js?v=20261015i';
+import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261015j';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261015j';
+import { EV } from '../dnd-hub-event-types.js?v=20261015j';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { bookDocs } from '../lk-book.js';
 import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
 import { step, typedPage, startOf, nextZoom, entryAt, areaAt } from './book-view-nav.js';
 import { startCut, stopCut, cutting } from './book-cut.js';
 import { cutActions } from './book-cut-actions.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261015i';
-import { showHandoutOverlay, armBookPin } from '../dnd-hub-pins.js?v=20261015i';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261015j';
+import { showHandoutOverlay, armBookPin } from '../dnd-hub-pins.js?v=20261015j';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 

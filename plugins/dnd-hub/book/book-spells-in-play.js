@@ -1,7 +1,7 @@
 // book-spells-in-play.js — the Hub's spell list (SRD.spells: Hero Forge, level-up) plus the open campaign's books.
 // Always rebuilt from the SRD's own list, so one campaign's books never leak into another's.
 import { request } from '../../plugin-sdk.js';
-import { SRD } from '../dnd-hub-state.js?v=20261015i';
+import { SRD } from '../dnd-hub-state.js?v=20261015j';
 import { mergeContent, loadPlayerParts } from '../lk-book.js';
 
 export async function useCampaignSpells(camp) {

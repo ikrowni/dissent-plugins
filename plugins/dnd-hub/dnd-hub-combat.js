@@ -1,14 +1,15 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015i';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015j';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015i';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015i';
+import { EV } from './dnd-hub-event-types.js?v=20261015j';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015j';
 import { rule } from './lk-table-rules.js';
 import { attackVerdict, attackCheck, attackTurnCheck } from './dnd-hub-rules.js';
+import { masteryOutcome } from './lk-mastery.js';
 import { limitingTurnId } from './dnd-hub-turn-move.js';
 import { publishTo, isRepeat } from './lk-bus.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261015i';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261015j';
 import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
@@ -135,6 +136,27 @@ export function judgeAttack(total, natural, rollerId) {
   return v;
 }
 
+// ── Weapon mastery (2024 Table rule; rules in lk-mastery.js) ─────────────────
+let _vex = null; // { rollerId, targetId, until }: my next attack against that target has advantage
+
+/**
+ * After a judged attack with a mastered weapon (the sheet sends `weapon.mastery`): Graze deals its damage on a miss
+ * (through the same damage path as a hit), Vex marks the target for my next attack, and every mastery's words join
+ * the verdict every screen shows. Returns those words, or null.
+ */
+export async function applyMastery(m, verdict, rollerId) {
+  const target = [...MAP.selectedTokens].map(id => MAP.mapData?.tokens?.[id]).find(Boolean);
+  if (!m || !verdict || !target) return null;
+  const out = masteryOutcome(m, { hit: verdict.hitIds.includes(target.id), targetName: target.name });
+  if (!out) return null;
+  if (out.vex) _vex = { rollerId, targetId: target.id, until: Date.now() + 120_000 };
+  if (out.damage && tableRule('autoDamage')) {
+    if (MAP.isDM) await damageTokens([target.id], out.damage, MAP.campaignId);
+    else await publishTo([], EV.DAMAGE_REQUEST, { campaignId: MAP.campaignId, tokenIds: [target.id], damage: out.damage, fromUserId: userId });
+  }
+  return out.text;
+}
+
 const _attacksUsed = {}; // turn key → weapon attacks I have made this turn
 
 /**
@@ -160,7 +182,10 @@ export function preAttack(rollerId, weapon) {
   if (!turn.ok) return turn;
   const r = attackCheck({ attacker: me, target, reach: weapon?.reach, tokens: toks, gs: effectiveGs(MAP.mapData), flanking: tableRule('flanking') });
   if (r.ok && turnId) _attacksUsed[key] = (_attacksUsed[key] || 0) + 1;
-  return { ...r, target };
+  // Vex: my last hit with a Vex weapon gives this attack advantage, once.
+  const vexed = r.ok && _vex?.rollerId === rollerId && _vex.targetId === target.id && Date.now() < _vex.until;
+  if (vexed) _vex = null;
+  return { ...r, adv: r.adv || vexed, vexed, target };
 }
 
 /**

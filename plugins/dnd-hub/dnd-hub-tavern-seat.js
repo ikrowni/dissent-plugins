@@ -9,14 +9,14 @@
 //
 // The DM's Hub decides what a result pays (lk-tavern.js settle, from the DM's setup), so a screen that lies about
 // its result still cannot pay itself more than the DM's own odds. Every wait gives up after a few seconds.
-import { MAP, userId, serverData } from './dnd-hub-state.js?v=20261015i';
+import { MAP, userId, serverData } from './dnd-hub-state.js?v=20261015j';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { gameType, statEdge, cheatCheck, hostPerception } from './lk-tavern.js';
-import { medal, actorFor } from './dnd-hub-tavern.js?v=20261015i';
-import { myHero } from './dnd-hub-tavern-talk.js?v=20261015i';
-import { loadGame } from './dnd-hub-tavern-games.js?v=20261015i';
-import { animateDiceFree } from './dnd-hub-dice.js?v=20261015i';
+import { medal, actorFor } from './dnd-hub-tavern.js?v=20261015j';
+import { myHero } from './dnd-hub-tavern-talk.js?v=20261015j';
+import { loadGame } from './dnd-hub-tavern-games.js?v=20261015j';
+import { animateDiceFree } from './dnd-hub-dice.js?v=20261015j';
 import { myLook } from './dnd-hub-dice-look.js';
 
 const HOUSE_KINDS = new Set(['lobby', 'state', 'cheated', 'refused']);

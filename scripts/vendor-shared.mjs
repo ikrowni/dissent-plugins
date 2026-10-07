@@ -127,6 +127,7 @@ const VENDORED = [
   { source: "lk-safety.js", targets: ["dnd-hub/lk-safety.js"] },
   { source: "lk-stage.js", targets: ["dnd-hub/lk-stage.js"] },
   { source: "lk-prep.js", targets: ["dnd-master/lk-prep.js"] },
+  { source: "lk-mastery.js", targets: ["dnd-hub/lk-mastery.js", "dnd-player/lk-mastery.js"] },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",
