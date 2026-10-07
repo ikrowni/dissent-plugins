@@ -16,6 +16,7 @@ import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees }
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { noticeMyConditions } from './dnd-hub-condition-fx.js';
+import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261014v';
 export { CLIENT_ID };
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
@@ -651,14 +652,24 @@ export function showContextMenu(token, cx, cy) {
 
   const isOwnToken = token.userId === userId;
   const canAct = MAP.isDM || isOwnToken;
-  if (!canAct) return;
+  // An NPC who talks (a game or a greeting) has a menu for everyone: "Talk to …" (owner, 2026-10-07).
+  const talk = token.npcActorId ? talkFor(token.npcActorId) : null;
+  if (!canAct && !talk) return;
 
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   _ctxMenu = menu;
 
+  if (talk) {
+    _addItem(menu, `💬 Talk to ${talk.name}`, async () => {
+      destroyContextMenu();
+      // loaded on demand: dnd-hub-tavern.js imports this file
+      (await import('./dnd-hub-tavern.js?v=20261014v')).talkToNpc(token);
+    });
+  }
+
   // ── Player-accessible items ────────────────────────────────────────────
-  _addItem(menu, '📏 Measure Movement', () => {
+  if (canAct) _addItem(menu, '📏 Measure Movement', () => {
     startRuler(token.x, token.y);
     destroyContextMenu();
   });
