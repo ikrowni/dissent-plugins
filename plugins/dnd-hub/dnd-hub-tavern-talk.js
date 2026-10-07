@@ -1,4 +1,4 @@
-// dnd-hub-tavern-talk.js — talking to a host: their greeting, what the game is, the stakes, and sitting down.
+// dnd-hub-tavern-talk.js — talking to an NPC: their greeting, what the game is, the stakes, and sitting down.
 //
 // A dialogue box at the foot of the tavern, with the host's portrait, words that type themselves out, and
 // numbered choices (keys 1–4, Esc to walk away). The DM can talk to a host too, to see what the players see,
@@ -6,7 +6,7 @@
 import { MAP, serverData } from './dnd-hub-state.js?v=20261014v';
 import { localPublish } from '../plugin-sdk.js';
 import { gameType, PLAYABLE, stakeProblem, CAUGHT } from './lk-tavern.js';
-import { medal } from './dnd-hub-tavern.js?v=20261014v';
+import { medal, TAVERN } from './dnd-hub-tavern.js?v=20261014v';
 import { sit } from './dnd-hub-tavern-seat.js?v=20261014v';
 
 let _hero = null;          // { gold, name, mods: {str…}, skills: {…} } from my sheet
@@ -85,7 +85,7 @@ export async function openTalk(host, setup) {
 
   const playable = g && PLAYABLE.has(g.id);
   const canSit = !MAP.isDM && playable;
-  const sitWhy = MAP.isDM ? 'Heroes sit down here; you see who is playing under each table.'
+  const sitWhy = MAP.isDM ? 'Heroes sit down here. Ask who is playing.'
     : !playable ? 'This game is not ready to play yet.' : null;
   const menu = text => {
     speak(text);
@@ -93,6 +93,10 @@ export async function openTalk(host, setup) {
       ...(g ? [['What\'s the game?', () => menu(`${g.name}. ${g.howTo}`)],
                ['What are the stakes?', () => menu(stakesLine(setup))],
                ['Deal me in.', () => stakePicker(), !canSit && sitWhy]] : []),
+      ...(MAP.isDM ? [['Who\'s at your table?', () => {
+        const names = TAVERN.busy[host.id] || [];
+        menu(names.length ? `Playing with me now: ${names.join(', ')}.` : 'Nobody, yet.');
+      }]] : []),
       ['Another time.', closeTalk],
     ]);
   };

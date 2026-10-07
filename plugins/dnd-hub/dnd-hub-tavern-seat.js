@@ -13,7 +13,7 @@ import { MAP, userId, serverData } from './dnd-hub-state.js?v=20261014v';
 import { localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { gameType, statEdge, cheatCheck, hostPerception } from './lk-tavern.js';
-import { TAVERN, medal, actorFor } from './dnd-hub-tavern.js?v=20261014v';
+import { medal, actorFor } from './dnd-hub-tavern.js?v=20261014v';
 import { myHero } from './dnd-hub-tavern-talk.js?v=20261014v';
 import { loadGame } from './dnd-hub-tavern-games.js?v=20261014v';
 import { animateDiceFree } from './dnd-hub-dice.js?v=20261014v';
@@ -50,7 +50,7 @@ export async function sit(host, setup, stake) {
   const hero = myHero();
   const seatedP = wait('tavern:seated', seatId); // listening before asking: the answer can be quick
   const g = gameType(setup.type);
-  send('tavern:sit', { tavernId: TAVERN.open?.id, hostId: host.id, stake, seatId, name: hero?.name || '',
+  send('tavern:sit', { hostId: host.id, stake, seatId, name: hero?.name || '',
     // a whole-table game is played on the DM's Hub, which needs the hero's numbers (their own sheet's word)
     hero: { mod: hero?.mods?.[g?.stat] ?? 0, sleight: hero?.skills?.['Sleight of Hand'] ?? hero?.mods?.dex ?? 0 } });
   const seated = await seatedP;
@@ -77,6 +77,9 @@ export function leaveTable() {
   send('tavern:result', { seatId: s.seatId, won: false, walkedAway: true });
   document.getElementById('lk-tavern-game')?.remove();
 }
+
+/** The NPC (actor id) whose table I am at, or null. */
+export const seatedAt = () => _seat?.host.id || null;
 
 async function playAt(host, setup, stake, seatId) {
   const g = gameType(setup.type);
@@ -139,7 +142,7 @@ function showResult(body, outcome, payout, done) {
   const text = !payout ? 'The house is counting… your winnings will reach your sheet.'
     : gold ? `${gold} gold to your purse${payout.itemName ? `, and ${payout.itemName}` : ''}.`
     : outcome?.caught && payout.thrownOut ? 'You are shown the door.' : 'Better luck next time.';
-  el.innerHTML = '<div><h2></h2><p></p><button class="tv-btn primary">Back to the tavern</button></div>';
+  el.innerHTML = '<div><h2></h2><p></p><button class="tv-btn primary">Back to the map</button></div>';
   el.querySelector('h2').textContent = title;
   el.querySelector('p').textContent = text;
   el.querySelector('button').onclick = done;

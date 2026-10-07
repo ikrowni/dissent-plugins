@@ -10,7 +10,7 @@ import { EV } from './dnd-hub-event-types.js?v=20261014v';
 import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261014v';
 import { startShopScene, stopShopScene, startShopMedia } from './dnd-hub-shop-scene.js';
 import { fileUrl } from './dnd-hub-file-url.js?v=20261014v';
-import { handleTavernEvent, closeTavernHere } from './dnd-hub-tavern.js?v=20261014v';
+import { handleTavernEvent, closeTavernHere, TAVERN, setTavernMapLoader } from './dnd-hub-tavern.js?v=20261014v';
 import { playConditionFx } from './dnd-hub-condition-fx.js';
 import { renderGrid } from './dnd-hub-grid.js?v=20261014v';
 import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261014v';
@@ -167,6 +167,8 @@ export function onEvent(ev) {
 }
 
 setSceneApplier(handleMapEvent); // travel pins load a scene on this screen the way a network scene:load does
+// A tavern switches this screen to its map the way `map:set` does (dnd-hub-tavern.js openHere).
+setTavernMapLoader(mapId => handleMapEvent({ type: 'map:set', campaignId: MAP.campaignId, mapId }));
 
 const OWN_ECHO_IGNORED = new Set(['map:weather', 'map:grid-settings', 'walls:update', 'door:state', 'lights:update', 'pins:update', 'audio:zone-update', 'pictures:update']);
 
@@ -178,7 +180,7 @@ const PRIVILEGED_EVENTS = new Set([
   'shop:open','shop:volume','shop:close','contest:roll',
   'session:start','map:view','level:grant','map:weather','pictures:update',
   // the tavern: opened and closed by the DM, and only the DM's Hub (the house) seats and pays (dnd-hub-tavern-ref.js)
-  'tavern:open','tavern:close','tavern:volume','tavern:busy','tavern:seated','tavern:payout',
+  'tavern:open','tavern:close','tavern:volume','tavern:busy','tavern:seated','tavern:payout','tavern:npcs',
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -274,7 +276,8 @@ export async function handleMapEvent(p) {
         clearTokenCache();
         renderTokens();
         if (!MAP.isDM) computeLocalPlayerLOS();
-        closeTavernHere({ restore: false });
+        // Another map ends the tavern; the tavern's own map (it asked for this switch) keeps it.
+        if (TAVERN.open?.mapId !== p.mapId) closeTavernHere();
         // Reset shop state so fog and audio restore normally on map load
         MAP._shopFogHidden = false; stopShopScene();
         MAP._activeShopId = null;
@@ -720,7 +723,7 @@ export async function handleMapEvent(p) {
     case 'scene:load': {
       if (p.campaignId !== MAP.campaignId) return;
       noteSceneLoaded();
-      closeTavernHere({ restore: false });
+      closeTavernHere();
       // Reset shop state so fog and audio restore when a scene takes over
       MAP._shopFogHidden = false; stopShopScene();
       MAP._activeShopId = null;
@@ -756,7 +759,7 @@ export async function handleMapEvent(p) {
       if (p.campaignId !== MAP.campaignId) return;
       // Stop any playing soundtrack or previous shop audio
       if (MAP._soundtrackAudio) { MAP._soundtrackAudio.pause(); MAP._soundtrackAudio.src = ''; MAP._soundtrackAudio = null; }
-      closeTavernHere({ restore: false });
+      closeTavernHere();
       if (MAP._shopAudio) { MAP._shopAudio.pause(); MAP._shopAudio = null; }
       // The shop's own picture or video if it has one, else the lantern-lit scene drawn in code. Both sit OVER the map:
       // the old video path wrote the shop's file into the map's own data, where a save could keep it.
