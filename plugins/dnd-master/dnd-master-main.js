@@ -1,5 +1,5 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
-import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
+import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish, genId } from '../plugin-sdk.js';
 import { EV } from './dnd-hub-event-types.js?v=20261014v';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
@@ -28,7 +28,8 @@ import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocal
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
 import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261014v';
 import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261014v';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected } from './dnd-master-shops.js?v=20261014v';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected, persistDmCatalog } from './dnd-master-shops.js?v=20261014v';
+import { migrateTaverns } from './lk-tavern.js';
 import { setLaunchCallback } from './dnd-master-encounter.js?v=20261014v';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
@@ -37,7 +38,7 @@ import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenP
 import { pickCampaign } from './dnd-campaign-pick.js';
 import { SECTIONS, TAB_LABELS, sectionOf, ALL_TABS } from './dnd-master-sections.js';
 import { icon } from './lk-icons.js';
-import { loadHubDmCompanion, setSecretsUser, joinSecrets } from './dnd-hub-shared-storage.js';
+import { loadHubDmCompanion, saveHubDmCompanion, setSecretsUser, joinSecrets } from './dnd-hub-shared-storage.js';
 import { sealedHtml } from './lk-sealed.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
@@ -194,6 +195,13 @@ async function onInit(data) {
   setShopsState(sharedState);
   setTavernsState(sharedState);
   setGamesState(sharedState);
+  // Taverns used to be tables with hosts; now NPCs run the games (owner, 2026-10-07). Moved over once: the dm-catalog
+  // backup is rewritten too, or its old taverns would be merged back in on the next load.
+  const moved = migrateTaverns(dmCampaign, genId);
+  if (moved) {
+    Object.assign(dmCampaign, moved);
+    saveHubDmCompanion(serverData).then(() => persistDmCatalog()).catch(e => console.warn('[dnd-master] moving taverns over', e));
+  }
   setNotesState(sharedState);
   setHomebrewState(sharedState);
   setLogsState(sharedState);

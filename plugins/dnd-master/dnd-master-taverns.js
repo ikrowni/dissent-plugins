@@ -1,12 +1,13 @@
-// dnd-master-taverns.js — the Taverns tab: a tavern is a place the DM opens for everyone, like a shop, with tables.
+// dnd-master-taverns.js — the Taverns tab: a tavern is a map, a sound, and the NPCs who stand in it (owner, 2026-10-07).
 //
-// Each table has a HOST — an NPC the heroes talk to — running one of the DM's game setups (dnd-master-games.js).
-// Opening a tavern sends `tavern:open` to the Hub, which draws the tavern and its hosts on every screen
-// (dnd-hub-tavern.js). The Hub reads the tavern itself from the campaign, so the save goes first.
+// Load: the NPCs not yet on the tavern's map are stood on it (free squares near the middle; ones already there stay
+// where the DM dragged them), the map becomes the active map, and `tavern:open` tells every Hub to switch to it and
+// play the sound (dnd-hub-tavern.js). The games belong to the NPCs (Actors tab); a tavern only lists who is there.
 import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014v';
-import { cleanTavern, cleanHost, gameType } from './lk-tavern.js';
+import { cleanTavern, MAX_TAVERN_NPCS } from './lk-tavern.js';
+import { setNpcGame, placeNpcs, npcTalkPayload } from './dnd-master-actor-talk.js?v=20261014v';
 
 let _state = null;
 let _volTimer = 0;
@@ -16,7 +17,9 @@ export function setTavernsState(s) { _state = s; }
 /** The taverns as this tab holds them (read only, for the playtests). */
 export const currentTaverns = () => Object.values(_state?.dmCampaign?.taverns || {});
 
-const setups = () => _state.dmCampaign.gameSetups || {};
+const npcs = () => Object.values(_state.dmCampaign.customActors || {}).filter(a => a.type === 'npc');
+const maps = () => Object.values(_state.dmCampaign.maps || {});
+const setups = () => Object.values(_state.dmCampaign.gameSetups || {});
 
 export function renderTavernsTab() {
   const el = document.getElementById('tab-taverns');
@@ -25,10 +28,9 @@ export function renderTavernsTab() {
   el.innerHTML =
     '<div class="lk-sec">CREATE TAVERN</div>' +
     '<div class="lk-row"><input id="tavern-name-input" class="search-input" placeholder="Tavern name…" style="margin:0;flex:1"></div>' +
+    '<div class="lk-row"><span class="lk-lbl">Map</span>' + mapSelect('id="tavern-map-input"', null) + '</div>' +
     '<div class="lk-row"><span class="lk-lbl">Sound</span><input id="tavern-sound-input" type="file" accept="audio/*" style="font-size:10px;flex:1;min-width:0"></div>' +
     '<div class="lk-row"><span class="lk-lbl">Volume</span><input type="range" id="tavern-new-volume" min="0" max="1" step="0.05" value="0.5" style="flex:1"></div>' +
-    '<div class="lk-row"><span class="lk-lbl" title="Optional: your own picture or video instead of the drawn tavern">Picture/video</span>' +
-      '<input id="tavern-media-input" type="file" accept="image/*,video/*" style="font-size:10px;flex:1;min-width:0"></div>' +
     '<button id="btn-save-tavern" class="btn btn-gold" data-act="create" style="width:100%;margin-bottom:12px">+ Tavern</button>' +
     '<div class="lk-sec">TAVERNS</div>' +
     (taverns.length ? taverns.map(tavernCard).join('') : '<div class="lk-empty">No taverns yet</div>');
@@ -37,41 +39,38 @@ export function renderTavernsTab() {
   el.onchange = onChange;
 }
 
+function mapSelect(attrs, chosen) {
+  return '<select ' + attrs + ' style="flex:1;min-width:0"><option value="">' + (maps().length ? 'Pick a map…' : 'Upload a map in the Maps tab first') + '</option>' +
+    maps().map(m => '<option value="' + esc(m.id) + '"' + (m.id === chosen ? ' selected' : '') + '>' + esc(m.name || 'Map') + '</option>').join('') + '</select>';
+}
+
 function tavernCard(raw) {
   const t = cleanTavern(raw);
-  const setupList = Object.values(setups());
-  const actors = Object.values(_state.dmCampaign.customActors || {});
-  const hosts = t.hosts.map(h => {
-    const s = setups()[h.setupId];
-    return '<div class="host-row"><span class="who">🍺 <b>' + esc(h.name) + '</b> · ' +
-      (s ? esc(s.name) : '<span style="color:#f97316">no game</span>') + '</span>' +
-      '<button class="icon-x" data-act="del-host" data-t="' + t.id + '" data-h="' + h.id + '" title="Remove this table">&#x2715;</button></div>';
-  }).join('');
-  const addHost = setupList.length
-    ? '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">' +
-        '<div class="lk-row"><span class="lk-lbl">Host</span><select data-f="actor" data-t="' + t.id + '"><option value="">A new face…</option>' +
-          actors.map(a => '<option value="' + a.id + '">' + esc(a.name) + '</option>').join('') + '</select></div>' +
-        '<div class="lk-row"><span class="lk-lbl">Name</span><input type="text" data-f="name" data-t="' + t.id + '" placeholder="One-Eyed Marta"></div>' +
-        '<div class="lk-row"><span class="lk-lbl">Game</span><select data-f="setup" data-t="' + t.id + '">' +
-          setupList.map(s => '<option value="' + s.id + '">' + esc(s.name) + ' (' + esc(gameType(s.type)?.name || '') + ')</option>').join('') + '</select></div>' +
-        '<div class="lk-row"><span class="lk-lbl">Says</span><textarea rows="2" data-f="greeting" data-t="' + t.id + '" placeholder="Fancy a throw, stranger?"></textarea></div>' +
-        '<div class="lk-row"><span class="lk-lbl">Portrait</span><input type="file" accept="image/*" data-f="portrait" data-t="' + t.id + '" style="font-size:10px;flex:1;min-width:0"></div>' +
-        '<button class="btn btn-ghost" data-act="add-host" data-t="' + t.id + '" style="width:100%;font-size:10px">+ Table</button></div>'
-    : '<div style="font-size:10px;color:var(--muted);margin-top:6px">Set up a game in the Games tab to seat a host here.</div>';
+  const actors = _state.dmCampaign.customActors || {};
+  const rows = t.npcIds.map(id => actors[id]).filter(Boolean).map(a =>
+    '<div class="host-row"><span class="who">🍺 <b>' + esc(a.name) + '</b></span>' +
+      '<select data-f="game" data-a="' + a.id + '" title="The game ' + esc(a.name) + ' runs"><option value="">Just talks</option>' +
+        setups().map(s => '<option value="' + s.id + '"' + (s.id === a.setupId ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '</select>' +
+      '<button class="icon-x" data-act="del-npc" data-t="' + t.id + '" data-a="' + a.id + '" title="Take ' + esc(a.name) + ' out of this tavern">&#x2715;</button></div>').join('');
+  const free = npcs().filter(a => !t.npcIds.includes(a.id));
+  const add = t.npcIds.length >= MAX_TAVERN_NPCS ? '<div style="font-size:10px;color:var(--muted);margin-top:6px">A tavern holds up to ' + MAX_TAVERN_NPCS + ' NPCs.</div>'
+    : free.length
+      ? '<div class="lk-row" style="margin-top:6px"><select data-f="npc" data-t="' + t.id + '" style="flex:1;min-width:0">' +
+          free.map(a => '<option value="' + a.id + '">' + esc(a.name) + '</option>').join('') + '</select>' +
+        '<button class="btn btn-ghost" data-act="add-npc" data-t="' + t.id + '" style="font-size:10px">+ NPC</button></div>'
+      : '<div style="font-size:10px;color:var(--muted);margin-top:6px">' + (npcs().length ? 'Every NPC is here.' : 'Make an NPC in the Actors tab to put them here.') + '</div>';
   const hasSound = !!t.soundFileId;
   return '<div class="tavern-card" data-tavern="' + t.id + '">' +
     '<div class="lk-row" style="margin-bottom:6px"><span style="font-size:11px;font-weight:700;flex:1">🏮 ' + esc(t.name) + '</span>' +
-      '<button class="btn btn-gold" data-act="open" data-t="' + t.id + '" style="font-size:10px;padding:2px 8px">&#x25B6; Open</button>' +
-      '<button class="icon-x" data-act="del" data-t="' + t.id + '" title="Delete tavern">&#x1F5D1;</button></div>' +
-    (hosts || '<div style="font-size:10px;color:var(--muted)">No tables yet</div>') + addHost +
+      '<button class="btn btn-gold" data-act="open" data-t="' + t.id + '" style="font-size:10px;padding:2px 8px"' +
+        (t.mapId ? ' title="Everyone moves to this map, the NPCs appear, and the sound plays"' : ' disabled title="Pick a map first"') + '>&#x25B6; Load</button>' +
+      '<button class="icon-x" data-act="del" data-t="' + t.id + '" title="Delete tavern (the NPCs are kept)">&#x1F5D1;</button></div>' +
+    '<div class="lk-row"><span class="lk-lbl">Map</span>' + mapSelect('data-f="map" data-t="' + t.id + '"', t.mapId) + '</div>' +
+    (rows || '<div style="font-size:10px;color:var(--muted)">No NPCs here yet</div>') + add +
     '<div class="lk-row" style="margin-top:6px"><span class="lk-lbl">' + (hasSound ? '🔊 Sound' : 'No sound') + '</span>' +
       (hasSound ? '<input type="range" min="0" max="1" step="0.05" value="' + t.ambientVolume + '" data-f="volume" data-t="' + t.id + '" style="flex:1">' : '<span style="flex:1"></span>') +
       '<label class="btn btn-ghost" style="font-size:10px;cursor:pointer">' + (hasSound ? 'Change' : 'Add sound') +
         '<input type="file" accept="audio/*" style="display:none" data-f="sound" data-t="' + t.id + '"></label></div>' +
-    '<div class="lk-row"><span style="font-size:10px;color:var(--muted);flex:1">' + (t.videoFileId ? '🖼 Your picture/video' : '🏮 The drawn tavern') + '</span>' +
-      '<label class="btn btn-ghost" style="font-size:10px;cursor:pointer">' + (t.videoFileId ? 'Change' : 'Use a picture/video') +
-        '<input type="file" accept="image/*,video/*" style="display:none" data-f="media" data-t="' + t.id + '"></label>' +
-      (t.videoFileId ? '<button class="btn btn-ghost" style="font-size:10px" data-act="no-media" data-t="' + t.id + '">Remove</button>' : '') + '</div>' +
   '</div>';
 }
 
@@ -85,34 +84,23 @@ const field = (tid, f) => document.querySelector(`#tab-taverns [data-f="${f}"][d
 
 async function onClick(e) {
   const b = e.target.closest('[data-act]');
-  if (!b) return;
+  if (!b || b.disabled) return;
   const taverns = (_state.dmCampaign.taverns ||= {});
   const t = taverns[b.dataset.t];
   switch (b.dataset.act) {
     case 'create': return createTavern(b);
     case 'del':
-      if (!t || !confirm(`Delete ${t.name}?`)) return;
+      if (!t || !confirm(`Delete ${t.name}? Its NPCs are kept.`)) return;
       delete taverns[t.id]; break;
-    case 'del-host':
+    case 'del-npc':
       if (!t) return;
-      t.hosts = (t.hosts || []).filter(h => h.id !== b.dataset.h); break;
-    case 'add-host': {
-      if (!t) return;
-      const actorId = field(t.id, 'actor')?.value || null;
-      const actor = actorId ? _state.dmCampaign.customActors?.[actorId] : null;
-      const name = field(t.id, 'name')?.value.trim() || actor?.name || '';
-      if (!name) { alert('Give the host a name, or pick one of your NPCs.'); return; }
-      let portraitFileId = null;
-      const file = field(t.id, 'portrait')?.files?.[0];
-      if (file) { portraitFileId = await uploadCampaignFile(file, { maxSide: 1024 }); if (portraitFileId === false) return; }
-      t.hosts = [...(t.hosts || []), cleanHost({ id: genId(), name, actorId, portraitFileId,
-        setupId: field(t.id, 'setup')?.value, greeting: field(t.id, 'greeting')?.value })];
-      break;
+      t.npcIds = (t.npcIds || []).filter(id => id !== b.dataset.a); break;
+    case 'add-npc': {
+      const id = field(t?.id, 'npc')?.value;
+      if (!t || !id) return;
+      taverns[t.id] = cleanTavern({ ...t, npcIds: [...(t.npcIds || []), id] }); break;
     }
-    case 'no-media':
-      if (!t) return;
-      t.videoFileId = null; t.videoMime = ''; break;
-    case 'open': return openTavern(t);
+    case 'open': return openTavern(t, b);
     default: return;
   }
   // Drawn first, saved after: a redraw when the save lands would wipe whatever the DM typed meanwhile.
@@ -125,12 +113,10 @@ async function createTavern(btn) {
   if (!name) { alert('Tavern name is required.'); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
   const done = () => { btn.disabled = false; btn.textContent = '+ Tavern'; };
-  const up = async id => { const f = document.getElementById(id)?.files?.[0]; return f ? [await uploadCampaignFile(f), f.type] : [null, '']; };
-  const [soundFileId] = await up('tavern-sound-input');
+  const f = document.getElementById('tavern-sound-input')?.files?.[0];
+  const soundFileId = f ? await uploadCampaignFile(f) : null;
   if (soundFileId === false) return done();
-  const [videoFileId, videoMime] = await up('tavern-media-input');
-  if (videoFileId === false) return done();
-  const t = cleanTavern({ id: genId(), name, soundFileId, videoFileId, videoMime,
+  const t = cleanTavern({ id: genId(), name, soundFileId, mapId: document.getElementById('tavern-map-input')?.value || null,
     ambientVolume: parseFloat(document.getElementById('tavern-new-volume')?.value || '0.5') });
   (_state.dmCampaign.taverns ||= {})[t.id] = t;
   done();
@@ -139,25 +125,30 @@ async function createTavern(btn) {
 }
 
 /**
- * Open the tavern on every screen. The event carries the tavern and its tables' game setups, so every Hub draws what
- * this tab shows without reading storage: under HTTP 429 the read came back stale (no hosts) or not at all. Sent with
- * `request` (the SDK's helper swallows a failure), retried once, and the DM is told if it still did not go.
+ * Load the tavern for everyone: its NPCs onto its map (saved first), then `tavern:open`, which carries the tavern and
+ * who talks, so every Hub acts without reading storage (under HTTP 429 a read came back stale or not at all). Sent
+ * with `request` (the SDK's helper swallows a failure), retried once, and the DM is told if it still did not go.
  */
-export async function openTavern(t) {
+export async function openTavern(t, btn = null) {
   if (!t) return;
   const tavern = cleanTavern(t);
-  const setups = Object.fromEntries(tavern.hosts.map(h => [h.setupId, setups_()[h.setupId]]).filter(([, s]) => s));
-  const payload = { type: 'tavern:open', tavernId: t.id, tavern, setups, campaignId: _state.dmCampaignId, fromUserId: _state.userId };
-  saveHubDmCompanion(_state.serverData).catch(() => {}); // kept for later visits; the open itself does not wait on it
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      await request('realtime:publish-companion', { registryId: 'dnd-hub', event: 'tavern:open', data: payload });
-      return;
-    } catch { await new Promise(r => setTimeout(r, 2000)); }
+  if (!tavern.mapId || !_state.dmCampaign.maps?.[tavern.mapId]) { alert('Pick a map for this tavern first.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  try {
+    const placed = await placeNpcs(tavern.npcIds, tavern.mapId);
+    if (placed === false) { alert(`${tavern.name} did not load: the map could not be read. Try again in a moment.`); return; }
+    const payload = { type: 'tavern:open', tavernId: tavern.id, tavern, ...npcTalkPayload(), campaignId: _state.dmCampaignId, fromUserId: _state.userId };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await request('realtime:publish-companion', { registryId: 'dnd-hub', event: 'tavern:open', data: payload });
+        return;
+      } catch { await new Promise(r => setTimeout(r, 2000)); }
+    }
+    alert(`${tavern.name} did not open: the server is busy. Try again in a moment.`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Load'; }
   }
-  alert(`${tavern.name} did not open: the server is busy. Try again in a moment.`);
 }
-const setups_ = () => _state.dmCampaign.gameSetups || {};
 
 function onInput(e) {
   if (e.target.dataset.f !== 'volume') return;
@@ -173,14 +164,16 @@ function onInput(e) {
 }
 
 async function onChange(e) {
-  const { f, t: tid } = e.target.dataset;
+  const { f, t: tid, a } = e.target.dataset;
+  if (f === 'game') return setNpcGame(a, e.target.value); // the game lives on the NPC (the Actors tab shows it too)
   const t = _state.dmCampaign.taverns?.[tid];
+  if (!t) return;
+  if (f === 'map') { t.mapId = e.target.value || null; renderTavernsTab(); return save(); }
   const file = e.target.files?.[0];
-  if (!t || !file || (f !== 'sound' && f !== 'media')) return;
+  if (f !== 'sound' || !file) return;
   const id = await uploadCampaignFile(file);
   if (!id) return;
-  if (f === 'sound') t.soundFileId = id;
-  else { t.videoFileId = id; t.videoMime = file.type || ''; }
+  t.soundFileId = id;
   renderTavernsTab();
   await save();
 }

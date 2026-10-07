@@ -1,10 +1,11 @@
 // dnd-master-games.js — the Games tab: the tavern games, and the DM's setups of them (stakes, prizes, cheating).
 //
-// A setup is one game with the DM's settings; a tavern's tables each run one setup (dnd-master-taverns.js). The
+// A setup is one game with the DM's settings; an NPC runs one setup (Actors tab, dnd-master-actors.js). The
 // settings are cleaned by lk-tavern.js cleanSetup on every change, and the DM's Hub cleans them again before it pays.
 import { esc, genId } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { persistDmCatalog } from './dnd-master-shops.js?v=20261014v';
+import { publishNpcTalk } from './dnd-master-actor-talk.js?v=20261014v';
 import { GAME_TYPES, PLAYABLE, NPC_SKILLS, CAUGHT, gameType, cleanSetup } from './lk-tavern.js';
 
 let _state = null;
@@ -29,7 +30,7 @@ export function renderGamesTab() {
   el.innerHTML =
     '<div class="lk-sec">YOUR GAME SETUPS</div>' +
     (setups.length ? setups.map(s => setupCard(cleanSetup(s), items)).join('')
-      : '<div class="lk-empty">Set up a game below, then seat it at a tavern table in the Taverns tab.</div>') +
+      : '<div class="lk-empty">Set up a game below, then give it to an NPC in the Actors tab.</div>') +
     '<div class="lk-sec" style="margin-top:12px">TAVERN GAMES</div>' +
     GAME_TYPES.map(g => {
       const ready = PLAYABLE.has(g.id);
@@ -74,6 +75,7 @@ async function save() {
   _state.serverData.campaigns[_state.dmCampaignId].gameSetups = _state.dmCampaign.gameSetups;
   await saveHubDmCompanion(_state.serverData);
   await persistDmCatalog();
+  await publishNpcTalk(); // the Hubs pay from the setup they were sent
 }
 
 async function onClick(e) {
@@ -84,11 +86,13 @@ async function onClick(e) {
     const s = cleanSetup({ id: genId(), type: b.dataset.type });
     setups[s.id] = s;
   } else if (b.dataset.act === 'del') {
-    const used = Object.values(_state.dmCampaign.taverns || {}).some(t => (t.hosts || []).some(h => h.setupId === b.dataset.id));
-    if (!confirm(used ? 'A tavern table runs this game. Delete it anyway? That table will be emptied.' : 'Delete this game setup?')) return;
+    const used = Object.values(_state.dmCampaign.customActors || {}).filter(a => a.setupId === b.dataset.id);
+    if (!confirm(used.length ? `${used.map(a => a.name).join(', ')} run${used.length === 1 ? 's' : ''} this game. Delete it anyway? They will just talk.` : 'Delete this game setup?')) return;
+    used.forEach(a => { a.setupId = ''; });
     delete setups[b.dataset.id];
   } else return;
   renderGamesTab(); // drawn first, saved after (see dnd-master-taverns.js)
+  if (b.dataset.act === 'del') _state.serverData.campaigns[_state.dmCampaignId].customActors = _state.dmCampaign.customActors;
   await save();
 }
 
