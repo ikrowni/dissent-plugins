@@ -3,9 +3,9 @@
 // Aim with the mouse (or arrow keys), hold to build power (or Space), let go to throw. The hand sways less with
 // Dexterity. Cheating: loosen the board's pin so the host's daggers wander (Sleight of Hand vs the host's eye).
 // Rules: dagger-toss-rules.js.
-import { THROWS, RINGS, SWEET, scoreAt, swayAmp, sway, powerAt, heroLanding, hostLanding, winner } from './dagger-toss-rules.js?v=20261015d';
-import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261015d';
-import { whoosh, thunk, chime, buzz } from './tavern-sfx.js?v=20261015d';
+import { THROWS, RINGS, SWEET, scoreAt, swayAmp, sway, powerAt, heroLanding, hostLanding, winner } from './dagger-toss-rules.js?v=20261015e';
+import { guardFrame, useKit, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261015e';
+import { whoosh, thunk, chime, buzz } from './tavern-sfx.js?v=20261015e';
 
 const BARKS = {
   start: ['Three daggers. Mind the barmaid.', 'Closest to the heart takes it.', 'Don\'t hit the lantern this time.'],

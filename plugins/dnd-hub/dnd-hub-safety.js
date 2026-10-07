@@ -4,10 +4,10 @@
 // DM's Hub keeps who asked for what in the campaign's DM-only part (`safetyByUser`, lk-secrets.js) and shares only the
 // combined, nameless list (`campaign.safety`, `safety:table`). The DM may be away when a player sets theirs, so a
 // player's Hub sends them again each time the map opens. The X (`safety:x`) shows on every screen without a name.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015d';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015e';
 import { esc, storageGet, storageSet } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015d';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015e';
 import { TOPICS, cleanPicks, combine, X_COOLDOWN_MS } from './lk-safety.js';
 
 let _mine = { topics: {}, custom: [] };
@@ -26,14 +26,24 @@ export function toggleSafetyPanel() {
   drawPanel();
 }
 
-function drawPanel() {
-  const el = document.getElementById('safety-panel');
-  if (!el) return;
+function tableHtml() {
   const t = campaign()?.safety || { lines: [], veils: [] };
   const list = (items, empty) => items.length ? `<div class="lk-chips">${items.map(x => `<span class="lk-chip">${esc(x)}</span>`).join('')}</div>`
     : `<div class="lk-pop-note" style="margin-top:2px">${empty}</div>`;
-  const table = `<div class="lk-pop-row" style="margin-top:0"><b style="color:var(--lk-text)">Lines</b>&nbsp;— never in this game</div>${list(t.lines, 'None yet.')}
+  return `<div class="lk-pop-row" style="margin-top:0"><b style="color:var(--lk-text)">Lines</b>&nbsp;— never in this game</div>${list(t.lines, 'None yet.')}
     <div class="lk-pop-row"><b style="color:var(--lk-text)">Veils</b>&nbsp;— may happen, off-screen</div>${list(t.veils, 'None yet.')}`;
+}
+
+/** The table's list changed: redraw only that part, never what the player is typing (it wiped the "Something else" box). */
+function drawTable() {
+  const el = document.getElementById('safety-table');
+  if (el) el.innerHTML = tableHtml();
+}
+
+function drawPanel() {
+  const el = document.getElementById('safety-panel');
+  if (!el) return;
+  const table = `<div id="safety-table">${tableHtml()}</div>`;
   const mine = MAP.isDM ? '<div class="lk-pop-note">Players set theirs here privately. You see the list, never who asked for what.</div>'
     : `<div class="lk-pop-title" style="margin-top:12px">Yours (only you see these)</div>
       <div class="lk-safety-grid">${TOPICS.map(tp => {
@@ -101,7 +111,7 @@ export async function handleSafetyEvent(p) {
   if (p.campaignId !== MAP.campaignId) return;
   const c = campaign();
   if (p.type === 'safety:x') { if (p.fromUserId !== userId) showX(); return; }
-  if (p.type === 'safety:table') { if (c) c.safety = p.safety; drawPanel(); return; }
+  if (p.type === 'safety:table') { if (c) c.safety = p.safety; drawTable(); return; }
   if (p.type === 'safety:set' && MAP.isDM && c && p.fromUserId && (c.members || []).includes(p.fromUserId)) {
     const seq = Number(p.seq) || 0;
     if (seq && seq <= (c.safetyByUser?.[p.fromUserId]?.seq || 0)) return; // older than what we have
@@ -109,7 +119,7 @@ export async function handleSafetyEvent(p) {
     const next = combine(c.safetyByUser);
     if (JSON.stringify(next) === JSON.stringify(c.safety || { lines: [], veils: [] })) return;
     c.safety = next;
-    drawPanel();
+    drawTable();
     await send('safety:table', { safety: next });
     await saveHubDm(serverData);
   }

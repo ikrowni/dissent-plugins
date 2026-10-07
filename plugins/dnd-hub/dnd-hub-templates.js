@@ -1,8 +1,8 @@
 // dnd-hub-templates.js — AoE template placement, rendering, and broadcast
-import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261015d';
+import { MAP, userId, effectiveGs } from './dnd-hub-state.js?v=20261015e';
 import { genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015d';
+import { EV } from './dnd-hub-event-types.js?v=20261015e';
 
 // 6 preset colors (PIXI hex + CSS hex pairs)
 export const TEMPLATE_COLORS = [

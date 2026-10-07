@@ -5,19 +5,19 @@
 // the NPC stands (dnd-hub-tavern-ref.js). A TAVERN is the DM's NPCs on a map of their choosing with a sound: the DM's
 // sidebar has already put the NPCs on the map (dnd-master-taverns.js); `tavern:open` switches every screen to that
 // map and plays the sound. The drawn tavern scene and the row of hosts are gone (owner, 2026-10-07).
-import { MAP, userId } from './dnd-hub-state.js?v=20261015d';
+import { MAP, userId } from './dnd-hub-state.js?v=20261015e';
 import { localPublish } from '../plugin-sdk.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261015d';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261015e';
 import { cleanTavern, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
 import { moveToast } from './dnd-hub-turn-move.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261015d';
-import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261015d';
-import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261015d';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261015d';
-import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261015d';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261015e';
+import { openTalk, closeTalk, setHero } from './dnd-hub-tavern-talk.js?v=20261015e';
+import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261015e';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261015e';
+import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261015e';
 
 /** open: the loaded tavern { id, mapId } or null. busy: who is playing with which NPC, { actorId: [names] }. */
 export const TAVERN = { open: null, busy: {} };

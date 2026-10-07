@@ -1,6 +1,6 @@
 // dnd-master-scenes.js — Scenes tab: create, delete, load
 import { requestWithTransfer, storageSetCompanion, realtimePublish, realtimePublishCompanion, genId, esc } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015d';
+import { EV } from './dnd-hub-event-types.js?v=20261015e';
 import { publishTo } from './lk-bus.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
