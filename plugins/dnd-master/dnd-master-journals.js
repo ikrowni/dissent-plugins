@@ -1,6 +1,6 @@
 // dnd-master-journals.js — Journals tab: create, edit, delete, push to players
 import { storageSetCompanion, realtimePublish, genId, esc } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015h';
+import { EV } from './dnd-hub-event-types.js?v=20261015i';
 import { publishTo } from './lk-bus.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 

@@ -1,21 +1,21 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015h';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015i';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015h';
-import { startSchedule } from './dnd-hub-schedule.js?v=20261015h';
-import { startSafety } from './dnd-hub-safety.js?v=20261015h';
-import { startStage } from './dnd-hub-stage.js?v=20261015h';
+import { EV } from './dnd-hub-event-types.js?v=20261015i';
+import { startSchedule } from './dnd-hub-schedule.js?v=20261015i';
+import { startSafety } from './dnd-hub-safety.js?v=20261015i';
+import { startStage } from './dnd-hub-stage.js?v=20261015i';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015h';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261015h';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261015h';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015i';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261015i';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261015i';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015h';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015i';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {

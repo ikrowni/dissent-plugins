@@ -1,6 +1,6 @@
 // plugins/dnd-hub/book/book-view-nav.test.js — moving through a book's real pages (plan 2026-10-06 page reader).
 import { describe, it, expect } from 'vitest';
-import { step, typedPage, entryAt, startOf, nextZoom, ZOOMS } from './book-view-nav.js';
+import { step, typedPage, entryAt, startOf, nextZoom, ZOOMS, areaAt } from './book-view-nav.js';
 
 const docs = [{ count: 40, packs: [] }, { count: 5, packs: [] }];
 const story = [
@@ -62,5 +62,18 @@ describe('zoom', () => {
     expect(nextZoom(1.5)).toBe(2);
     expect(nextZoom(2)).toBe(1);
     expect(nextZoom(7)).toBe(1);
+  });
+});
+
+describe('the keyed area being read', () => {
+  const st = [{ id: 'c', title: 'Chapter 2: The Village', doc: 0, page: 3 }, { id: 'a', title: '12. Master Suite', doc: 0, page: 5 },
+    { id: 'q', title: 'Q12. Dining Hall', doc: 0, page: 9 }, { id: 'n', title: '1990. A year', doc: 0, page: 12 }];
+  it('is the area the page sits in', () => {
+    expect(areaAt(st, { doc: 0, page: 6 })?.id).toBe('a');
+    expect(areaAt(st, { doc: 0, page: 9 })?.id).toBe('q');
+  });
+  it('is nothing in a chapter opening, or for a heading that only starts with a number', () => {
+    expect(areaAt(st, { doc: 0, page: 4 })).toBeNull();
+    expect(areaAt(st, { doc: 0, page: 13 })).toBeNull();
   });
 });

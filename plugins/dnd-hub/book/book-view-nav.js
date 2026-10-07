@@ -1,6 +1,7 @@
 // book-view-nav.js — moving through a book's real pages in the reader (plan 2026-10-06 page reader). Pure.
 // A place is { doc, page }: page `page` (from 1) of PDF `doc` (book.docs, lk-book.js bookDocs). Paging stays inside
 // its PDF: the PDF switcher moves between them.
+import { AREA_KEY } from './book-scan.js';
 
 /** The zoom steps: the page fits the width, then 150 % and 200 % (scrolling). */
 export const ZOOMS = [1, 1.5, 2];
@@ -33,3 +34,9 @@ export function entryAt(story, place) {
 
 /** Where an index line (or a monster, item…) starts: its page, or its PDF's first page when it has none. */
 export const startOf = e => ({ doc: e?.doc || 0, page: e?.page || 1 });
+
+/** The keyed area being read ("12. Master Suite"), or null: what the DM can pin on the map (owner, 2026-10-07). */
+export function areaAt(story, place) {
+  const e = entryAt(story, place);
+  return e && AREA_KEY.test(e.title) && /^[A-Z]/.test(e.title.replace(AREA_KEY, '')) ? e : null;
+}

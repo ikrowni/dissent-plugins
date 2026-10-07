@@ -1,13 +1,15 @@
 // dnd-hub-pins.js — map pin placement, rendering, and journal overlay
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015h';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015i';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015h';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015h';
+import { EV } from './dnd-hub-event-types.js?v=20261015i';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015i';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { canTravel, travelFields, travelSummary } from './dnd-hub-pin-travel.js';
 import { campaignScenes, travelToScene, requestTravel, travelNotice } from './dnd-hub-travel.js';
+import { setTool } from './dnd-hub-walls.js?v=20261015i';
+import { moveToast } from './dnd-hub-turn-move.js';
 let _pinSprites = []; // PixiJS containers currently on the ui layer
 
 // ── Rendering ────────────────────────────────────────────────────────────────
@@ -80,6 +82,15 @@ function _showPinToPlayer(pin) {
   showHandoutOverlay({ title: pin.label || page?.title || 'Map note', content: content || (action ? '' : '(no note)'), action });
 }
 
+// ── A keyed area from the book (owner, 2026-10-07) ─────────────────────────────
+// The Book panel's "Pin on the map" arms the pin tool with the area's title and where it is in the book; the DM's next
+// click on the map opens the pin form already filled in (DM only), and the pin keeps `book: { bookId, section }`.
+export function armBookPin({ label, book }) {
+  MAP._pendingPin = { label, visible: 'dm', book };
+  setTool('pin');
+  moveToast(`Click the map where ${label} is.`);
+}
+
 // ── DM pin management menu ────────────────────────────────────────────────────
 
 const _btn = 'width:100%;padding:6px;border-radius:6px;font-size:11px;cursor:pointer;margin-bottom:6px;';
@@ -105,6 +116,7 @@ function _showDMPinMenu(pin) {
     '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px">' + (pin.visible === 'all' ? 'Players can open it once they have seen this spot' : 'DM only') + '</div>' +
     (pin.sceneId ? '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px">' + esc(travelSummary(pin, _playerName)) + '</div>' +
       '<button id="pin-travel-btn" style="' + BTN_GOLD + '">\u27A4 Go to <span id="pin-scene-name">the scene</span></button>' : '<div style="height:4px"></div>') +
+    (pin.book ? '<button id="pin-book-btn" style="' + BTN_GOLD + '">\uD83D\uDCD6 Open in the book</button>' : '') +
     '<button id="pin-edit-btn" style="' + BTN_PLAIN + '">\u270E Edit pin</button>' +
     '<button id="pin-del-btn" style="' + BTN_DANGER + '">\uD83D\uDDD1 Delete Pin</button>' +
     '<button id="pin-cancel-btn" style="' + BTN_PLAIN + ';margin-bottom:0">Cancel</button>';
@@ -112,6 +124,9 @@ function _showDMPinMenu(pin) {
   document.getElementById('pin-del-btn').onclick = () => { _removePinDialog(); deletePinById(pin.id); };
   document.getElementById('pin-edit-btn').onclick = () => showPinDialog(pin.cx, pin.cy, pin);
   document.getElementById('pin-cancel-btn').onclick = _removePinDialog;
+  const book = document.getElementById('pin-book-btn');
+  // Loaded on demand: the Book panel imports this file.
+  if (book) book.onclick = async () => { _removePinDialog(); (await import('./book/book-reader.js')).openBookAt(pin.book); };
   const go = document.getElementById('pin-travel-btn');
   if (go) {
     campaignScenes().then(sc => {
@@ -140,7 +155,10 @@ export function showPinDialog(worldX, worldY, edit = null) {
   const camp = serverData?.campaigns?.[MAP.campaignId];
   const journals = Object.values(camp?.journals || {}).filter(j => j.visibility === 'player');
   const players = (camp?.members || []).filter(uid => uid && uid !== camp?.dmUserId);
-  const cur = { label: '', note: '', journalId: '', visible: 'all', sceneId: '', travel: 'dm', travelers: [], ...(edit || {}) };
+  // A new pin for a book's keyed area comes pre-filled (armBookPin); it is used once.
+  const pending = edit ? null : MAP._pendingPin || null;
+  MAP._pendingPin = null;
+  const cur = { label: '', note: '', journalId: '', visible: 'all', sceneId: '', travel: 'dm', travelers: [], ...(pending || {}), ...(edit || {}) };
   const d = document.createElement('div');
   d.id = 'pin-dialog';
   d.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
@@ -190,11 +208,11 @@ export function showPinDialog(worldX, worldY, edit = null) {
   });
   sync();
   document.getElementById('pin-label-input').focus();
-  document.getElementById('pin-place-btn').onclick = () => _placePin(worldX, worldY, edit);
+  document.getElementById('pin-place-btn').onclick = () => { _placePin(worldX, worldY, edit, pending?.book); if (pending) setTool('select'); };
   document.getElementById('pin-cancel-btn').onclick = _removePinDialog;
 }
 
-async function _placePin(worldX, worldY, edit) {
+async function _placePin(worldX, worldY, edit, book = null) {
   const label     = document.getElementById('pin-label-input')?.value?.trim() || '';
   const note      = document.getElementById('pin-note-input')?.value?.trim() || '';
   const journalId = document.getElementById('pin-journal-select')?.value || null;
@@ -207,7 +225,8 @@ async function _placePin(worldX, worldY, edit) {
   _removePinDialog();
   if (!MAP.mapData) return;
   if (!MAP.mapData.pins) MAP.mapData.pins = [];
-  const pin = { ...(edit || {}), id: edit?.id || genId(), cx: worldX, cy: worldY, label, note, journalId: journalId || null, visible, ...travel };
+  const pin = { ...(edit || {}), id: edit?.id || genId(), cx: worldX, cy: worldY, label, note, journalId: journalId || null, visible, ...travel,
+    ...(book ? { book } : {}) };
   const i = MAP.mapData.pins.findIndex(x => x.id === pin.id);
   if (i >= 0) MAP.mapData.pins[i] = pin; else MAP.mapData.pins.push(pin);
   await savePinsAndBroadcast();

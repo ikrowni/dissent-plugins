@@ -5,17 +5,17 @@
 import { esc, localPublish, requestWithTransfer } from '../../plugin-sdk.js';
 import { realtimePublish } from '../dnd-hub-publish.js';
 import { icon } from '../lk-icons.js';
-import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261015h';
-import { saveHubDm } from '../dnd-hub-storage.js?v=20261015h';
-import { EV } from '../dnd-hub-event-types.js?v=20261015h';
+import { MAP, serverData, userId } from '../dnd-hub-state.js?v=20261015i';
+import { saveHubDm } from '../dnd-hub-storage.js?v=20261015i';
+import { EV } from '../dnd-hub-event-types.js?v=20261015i';
 import { campaignBooks, listBooks, attachBook, loadBookPicture } from './book-library.js';
 import { bookDocs } from '../lk-book.js';
 import { pageViewHtml, fillPage, pageKey, tocHtml } from './book-viewer.js';
-import { step, typedPage, startOf, nextZoom, entryAt } from './book-view-nav.js';
+import { step, typedPage, startOf, nextZoom, entryAt, areaAt } from './book-view-nav.js';
 import { startCut, stopCut, cutting } from './book-cut.js';
 import { cutActions } from './book-cut-actions.js';
-import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261015h';
-import { showHandoutOverlay } from '../dnd-hub-pins.js?v=20261015h';
+import { addMapFromBuffer } from '../dnd-hub-map-bg.js?v=20261015i';
+import { showHandoutOverlay, armBookPin } from '../dnd-hub-pins.js?v=20261015i';
 import { guarded } from '../lk-upload.js';
 import { guide } from '../lk-guide-ui.js';
 
@@ -97,7 +97,9 @@ function draw() {
 // page pictures still has its old text: shown as it was, with a word on getting the pages.
 function storyView(b) {
   if (hasPages()) return pageViewHtml(b, R.view, { mark: id => (shared(id) ? ' <span title="Shared with the players">✓</span>' : ''),
-    tools: '<button class="btn btn-ghost btn-sm" onclick="bookCutStart()" title="Draw a box round a map, art or a handout">✂ Cut out</button>' });
+    tools: '<button class="btn btn-ghost btn-sm" onclick="bookCutStart()" title="Draw a box round a map, art or a handout">✂ Cut out</button>' +
+      // A keyed area ("12. Master Suite") can be pinned on the map; the pin opens this page again (owner, 2026-10-07).
+      (areaAt(b.story, R.view) ? `<button class="btn btn-ghost btn-sm" onclick="bookPinArea()" title="Click the map where this area is: a DM-only pin opens this page">📍 Pin on the map</button>` : '') });
   const i = Math.max(0, b.story.findIndex(x => x.id === R.section));
   const s = b.story[i];
   return `<p class="bk-help">This book was saved before LanternKeep showed the real pages. Import it again to read them.</p>
@@ -191,6 +193,21 @@ export async function bookShowPicture(picId) {
 }
 
 export function bookPanelTab(t) { R.tab = t; R.q = ''; draw(); }
+/** "Pin on the map" for the keyed area being read: the DM's next click on the map places it. */
+export function bookPinArea() {
+  const e = areaAt(book()?.story, R.view);
+  if (e) armBookPin({ label: e.title, book: { bookId: book().id, section: e.id } });
+}
+/** A pin's "Open in the book": the Book panel, open (or opened) at that book and section. */
+export async function openBookAt(ref) {
+  if (!ref) return;
+  if (!document.getElementById('book-panel')) await toggleBookPanel();
+  const i = (R?.books || []).findIndex(b => b.id === ref.bookId);
+  if (i < 0) return;
+  if (i !== R.book) openBook(i);
+  R.tab = 'story';
+  bookPanelSection(ref.section);
+}
 export function bookPanelBook(i) { openBook(i); draw(); }
 /** An index line: its page (or, in an old book, its text). */
 export function bookPanelSection(id) {
