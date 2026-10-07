@@ -1,6 +1,6 @@
 // dnd-master-shops.js — Shops tab: shop creation and inventory manager
 import { storageGet, storageSet, esc, genId, requestWithTransfer, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015j';
+import { EV } from './dnd-hub-event-types.js?v=20261015k';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 
 import { guarded } from './lk-upload.js';

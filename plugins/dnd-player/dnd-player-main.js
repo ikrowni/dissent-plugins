@@ -29,7 +29,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015j';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015k';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1269,6 +1269,7 @@ async function onEvent(ev) {
     if (isRepeat(p)) return;
     SERVER_DATA = SERVER_DATA || { campaigns: {} };
     SERVER_DATA.campaigns[CAMPAIGN_ID] = { ...(SERVER_DATA.campaigns[CAMPAIGN_ID] || {}), settings: p.settings };
+    if (CHAR) renderAll(); // e.g. weapon mastery switched on: the weapons show theirs
     return;
   }
 
