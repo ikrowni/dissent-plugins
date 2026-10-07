@@ -176,7 +176,7 @@
     },
     {
       "url": "book/book-monsters.js",
-      "sha256": "7c7f15fbcd79ca1ef62ae861d53367c0e90498563a7eaad86da5e87b0efebc9f"
+      "sha256": "f1d45fef2da6bb2abc9ec3284c451054d6a6923df25ceb3690c03ed613227d25"
     },
     {
       "url": "book/book-ocr-lines.js",
@@ -212,7 +212,7 @@
     },
     {
       "url": "book/book-scan.js",
-      "sha256": "f4d250b36c5fe9be466b28c836615e4d6e892ec1dc62662e37504e56865793e8"
+      "sha256": "125e59363ff1c6bc22624e67962432d203d559da87acf3aca85a79078d65d01d"
     },
     {
       "url": "book/book-screens.js",

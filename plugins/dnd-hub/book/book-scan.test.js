@@ -120,6 +120,16 @@ describe('a 2021-style scan', () => {
   it('a score row with OCR marks between the scores is read', () => {
     expect(scanScores(['18 (+4) 8 (-1) 20 (+5) 14 (+2) =14. (+2) ~—-18 (+4)'])).toEqual([18, 8, 20, 14, 14, 18]);
   });
+  it('🔴 one score that does not fit its modifier spoils the row — a wrong number is worse than none', () => {
+    // Rahadin, a copy whose text layer read "22 (+6)" as "2 (+6)": the old "four of six agree" rule took DEX 2.
+    expect(scanScores(['14 (+2) 2 (+6) 17 (+3) 15 (+2) 16 (+3) 18 (+4)'])).toBe(null);
+    // A printed slip (one modifier off by one: Iron Route's "11 (+1)") is not a misread; two are.
+    expect(scanScores(['14 (+2) 10 (+0) 12 (+1) 11 (+1) 13 (+1) 16 (+3)'])).toEqual([14, 10, 12, 11, 13, 16]);
+    expect(scanScores(['14 (+2) 10 (+1) 12 (+1) 11 (+1) 13 (+1) 16 (+3)'])).toBe(null);
+    // The sign is not trusted (OCR reads "−1" as "+1"), and "43" is "+3".
+    expect(scanScores(['8 (+1) 13 (+1) 12 (+1) 11 (+0) 12 (+1) 9 (+1)'])).toEqual([8, 13, 12, 11, 12, 9]);
+    expect(scanScores(['14 (+2) 22 (+6) 17(43) 15 (+2) 16 (+3) 18 (+4)'])).toEqual([14, 22, 17, 15, 16, 18]);
+  });
   it('six numbers whose modifiers mostly disagree are not scores', () => {
     expect(scanScores(['18 (+0) 8 (+3) 20 (-2) 14 (+5) 14 (-1) 18 (+1)'])).toBe(null);
   });

@@ -132,17 +132,25 @@ export const isScoreHeader = t => (String(t).match(/\b(STR|DEX|CON|INT|WIS|CHA)\
  */
 export const scoreRows = texts => texts.filter(x => !/^\W*(?:(?:STR|DEX|CON|INT|WIS|CHA)\W*)+$/i.test(x)).slice(0, 2);
 
+// A modifier is at most 10. "43" is "+3" with its "+" read as a 4 ("17(43)"); any other two digits are unreadable.
+const modOf = d => (d == null || +d <= 10 ? (d == null ? null : +d) : /^4\d$/.test(d) ? +d[1] : NaN);
+
 export function scanScores(texts) {
-  for (let n = 1; n <= Math.min(2, texts.length); n++) {
+  for (let n = 1; n <= Math.min(3, texts.length); n++) {
     // A score, maybe OCR marks ("=14. (+2)"), then its modifier in brackets.
     const found = [...texts.slice(0, n).join(' ').matchAll(/(\d{1,2})[\s.,:;'"=~_|-]*\(\s*([+\-–—−~]?)\s*(\d{1,2})?/g)]
-      .map(x => ({ v: +x[1], mod: x[3] == null ? null : (/[-–—−~]/.test(x[2]) ? -x[3] : +x[3]) }));
+      .map(x => ({ v: +x[1], mod: x[3] == null ? null : (/[-–—−~]/.test(x[2]) ? -modOf(x[3]) : modOf(x[3])) }));
     if (found.length < 6) continue;
     const six = found.slice(0, 6);
     if (!six.every(f => f.v >= 1 && f.v <= 30)) return null;
-    // A stat block's modifier is (score − 10) / 2 rounded down: most of the six must agree, or this is not a score row.
-    const agree = six.filter(f => f.mod != null && f.mod === Math.floor((f.v - 10) / 2)).length;
-    return agree >= 4 || six.every(f => f.mod == null) ? six.map(f => f.v) : null;
+    // A stat block's modifier is (score − 10) / 2 rounded down. 🔴 One that does not fit means a number was misread
+    // ("22 (+6)" read as "2 (+6)", Rahadin): the row is not taken — a wrong score is worse than an unread one, which
+    // the DM (or the on-device AI) fills in. The sign is not trusted: OCR reads "−1" as "+1" or "~1".
+    // One modifier off by exactly one is a printing slip, not a misread (Iron Route prints "11 (+1)").
+    const off = f => Math.abs(Math.abs(f.mod) - Math.abs(Math.floor((f.v - 10) / 2)));
+    const read = six.filter(f => f.mod != null && !Number.isNaN(f.mod));
+    if (read.some(f => off(f) > 1) || read.filter(f => off(f) === 1).length > 1) return null;
+    return read.length >= 4 || !read.length ? six.map(f => f.v) : null;
   }
   return looseScores(texts.slice(0, 2).join(' '));
 }

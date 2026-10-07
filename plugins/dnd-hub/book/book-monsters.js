@@ -76,9 +76,16 @@ export function findMonsters(lines) {
   const out = [];
   for (let i = 0; i < lines.length; i++) {
     if (!isBlockStart(lines, i)) continue;
-    let end = i + 2;
-    while (end < lines.length && !isBlockStart(lines, end)
-      && !(lines[end].size >= BLOCK_HEADING && !sectionHeading(lines[end].text, SECTIONS))) end++;
+    // A heading ends the block only after its Actions (or another section): before them it is a sidebar set inside
+    // the block ("RAHADIN'S TRAITS" sits between his traits and his actions; cutting there lost his challenge rating
+    // and every action). The scan reader does the same (findScanned). 150 lines at most.
+    let end = i + 2, acted = false;
+    while (end < lines.length && end - i < 150 && !isBlockStart(lines, end)) {
+      const t = lines[end].text;
+      if (sectionHeading(t, SECTIONS)) acted = true;
+      else if (lines[end].size >= BLOCK_HEADING && (acted || /^(chapter|appendix)\b/i.test(t.trim()))) break;
+      end++;
+    }
     out.push(readBlock(lines, i, end - 1));
     i = end - 1;
   }
@@ -206,12 +213,13 @@ function readBlock(lines, start, last, scan = null) {
       continue;
     }
     if (/^STR\s+DEX\s+CON\s+INT\s+WIS\s+CHA$/.test(t)) {
-      const nums = [];
-      for (let k = i + 1; k <= Math.min(last, i + 3) && nums.length < 6; k++) {
-        for (const x of lines[k].text.matchAll(/(\d+)\s*\(\s*[+−–-]?\d+\s*\)/g)) nums.push(+x[1]);
-        if (nums.length >= 6) i = k;
-      }
-      ABIL.forEach((a, k) => { m[a] = nums[k] ?? null; });
+      // 🔴 All six or none, each fitting its modifier (scanScores): a book whose text layer was machine-read (a
+      // scanned copy that is not detected as one) used to fill a partial row from the left — Tree Blight came out
+      // 23 20 6 3 for 23 10 20 6 10 3. Unread, the review offers the on-device AI that row (scoreLine).
+      const nums = scanScores(lines.slice(i + 1, Math.min(last, i + 3) + 1).map(l => l.text));
+      ABIL.forEach((a, k) => { m[a] = nums?.[k] ?? null; });
+      if (!nums) scoreLine = i;
+      while (i < last && /^[\d\s()+\-−–]+$/.test(lines[i + 1].text.trim())) i++; // the number rows are not entries
       continue;
     }
     const lab = LABELS.find(l => t === l || t.startsWith(l + ' '));
@@ -270,7 +278,7 @@ function readBlock(lines, start, last, scan = null) {
   if (scan) { out.scan = true; out.unnamed = !name; out.farName = !!(name && scan.far); }
   // Where the score row sits, while its scores are unread: the review can cut that strip out of the page for the
   // on-device AI to read (book-ai-scores.js). A line index, like `lines`; book-parse.js turns it into a region.
-  if (scan && scoreLine != null && ABIL.some(a => m[a] == null)) out.scoreLine = scoreLine;
+  if (scoreLine != null && ABIL.some(a => m[a] == null)) out.scoreLine = scoreLine;
   return withProblems(out);
 }
 
