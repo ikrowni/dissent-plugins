@@ -6,7 +6,7 @@
 // new publish path reopens the leak (spec: docs/superpowers/specs/2026-10-03-lanternkeep-dm-secrets-design.md).
 import { realtimePublish as sdkPublish } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { MAP } from './dnd-hub-state.js?v=20261014y';
+import { MAP } from './dnd-hub-state.js?v=20261015a';
 
 /** Same contract as the SDK's: resolves undefined when sent (or deliberately not sent), null when refused. */
 export function realtimePublish(event, payload) {

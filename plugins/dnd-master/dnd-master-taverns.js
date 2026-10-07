@@ -5,9 +5,9 @@
 // play the sound (dnd-hub-tavern.js). The games belong to the NPCs (Actors tab); a tavern only lists who is there.
 import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014y';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261015a';
 import { cleanTavern, MAX_TAVERN_NPCS } from './lk-tavern.js';
-import { setNpcGame, placeNpcs, npcTalkPayload } from './dnd-master-actor-talk.js?v=20261014y';
+import { setNpcGame, placeNpcs, npcTalkPayload } from './dnd-master-actor-talk.js?v=20261015a';
 
 let _state = null;
 let _volTimer = 0;

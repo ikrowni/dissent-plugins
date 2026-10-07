@@ -1,47 +1,48 @@
 // dnd-hub-events.js — onInit, onEvent, handleMapEvent (realtime event dispatcher)
-import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261014y';
+import { MAP, serverData, userId, showScreen, setServerData, setUserId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261015a';
 import { request, storageGet, storageSet, getIdentity, realtimePublishCompanion, localPublish, storageGetUser, storageSetUser } from '../plugin-sdk.js';
 import { initGuides, guide } from './lk-guide-ui.js';
 import { floatHp, secretRoll } from './dnd-hub-fx-combat.js';
 import { GUIDES_KEY } from './lk-guides.js';
 import { realtimePublish } from './dnd-hub-publish.js';
 import { receivedToken, receivedPins } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014y';
-import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261014y';
+import { EV } from './dnd-hub-event-types.js?v=20261015a';
+import { renderMapBackground, ensureImageFrame, refreshGuide } from './dnd-hub-map-bg.js?v=20261015a';
 import { startShopScene, stopShopScene, startShopMedia } from './dnd-hub-shop-scene.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261014y';
-import { handleTavernEvent, closeTavernHere, TAVERN, setTavernMapLoader } from './dnd-hub-tavern.js?v=20261014y';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261015a';
+import { handleTavernEvent, closeTavernHere, TAVERN, setTavernMapLoader } from './dnd-hub-tavern.js?v=20261015a';
+import { handleScheduleEvent } from './dnd-hub-schedule.js?v=20261015a';
 import { playConditionFx } from './dnd-hub-condition-fx.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261014y';
-import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261014y';
+import { renderGrid } from './dnd-hub-grid.js?v=20261015a';
+import { renderTokens, buildTokenSprite, clearTokenCache, CLIENT_ID, moveStamp, publishMove, applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261015a';
 import { syncTurn, commitPath, refereeMove, moveToast, limitingTurnId } from './dnd-hub-turn-move.js';
 import { cellsBetween } from './dnd-hub-movement.js';
 import { allowedLevel } from './lk-levelling.js';
 import { openLevelUp, levelBurst } from './dnd-hub-levelup.js';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261014y';
-import { renderFog } from './dnd-hub-fog.js?v=20261014y';
-import { renderWalls } from './dnd-hub-walls.js?v=20261014y';
-import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261014y';
-import { loadSRD } from './dnd-hub-char.js?v=20261014y';
-import { showPingAnimation } from './dnd-hub-ruler.js?v=20261014y';
-import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261014y';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015a';
+import { renderFog } from './dnd-hub-fog.js?v=20261015a';
+import { renderWalls } from './dnd-hub-walls.js?v=20261015a';
+import { renderInitiativeHUD, showMapRollToast } from './dnd-hub-initiative.js?v=20261015a';
+import { loadSRD } from './dnd-hub-char.js?v=20261015a';
+import { showPingAnimation } from './dnd-hub-ruler.js?v=20261015a';
+import { judgeAttack, applyPendingDamage, damageTokens, showCombatToast, focusClosestEnemy, preAttack } from './dnd-hub-combat.js?v=20261015a';
 import { rule } from './lk-table-rules.js';
-import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261014y';
-import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261014y';
+import { animateDice, animateDiceFree } from './dnd-hub-dice.js?v=20261015a';
+import { renderPins, showHandoutOverlay } from './dnd-hub-pins.js?v=20261015a';
 import { setSceneApplier, handleTravelRequest, noteSceneLoaded, PIN_TRAVEL } from './dnd-hub-travel.js';
 import { whileRemote } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { renderPictures, PICTURES_UPDATE } from './dnd-hub-pictures.js';
 import { myLook } from './dnd-hub-dice-look.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261014y';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261014y';
-import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261014y';
-import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261014y';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261014y';
-import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261014y';
+import { renderLights } from './dnd-hub-lights.js?v=20261015a';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261015a';
+import { renderTriggers, checkTriggers, triggerCell, fireTrigger, showTriggerToast, showTriggerConfirm } from './dnd-hub-triggers.js?v=20261015a';
+import { updateSpatialAudio } from './dnd-hub-spatial.js?v=20261015a';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261015a';
+import { saveHubDm, loadHubDm, setSecretsUser, isUnreadCampaign } from './dnd-hub-storage.js?v=20261015a';
 import { isRepeat, publishTo } from './lk-bus.js';
 import { acceptMove, viewCentre, isOwnWaitingSpawn } from './dnd-hub-rules.js';
-import { setView } from './dnd-hub-canvas.js?v=20261014y';
+import { setView } from './dnd-hub-canvas.js?v=20261015a';
 import { startAmbience, stopAmbience, playWhenAllowed } from './dnd-hub-ambience.js';
 
 // Timestamps of dice:roll events broadcast BY THIS HUB after a physics roll —
@@ -181,6 +182,7 @@ const PRIVILEGED_EVENTS = new Set([
   'session:start','map:view','level:grant','map:weather','pictures:update',
   // the tavern: opened and closed by the DM, and only the DM's Hub (the house) seats and pays (dnd-hub-tavern-ref.js)
   'tavern:open','tavern:close','tavern:volume','tavern:busy','tavern:seated','tavern:payout','tavern:npcs',
+  'schedule:set', // the DM's next-session question (dnd-hub-schedule.js)
 ]);
 
 // Returns true if the event came from the DM of the campaign.
@@ -238,6 +240,7 @@ export async function handleMapEvent(p) {
     return;
   }
   if (p.type.startsWith('tavern:')) { await handleTavernEvent(p); return; }
+  if (p.type.startsWith('schedule:')) { await handleScheduleEvent(p); return; }
 
   switch (p.type) {
     // A player joined or finished a character: the DM's copy of the campaign is stale until it is

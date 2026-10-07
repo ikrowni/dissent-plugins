@@ -240,3 +240,5 @@ html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
 .lk-dice-panel .lk-chips{margin-top:10px}
 .lk-dice-try{display:block;width:100%;margin-top:12px;padding:7px;border-radius:7px;border:1px solid rgba(224,181,82,.45);background:rgba(224,181,82,.12);color:var(--lk-gold);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .lk-picture-menu{min-width:280px}
+/* an answer is waiting (the 📅 Next button) */
+.lk-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--lk-gold);margin-left:4px;box-shadow:0 0 6px var(--lk-gold);vertical-align:middle}

@@ -1,18 +1,19 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261014y';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015a';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261014y';
+import { EV } from './dnd-hub-event-types.js?v=20261015a';
+import { startSchedule } from './dnd-hub-schedule.js?v=20261015a';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261014y';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261014y';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261014y';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015a';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261015a';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261015a';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261014y';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015a';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -457,6 +458,7 @@ export async function renderCampaignView(campaignId, isDM) {
           <button class="map-tool-btn" onclick="showTemplatePicker()" title="Place an area template (spell radius, cone, line)">${icon('target')}Template</button>
         `}
         <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+          <button class="map-tool-btn" id="btn-next-session" onclick="toggleSchedulePanel()" title="Next session">${icon('calendar-clock')}Next</button>
           <button class="map-tool-btn" id="btn-dice-look" onclick="toggleDicePanel()" title="Your dice: pick a skin or your own colours">${icon('dices')}Dice</button>
           <button class="map-tool-btn" id="btn-guides" onclick="toggleGuides()" title="Guides: short tips the first time something happens" aria-pressed="true">${icon('lantern')}Guide</button>
           <button class="map-tool-btn" onclick="setZoom(MAP.zoom - 0.25)" title="Zoom out" aria-label="Zoom out">${icon('zoom-out')}</button>
@@ -536,6 +538,7 @@ export async function renderCampaignView(campaignId, isDM) {
       </div>
     </div>
   `;
+  startSchedule(); // the 📅 button, the answers, the day-before reminder (dnd-hub-schedule.js)
 
   await initPixiApp();
   initKeyboardHandlers();

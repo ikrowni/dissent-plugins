@@ -1,6 +1,6 @@
 // dnd-master-session.js — Start session / End session at the top of Run (spec 2026-10-03 §6). Decisions live in
 // dnd-master-session-rules.js; this file draws the bar and the two windows and writes the campaign records.
-import { EV } from './dnd-hub-event-types.js?v=20261014y';
+import { EV } from './dnd-hub-event-types.js?v=20261015a';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
 import { esc, genId } from '../plugin-sdk.js';
@@ -23,6 +23,7 @@ export function renderSessionBar() {
     ? `<span style="flex:1;font-size:10px;color:var(--muted)">Session running since ${esc(new Date(open.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>` +
       '<button class="btn btn-ghost" onclick="openEndSession()">End session</button>'
     : '<button class="btn btn-gold" style="flex:1" onclick="openStartSession()">Start session</button>';
+  el.innerHTML += '<button class="btn btn-ghost" onclick="openSchedule()" title="Ask the table when they can play next">📅 Next</button>';
   // Growing your hero: one button for the table's levelling rule.
   el.innerHTML += levellingByXp()
     ? '<button class="btn btn-ghost" onclick="giveXpParty()">Give XP</button>'
