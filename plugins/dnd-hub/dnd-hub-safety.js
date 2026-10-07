@@ -4,10 +4,10 @@
 // DM's Hub keeps who asked for what in the campaign's DM-only part (`safetyByUser`, lk-secrets.js) and shares only the
 // combined, nameless list (`campaign.safety`, `safety:table`). The DM may be away when a player sets theirs, so a
 // player's Hub sends them again each time the map opens. The X (`safety:x`) shows on every screen without a name.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015c';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015d';
 import { esc, storageGet, storageSet } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015c';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015d';
 import { TOPICS, cleanPicks, combine, X_COOLDOWN_MS } from './lk-safety.js';
 
 let _mine = { topics: {}, custom: [] };
@@ -67,10 +67,16 @@ function drawPanel() {
   };
 }
 
-async function saveMine() {
+// One at a time, numbered: three quick changes sent at once arrived out of order and an older set won (playtest).
+let _chain = Promise.resolve(), _seq = 0;
+function saveMine() {
   _mine = cleanPicks(_mine);
-  await storageSet(myKey(), _mine, 'user');
-  await send('safety:set', { picks: _mine });
+  const picks = _mine, seq = Date.now() * 1000 + (++_seq % 1000);
+  _chain = _chain.then(async () => {
+    await storageSet(myKey(), picks, 'user');
+    await send('safety:set', { picks, seq });
+  }).catch(() => {});
+  return _chain;
 }
 
 /** The ✋ X: no reason, no name, on every screen. */
@@ -97,7 +103,9 @@ export async function handleSafetyEvent(p) {
   if (p.type === 'safety:x') { if (p.fromUserId !== userId) showX(); return; }
   if (p.type === 'safety:table') { if (c) c.safety = p.safety; drawPanel(); return; }
   if (p.type === 'safety:set' && MAP.isDM && c && p.fromUserId && (c.members || []).includes(p.fromUserId)) {
-    c.safetyByUser = { ...(c.safetyByUser || {}), [p.fromUserId]: cleanPicks(p.picks) };
+    const seq = Number(p.seq) || 0;
+    if (seq && seq <= (c.safetyByUser?.[p.fromUserId]?.seq || 0)) return; // older than what we have
+    c.safetyByUser = { ...(c.safetyByUser || {}), [p.fromUserId]: { ...cleanPicks(p.picks), seq } };
     const next = combine(c.safetyByUser);
     if (JSON.stringify(next) === JSON.stringify(c.safety || { lines: [], veils: [] })) return;
     c.safety = next;
@@ -111,5 +119,5 @@ export async function handleSafetyEvent(p) {
 export async function startSafety() {
   if (MAP.isDM) return;
   _mine = cleanPicks(await storageGet(myKey(), 'user'));
-  if (Object.keys(_mine.topics).length || _mine.custom.length) await send('safety:set', { picks: _mine });
+  if (Object.keys(_mine.topics).length || _mine.custom.length) await saveMine();
 }

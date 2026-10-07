@@ -3,10 +3,10 @@
 // The house (dnd-hub-tavern-ref.js) seats a hero and hands the seat here; the runner keeps a lobby open for a few
 // seconds so others can sit down, then plays the game with every hero there plus the host's NPCs, and settles each
 // seat itself (a hero's screen never reports a whole-table result). Its state goes to every Hub as `tavern:game`.
-import { MAP } from './dnd-hub-state.js?v=20261015c';
+import { MAP } from './dnd-hub-state.js?v=20261015d';
 import { publishTo } from './lk-bus.js';
-import { createTableRunner } from './tavern-games/table-runner.js?v=20261015c';
-import { loadTableRules } from './dnd-hub-tavern-games.js?v=20261015c';
+import { createTableRunner } from './tavern-games/table-runner.js?v=20261015d';
+import { loadTableRules } from './dnd-hub-tavern-games.js?v=20261015d';
 
 const _tables = new Map(); // hostId → runner
 

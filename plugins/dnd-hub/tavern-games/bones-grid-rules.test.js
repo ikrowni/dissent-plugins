@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { columnScore, boardScore, place, emptyBoard, hostMove, winner, rerolls, moveValue, isFull } from './bones-grid-rules.js?v=20261015c';
+import { columnScore, boardScore, place, emptyBoard, hostMove, winner, rerolls, moveValue, isFull } from './bones-grid-rules.js?v=20261015d';
 
 describe('scoring', () => {
   it('multiplies matching faces in a column', () => {
