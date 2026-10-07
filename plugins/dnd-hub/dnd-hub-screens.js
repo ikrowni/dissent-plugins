@@ -1,20 +1,21 @@
 // dnd-hub-screens.js — lobby, DM portal, join screen, campaign view, campaign wizard
-import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015f';
+import { MAP, serverData, userId, showScreen, setServerData } from './dnd-hub-state.js?v=20261015g';
 import { storageGet, storageSet, storageGetUser, storageSetUser, getIdentity, esc, fmtDate, genId, storageDelete, releaseFileContext, localPublish } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015f';
-import { startSchedule } from './dnd-hub-schedule.js?v=20261015f';
-import { startSafety } from './dnd-hub-safety.js?v=20261015f';
+import { EV } from './dnd-hub-event-types.js?v=20261015g';
+import { startSchedule } from './dnd-hub-schedule.js?v=20261015g';
+import { startSafety } from './dnd-hub-safety.js?v=20261015g';
+import { startStage } from './dnd-hub-stage.js?v=20261015g';
 import { icon } from './lk-icons.js';
-import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015f';
-import { loadMapData } from './dnd-hub-map-bg.js?v=20261015f';
-import { startCharacterCreator } from './dnd-hub-char.js?v=20261015f';
+import { initPixiApp, initKeyboardHandlers } from './dnd-hub-canvas.js?v=20261015g';
+import { loadMapData } from './dnd-hub-map-bg.js?v=20261015g';
+import { startCharacterCreator } from './dnd-hub-char.js?v=20261015g';
 import { campaignRecord } from './dnd-hub-rules.js';
 import { showQuickCharacter } from './dnd-hub-forge.js';
 import { sendBookMonsters } from './book/book-reader.js';
 import { guide, guidesOn, setGuidesOn } from './lk-guide-ui.js';
 import { startWeather } from './dnd-hub-weather.js';
-import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015f';
+import { saveHubDm, loadHubDm, hubCampKey, joinSecrets, otherCampaigns, loadCampaign } from './dnd-hub-storage.js?v=20261015g';
 
 // ── Screen frame renderers ────────────────────────────────────────────────────
 export function renderLobbyScreen() {
@@ -545,6 +546,7 @@ export async function renderCampaignView(campaignId, isDM) {
   startSafety().catch(() => {}); // my lines and veils, sent again for the DM's Hub (dnd-hub-safety.js)
 
   await initPixiApp();
+  startStage(); // a talking scene already under way (dnd-hub-stage.js)
   initKeyboardHandlers();
   await loadMapData(campaignId);
   startWeather(); // after the map's canvas, so it sits above it
