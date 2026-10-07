@@ -5,6 +5,8 @@
 // they become ONE book; images become pictures, grouped by their folder; .lkpack copies open as they always did; the
 // rest is listed as left out, so the DM can see nothing was lost silently.
 
+import { mergeCopies, mergeItemCopies } from './book-merge.js';
+
 const IMAGE = /\.(png|jpe?g|webp|gif|bmp)$/i;
 // Copies a Mac or Windows adds to an archive, never the DM's content.
 const JUNK = /(^|\/)(__MACOSX\/|\.DS_Store$|Thumbs\.db$|desktop\.ini$|\._)/i;
@@ -58,5 +60,7 @@ export function mergeParsed(parts) {
   parts.forEach(({ parsed }, doc) => {
     for (const kind of Object.keys(out)) for (const e of parsed[kind] || []) out[kind].push({ ...e, id: unique(kind, e), doc });
   });
+  // The same book in two PDFs: each creature and item once, filled from both readings (book-merge.js).
+  if (parts.length > 1) { out.monsters = mergeCopies(out.monsters); out.items = mergeItemCopies(out.items); }
   return out;
 }

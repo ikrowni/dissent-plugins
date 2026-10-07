@@ -124,7 +124,7 @@
     },
     {
       "url": "book/book-bundle.js",
-      "sha256": "d3a6f39c6bd10b78d13b7dc4c92935812f6918e0ac39eeb2b0cb789e587c3072"
+      "sha256": "79a9a0e5db9b0d9dc7e85ca576129861cb74286ca6a83b0a7a9ae89ce76a1940"
     },
     {
       "url": "book/book-cut-actions.js",
@@ -172,7 +172,7 @@
     },
     {
       "url": "book/book-merge.js",
-      "sha256": "63e8db0094eeae548c4363defd5098787ea24e6b362348692500de66ad413886"
+      "sha256": "f85f51baa854bc30aab31b267012096d1b48444f04b3f973ac5b95e097ebba04"
     },
     {
       "url": "book/book-monsters.js",
