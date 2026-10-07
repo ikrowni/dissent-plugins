@@ -1,7 +1,7 @@
 // dnd-hub-popovers.js — the map's small panels and menus close when you click anywhere else, or press Escape.
 // Before, the dice, weather and grid panels closed only from the button that opened them, and the template picker
 // not at all (owner, 2026-10-05).
-import { templatePending, destroyTemplatePicker } from './dnd-hub-templates.js?v=20261014w';
+import { templatePending, destroyTemplatePicker } from './dnd-hub-templates.js?v=20261014x';
 
 const remove = el => el.remove();
 const POPOVERS = [

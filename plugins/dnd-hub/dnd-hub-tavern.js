@@ -5,18 +5,19 @@
 // the NPC stands (dnd-hub-tavern-ref.js). A TAVERN is the DM's NPCs on a map of their choosing with a sound: the DM's
 // sidebar has already put the NPCs on the map (dnd-master-taverns.js); `tavern:open` switches every screen to that
 // map and plays the sound. The drawn tavern scene and the row of hosts are gone (owner, 2026-10-07).
-import { MAP, userId } from './dnd-hub-state.js?v=20261014w';
+import { MAP, userId } from './dnd-hub-state.js?v=20261014x';
 import { localPublish } from '../plugin-sdk.js';
-import { fileUrl } from './dnd-hub-file-url.js?v=20261014w';
+import { fileUrl } from './dnd-hub-file-url.js?v=20261014x';
 import { cleanTavern, gameType } from './lk-tavern.js';
 import { publishTo } from './lk-bus.js';
 import { stopShopScene } from './dnd-hub-shop-scene.js';
 import { playWhenAllowed } from './dnd-hub-ambience.js';
 import { moveToast } from './dnd-hub-turn-move.js';
-import { openTalk, closeTalk, setHero, myHero } from './dnd-hub-tavern-talk.js?v=20261014w';
-import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261014w';
-import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014w';
-import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014w';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261014x';
+import { openTalk, closeTalk, setHero, myHero } from './dnd-hub-tavern-talk.js?v=20261014x';
+import { onSeatEvent, leaveTable, seatedAt } from './dnd-hub-tavern-seat.js?v=20261014x';
+import { refereeEvent, refereeOpen, refereeClose } from './dnd-hub-tavern-ref.js?v=20261014x';
+import { setNpcTalk, talkFor, setupOf, actorOf, heroInReach } from './dnd-hub-tavern-npcs.js?v=20261014x';
 
 /** open: the loaded tavern { id, mapId } or null. busy: who is playing with which NPC, { actorId: [names] }. */
 export const TAVERN = { open: null, busy: {} };
@@ -56,6 +57,9 @@ async function openHere(p) {
   for (const k of ['_shopAudio', '_soundtrackAudio']) if (MAP[k]) { MAP[k].pause(); MAP[k].src = ''; MAP[k] = null; }
   if (t.mapId && t.mapId !== MAP.mapId) await _loadMap?.(t.mapId);
   if (TAVERN.open?.id !== t.id) return; // closed meanwhile
+  // The NPCs the sidebar just stood here travel with the event: a storage read refused under HTTP 429 lost them.
+  const fresh = (Array.isArray(p.npcTokens) ? p.npcTokens : []).filter(k => k?.id && MAP.mapData?.tokens && !MAP.mapData.tokens[k.id]);
+  if (fresh.length) { for (const k of fresh) MAP.mapData.tokens[k.id] = k; renderTokens(); }
   if (t.soundFileId) fileUrl(t.soundFileId).then(res => {
     if (!res?.url || TAVERN.open?.id !== t.id) return;
     const aud = new Audio(res.url);

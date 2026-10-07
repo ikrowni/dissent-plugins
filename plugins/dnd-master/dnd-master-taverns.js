@@ -5,9 +5,9 @@
 // play the sound (dnd-hub-tavern.js). The games belong to the NPCs (Actors tab); a tavern only lists who is there.
 import { esc, genId, request, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014w';
+import { persistDmCatalog, uploadCampaignFile } from './dnd-master-shops.js?v=20261014x';
 import { cleanTavern, MAX_TAVERN_NPCS } from './lk-tavern.js';
-import { setNpcGame, placeNpcs, npcTalkPayload } from './dnd-master-actor-talk.js?v=20261014w';
+import { setNpcGame, placeNpcs, npcTalkPayload } from './dnd-master-actor-talk.js?v=20261014x';
 
 let _state = null;
 let _volTimer = 0;
@@ -136,8 +136,9 @@ export async function openTavern(t, btn = null) {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   try {
     const placed = await placeNpcs(tavern.npcIds, tavern.mapId);
-    if (placed === false) { alert(`${tavern.name} did not load: the map could not be read. Try again in a moment.`); return; }
-    const payload = { type: 'tavern:open', tavernId: tavern.id, tavern, ...npcTalkPayload(), campaignId: _state.dmCampaignId, fromUserId: _state.userId };
+    if (placed === false) { alert(`${tavern.name} did not load: its map is gone. Pick another.`); return; }
+    const payload = { type: 'tavern:open', tavernId: tavern.id, tavern, npcTokens: placed, ...npcTalkPayload(),
+      campaignId: _state.dmCampaignId, fromUserId: _state.userId };
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         await request('realtime:publish-companion', { registryId: 'dnd-hub', event: 'tavern:open', data: payload });
