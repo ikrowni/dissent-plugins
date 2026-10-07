@@ -2,9 +2,9 @@
 //
 // Pick a card from your hand, then a lane (click, or keys 1–7 then 1–3). Intelligence brings a bigger hand.
 // Cheating: mark the deck and see the host's hand (Sleight of Hand vs the host's eye). Rules: hearthlane-rules.js.
-import { CARDS, PLAYS, LANE_CAP, handSize, newGame, lanePower, legalLanes, play as playCard, over, score, hostMove } from './hearthlane-rules.js?v=20261014v';
-import { useKit, loadCss, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014v';
-import { clack, chime, crack, tick } from './tavern-sfx.js?v=20261014v';
+import { CARDS, PLAYS, LANE_CAP, handSize, newGame, lanePower, legalLanes, play as playCard, over, score, hostMove } from './hearthlane-rules.js?v=20261014w';
+import { useKit, loadCss, el, btn, banner, coins, sleep, pick } from './kit.js?v=20261014w';
+import { clack, chime, crack, tick } from './tavern-sfx.js?v=20261014w';
 import { icon } from '../lk-icons.js';
 
 const BARKS = {
@@ -15,7 +15,7 @@ const BARKS = {
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('hl-css', './hearthlane.css?v=20261014v', import.meta.url);
+  loadCss('hl-css', './hearthlane.css?v=20261014w', import.meta.url);
   const wrap = el('div', 'tk-felt hl');
   wrap.innerHTML = `<div class="hl-hosthand"></div><div class="hl-board"></div><div class="tk-note hl-status" aria-live="polite"></div>
     <div class="hl-hand"></div><div class="tk-row hl-tricks"></div>`;
