@@ -1,6 +1,6 @@
 // plugins/dnd-hub/book/book-snippet-geom.test.js — where an entry sits on its page(s). Hand-written lines only.
 import { describe, it, expect } from 'vitest';
-import { entryRegions, toPageRect, MARGIN } from './book-snippet-geom.js';
+import { entryRegions, toPageRect, scoreRegion, MARGIN } from './book-snippet-geom.js';
 
 const ln = (page, x, y, w = 200, size = 10, extra = {}) => ({ text: 't', size, runs: [], page, x, y, w, ...extra });
 
@@ -39,5 +39,38 @@ describe('toPageRect (top-down points, with a margin, inside the page)', () => {
   });
   it('a region with nothing in it is null', () => {
     expect(toPageRect({ page: 1, x0: 57, x1: 57, top: 700, bottom: 700, fromTop: false }, 0, 0)).toBe(null);
+  });
+});
+
+describe('scoreRegion', () => {
+  it('an OCR header line: from its top to about two lines below it', () => {
+    const r = scoreRegion([{ page: 205, x: 72, y: 201, w: 199, size: 12, fromTop: true }], 0);
+    expect(r).toEqual({ page: 205, x0: 57.6, x1: 285.4, top: 201, bottom: 238.2, fromTop: true }); // ±1.2 lines; 201 + 14.4 + 22.8
+    const rect = toPageRect(r, 612, 792);
+    expect(rect.h).toBeCloseTo(37.2 + 2 * MARGIN, 5);
+  });
+
+  it('a text-layer line (baseline from the bottom): the strip runs DOWN the page', () => {
+    const r = scoreRegion([{ page: 3, x: 50, y: 500, w: 180, size: 10 }], 0);
+    expect(r).toMatchObject({ top: 510, bottom: 478, fromTop: false }); // 500 − 3 − 19
+    const rect = toPageRect(r, 612, 792);
+    expect(rect.y).toBeCloseTo(792 - 510 - MARGIN, 5);
+    expect(rect.h).toBeCloseTo(32 + 2 * MARGIN, 5);
+  });
+
+  it('joins a header the text layer split on one baseline, and nothing from another line', () => {
+    const lines = [
+      { page: 7, x: 40, y: 600, w: 20, size: 10, text: 'STR' },
+      { page: 7, x: 90, y: 600.5, w: 150, size: 10, text: 'DEX CON INT WIS CHA' },
+      { page: 7, x: 300, y: 600, w: 80, size: 10, text: 'a story column' },
+      { page: 7, x: 10, y: 580, w: 400, size: 10, text: 'STR saving throws are hard' },
+    ];
+    const r = scoreRegion(lines, 1);
+    expect(r).toMatchObject({ x0: 28, x1: 252 });
+  });
+
+  it('null for a line with no position', () => {
+    expect(scoreRegion([{ page: 1, text: 'STR DEX' }], 0)).toBeNull();
+    expect(scoreRegion([], 3)).toBeNull();
   });
 });

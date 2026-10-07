@@ -7,7 +7,7 @@ import { findItems } from './book-items.js';
 import { findStory } from './book-story.js';
 import { isScanned } from './book-scan.js';
 import { mergeReadings } from './book-merge.js';
-import { entryRegions } from './book-snippet-geom.js';
+import { entryRegions, scoreRegion } from './book-snippet-geom.js';
 
 // `scanLines`: a scan read again with our own OCR (book-ocr.js) passes `lines` = the OCR'd book and `scanLines` =
 // the scan's own text; monsters are taken from both (book-merge.js). Nothing else is read twice.
@@ -16,7 +16,11 @@ export function parseBook(lines, { scanLines = null, outline = null, scanned: kn
   const scanned = known ?? isScanned(lines);
   // Where each find sat on its page (book-snippet-geom.js): the review shows that part of the real page beside it.
   // Taken against the lines it was found in: a scan's second reading has its own lines.
-  const withSrc = arr => e => ({ ...e, src: entryRegions(arr, e.lines) });
+  const withSrc = arr => e => {
+    const out = { ...e, src: entryRegions(arr, e.lines) };
+    if (e.scoreLine != null) { const r = scoreRegion(arr, e.scoreLine); if (r) out.scoreSrc = r; delete out.scoreLine; }
+    return out;
+  };
   const monsters = scanLines
     ? mergeReadings(findMonsters(lines).map(withSrc(lines)), findMonsters(scanLines).map(withSrc(scanLines)))
     : findMonsters(lines).map(withSrc(lines));

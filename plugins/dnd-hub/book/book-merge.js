@@ -28,6 +28,8 @@ export function mergeReadings(primary, secondary) {
     if ((m.unnamed && !b.unnamed) || (m.farName && !b.unnamed && !b.farName)) Object.assign(m, { name: b.name, unnamed: false, farName: b.farName });
     if (!m.size && b.size) Object.assign(m, { size: b.size, type: b.type, subtype: b.subtype, alignment: b.alignment });
     if (ABIL.some(k => m[k] == null) && ABIL.every(k => b[k] != null)) for (const k of ABIL) m[k] = b[k];
+    // Still unread: keep a place the review can cut the score row from (book-ai-scores.js), from either reading.
+    if (ABIL.some(k => m[k] == null)) m.scoreSrc ??= b.scoreSrc; else delete m.scoreSrc;
     for (const [k, k2] of [['ac', 'ac_type'], ['hp', 'hp_dice'], ['cr', 'xp']]) if (m[k] == null && b[k] != null) { m[k] = b[k]; m[k2] = b[k2]; }
     if (!Object.keys(m.speed || {}).length) m.speed = b.speed;
     if (!Object.keys(m.senses || {}).length) m.senses = b.senses;

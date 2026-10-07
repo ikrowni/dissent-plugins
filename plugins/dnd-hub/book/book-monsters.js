@@ -164,7 +164,7 @@ function readBlock(lines, start, last, scan = null) {
   const fields = {};
   const body = bodyFont(lines.slice(first, last + 1));
   const entryAt = k => (scan ? textEntry(lines[k].text) : entryStart(lines[k], body));
-  let i = first, label = null, section = 'special_abilities', entry = null, intro = false, entryX = null, scored = false, actionsX = null;
+  let i = first, label = null, section = 'special_abilities', entry = null, intro = false, entryX = null, scored = false, actionsX = null, scoreLine = null;
   const close = () => { if (entry) m[section].push(entry); entry = null; };
 
   for (; i <= last; i++) {
@@ -180,6 +180,7 @@ function readBlock(lines, start, last, scan = null) {
     if ((mm = t.match(/^Speed\s+(.+)/))) { m.speed = speedOf(mm[1]); continue; }
     if (scan && isScoreHeader(t)) {
       scored = true;
+      scoreLine = i;
       const nums = scanScores(scoreRows(lines.slice(i + 1, Math.min(last, i + 4) + 1).map(l => l.text))) || [];
       ABIL.forEach((a, k) => { m[a] = nums[k] ?? null; });
       continue;
@@ -267,6 +268,9 @@ function readBlock(lines, start, last, scan = null) {
   if (scan && m.con != null && !scoresFitHp(m.con, m.hp_dice)) for (const a of ABIL) m[a] = null;
   const out = { ...m, lines: [start, last], page: lines[start].page };
   if (scan) { out.scan = true; out.unnamed = !name; out.farName = !!(name && scan.far); }
+  // Where the score row sits, while its scores are unread: the review can cut that strip out of the page for the
+  // on-device AI to read (book-ai-scores.js). A line index, like `lines`; book-parse.js turns it into a region.
+  if (scan && scoreLine != null && ABIL.some(a => m[a] == null)) out.scoreLine = scoreLine;
   return withProblems(out);
 }
 

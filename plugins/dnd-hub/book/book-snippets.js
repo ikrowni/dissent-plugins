@@ -13,33 +13,43 @@ async function docFor(blob) {
   return _doc;
 }
 
+/** The picture of one region (entryRegions / scoreRegion) of `doc`, rendered at `scale` (1 = 72 dpi); null if empty. */
+async function regionPicture(doc, r, scale, type, quality) {
+  const page = await doc.getPage(r.page);
+  try {
+    const one = page.getViewport({ scale: 1 });
+    const rect = toPageRect(r, one.width, one.height);
+    if (!rect) return null;
+    const vp = page.getViewport({ scale });
+    const full = document.createElement('canvas');
+    full.width = Math.round(vp.width); full.height = Math.round(vp.height);
+    const ctx = full.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, full.width, full.height);
+    await page.render({ canvasContext: ctx, viewport: vp, canvas: full }).promise;
+    const out = document.createElement('canvas');
+    out.width = Math.round(rect.w * scale); out.height = Math.round(rect.h * scale);
+    out.getContext('2d').drawImage(full, rect.x * scale, rect.y * scale, out.width, out.height, 0, 0, out.width, out.height);
+    full.width = full.height = 0;
+    return await new Promise(res => out.toBlob(res, type, quality));
+  } finally { page.cleanup(); }
+}
+
 /** Object URLs of the pictures of `src` (entryRegions), one per region; cached under `key` for this PDF. */
 export async function snippetUrls(blob, key, src) {
   if (_blob === blob && _urls.has(key)) return _urls.get(key);
   const doc = await docFor(blob);
   const urls = [];
   for (const r of src || []) {
-    const page = await doc.getPage(r.page);
-    try {
-      const one = page.getViewport({ scale: 1 });
-      const rect = toPageRect(r, one.width, one.height);
-      if (!rect) continue;
-      const vp = page.getViewport({ scale: SCALE });
-      const full = document.createElement('canvas');
-      full.width = Math.round(vp.width); full.height = Math.round(vp.height);
-      const ctx = full.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, full.width, full.height);
-      await page.render({ canvasContext: ctx, viewport: vp, canvas: full }).promise;
-      const out = document.createElement('canvas');
-      out.width = Math.round(rect.w * SCALE); out.height = Math.round(rect.h * SCALE);
-      out.getContext('2d').drawImage(full, rect.x * SCALE, rect.y * SCALE, out.width, out.height, 0, 0, out.width, out.height);
-      full.width = full.height = 0;
-      const pic = await new Promise(res => out.toBlob(res, 'image/webp', 0.85));
-      if (pic) urls.push(URL.createObjectURL(pic));
-    } finally { page.cleanup(); }
+    const pic = await regionPicture(doc, r, SCALE, 'image/webp', 0.85);
+    if (pic) urls.push(URL.createObjectURL(pic));
   }
   if (_blob === blob) _urls.set(key, urls);
   return urls;
+}
+
+/** One region as a sharp PNG for the on-device AI to read (300 dpi, as the spike measured). Not cached. */
+export async function regionPng(blob, region) {
+  return regionPicture(await docFor(blob), region, 300 / 72, 'image/png');
 }
 
 /** Forget the open PDF and its pictures (leaving the review). */

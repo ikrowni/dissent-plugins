@@ -4,8 +4,8 @@
 // click saves; the unsure ones say why.
 import { esc, saveToDevice, request } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
-import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014u';
-import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014u';
+import { serverData, userId, setServerData } from '../dnd-hub-state.js?v=20261014v';
+import { saveHubDm, loadHubDm } from '../dnd-hub-storage.js?v=20261014v';
 import { makeBook, toPack, fromPack, packFileName } from '../lk-book.js';
 import { readBundle } from './book-import.js';
 import { rememberPdf } from './book-pdf.js';
@@ -17,6 +17,7 @@ import { snippetUrls, closeSnippets } from './book-snippets.js';
 import { SORT_OPTIONS, kindFromChoice, paintedPage } from './book-images.js';
 import { parseBook } from './book-parse.js';
 import { readScannedPages } from './book-ocr.js';
+import { needsScores, readMissingScores } from './book-ai-scores.js';
 
 const KINDS = [['monsters', 'Monsters'], ['spells', 'Spells'], ['items', 'Magic items'], ['story', 'Index'], ['images', 'Maps & art']];
 let S = null; // { mode: 'list'|'reading'|'review'|'saved', ... }
@@ -255,7 +256,8 @@ function applyReadPages(st, d, found, lines) {
 const countOf = (st, k, d) => st.parsed[k].filter(e => (e.doc || 0) === d).length;
 
 function meta(k, e) {
-  if (k === 'monsters') return [`CR ${crText(e.cr)}`, [e.size, e.type].filter(Boolean).join(' '), e.hp ? `${e.hp} HP` : ''].filter(Boolean).join(' · ');
+  if (k === 'monsters') return [`CR ${crText(e.cr)}`, [e.size, e.type].filter(Boolean).join(' '), e.hp ? `${e.hp} HP` : '',
+    e.aiScores ? 'scores read by on-device AI' : ''].filter(Boolean).join(' · ');
   if (k === 'spells') return e.level === 0 ? `${e.school} cantrip` : `Level ${e.level} ${String(e.school || '').toLowerCase()}`;
   if (k === 'items') return `${e.category}, ${String(e.rarity || '').toLowerCase()}`;
   if (k === 'images') return `${e.kind === 'map' ? 'Map' : 'Art'} · ${picWhere(e)}`;
@@ -333,6 +335,7 @@ function reviewView() {
       ${k === 'images' ? '' : `<button class="btn btn-ghost btn-sm" onclick="bookKeepAll('sure')">Keep the sure ones</button>`}
       <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('all')">Keep all${k === 'images' && S.picShow !== 'all' ? ' shown' : ''}</button>
       <button class="btn btn-ghost btn-sm" onclick="bookKeepAll('none')">Keep none${k === 'images' && S.picShow !== 'all' ? ' shown' : ''}</button></div>
+    ${k === 'monsters' ? aiScoresBar() : ''}
     ${k === 'images' ? imageGrid(shown, keep) : `<div class="bk-rows" id="bk-rows">${shown.slice(0, 400).map(e => `<div class="bk-row ${keep.has(e.id) ? 'kept' : ''} ${S.open === e.id ? 'open' : ''}">
         <label class="bk-row-head"><input type="checkbox" ${keep.has(e.id) ? 'checked' : ''} onchange="bookKeep('${esc(e.id)}', this.checked)">
           <b>${esc(e.name || e.title)}</b><span>${esc(meta(k, e))}</span>
@@ -410,6 +413,24 @@ export async function bookAiSort() {
   render();
 }
 export function bookPicShow(id) { S.picShow = id; render(); }
+
+// "Read the missing scores with on-device AI" (book-ai-scores.js): shown while a scanned creature's score row is unread.
+function aiScoresBar() {
+  const n = needsScores(S.parsed.monsters).length;
+  if (!n && !S.aiScores?.note) return '';
+  return `<div class="bk-ai-sort">${n ? `<button class="btn btn-ghost btn-sm" onclick="bookAiScores()" ${S.aiScores?.busy ? 'disabled' : ''}>✨ Read ${n} missing score row${n === 1 ? '' : 's'} with on-device AI</button>` : ''}
+    <span id="bk-ai-scores-note">${esc(S.aiScores?.note || 'Windows desktop app: your PC reads each row off the page. A row is kept only if every score fits its modifier.')}</span></div>`;
+}
+export async function bookAiScores() {
+  if (!needsScores(S?.parsed?.monsters).length || S.aiScores?.busy) return;
+  S.aiScores = { busy: true, note: 'Asking your PC…' };
+  render();
+  const note = t => { S.aiScores.note = t; const el = document.getElementById('bk-ai-scores-note'); if (el) el.textContent = t; };
+  const r = await readMissingScores(S.parsed.monsters, pdfOf, note, () => S?.mode === 'review');
+  if (S?.mode !== 'review') return;
+  S.aiScores = { busy: false, note: r.why || `Read ${r.read} of ${r.of} score rows on your PC; each one checked against its modifiers. ${r.read < r.of ? 'The rest stay for you to fill in.' : ''}`.trim() };
+  render();
+}
 
 export function bookTab(k) { S.tab = k; S.open = null; S.filter = ''; render(); }
 export function bookFilter(v) {

@@ -31,4 +31,12 @@ describe('two readings of a scan', () => {
     const out = mergeReadings([M({ name: 'Broom', ac: 15, hp: 17 })], [M({ name: 'Hut', ac: 16, hp: 263 })]);
     expect(out.map(m => [m.name, m.lines])).toEqual([['Broom', [0, 1]], ['Hut', null]]);
   });
+  it('keeps a place to read the score row from while the scores are still unread, from either reading', () => {
+    const at = { page: 9, x0: 1, x1: 2, top: 3, bottom: 4, fromTop: true };
+    const unread = { str: null, dex: null, con: null, int: null, wis: null, cha: null };
+    const [m] = mergeReadings([M({ ...unread })], [M({ ...unread, scoreSrc: at })]);
+    expect(m.scoreSrc).toBe(at);
+    const [n] = mergeReadings([M({ ...unread, scoreSrc: at })], [M({ ...SC })]);
+    expect(n.scoreSrc).toBeUndefined(); // the scan's own text had the scores
+  });
 });

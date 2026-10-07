@@ -21,7 +21,7 @@
 // Format-1 books and copies still open.
 export const BOOK_FORMAT = 2;
 const KINDS = ['monsters', 'spells', 'items', 'story'];
-const WORKING = ['confidence', 'problems', 'lines', 'src'];
+const WORKING = ['confidence', 'problems', 'lines', 'src', 'scoreSrc', 'scoreLine', 'aiScores'];
 
 /** The book the DM saves. `keep`: kind → ids kept (a kind not named keeps everything). */
 export function makeBook({ title, parsed, keep = {}, id, now = new Date().toISOString() }) {

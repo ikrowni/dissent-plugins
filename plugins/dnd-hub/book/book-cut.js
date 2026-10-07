@@ -2,14 +2,16 @@
 // box round a map, a piece of art or a handout, and does something with it (book-cut-actions.js). The box is cut from
 // the PDF itself when it is open this session (sharp: a 900 px page picture is fine to read and blurry as a battle
 // map), else from the page picture, saying so and offering to open the PDF. The PDF is never uploaded.
-// Geometry is book-cut-geom.js (pure). `suggestions` ([{ rect, kind }]) are drawn dashed, one click takes one: the
-// seam for the on-device AI, which fills nothing yet.
+// Geometry is book-cut-geom.js (pure). `suggestions` ([{ rect, kind }]) are drawn dashed, one click takes one: where
+// the PDF put its pictures, or — on a page with none, after "Find pictures" — boxes the on-device AI found
+// (book-ai-regions.js).
 import { esc } from '../../plugin-sdk.js';
 import { icon } from '../lk-icons.js';
 import { bookDocs } from '../lk-book.js';
 import { loadPage } from './book-pages.js';
 import { pdfjs, openPdf, rememberPdf, rememberedPdf, pdfIdentity } from './book-pdf.js';
 import { rectFromDrag, moveRect, resizeRect, tooSmall, toPixels, pdfScale } from './book-cut-geom.js';
+import { findPictures } from './book-ai-regions.js';
 
 const HANDLES = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
 let C = null; // { book, place: { doc, page }, rect, suggestions, actions, busy, note }
@@ -66,6 +68,7 @@ function paint() {
   const sharp = sharpNow();
   bar.innerHTML = `<b style="font-size:12px;color:var(--lk-gold)">✂ ${r ? 'Your box:' : 'Drag a box on the page'}</b>
     <button class="btn btn-ghost btn-sm" data-cut="whole">Whole page</button>
+    ${!r && !C.suggestions.length && !C.found ? `<button class="btn btn-ghost btn-sm" data-cut="find" ${C.busy ? 'disabled' : ''} title="Windows desktop app: your PC looks for the pictures on this page">✨ Find pictures</button>` : ''}
     ${r ? C.actions.map((a, i) => `<button class="btn ${a.primary ? 'btn-gold' : 'btn-ghost'} btn-sm" data-act="${i}" ${C.busy ? 'disabled' : ''}>${esc(a.label)}</button>`).join('') : ''}
     <button class="btn btn-ghost btn-sm" data-cut="look" ${r && !C.busy ? '' : 'disabled'}>${icon('eye', { size: 13 })} Look</button>
     <button class="btn btn-ghost btn-sm" data-cut="cancel">Cancel</button>
@@ -119,6 +122,7 @@ async function onBar(ev) {
   if (b.dataset.cut === 'whole') { C.rect = [0, 0, 1, 1]; return paint(); }
   if (b.dataset.cut === 'pdf') return document.querySelector('#book-panel .bk-cut-bar [data-cut=file]')?.click();
   if (b.dataset.cut === 'look') return look();
+  if (b.dataset.cut === 'find') return find();
   if (b.dataset.act != null) return act(C.actions[+b.dataset.act]);
 }
 
@@ -136,6 +140,20 @@ async function act(action) {
     C.busy = false; C.note = e?.shown ? '' : `That did not work (${e?.message || e}).`;
     paint();
   }
+}
+
+/** "Find pictures": the on-device AI's boxes for this page become dashed suggestions (book-ai-regions.js). */
+async function find() {
+  if (!C || C.busy) return;
+  const place = { ...C.place }, book = C.book;
+  C.busy = true; C.note = 'Your PC is looking for pictures on this page…'; paint();
+  const r = await findPictures(book.id, place, async () => (await cutPicture(book, place, [0, 0, 1, 1])).blob);
+  if (!C || C.place.doc !== place.doc || C.place.page !== place.page) return;
+  C.busy = false; C.found = true;
+  if (r.rects?.length) C.suggestions = [...C.suggestions, ...r.rects.map(rect => ({ rect, ai: true }))];
+  C.note = r.why || (r.rects.length ? `Found ${r.rects.length} picture${r.rects.length === 1 ? '' : 's'}: click a dashed box to use it.`
+    : 'No pictures found on this page: drag a box yourself.');
+  paint();
 }
 
 async function look() {
