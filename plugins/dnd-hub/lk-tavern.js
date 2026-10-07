@@ -10,10 +10,10 @@
 //
 // ⚠️ SOURCE; vendored into dnd-hub and dnd-master (scripts/vendor-shared.mjs).
 //
-// A TAVERN is a place the DM opens for everyone, like a shop: a name, a sound, a picture/video, and HOSTS: an NPC
-// at a table who runs one GAME SETUP. A game setup is one of the GAME_TYPES with the DM's settings (stakes, prizes,
-// how good the NPC is, cheating). Every number a game pays out comes from `settle`, run on the DM's Hub, never from
-// what a player's screen claims it won.
+// A TAVERN is a map, a sound and the NPCs who stand in it (owner, 2026-10-07). A game belongs to an NPC: the DM's
+// NPC (`customActors[id]`, type 'npc') carries `setupId` (one of the GAME SETUPS: a GAME_TYPE with the DM's stakes,
+// prizes, how good the NPC is, cheating), `greeting` and `portraitFileId`. Its token on a map is `npc_<actorId>`.
+// Every number a game pays out comes from `settle`, run on the DM's Hub, never from what a player's screen claims.
 
 /** The games a tavern can run. `mode`: 'npc' = one hero against the host; 'table' = everyone at the table at once. */
 export const GAME_TYPES = [
@@ -99,25 +99,118 @@ export function cleanSetup(s = {}) {
   };
 }
 
-/** A host: the NPC at a table. `actorId` points at one of the DM's NPCs (for stats and a picture) or is empty. */
-export function cleanHost(h = {}) {
+export const MAX_TAVERN_NPCS = 12;
+export const TALK_RANGE = 3; // squares (15 ft): a hero walks up to an NPC to talk
+
+/** A tavern as it may be stored: a map, a sound and up to twelve NPCs. */
+export function cleanTavern(t = {}) {
+  const ids = (Array.isArray(t.npcIds) ? t.npcIds : []).map(x => str(x, 40)).filter(Boolean);
   return {
-    id: str(h.id, 40), setupId: str(h.setupId, 40), actorId: h.actorId ? str(h.actorId, 40) : null,
-    name: str(h.name, 40) || 'The dealer',
-    greeting: str(h.greeting, 300),
-    portraitFileId: h.portraitFileId ? str(h.portraitFileId, 80) : null,
+    id: str(t.id, 40), name: str(t.name, 60) || 'Tavern',
+    mapId: t.mapId ? str(t.mapId, 40) : null,
+    soundFileId: t.soundFileId ? str(t.soundFileId, 80) : null,
+    ambientVolume: Math.min(1, Math.max(0, Number(t.ambientVolume ?? 0.5) || 0)),
+    npcIds: [...new Set(ids)].slice(0, MAX_TAVERN_NPCS),
   };
 }
 
-/** A tavern as it may be stored. Up to 8 hosts (tables). */
-export function cleanTavern(t = {}) {
+/** An NPC as the talk box and the house see it. `id` is the actor's id (the house's "host id"). */
+export function npcHost(a = {}) {
   return {
-    id: str(t.id, 40), name: str(t.name, 60) || 'Tavern',
-    soundFileId: t.soundFileId ? str(t.soundFileId, 80) : null,
-    ambientVolume: Math.min(1, Math.max(0, Number(t.ambientVolume ?? 0.5) || 0)),
-    videoFileId: t.videoFileId ? str(t.videoFileId, 80) : null, videoMime: str(t.videoMime, 60),
-    hosts: (Array.isArray(t.hosts) ? t.hosts : []).slice(0, 8).map(cleanHost),
+    id: str(a.id, 40), actorId: str(a.id, 40), name: str(a.name, 40) || 'Stranger',
+    greeting: str(a.greeting, 300), portraitFileId: a.portraitFileId ? str(a.portraitFileId, 80) : null,
+    setupId: a.setupId ? str(a.setupId, 40) : '', wis: Number(a.wis) || 10,
   };
+}
+
+/** Every NPC who talks (a game or a greeting), as hosts by actor id, and the game setups they run. */
+export function talkingNpcs(c) {
+  const npcs = {}, setups = {};
+  for (const a of Object.values(c?.customActors || {})) {
+    if (a?.type !== 'npc' || !(a.setupId || a.greeting)) continue;
+    npcs[a.id] = npcHost(a);
+    const s = a.setupId && c.gameSetups?.[a.setupId];
+    if (s) setups[s.id] = s;
+  }
+  return { npcs, setups };
+}
+
+/**
+ * Old taverns (tables with hosts) → NPCs. Each host becomes an NPC — its own actor, else the DM's NPC of that name,
+ * else a new one — carrying the host's game, words and portrait; the tavern lists them. Returns the campaign's new
+ * `customActors` and `taverns`, or null when there is nothing to move. A game setup that is gone is dropped.
+ */
+export function migrateTaverns(c, newId) {
+  const old = Object.values(c?.taverns || {}).filter(t => Array.isArray(t?.hosts));
+  if (!old.length) return null;
+  const actors = { ...(c.customActors || {}) }, taverns = { ...c.taverns };
+  for (const t of old) {
+    const npcIds = [];
+    for (const h of t.hosts) {
+      const name = str(h?.name, 40) || 'The dealer';
+      let a = (h.actorId && actors[h.actorId]) || Object.values(actors).find(x => x.type === 'npc' && x.name === name);
+      if (!a) {
+        const id = newId();
+        a = { id, name, type: 'npc', cr: '0', size: 'medium', ac: 10, hp: 4, speed: 30,
+          str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, attacks: [] };
+      }
+      const setupId = h.setupId && c.gameSetups?.[h.setupId] ? str(h.setupId, 40) : '';
+      actors[a.id] = { ...a, setupId: setupId || a.setupId || '', greeting: str(h.greeting, 300) || a.greeting || '',
+        portraitFileId: h.portraitFileId || a.portraitFileId || null };
+      npcIds.push(a.id);
+    }
+    taverns[t.id] = cleanTavern({ ...t, npcIds });
+  }
+  return { customActors: actors, taverns };
+}
+
+export const npcTokenId = actorId => `npc_${actorId}`;
+
+/** The token an NPC stands on a map as. */
+export function npcToken(a, { x, y }) {
+  return {
+    id: npcTokenId(a.id), type: 'npc', npcActorId: a.id, name: a.name, x, y,
+    hp: a.hp ?? 10, hpMax: a.hp ?? 10, ac: a.ac ?? 10, speed: a.speed ?? 30, size: a.size || 'medium',
+    attacks: a.attacks || [], conditions: [], visible: true, portraitFileId: a.portraitFileId || null,
+  };
+}
+
+/** The map's squares as the sidebar can know them from the stored map (no image loaded). */
+function mapGeometry(m) {
+  const bgW = m.bgScaledW || 0, bgH = m.bgScaledH || 0;
+  const gs = m.mapCellW && bgW > 0 ? bgW / m.mapCellW : (m.gridSize || 40);
+  const ox = (m.bgOffsetX ?? 0) + (m.gridOffsetX ?? 0), oy = (m.bgOffsetY ?? 0) + (m.gridOffsetY ?? 0);
+  const cx = (m.bgOffsetX ?? 0) + (bgW ? bgW / 2 : gs * 10), cy = (m.bgOffsetY ?? 0) + (bgH ? bgH / 2 : gs * 8);
+  return { gs, ox, oy, cx, cy };
+}
+
+/** Centres of `count` free squares through the middle of the map: middle, right, left, further right… one apart. */
+export function npcSpots(m, count) {
+  const { gs, ox, oy, cx, cy } = mapGeometry(m);
+  const cell = (x, y) => `${Math.floor((x - ox) / gs)},${Math.floor((y - oy) / gs)}`;
+  const taken = new Set(Object.values(m.tokens || {}).map(t => cell(t.x, t.y)));
+  const col0 = Math.floor((cx - ox) / gs), row0 = Math.floor((cy - oy) / gs);
+  const spots = [];
+  for (let r = 0; spots.length < count && r < 40; r += 2) {
+    for (let i = 0; spots.length < count && i < 25; i++) {
+      const col = col0 + (i === 0 ? 0 : i % 2 ? i + 1 : -i), row = row0 + r;
+      const key = `${col},${row}`;
+      if (taken.has(key)) continue;
+      taken.add(key);
+      spots.push({ x: ox + col * gs + gs / 2, y: oy + row * gs + gs / 2 });
+    }
+  }
+  return spots;
+}
+
+const SIZE_SQUARES = { tiny: 1, small: 1, medium: 1, large: 2, huge: 3, gargantuan: 4 };
+
+/** Is token `b` within TALK_RANGE squares of token `a` (edge to edge; a diagonal counts as one square)? */
+export function withinTalkRange(a, b, gs, range = TALK_RANGE) {
+  if (!a || !b || !gs) return false;
+  const half = t => ((SIZE_SQUARES[t.size] || 1) - 1) / 2;
+  const d = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gs - half(a) - half(b);
+  return d <= range + 1e-9;
 }
 
 /** Whether a stake may be played at this setup; null when it may, else why not (said to the player). */
