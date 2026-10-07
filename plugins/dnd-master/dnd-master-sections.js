@@ -2,11 +2,11 @@
 // edge of the sidebar; grouped by what a DM is doing: running the fight, preparing foes, the world, loot,
 // sound. Table rules live behind the gear in the header.
 
-export const ALL_TABS = ['encounter','initiative','monsters','maps','actors','items','shops','taverns','games','scenes','journals',
+export const ALL_TABS = ['encounter','initiative','prep','monsters','maps','actors','items','shops','taverns','games','scenes','journals',
   'sounds','triggers','notes','logs','settings','players','homebrew'];
 
 export const SECTIONS = [
-  { id: 'run',   label: 'Run',   icon: 'play',      tabs: ['initiative', 'players', 'logs'] },
+  { id: 'run',   label: 'Run',   icon: 'play',      tabs: ['initiative', 'prep', 'players', 'logs'] },
   { id: 'foes',  label: 'Foes',  icon: 'skull',     tabs: ['encounter', 'monsters', 'actors', 'triggers'] },
   { id: 'world', label: 'World', icon: 'globe',     tabs: ['maps', 'scenes', 'journals', 'notes', 'homebrew'] },
   { id: 'loot',  label: 'Loot',  icon: 'coins',     tabs: ['items', 'shops', 'taverns', 'games'] },
@@ -14,7 +14,7 @@ export const SECTIONS = [
 ];
 
 export const TAB_LABELS = {
-  initiative: 'Initiative', players: 'Players', logs: 'Log',
+  initiative: 'Initiative', prep: 'Prep', players: 'Players', logs: 'Log',
   encounter: 'Encounter', monsters: 'Monsters', actors: 'NPCs', triggers: 'Traps',
   maps: 'Maps', scenes: 'Scenes', journals: 'Journals', notes: 'Notes', homebrew: 'Homebrew',
   items: 'Items', shops: 'Shops', taverns: 'Taverns', games: 'Games', sounds: 'Sounds', settings: 'Table rules',

@@ -1,14 +1,14 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261015g';
+import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261015h';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015g';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015g';
+import { EV } from './dnd-hub-event-types.js?v=20261015h';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015h';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015g';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015h';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015g';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015h';
 import { validateDraft } from './dnd-hub-draft-rules.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 

@@ -26,6 +26,11 @@ const camp = () => ({
 });
 
 describe('splitCampaign', () => {
+  it('keeps the DM\'s prep board secret', () => {
+    const { pub, sec } = splitCampaign({ dmUserId: 'dm', prep: { start: 'Ambush' } });
+    expect(pub.prep).toBeUndefined();
+    expect(sec.prep.start).toBe('Ambush');
+  });
   it('keeps who asked for which lines and veils with the DM; the nameless list stays public', () => {
     const { pub, sec } = splitCampaign({ dmUserId: 'dm', safety: { lines: ['Gore'], veils: [] }, safetyByUser: { u1: { topics: { gore: 'line' } } } });
     expect(pub.safetyByUser).toBeUndefined();

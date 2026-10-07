@@ -2,7 +2,7 @@
 // test die (only on your screen). The look itself lives in dnd-hub-dice-look.js and rides along with your rolls.
 import { esc } from '../plugin-sdk.js';
 import { PRESETS, FINISHES, FINISH_LABELS, myLook, setMyLook, presetOf } from './dnd-hub-dice-look.js';
-import { animateDiceFree } from './dnd-hub-dice.js?v=20261015g';
+import { animateDiceFree } from './dnd-hub-dice.js?v=20261015h';
 
 function panelHtml() {
   const l = myLook(), on = presetOf(l);

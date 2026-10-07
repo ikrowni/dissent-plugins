@@ -159,3 +159,13 @@ option{background:#1a1410;color:var(--text)}
 .host-row{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:11px}
 .host-row .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .icon-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px}
+/* the Prep tab (dnd-master-prep.js) */
+.prep-step{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px}
+.prep-head{display:flex;align-items:center;gap:6px;font-size:11px}
+.prep-n{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:rgba(212,175,55,.15);color:var(--gold);font-size:9px;font-weight:700}
+.prep-hint{font-size:10px;color:var(--muted);margin:2px 0 6px}
+.prep-line{display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;cursor:pointer}
+.prep-line span{flex:1;min-width:0}
+.prep-line.done span{text-decoration:line-through;color:var(--muted)}
+.prep-step textarea,.prep-step input:not([type=checkbox]),.prep-step select{width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:4px 6px;font-family:inherit}
+.prep-step select{width:auto}
