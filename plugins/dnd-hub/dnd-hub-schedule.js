@@ -6,7 +6,7 @@
 // answer is their own server key (lk-schedule.js voteKey) plus a `schedule:vote` event for screens already open;
 // the DM's Hub hands that on to the DM sidebar (a player has no consent to publish to dnd-master).
 // The reminder a day before is posted by whichever screen of the table is open then: the first to claim it.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015e';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015f';
 import { esc, request, storageGet, storageSet, localPublish } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
 import { icon } from './lk-icons.js';
@@ -49,6 +49,8 @@ export async function toggleSchedulePanel() {
   if (old) { old.remove(); return; }
   const el = document.createElement('div');
   el.id = 'schedule-panel'; el.className = 'lk-pop';
+  // Below the whole toolbar: it wraps to two rows on a narrow screen, and a panel at a fixed height covered the X.
+  el.style.top = `${(document.getElementById('map-toolbar')?.offsetHeight || 40) + 6}px`;
   document.getElementById('map-root')?.appendChild(el);
   await loadVotes(question());
   drawPanel();

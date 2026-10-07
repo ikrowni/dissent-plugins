@@ -7,7 +7,7 @@
 import { localPublish, realtimePublishCompanion } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015e';
+import { EV } from './dnd-hub-event-types.js?v=20261015f';
 import { talkingNpcs, npcToken, npcTokenId, npcSpots } from './lk-tavern.js';
 
 let _state = null;

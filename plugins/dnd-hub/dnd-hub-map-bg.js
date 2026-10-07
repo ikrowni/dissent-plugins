@@ -1,19 +1,19 @@
 // dnd-hub-map-bg.js — map background loading, upload, fitSprite, loadMapData
-import { MAP, serverData, effectiveGs } from './dnd-hub-state.js?v=20261015e';
+import { MAP, serverData, effectiveGs } from './dnd-hub-state.js?v=20261015f';
 import { request, requestWithTransfer, storageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { renderGrid } from './dnd-hub-grid.js?v=20261015e';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261015e';
-import { renderFog } from './dnd-hub-fog.js?v=20261015e';
-import { renderWalls } from './dnd-hub-walls.js?v=20261015e';
-import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261015e';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015e';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015e';
+import { renderGrid } from './dnd-hub-grid.js?v=20261015f';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261015f';
+import { renderFog } from './dnd-hub-fog.js?v=20261015f';
+import { renderWalls } from './dnd-hub-walls.js?v=20261015f';
+import { renderInitiativeHUD } from './dnd-hub-initiative.js?v=20261015f';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015f';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015f';
 import { icon } from './lk-icons.js';
 import { renderGuide } from './dnd-hub-guide.js';
 import { fitView, legacyFrame, migrateMapToImageFrame, defaultGridSize } from './dnd-hub-frame.js';
 import { parsePackFileId, packMapBlob } from './dnd-hub-pack-map.js';
-import { setZoom } from './dnd-hub-canvas.js?v=20261015e';
+import { setZoom } from './dnd-hub-canvas.js?v=20261015f';
 import { syncTurn } from './dnd-hub-turn-move.js';
 
 import { guarded } from './lk-upload.js';

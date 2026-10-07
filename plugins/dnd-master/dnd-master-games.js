@@ -4,8 +4,8 @@
 // settings are cleaned by lk-tavern.js cleanSetup on every change, and the DM's Hub cleans them again before it pays.
 import { esc, genId } from '../plugin-sdk.js';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
-import { persistDmCatalog } from './dnd-master-shops.js?v=20261015e';
-import { publishNpcTalk } from './dnd-master-actor-talk.js?v=20261015e';
+import { persistDmCatalog } from './dnd-master-shops.js?v=20261015f';
+import { publishNpcTalk } from './dnd-master-actor-talk.js?v=20261015f';
 import { GAME_TYPES, PLAYABLE, NPC_SKILLS, CAUGHT, gameType, cleanSetup } from './lk-tavern.js';
 
 let _state = null;

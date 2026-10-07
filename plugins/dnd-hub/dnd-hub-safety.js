@@ -4,10 +4,10 @@
 // DM's Hub keeps who asked for what in the campaign's DM-only part (`safetyByUser`, lk-secrets.js) and shares only the
 // combined, nameless list (`campaign.safety`, `safety:table`). The DM may be away when a player sets theirs, so a
 // player's Hub sends them again each time the map opens. The X (`safety:x`) shows on every screen without a name.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015e';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015f';
 import { esc, storageGet, storageSet } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015e';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015f';
 import { TOPICS, cleanPicks, combine, X_COOLDOWN_MS } from './lk-safety.js';
 
 let _mine = { topics: {}, custom: [] };
@@ -22,6 +22,8 @@ export function toggleSafetyPanel() {
   if (old) { old.remove(); return; }
   const el = document.createElement('div');
   el.id = 'safety-panel'; el.className = 'lk-pop lk-safety';
+  // Below the whole toolbar: it wraps to two rows on a narrow screen, and a panel at a fixed height covered the X.
+  el.style.top = `${(document.getElementById('map-toolbar')?.offsetHeight || 40) + 6}px`;
   document.getElementById('map-root')?.appendChild(el);
   drawPanel();
 }

@@ -1,8 +1,8 @@
 // dnd-hub-los.js — line-of-sight math, fog update from LOS
-import { MAP, serverData, userId, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261015e';
-import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261015e';
-import { wallPx, renderWalls } from './dnd-hub-walls.js?v=20261015e';
-import { renderPins } from './dnd-hub-pins.js?v=20261015e';
+import { MAP, serverData, userId, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261015f';
+import { renderFog, saveFogState } from './dnd-hub-fog.js?v=20261015f';
+import { wallPx, renderWalls } from './dnd-hub-walls.js?v=20261015f';
+import { renderPins } from './dnd-hub-pins.js?v=20261015f';
 
 export function getOpaqueSegments(mapData) {
   const segs = [...(mapData.walls || [])];
