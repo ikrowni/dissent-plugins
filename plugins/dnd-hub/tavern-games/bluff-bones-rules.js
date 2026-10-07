@@ -5,7 +5,7 @@
 // Lose your last die and you are out; the last one with dice wins. Wisdom (Insight) reads the bidders' tells.
 
 export const DICE = 4;
-export const lobbyMs = 15000;
+export const lobbyMs = 30000; // heroes are called over from across the map (owner, 2026-10-07)
 
 const alive = s => s.players.filter(p => !p.out);
 const rollN = (n, rng) => Array.from({ length: n }, () => 1 + Math.floor(rng() * 6));

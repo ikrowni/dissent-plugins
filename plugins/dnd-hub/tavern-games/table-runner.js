@@ -13,7 +13,7 @@
 // Every state change is broadcast whole; a game's view draws what its player may see.
 import { cheatCheck, hostPerception } from '../lk-tavern.js';
 
-export const LOBBY_MS = 15000, TURN_MS = 45000;
+export const LOBBY_MS = 30000, TURN_MS = 45000;
 
 export function createTableRunner({ rules, setup, host, actor = null, broadcast, settle, rng = Math.random,
   setTimer = (f, ms) => setTimeout(f, ms), clearTimer = t => clearTimeout(t), now = () => Date.now() }) {

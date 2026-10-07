@@ -5,7 +5,7 @@
 // known form, but on the day some are keener than others: Wisdom (Insight) catches a whisper about one of them.
 
 export const LANES = 6, TICKS = 90, TICK_MS = 90;
-export const lobbyMs = 15000;
+export const lobbyMs = 30000; // heroes are called over from across the map (owner, 2026-10-07)
 const NAMES = ['Old Clatterback', 'Saint Nibbles', 'Rust Duchess', 'Gravel Prince', 'Little Thunder', 'Moss Widow', 'Captain Crumb',
   'The Undertaker', 'Lady Scuttle', 'Brass Button', 'Burrow Baron', 'Sweet Mildred'];
 const SHELLS = ['#b8412a', '#2f6a3a', '#3a5aa8', '#c79a2a', '#6a3a8a', '#2a8a8a', '#8a5a2a', '#a83a6a'];

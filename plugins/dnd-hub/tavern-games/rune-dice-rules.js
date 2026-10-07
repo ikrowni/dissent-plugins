@@ -16,7 +16,7 @@ export const BOONS = {
   grace: { name: 'The Mother\'s Grace', cost: 4, text: 'Heal 3 stones' },
   raven: { name: 'The Raven\'s Theft', cost: 2, text: 'Steal 2 favour from your target' },
 };
-export const lobbyMs = 15000;
+export const lobbyMs = 30000; // heroes are called over from across the map (owner, 2026-10-07)
 
 const roll6 = rng => Array.from({ length: 6 }, () => Math.floor(rng() * 6));
 const alive = s => s.players.filter(p => !p.out);

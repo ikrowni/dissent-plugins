@@ -6,7 +6,7 @@
 // stays in. The last one upright wins; still several after MAX_ROUNDS, they share it.
 
 export const MAX_ROUNDS = 8;
-export const lobbyMs = 15000;
+export const lobbyMs = 30000; // heroes are called over from across the map (owner, 2026-10-07)
 export const dcFor = round => 8 + 2 * round;
 export const steadyBonus = score => Math.round(3 * Math.max(0, Math.min(1, Number(score) || 0)) - 1);
 const NPC_STEADY = { novice: [0.2, 0.6], regular: [0.35, 0.8], shark: [0.55, 0.95] };
