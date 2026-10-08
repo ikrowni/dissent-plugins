@@ -48,11 +48,13 @@ export function shapeBody(kind, d, ctx) {
             `<option value="${v}" ${d.baseScores[k] === v && values.indexOf(v) === i ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <b style="min-width:70px;text-align:right">${ctx.finals[k]} <small style="color:var(--lk-gold)">(${fmt(abilityMod(ctx.finals[k]))})</small></b></div>`;
       }).join('');
-      return note(`Six numbers say what your hero is good at. We put the best ones where a ${esc(ctx.cls.name)} needs them (★). Change a number and the two swap. Your heritage's bonus is already added on the right.`)
+      const bg = ctx.bg?.abilities ? ctx.bg : null; // 2024 origins: the background gives the increases
+      return note(`Six numbers say what your hero is good at. We put the best ones where a ${esc(ctx.cls.name)} needs them (★). Change a number and the two swap. Your ${bg ? `background's (${esc(bg.name)})` : 'heritage\'s'} increases are already added on the right.`)
         + `<div class="lvl-abs">${rows}</div>`
         + `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" onclick="shapeScores('array')" aria-pressed="${d.abilityMethod === 'standard-array'}">Standard numbers (15, 14, 13, 12, 10, 8)</button>
             <button class="btn btn-ghost btn-sm" onclick="shapeScores('roll')" aria-pressed="${d.abilityMethod === 'manual-roll'}">🎲 Roll for them</button></div>`
+        + (bg ? bgBonusHtml(bg, d.bgBonus) : '')
         + (d.race === 'half-elf' ? note('Half-elf: +2 Charisma, and +1 to two other abilities:') + `<div style="display:flex;gap:8px">${[0, 1].map(i =>
           `<select aria-label="Half-elf bonus ${i + 1}" onchange="shapeHalfElf(${i}, this.value)">${ABILITIES.filter(([k]) => k !== 'cha').map(([k, name]) =>
             `<option value="${k}" ${(d.halfElfBonus || [])[i] === k ? 'selected' : ''}>${name}</option>`).join('')}</select>`).join('')}</div>` : '');
@@ -62,12 +64,15 @@ export function shapeBody(kind, d, ctx) {
       return note(`Skills are what you are trained in: when you try one, you add a bonus. Choose ${s.choose} (${picked.length}/${s.choose}).`
           + (s.already.length ? ` Already yours from your people and past: <b>${s.already.map(esc).join(', ')}</b>.` : ''))
         + `<div class="lvl-grid">${s.from.map(n => card('shapeSkill', n, n, '', picked.includes(n))).join('')}</div>`
-        + (s.halfElf ? note(`Half-elf: two more skills of any kind (${extra.length}/2).`)
+        + (s.extra ? note(`${d.race === 'half-elf' ? 'Half-elf' : 'Human (Skillful)'}: ${s.extra === 1 ? 'one more skill' : 'two more skills'} of any kind (${extra.length}/${s.extra}).`)
           + `<div class="lvl-grid">${ctx.allSkills.filter(n => !picked.includes(n) && !s.already.includes(n)).map(n => card('shapeExtraSkill', n, n, '', extra.includes(n))).join('')}</div>` : '');
     }
-    case 'background':
-      return note('Where your hero comes from: it gives skills and a feature.')
-        + `<div class="lvl-grid">${(ctx.srd.backgrounds || []).map(b => card('shapePick', 'background:' + b.id, b.name, b.feature?.name || '', d.background === b.id)).join('')}</div>`;
+    case 'background': {
+      const o24 = (ctx.srd.backgrounds || []).some(b => b.abilities);
+      const what = b => (o24 ? `${b.abilities.map(a => a.toUpperCase()).join(', ')} · ${b.feature.name.replace(' (origin feat)', '')} · ${b.starting_proficiencies.map(p => p.slice(7)).join(', ')}` : b.feature?.name || '');
+      return note(o24 ? 'Where your hero comes from: it raises three abilities, gives two skills and an origin feat.' : 'Where your hero comes from: it gives skills and a feature.')
+        + `<div class="lvl-grid">${(ctx.srd.backgrounds || []).map(b => card('shapePick', 'background:' + b.id, b.name, what(b), d.background === b.id)).join('')}</div>`;
+    }
     case 'gear':
       return note('What you carry into your first adventure. Armour you take is worn and weapons are ready.')
         + `<div class="lvl-grid">
@@ -100,6 +105,19 @@ export function shapeBody(kind, d, ctx) {
       </div>`;
     default: return '';
   }
+}
+
+const AB_NAME = Object.fromEntries(ABILITIES.map(([k, n]) => [k, n]));
+/** 2024 origins: the background's increases — +2 and +1 to two of its abilities, or +1 to all three. */
+function bgBonusHtml(bg, bonus) {
+  const all = !!bonus?.all;
+  const pick = (which, cur) => `<select aria-label="${which === 'plus2' ? '+2' : '+1'}" onchange="shapeBgBonus('${which}', this.value)" ${all ? 'disabled' : ''}>`
+    + bg.abilities.map(a => `<option value="${a}" ${cur === a ? 'selected' : ''}>${AB_NAME[a]}</option>`).join('') + '</select>';
+  return note(`From your background (${esc(bg.name)}):`)
+    + `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" aria-pressed="${!all}" onclick="shapeBgBonus('mode', 'split')">+2 and +1</button>
+      <span>+2 ${pick('plus2', bonus?.plus2)}</span><span>+1 ${pick('plus1', bonus?.plus1)}</span>
+      <button class="btn btn-ghost btn-sm" aria-pressed="${all}" onclick="shapeBgBonus('mode', 'all')">+1 to all three</button></div>`;
 }
 
 export function shapeFooter(error, isLast) {

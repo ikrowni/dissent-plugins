@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { quickBuild, previewStats, READY_HEROES, STARTING_KITS, RECOMMENDED_SPELLS } from './dnd-hub-quick.js';
 import { validateDraft, classSkillChoice } from './dnd-hub-draft-rules.js';
 import { armorClass, isCaster } from './lk-rules5e.js';
+import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
+import { draftScores } from './dnd-hub-draft-rules.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const load = f => JSON.parse(readFileSync(join(here, 'dnd-srd', f), 'utf8'));
@@ -25,6 +27,32 @@ describe('quickBuild: every race with every class', () => {
       if (!isCaster(c.id)) expect(d.spells.length + d.cantrips.length).toBe(0);
     });
   }
+});
+
+// 2024 origins (Table rule origins2024): the Forge is handed the 2024 species and backgrounds instead.
+const SRD24 = { ...SRD, races: SPECIES_2024, backgrounds: BACKGROUNDS_2024 };
+describe('quickBuild with 2024 origins: every species with every class', () => {
+  for (const r of SRD24.races) for (const c of SRD24.classes) {
+    it(`${r.id} ${c.id} is a valid hero`, () => {
+      const d = quickBuild(SRD24, r.id, c.id, fixedRng);
+      expect(validateDraft(d, SRD24)).toEqual([]);
+      const bg = BACKGROUNDS_2024.find(b => b.id === d.background);
+      const bgSkills = bg.starting_proficiencies.map(p => p.slice(7));
+      for (const sk of bgSkills) expect(d.proficiencyChoices).not.toContain(sk); // never a pick on the background's skills
+      if (r.id === 'human') expect(d.extraSkills).toHaveLength(1);
+    });
+  }
+  it('the increases come from the background: a fighter soldier gets +2 STR and +1 CON over the array', () => {
+    const d = quickBuild(SRD24, 'goliath', 'fighter', fixedRng);
+    expect(d.background).toBe('soldier');
+    expect(draftScores(d, SRD24.races, SRD24.backgrounds)).toMatchObject({ str: 17, con: 15 });
+  });
+  it('no species bonus in 2024 (a dwarf\'s 2014 +2 CON is gone)', () => {
+    const d = quickBuild(SRD24, 'dwarf', 'wizard', fixedRng);
+    const s = draftScores(d, SRD24.races, SRD24.backgrounds);
+    const base = draftScores({ ...d, bgBonus: null }, SRD24.races, SRD24.backgrounds);
+    expect(Object.values(s).reduce((a, b) => a + b) - Object.values(base).reduce((a, b) => a + b)).toBe(3);
+  });
 });
 
 describe('data', () => {

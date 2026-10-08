@@ -10,6 +10,9 @@ const P = {
   'race-gnome': '<circle cx="32" cy="32" r="10"/><path d="M32 16 v6 M32 42 v6 M16 32 h6 M42 32 h6 M21 21 l4 4 M39 39 l4 4 M43 21 l-4 4 M25 39 l-4 4"/><path d="M32 27 l4 5 l-4 5 l-4 -5 Z"/>',
   'race-half-elf': '<path d="M20 46 L44 18 M42 16 l4 4 M18 44 l4 4 M24 40 l4 4"/><path d="M22 22 C30 22 38 30 40 44 C30 42 22 34 22 22 Z"/>',
   'race-half-orc': '<path d="M20 18 h24 v14 c0 10 -6 16 -12 20 c-6 -4 -12 -10 -12 -20 Z"/><path d="M26 30 l-2 -6 M38 30 l2 -6"/><path d="M14 48 h6 m4 0 h6 m4 0 h6 m4 0 h6"/>',
+  // 2024 origins (lk-origins2024.js): a mountain under snow and cloud; a tusked face.
+  'race-goliath': '<path d="M8 50 L24 20 L32 32 L42 12 L56 50 Z"/><path d="M36 22 l6 -10 l6 10 l-6 -3 Z M19 30 l5 -10 l5 10"/><path d="M12 42 c6 -3 10 1 16 -1 c6 -2 12 2 18 0"/>',
+  'race-orc': '<path d="M18 20 h28 l-3 18 c-2 7 -6 12 -11 12 c-5 0 -9 -5 -11 -12 Z"/><path d="M25 42 c-3 -5 -3 -10 -1 -14 M39 42 c3 -5 3 -10 1 -14"/><path d="M24 29 h5 M35 29 h5 M22 20 l3 -6 M42 20 l-3 -6"/>',
   'race-tiefling': '<path d="M22 30 C18 22 18 16 22 12 C24 18 26 22 30 24 M42 30 C46 22 46 16 42 12 C40 18 38 22 34 24"/><path d="M32 50 C24 46 24 38 30 32 C30 38 34 38 34 34 C40 40 40 46 32 50 Z"/>',
   'class-barbarian': '<path d="M32 14 V52 M32 18 C22 18 18 26 20 34 C26 30 30 28 32 28 M32 18 C42 18 46 26 44 34 C38 30 34 28 32 28"/><path d="M26 52 c2 -6 6 -8 6 -12 c0 4 4 6 6 12"/>',
   'class-bard': '<path d="M22 40 a8 8 0 1 0 12 6 L46 18 l4 -2 l-2 4 Z"/><path d="M28 44 l14 -20 M40 22 l4 4"/><circle cx="26" cy="44" r="2"/>',

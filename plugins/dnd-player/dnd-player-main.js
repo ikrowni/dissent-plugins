@@ -9,6 +9,7 @@ import { setCampaignGetter, setSheetState, setInventoryImageUrls, renderAll, ren
   computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem,
   heroMasteries, masteryOn, toggleMastery } from './dnd-player-sheet.js';
 import { masteryFor } from './lk-mastery.js';
+import { alertBonus } from './lk-origins2024.js';
 import { setSpellState, setBookParts, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
          castSpell, setConcentration, clearConcentration } from './dnd-player-spells.js';
 import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setCombatCharData, setNeedsInitiativeRoll } from './dnd-player-combat.js';
@@ -29,7 +30,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015l';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015m';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1074,7 +1075,7 @@ async function rollInitiativeNow() {
   // The real dice, on the table like every other roll (it was a hidden random number). _afterMyRoll sends it to the
   // DM's tracker — via the Hub: players cannot publish to the DM's sidebar (403).
   _pendingInitiative = true;
-  setDiceRollLabel('Initiative', abilityMod((effectiveChar() || CHAR).dex));
+  setDiceRollLabel('Initiative', abilityMod((effectiveChar() || CHAR).dex) + alertBonus(CHAR)); // + Alert (2024 origin feat)
   await rollDice('initiative');
 }
 

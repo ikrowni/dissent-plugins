@@ -1,9 +1,10 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20261015l';
+import { SRD } from './dnd-hub-state.js?v=20261015m';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261015l';
+import { suggestBgBonus } from './lk-origins2024.js';
+import { startCharacterCreator, finishWithDraft, useOrigins } from './dnd-hub-char.js?v=20261015m';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -12,12 +13,12 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20261015l';
+import { serverData, CC } from './dnd-hub-state.js?v=20261015m';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
 import { useCampaignSpells } from './book/book-spells-in-play.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015l';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015m';
 import { setGearTarget, gearChooserHtml, gearShopHtml } from './dnd-hub-gear-view.js';
 import { applyGear } from './dnd-hub-starting-gear.js';
 
@@ -43,6 +44,8 @@ const open = () => !root()?.classList.contains('hidden') && !!root()?.querySelec
 export function showQuickCharacter(campaignId) {
   // The campaign's books add spells to the spell step (re-drawn if they arrive while it is open).
   useCampaignSpells(serverData?.campaigns?.[campaignId]).then(() => { if (_s?.scene === 'shape') render(); }).catch(() => {});
+  // The table's rules edition: 2024 origins hand the Forge the 2024 peoples and backgrounds (lk-origins2024.js).
+  useOrigins(serverData?.campaigns?.[campaignId]);
   _campaignId = campaignId; _draft = null; _showQuick = false; _shapeError = '';
   _s = initForge((SRD.races || []).length, (SRD.classes || []).length);
   window.showScreen('char-creator');
@@ -65,7 +68,7 @@ function render() {
     // Ready-made heroes are tucked away (owner, 2026-10-03): the Forge is for making your own.
     ui.innerHTML = topBar('Choose your people', { muted: _sound.muted(), canBack: false })
       + stage(race, { kind: 'race', dir: _dir }) + emblemRow(R, _s.race, 'Races')
-      + (_showQuick ? quickStrip(READY_HEROES)
+      + (_showQuick ? quickStrip(READY_HEROES.filter(h => (SRD.races || []).some(r => r.id === h.race)))
         : '<button class="forge-hurry" id="forge-hurry" onclick="forgeShowQuick()">In a hurry? Take a ready-made hero</button>');
   } else if (_s.scene === 'class') {
     ui.innerHTML = topBar('Choose your calling', { muted: _sound.muted(), canBack: true })
@@ -183,7 +186,8 @@ function renderShape(ui, race, cls) {
   const kind = kinds[_s.shape];
   const srdRace = (SRD.races || []).find(r => r.id === _draft.race);
   const ctx = { srd: SRD, race: srdRace, cls, main: (CLASS_PRIORITY[_draft.class] || []).slice(0, 2),
-    finals: draftScores(_draft, SRD.races), skills: skillStep(_draft, SRD), spells: spellStep(_draft, SRD),
+    finals: draftScores(_draft, SRD.races, SRD.backgrounds), skills: skillStep(_draft, SRD), spells: spellStep(_draft, SRD),
+    bg: (SRD.backgrounds || []).find(b => b.id === _draft.background),
     kit: kitNames({ equipment: STARTING_KITS[_draft.class] || _draft.equipment }, SRD), gold: getStartingGold(), allSkills: ALL_SKILLS };
   if (kind === 'gear') {
     // The class's choices, or the shop for starting gold (dnd-hub-gear-view.js); every pick redraws this step.
@@ -203,7 +207,17 @@ const reshape = () => { _shapeError = ''; render(); };
 export function shapePick(kv) {
   const [k, v] = String(kv).split(':');
   if (k === 'subrace') _draft.subrace = v;
-  else if (k === 'background') _draft.background = v;
+  else if (k === 'background') {
+    _draft.background = v;
+    const bg = (SRD.backgrounds || []).find(b => b.id === v);
+    if (bg?.abilities) {
+      // 2024: the new background's increases, and no class pick spent on a skill it now gives.
+      _draft.bgBonus = suggestBgBonus(bg, CLASS_PRIORITY[_draft.class]);
+      const given = bg.starting_proficiencies.map(p => p.slice(7));
+      _draft.proficiencyChoices = (_draft.proficiencyChoices || []).filter(s => !given.includes(s));
+      _draft.extraSkills = (_draft.extraSkills || []).filter(s => !given.includes(s));
+    }
+  }
   else if (k === 'gear') {
     _draft.useStartingGold = v === 'gold';
     applyGear(_draft, SRD);
@@ -223,7 +237,19 @@ export function shapeSkill(n) {
   _draft.extraSkills = (_draft.extraSkills || []).filter(x => !_draft.proficiencyChoices.includes(x));
   reshape();
 }
-export function shapeExtraSkill(n) { _draft.extraSkills = toggleLimited(_draft.extraSkills, n, 2); reshape(); }
+export function shapeExtraSkill(n) { _draft.extraSkills = toggleLimited(_draft.extraSkills, n, skillStep(_draft, SRD).extra); reshape(); }
+/** 2024 origins: the background's increases. `which`: 'mode' ('split' | 'all'), 'plus2' or 'plus1' (an ability). */
+export function shapeBgBonus(which, value) {
+  const bg = (SRD.backgrounds || []).find(b => b.id === _draft.background);
+  if (!bg?.abilities) return;
+  const cur = _draft.bgBonus?.all ? suggestBgBonus(bg, CLASS_PRIORITY[_draft.class]) : { ...(_draft.bgBonus || {}) };
+  if (which === 'mode') { _draft.bgBonus = value === 'all' ? { all: true } : (cur.all ? { plus2: bg.abilities[0], plus1: bg.abilities[1] } : cur); reshape(); return; }
+  const next = { plus2: cur.plus2 || bg.abilities[0], plus1: cur.plus1 || bg.abilities[1], [which]: value };
+  // The two must differ: picking the other's ability swaps them.
+  if (next.plus2 === next.plus1) next[which === 'plus2' ? 'plus1' : 'plus2'] = cur[which];
+  _draft.bgBonus = next;
+  reshape();
+}
 export function shapeCantrip(id) { _draft.cantrips = toggleLimited(_draft.cantrips, id, spellStep(_draft, SRD).cantrips); reshape(); }
 export function shapeSpell(id) { _draft.spells = toggleLimited(_draft.spells, id, spellStep(_draft, SRD).spells); reshape(); }
 /** Typing: no re-render, or the field loses focus. */

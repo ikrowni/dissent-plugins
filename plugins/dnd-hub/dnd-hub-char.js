@@ -1,15 +1,17 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261015l';
+import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015m';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015l';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015l';
+import { EV } from './dnd-hub-event-types.js?v=20261015m';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015m';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015l';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015m';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015l';
-import { validateDraft } from './dnd-hub-draft-rules.js';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015m';
+import { validateDraft, origins2024 } from './dnd-hub-draft-rules.js';
+import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
+import { edition } from './lk-table-rules.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
 // Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
@@ -43,8 +45,21 @@ export async function loadSRD() {
   }));
 }
 
+/**
+ * The table's rules edition for the hero being made (Table rule origins2024, owner 2026-10-07): the creator and the
+ * Forge read SRD.races / SRD.backgrounds, so those two lists become the 2024 ones (lk-origins2024.js) or go back to
+ * the bundled 2014 ones. Called whenever either opens for a campaign.
+ */
+export function useOrigins(campaign) {
+  if (!SRD._races2014) { SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds; }
+  const on = edition(campaign?.settings, 'origins2024');
+  SRD.races = on ? SPECIES_2024 : SRD._races2014;
+  SRD.backgrounds = on ? BACKGROUNDS_2024 : SRD._backgrounds2014;
+}
+
 // ── Wizard shell ──────────────────────────────────────────────────────────────
 export function startCharacterCreator(campaignId) {
+  useOrigins(serverData?.campaigns?.[campaignId]);
   renderCharacterCreator(campaignId);
   // showScreen is on window (set by bootstrap from dnd-hub-state.js)
   window.showScreen('char-creator');
@@ -140,12 +155,15 @@ export async function finishCharacterCreation({ enter = true } = {}) {
 
   const race = (SRD.races || []).find(r => r.id === CC.draft.race);
   const cls = (SRD.classes || []).find(c => c.id === CC.draft.class);
+  const o24 = origins2024(SRD);
+  const lineage = race?.subraces?.find(s => s.id === CC.draft.subrace) || null;
 
   const finalScores = draftScores();
 
   const hitDie = cls?.hit_die || hitDieFor(CC.draft.class);
   // Hill dwarves: +1 HP per level (Dwarven Toughness).
-  const maxHP = Math.max(1, hitDie + abilityMod(finalScores.con)) + (CC.draft.subrace === 'hill-dwarf' ? 1 : 0);
+  // 2024: every dwarf has Dwarven Toughness.
+  const maxHP = Math.max(1, hitDie + abilityMod(finalScores.con)) + (CC.draft.subrace === 'hill-dwarf' || (o24 && CC.draft.race === 'dwarf') ? 1 : 0);
   const background = (SRD.backgrounds || []).find(b => b.id === CC.draft.background);
   // Starting kit: armour and shield worn, weapons in hand; named, so the inventory can show them.
   // Counts come from the gear choice (2 handaxes, 20 arrows); background gear with no item is kept by name.
@@ -178,7 +196,8 @@ export async function finishCharacterCreation({ enter = true } = {}) {
     hp: maxHP, hpMax: maxHP, hpTemp: 0, hitDiceRemaining: 1,
     ac: armorClass({ class: CC.draft.class, ...finalScores }, equipment.filter(e => e.equipped)),
     initiative: abilityMod(finalScores.dex),
-    speed: race?.speed || 30,
+    speed: lineage?.speed || race?.speed || 30, // a 2024 wood elf: 35
+    ...(o24 ? { origins: '2024' } : {}), // made with the 2024 origins (Table rule)
     proficiencyBonus: profBonus(1),
     spellcastingAbility: cls?.spellcasting_ability?.toLowerCase().slice(0, 3) || null,
     // One shape everywhere: index = slot level, [current, max]; only casters get slots (audit A2, A3).
@@ -198,6 +217,7 @@ export async function finishCharacterCreation({ enter = true } = {}) {
     invocations: [], metamagic: [], feats: [], pactBoon: null,
     features: [
       ...(race?.traits?.map(t => t.name) || []),
+      ...(o24 ? (lineage?.traits || []).map(t => t.name) : []), // a 2024 lineage's own gifts
       ...(L1_FEATURES[CC.draft.class] || []),
       ...(background?.feature?.name ? [background.feature.name] : []),
     ],

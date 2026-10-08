@@ -11,7 +11,7 @@ export const DIFFICULTIES = ['Easy', 'Medium', 'Tricky'];
 export const AURAS = {
   dwarf: ['#ff6a1a', '#7a2e0e'], elf: ['#3ddc97', '#1e4d8c'], halfling: ['#ffc94a', '#5e8f2f'], human: ['#e8b54a', '#2f4fa8'],
   dragonborn: ['#ff3d2e', '#c9a227'], gnome: ['#29e0d0', '#7b4dff'], 'half-elf': ['#ff8fb3', '#7a5cd6'],
-  'half-orc': ['#d4351c', '#6b4a2a'], tiefling: ['#ff2a6d', '#5b1a8c'],
+  'half-orc': ['#d4351c', '#6b4a2a'], tiefling: ['#ff2a6d', '#5b1a8c'], goliath: ['#9fc7e6', '#4a5a6e'], orc: ['#c2411f', '#3d5a2a'],
   barbarian: ['#ff3b1f', '#8a1c0c'], bard: ['#ff5fd2', '#ffb347'], cleric: ['#fff1b8', '#d9a520'], druid: ['#7ddc3d', '#2f6b3a'],
   fighter: ['#7fa7d9', '#3b4a63'], monk: ['#ffae35', '#d9480f'], paladin: ['#ffe27a', '#8fb4ff'], ranger: ['#4caf50', '#8d6e3f'],
   rogue: ['#8a5cff', '#1a1033'], sorcerer: ['#ff4d4d', '#a64dff'], warlock: ['#7cff4d', '#6a00a8'], wizard: ['#3d7bff', '#7f5af0'],
@@ -38,6 +38,11 @@ export const RACE_INFO = {
     lore: 'Strong and fierce, with an orc’s fury and a human’s will. When they should go down, they often don’t.' },
   tiefling: { colour: '#d4413b', signature: 'Resists fire', art: true,
     lore: 'Marked by an old infernal bargain: horns, a tail, eyes like coals, and a little hellfire in the blood.' },
+  // 2024 origins (lk-origins2024.js). No paintings yet: their emblems stand in.
+  goliath: { colour: '#8fb3d1', signature: 'A giant ancestor\'s gift',
+    lore: 'Towering mountain folk with a giant somewhere in the family tree, and a little of its power still in their blood.' },
+  orc: { colour: '#b5523b', signature: 'Refuses to fall once',
+    lore: 'Fierce, tireless wanderers made for hard roads. When they should go down, they get back up.' },
 };
 
 export const CLASS_INFO = {

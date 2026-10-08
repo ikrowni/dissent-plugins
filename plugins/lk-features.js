@@ -6,6 +6,7 @@
 // features, and the sheet's own table covered a third of them (owner, 2026-10-05). Names are SRD 5.1 names; every
 // description is original. Never write the trademark in user-facing text.
 import { SRD_SUBCLASS_DESC, FIGHTING_STYLES, PACT_BOONS } from './lk-levelling.js';
+import { SPECIES_2024, ORIGIN_FEATS } from './lk-origins2024.js';
 
 const RACE_TRAITS = {
   'darkvision': 'You see in dim light within 60 ft as if it were bright, and in darkness as if it were dim (no colours, only shades of grey).',
@@ -154,6 +155,14 @@ const BACKGROUND_FEATURES = {
   'shelter of the faithful': 'Temples of your faith give you and your companions healing and care, and their priests will help you.',
 };
 
+// The 2024 origins (lk-origins2024.js): a 2024 hero's traits and origin feat ("Alert (origin feat)").
+const ORIGINS_2024 = (() => {
+  const out = {};
+  for (const s of SPECIES_2024) for (const t of [...s.traits, ...s.subraces.flatMap(x => x.traits)]) out[t.name.toLowerCase()] ||= t.desc;
+  for (const f of Object.values(ORIGIN_FEATS)) out[f.name.toLowerCase().replace(/\s*\(.*\)\s*$/, '')] ||= f.desc;
+  return out;
+})();
+
 const norm = s => String(s || '').toLowerCase().replace(/’/g, "'").trim();
 
 /**
@@ -173,5 +182,5 @@ export function featureDesc(name, { feats = [] } = {}) {
   const boon = PACT_BOONS.find(b => norm(b.name) === norm(raw));
   if (boon) return boon.desc;
   const key = norm(raw).replace(/\s*\(.*\)\s*$/, '').replace(/\s+improvement$/, '');
-  return RACE_TRAITS[key] || CLASS_FEATURES[key] || BACKGROUND_FEATURES[key] || '';
+  return RACE_TRAITS[key] || CLASS_FEATURES[key] || BACKGROUND_FEATURES[key] || ORIGINS_2024[key] || '';
 }

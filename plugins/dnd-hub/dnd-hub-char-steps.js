@@ -1,5 +1,5 @@
 // dnd-hub-char-steps.js — character creator step renderers (Race → Review)
-import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20261015l';
+import { CC, SRD, ABILITIES, ABILITY_NAMES, STANDARD_ARRAY, ALIGNMENTS, abilityMod, fmtMod } from './dnd-hub-state.js?v=20261015m';
 import { esc } from '../plugin-sdk.js';
 import { proficiencyLabel, racialBonus, finalScore, modifier } from './dnd-hub-char-format.js';
 import { armorClass } from './lk-rules5e.js';
@@ -377,7 +377,7 @@ export function getStartingGold(cls = CC.draft.class) {
  * Final ability scores of the draft: base + race + subrace bonuses + a half-elf's two +1s. One function for
  * the review step and the saved character (the save used to drop subrace bonuses — audit A6).
  */
-export function draftScores() { return scoresFor(CC.draft, SRD.races); }
+export function draftScores() { return scoresFor(CC.draft, SRD.races, SRD.backgrounds); }
 
 /** A half-elf picks two abilities other than Charisma for +1 each. */
 export function setHalfElfBonus(i, ability) {

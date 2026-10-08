@@ -1,6 +1,7 @@
 // dnd-hub-quick.js — Quick character: a complete, rules-valid draft from a race and a class (spec 2026-10-03 §2).
 // Pure: data in, draft out. The page is the Hero Forge (dnd-hub-forge.js); saving is the creator's own path.
-import { ABILITY_KEYS, CANTRIPS_KNOWN, classSkillChoice, draftScores, spellLimitL1 } from './dnd-hub-draft-rules.js';
+import { ABILITY_KEYS, CANTRIPS_KNOWN, classSkillChoice, draftScores, spellLimitL1, origins2024 } from './dnd-hub-draft-rules.js';
+import { suggestBackground, suggestBgBonus, extraSkillsFor } from './lk-origins2024.js';
 import { armorClass, weaponProfile, hitDieFor, abilityMod, isWeaponId } from './lk-rules5e.js';
 
 const ARRAY = [15, 14, 13, 12, 10, 8];
@@ -33,7 +34,7 @@ const SKILL_PREF = {
 const ANY_SKILL_PREF = ['Perception', 'Stealth', 'Athletics', 'Acrobatics', 'Persuasion', 'Arcana', 'Investigation',
   'Survival', 'Medicine', 'Deception', 'Intimidation', 'Performance', 'History', 'Nature', 'Animal Handling',
   'Sleight of Hand'];
-const BACKGROUND_SKILLS = ['Insight', 'Religion']; // Acolyte, the only SRD 5.1 background
+const BACKGROUND_SKILLS = ['Insight', 'Religion']; // Acolyte, the only SRD 5.1 background (2024: the suggested one's)
 const RACE_SKILLS = { elf: ['Perception'], 'half-orc': ['Intimidation'] };
 
 // SRD-style starting kits, ids from equipment.json (audit A11). Armour and shields are worn when saved.
@@ -85,6 +86,7 @@ export const RACE_BLURBS = {
   dragonborn: 'Proud dragon-blooded warriors with a breath weapon.', gnome: 'Small, curious and clever; sees in the dark.',
   'half-elf': 'Charming and versatile; two extra skills.', 'half-orc': 'Strong and hard to put down.',
   tiefling: 'Fiend-touched; resists fire and knows a little magic.',
+  goliath: 'Giant-blooded and towering; a gift from their giant ancestors.', orc: 'Tireless and hard to put down; sees far in the dark.',
 };
 export const CLASS_BLURBS = {
   barbarian: 'Rage and raw strength.', bard: 'Music, magic and a silver tongue.', cleric: 'Armoured healer of a god.',
@@ -99,6 +101,7 @@ const NAMES = {
   dragonborn: ['Arjhan Flamescale', 'Sora Brightclaw', 'Kriv Ember'], gnome: ['Fizz Copperpot', 'Nim Tinkerley', 'Wren Gearwhistle'],
   'half-elf': ['Kael Dawnmere', 'Isla Fairwind', 'Rowan Vale'], 'half-orc': ['Shura Redtusk', 'Durg Ironhide', 'Mok Ashjaw'],
   tiefling: ['Vex Morrow', 'Ria Cinder', 'Lucan Hollow'],
+  goliath: ['Kavaki Stormstride', 'Thalai Peakborn', 'Gauthak Rockfist'], orc: ['Ghorza Ashfang', 'Brakka Ironjaw', 'Uthra Redmane'],
 };
 
 /** A complete creator draft for `raceId` + `classId`. `rng` picks the name; `name` overrides it. */
@@ -108,16 +111,21 @@ export function quickBuild(srd, raceId, classId, rng = Math.random, name = null,
   const baseScores = Object.fromEntries(prio.map((a, i) => [a, ARRAY[i]]));
   const halfElfBonus = raceId === 'half-elf' ? prio.filter(a => a !== 'cha').slice(0, 2) : [];
 
+  // 2024 origins: the background that suits the class, and its increases (lk-origins2024.js).
+  const o24 = origins2024(srd);
+  const bgId = o24 ? suggestBackground(classId) : 'acolyte';
+  const bgObj = (srd.backgrounds || []).find(b => b.id === bgId);
+  const bgSkills = o24 ? (bgObj?.starting_proficiencies || []).map(p => p.replace(/^Skill: /, '')) : BACKGROUND_SKILLS;
   const { choose, from } = classSkillChoice(srd.classes, classId);
-  const taken = new Set([...BACKGROUND_SKILLS, ...(RACE_SKILLS[raceId] || [])]);
+  const taken = new Set([...bgSkills, ...(RACE_SKILLS[raceId] || [])]);
   const wanted = [...(SKILL_PREF[classId] || []), ...from];
   const proficiencyChoices = [...new Set(wanted)].filter(s => from.includes(s) && !taken.has(s)).slice(0, choose);
-  const extraSkills = raceId === 'half-elf'
-    ? ANY_SKILL_PREF.filter(s => !taken.has(s) && !proficiencyChoices.includes(s)).slice(0, 2) : [];
+  const extraCount = raceId === 'half-elf' ? 2 : o24 ? extraSkillsFor(raceId) : 0;
+  const extraSkills = ANY_SKILL_PREF.filter(s => !taken.has(s) && !proficiencyChoices.includes(s)).slice(0, extraCount);
 
   const draft = {
     race: raceId, subrace: race?.subraces?.[0]?.id || null, class: classId, subclass: null, level: 1,
-    background: 'acolyte', abilityMethod: 'standard-array', baseScores, halfElfBonus,
+    background: bgId, bgBonus: o24 ? suggestBgBonus(bgObj, prio) : null, abilityMethod: 'standard-array', baseScores, halfElfBonus,
     proficiencyChoices, extraSkills, equipment: [...(STARTING_KITS[classId] || [])], useStartingGold: false,
     cantrips: [], spells: [], alignment: 'Neutral Good', deity: '', portraitUrl: '', portraitFileId: '',
     personalityTraits: '', ideals: '', bonds: '', flaws: '', appearance: '', backstory: '',
@@ -125,7 +133,7 @@ export function quickBuild(srd, raceId, classId, rng = Math.random, name = null,
   const rec = RECOMMENDED_SPELLS[classId];
   if (rec) {
     draft.cantrips = rec.cantrips.slice(0, CANTRIPS_KNOWN[classId] ?? 0);
-    draft.spells = rec.spells.slice(0, spellLimitL1(classId, draftScores(draft, srd.races).wis));
+    draft.spells = rec.spells.slice(0, spellLimitL1(classId, draftScores(draft, srd.races, srd.backgrounds).wis));
   }
   const pool = NAMES[raceId] || ['Hero'];
   draft.name = name || pool[Math.floor(rng() * pool.length) % pool.length];
@@ -136,7 +144,7 @@ export function quickBuild(srd, raceId, classId, rng = Math.random, name = null,
 
 /** What the "Here's your hero" card shows: HP, AC and the main attack, by the same rules the save uses. */
 export function previewStats(srd, draft) {
-  const scores = draftScores(draft, srd.races);
+  const scores = draftScores(draft, srd.races, srd.backgrounds);
   const hero = { class: draft.class, level: 1, ...scores };
   const worn = (draft.equipment || []).filter(id => (srd.equipment || []).find(e => e.id === id)?.category === 'Armor');
   const firstArmor = worn.find(id => id !== 'shield');

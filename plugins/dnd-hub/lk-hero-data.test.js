@@ -7,9 +7,11 @@ import { RACE_INFO, CLASS_INFO, ROLES, DIFFICULTIES, raceView, classView, sturdi
 const races = JSON.parse(readFileSync(new URL('./dnd-srd/races.json', import.meta.url)));
 const classes = JSON.parse(readFileSync(new URL('./dnd-srd/classes.json', import.meta.url)));
 
+import { SPECIES_2024 } from './lk-origins2024.js';
+
 describe('hero data covers the SRD', () => {
-  it('has every race and class, and nothing extra', () => {
-    expect(Object.keys(RACE_INFO).sort()).toEqual(races.map(r => r.id).sort());
+  it('has every race (2014 and 2024 origins) and class, and nothing extra', () => {
+    expect(Object.keys(RACE_INFO).sort()).toEqual([...new Set([...races.map(r => r.id), ...SPECIES_2024.map(s => s.id)])].sort());
     expect(Object.keys(CLASS_INFO).sort()).toEqual(classes.map(c => c.id).sort());
   });
   it('uses only the allowed roles and difficulties, and a colour per race', () => {

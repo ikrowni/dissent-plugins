@@ -1,12 +1,12 @@
 // dnd-hub-fog.js — fog-of-war rendering, brush tools, fog save/reset
-import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261015l';
+import { MAP, userId, effectiveGs, hubFogKey } from './dnd-hub-state.js?v=20261015m';
 import { storageSet } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015l';
-import { computeLitCells, lightPx, getEffectiveRadius } from './dnd-hub-lights.js?v=20261015l';
-import { computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261015l';
+import { EV } from './dnd-hub-event-types.js?v=20261015m';
+import { computeLitCells, lightPx, getEffectiveRadius } from './dnd-hub-lights.js?v=20261015m';
+import { computeVisibilityPolygon, sightBlockers } from './dnd-hub-los.js?v=20261015m';
 import { fogAlpha } from './dnd-hub-rules.js';
-import { applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261015l';
+import { applyPlayerSight, applyFacing } from './dnd-hub-tokens.js?v=20261015m';
 import { fogBefore, fogAfter } from './dnd-hub-undo.js';
 
 export function renderFog() {

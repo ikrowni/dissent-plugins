@@ -2,17 +2,20 @@
 // race and class it guides the user through building the rest"). Pure: which steps apply and the small rules each
 // step needs. The draft starts as Quick character's suggestion (dnd-hub-quick.js quickBuild), so every step opens
 // with a sensible choice already made; dnd-hub-forge.js shows them, dnd-hub-forge-shape-view.js draws them.
-import { ABILITY_KEYS, CANTRIPS_KNOWN, classSkillChoice, draftScores, spellLimitL1 } from './dnd-hub-draft-rules.js';
+import { ABILITY_KEYS, CANTRIPS_KNOWN, classSkillChoice, draftScores, spellLimitL1, origins2024 } from './dnd-hub-draft-rules.js';
+import { extraSkillsFor } from './lk-origins2024.js';
 import { skillProficiencies } from './lk-rules5e.js';
 
 /** The guided steps for this draft, in order. A choice with one option is not a step. */
 export function shapeSteps(draft, srd) {
   const race = (srd.races || []).find(r => r.id === draft.race);
   const out = [];
+  const o24 = origins2024(srd); // 2024 origins: the background comes first, it sets the ability increases
   if ((race?.subraces || []).length > 1) out.push('heritage');
+  if (o24) out.push('background');
   out.push('abilities');
-  if (classSkillChoice(srd.classes, draft.class).choose > 0 || draft.race === 'half-elf') out.push('skills');
-  if ((srd.backgrounds || []).length > 1) out.push('background');
+  if (classSkillChoice(srd.classes, draft.class).choose > 0 || extraCount(draft, srd)) out.push('skills');
+  if (!o24 && (srd.backgrounds || []).length > 1) out.push('background');
   out.push('gear');
   const sp = spellStep(draft, srd);
   if (sp.cantrips > 0 || sp.spells > 0) out.push('spells');
@@ -50,14 +53,17 @@ export function skillStep(draft, srd) {
   const bg = (srd.backgrounds || []).find(b => b.id === draft.background);
   const already = Object.keys(skillProficiencies({ race: draft.race }, bg));
   const { choose, from } = classSkillChoice(srd.classes, draft.class);
-  return { choose, from: from.filter(s => !already.includes(s)), already, halfElf: draft.race === 'half-elf' };
+  return { choose, from: from.filter(s => !already.includes(s)), already, extra: extraCount(draft, srd) };
 }
+
+/** Skills of any kind on top of the class's: a half-elf's two (2014), a human's one (2024 Skillful). */
+export const extraCount = (draft, srd) => (draft.race === 'half-elf' ? 2 : origins2024(srd) ? extraSkillsFor(draft.race) : 0);
 
 /** Spells at level 1: how many cantrips and spells, and the class's options. */
 export function spellStep(draft, srd) {
   const cls = (srd.classes || []).find(c => c.id === draft.class);
   const list = (srd.spells || []).filter(s => Array.isArray(s.classes) && cls && s.classes.includes(cls.name));
-  const spells = spellLimitL1(draft.class, draftScores(draft, srd.races).wis);
+  const spells = spellLimitL1(draft.class, draftScores(draft, srd.races, srd.backgrounds).wis);
   return { cantrips: CANTRIPS_KNOWN[draft.class] ?? 0, spells,
     prepared: draft.class === 'cleric' || draft.class === 'druid',
     options: { cantrips: list.filter(s => s.level === 0), spells: spells > 0 ? list.filter(s => s.level === 1) : [] } };

@@ -7,6 +7,7 @@ import { allowedLevel } from './lk-levelling.js';
 import { featureDesc } from './lk-features.js';
 import { rule, edition } from './lk-table-rules.js';
 import { MASTERY_OF, MASTERIES, masteryCount, defaultMasteries } from './lk-mastery.js';
+import { alertBonus } from './lk-origins2024.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
   armorClass, weaponProfile } from './lk-rules5e.js';
 
@@ -154,7 +155,7 @@ export function renderMain() {
   bar.style.background = pct > 50 ? '#22c55e' : pct > 25 ? '#f59e0b' : '#ef4444';
   document.getElementById('temp-hp').value = _char.hpTemp || 0;
   document.getElementById('stat-ac').textContent = _effectiveStats.ac ?? _char.ac ?? '—';
-  document.getElementById('stat-init').textContent = fmtMod(abilityMod((_effectiveStats.abilities['dex'] ?? _char.dex) ?? 10));
+  document.getElementById('stat-init').textContent = fmtMod(abilityMod((_effectiveStats.abilities['dex'] ?? _char.dex) ?? 10) + alertBonus(_char)); // + Alert (2024 origin feat)
   document.getElementById('stat-speed').textContent = (_char.speed || 30) + 'ft';
   document.getElementById('stat-insp').textContent = _char.inspiration ? '★' : '☆';
   const extraConds = _effectiveStats.extraConditions || [];

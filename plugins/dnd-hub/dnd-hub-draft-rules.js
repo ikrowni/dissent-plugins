@@ -1,6 +1,7 @@
 // dnd-hub-draft-rules.js — the character creator's rules as pure functions. The full creator's step checks
 // and Quick character (dnd-hub-quick.js) both use these, so "a valid hero" means one thing.
 import { abilityMod } from './lk-rules5e.js';
+import { bgBonusScores, bgIncreases, extraSkillsFor } from './lk-origins2024.js';
 
 export const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 export const CANTRIPS_KNOWN = { bard: 2, cleric: 3, druid: 2, sorcerer: 4, warlock: 2, wizard: 3 };
@@ -24,14 +25,18 @@ const bonusFor = (r, ab) => (r?.ability_bonuses || [])
   .filter(b => String(b.ability || '').toUpperCase() === ab.toUpperCase())
   .reduce((n, b) => n + (b.bonus || 0), 0);
 
-/** Final ability scores: base + race + subrace + a half-elf's two +1s. */
-export function draftScores(draft, races) {
+/**
+ * Final ability scores: base + race + subrace + a half-elf's two +1s; with 2024 origins (a background that lists
+ * abilities, lk-origins2024.js) the background's +2/+1 or +1/+1/+1 instead (2024 species give none).
+ */
+export function draftScores(draft, races, backgrounds = null) {
   const race = (races || []).find(r => r.id === draft.race);
   const sub = race?.subraces?.find(s => s.id === draft.subrace) || null;
   const out = {};
   for (const a of ABILITY_KEYS) out[a] = (draft.baseScores?.[a] || 0) + bonusFor(race, a) + bonusFor(sub, a);
   if (draft.race === 'half-elf') for (const a of new Set(draft.halfElfBonus || [])) if (a !== 'cha' && a in out) out[a] += 1;
-  return out;
+  const bg = (backgrounds || []).find(b => b.id === draft.background);
+  return bg?.abilities ? bgBonusScores(out, bg, draft.bgBonus) : out;
 }
 
 /** Every unmet choice, as { step, message } — step = the creator step that fixes it (0 race … 6 description). */
@@ -47,6 +52,7 @@ export function validateDraft(d, srd) {
   else if ((d.proficiencyChoices || []).length !== choose || (d.proficiencyChoices || []).some(s => !from.includes(s))) {
     add(1, `Please choose ${choose} skills.`);
   } else if (d.race === 'half-elf' && new Set(d.extraSkills || []).size !== 2) add(1, 'Half-elves choose two more skills.');
+  else if (origins2024(srd) && extraSkillsFor(d.race) && new Set(d.extraSkills || []).size !== extraSkillsFor(d.race)) add(1, 'Humans choose one more skill.');
 
   const b = d.baseScores || {};
   if (d.abilityMethod === 'standard-array') {
@@ -60,11 +66,18 @@ export function validateDraft(d, srd) {
     if (!he[0] || !he[1] || he[0] === he[1] || he.includes('cha')) add(2, 'Half-elves choose two different abilities (not Charisma) for +1.');
   }
 
+  // 2024 origins: the background's ability increases are part of the abilities step.
+  const bg = (srd.backgrounds || []).find(b => b.id === d.background);
+  if (bg?.abilities && !Object.keys(bgIncreases(bg, d.bgBonus)).length) add(2, `Choose your ${bg.name} increases: +2 and +1, or +1 to all three.`);
+
   if (d.class) {
-    const wis = draftScores(d, srd.races).wis;
+    const wis = draftScores(d, srd.races, srd.backgrounds).wis;
     if ((d.cantrips || []).length > (CANTRIPS_KNOWN[d.class] ?? 0)) add(5, 'Too many cantrips for your class.');
     if ((d.spells || []).length > spellLimitL1(d.class, wis)) add(5, 'Too many 1st-level spells for your class.');
   }
   if (!String(d.name || '').trim()) add(6, 'Please enter a character name.');
   return out;
 }
+
+/** The 2024 origins are in play when the backgrounds offered list their abilities (lk-origins2024.js). */
+export const origins2024 = srd => !!(srd?.backgrounds || []).some(b => b.abilities);
