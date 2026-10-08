@@ -1,7 +1,7 @@
 // dnd-hub-levelup.js — the level-up scene (spec 2026-10-03 growing your hero §1), in the map area, built from the
 // Hero Forge's pieces. Nothing is saved until the last step; several waiting levels run one after another.
-import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261015p';
-import { loadHubDm } from './dnd-hub-storage.js?v=20261015p';
+import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261015q';
+import { loadHubDm } from './dnd-hub-storage.js?v=20261015q';
 import { storageGetUser } from '../plugin-sdk.js';
 import { rule } from './lk-table-rules.js';
 import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './lk-levelling.js';
@@ -11,8 +11,9 @@ import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
 import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
-import { saveHero } from './dnd-hub-char.js?v=20261015p';
+import { saveHero } from './dnd-hub-char.js?v=20261015q';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
+import { moveToast } from './dnd-hub-turn-move.js';
 
 let S = null; // { campaignId, hero, plan, i, choices, error, onDone, fx, back }
 const sound = createForgeSound();
@@ -28,13 +29,22 @@ export function levelCtx(campaignId) {
 export async function openLevelUp(campaignId, onDone = null) {
   // A fresh read: the DM may have added subclasses or feats, or granted levels, since this screen loaded.
   // Only the fields the level-up reads are copied in: replacing the campaign object would detach the open map.
-  const fresh = (await loadHubDm().catch(() => null))?.campaigns?.[campaignId];
   const camp = serverData?.campaigns?.[campaignId];
-  if (fresh && camp) for (const k of ['library', 'levels', 'xp', 'settings', 'startingLevel']) if (k in fresh) camp[k] = fresh[k];
   const hero = (await storageGetUser('characters') || {})[campaignId];
   if (!hero || !camp) return false;
+  const waiting = () => (hero.level || 1) < allowedLevel(camp, userId, hero, rule(camp.settings, 'levelByXp'));
+  // A refused read (HTTP 429) kept the old record and the Level up button did nothing (playtest 2026-10-08): try twice.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const fresh = (await loadHubDm().catch(() => null))?.campaigns?.[campaignId];
+    if (fresh) for (const k of ['library', 'levels', 'xp', 'settings', 'startingLevel']) if (k in fresh) camp[k] = fresh[k];
+    if (waiting()) break;
+    if (attempt === 0 && !onDone) await new Promise(r => setTimeout(r, 2500));
+  }
   await useCampaignSpells(camp).catch(() => {}); // the campaign's books add spells to the choices
-  if ((hero.level || 1) >= allowedLevel(camp, userId, hero, rule(camp.settings, 'levelByXp'))) { onDone?.(); return false; }
+  if (!waiting()) {
+    if (!onDone) moveToast('No level is waiting yet. If the DM just granted one, try again in a moment.');
+    onDone?.(); return false;
+  }
   const plan = levelPlan(hero, levelCtx(campaignId));
   if (!plan) { onDone?.(); return false; }
   S = { campaignId, hero, plan, i: 0, choices: {}, error: '', onDone, back: document.querySelector('[id^="screen-"]:not(.hidden)')?.id?.slice(7) || 'campaign' };

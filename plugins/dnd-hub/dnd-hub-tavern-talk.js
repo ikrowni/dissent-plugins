@@ -3,11 +3,11 @@
 // A dialogue box at the foot of the tavern, with the host's portrait, words that type themselves out, and
 // numbered choices (keys 1–4, Esc to walk away). The DM can talk to a host too, to see what the players see,
 // but only heroes sit down. My purse and numbers come from my own sheet (`tavern:hero`, dnd-player-tavern.js).
-import { MAP, serverData } from './dnd-hub-state.js?v=20261015p';
+import { MAP, serverData } from './dnd-hub-state.js?v=20261015q';
 import { localPublish } from '../plugin-sdk.js';
 import { gameType, PLAYABLE, stakeProblem, CAUGHT } from './lk-tavern.js';
-import { medal, TAVERN } from './dnd-hub-tavern.js?v=20261015p';
-import { sit } from './dnd-hub-tavern-seat.js?v=20261015p';
+import { medal, TAVERN } from './dnd-hub-tavern.js?v=20261015q';
+import { sit } from './dnd-hub-tavern-seat.js?v=20261015q';
 
 let _hero = null;          // { gold, name, mods: {str…}, skills: {…} } from my sheet
 let _typer = 0, _keys = null;

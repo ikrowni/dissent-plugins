@@ -1,25 +1,25 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20261015p';
+import { MAP, serverData, userId, effectiveGs, TOKEN_COLORS } from './dnd-hub-state.js?v=20261015q';
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015p';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261015p';
-import { renderGrid } from './dnd-hub-grid.js?v=20261015p';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261015p';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261015p';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015p';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015p';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261015p';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261015p';
+import { EV } from './dnd-hub-event-types.js?v=20261015q';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261015q';
+import { renderGrid } from './dnd-hub-grid.js?v=20261015q';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261015q';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261015q';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015q';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015q';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261015q';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261015q';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015p';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261015p';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015p';
-import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261015p';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015p';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261015p';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015q';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261015q';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015q';
+import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261015q';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015q';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261015q';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor, snapWallPoint } from './dnd-hub-rules.js';
 import { onMap, toCell, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath } from './dnd-hub-movement.js';
@@ -862,7 +862,7 @@ function _showTemplateContextMenu(clientX, clientY, wx, wy) {
 
 window._placeTemplateAt = async (type, wx, wy) => {
   document.getElementById('tmpl-ctx-menu')?.remove();
-  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261015p');
+  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261015q');
   await addTemplate(type, wx, wy, 10, 0, 10, 0xff4444, userId);
 };
 
