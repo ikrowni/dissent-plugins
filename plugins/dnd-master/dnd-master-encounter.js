@@ -1,12 +1,12 @@
 // dnd-master-encounter.js — encounter builder: monster list, roster, XP budget, launch
 import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015s';
+import { EV } from './dnd-hub-event-types.js?v=20261015t';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { browsable } from './lk-srd-edition.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
 import { adjustedEncounterXp } from './lk-rules5e.js';
-import { preparedToDraft, spawnPositions } from './dnd-master-prepared.js';
+import { preparedToDraft, monsterSpots, tokenSize } from './dnd-master-prepared.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { rule } from './lk-table-rules.js';
 import { startInitiative } from './dnd-master-init-order.js';
@@ -191,7 +191,7 @@ export function addMonsterToEncounter(monsterId) {
     const actor    = (_state.dmCampaign?.customActors || {})[customId];
     if (!actor) return;
     m = { id: monsterId, name: actor.name, type: actor.type, cr: actor.cr,
-          hp: actor.hp, ac: actor.ac, dex: actor.dex || 10, hp_dice: String(actor.hp) };
+          hp: actor.hp, ac: actor.ac, dex: actor.dex || 10, hp_dice: String(actor.hp), size: actor.size };
   } else {
     m = _state.srdMonsters.find(x => x.id === monsterId);
   }
@@ -370,6 +370,7 @@ export async function launchEncounter() {
           xp: CR_XP[m.cr] || 0, // shared out when the fight ends (experience mode)
           hp, hpMax: hp, ac: m.ac || 10, conditions: [], attacks,
           speed: parseInt(String(m.speed?.walk ?? m.speed ?? '30')) || 30,
+          size: tokenSize(m.size), // a Large ogre covers 2×2 on the map
         });
       }
     });
@@ -421,24 +422,17 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
     const activeMapId = campaign?.activeMapId;
 
     const mapData = campaign.maps[activeMapId];
-    const bgOffX = mapData.bgOffsetX ?? 0;
-    const bgOffY = mapData.bgOffsetY ?? 0;
-    const bgW    = mapData.bgScaledW ?? 0;
-    const gs = (mapData.mapCellW && bgW > 0) ? bgW / mapData.mapCellW : (mapData.gridSize || 40);
-    const oy = bgOffY + (mapData.gridOffsetY || 0);
-    const spawnX = bgOffX + (bgW > 0 ? bgW + gs : gs * 15);
     mapData.tokens = mapData.tokens || {};
 
-    // A prepared encounter's monsters stand on their cells in the room; others in the old column off the map.
-    const pos = spawnPositions(order, spawnCells, mapData.gridSize || gs, null);
+    // A prepared encounter's monsters stand on their cells in the room; others in a column off the map. On squares.
+    const pos = monsterSpots(order, mapData, spawnCells);
     const newTokens = [];
-    let row = 0;
-    for (const c of order) {
+    for (const [i, c] of order.entries()) {
       if (c.type !== 'monster') continue;
       if (mapData.tokens[c.id]) continue;
       mapData.tokens[c.id] = {
-        id: c.id, type: 'monster', name: c.name,
-        x: pos[order.indexOf(c)]?.x ?? spawnX, y: pos[order.indexOf(c)]?.y ?? (oy + row * gs + gs / 2),
+        id: c.id, type: 'monster', name: c.name, size: tokenSize(c.size),
+        x: pos[i].x, y: pos[i].y,
         hp: c.hp, hpMax: c.hpMax, ac: c.ac || 10,
         conditions: [], visible: true,
         monsterId: c.monsterId || null,
@@ -447,7 +441,6 @@ async function _spawnMonsterTokens(order, dmCampaignId, userId, lootByMonsterId 
         lootItems: (lootByMonsterId[c.monsterId] || []).map(li => ({ ...li, claimed: false })),
       };
       newTokens.push(mapData.tokens[c.id]);
-      row++;
     }
     if (!newTokens.length) return;
 

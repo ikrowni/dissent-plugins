@@ -1,12 +1,13 @@
 // dnd-master-initiative.js — initiative tracker: render, move, HP updates
 import { storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015s';
+import { EV } from './dnd-hub-event-types.js?v=20261015t';
 import { publishTo } from './lk-bus.js';
 import { loadHubDmCompanion, saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { withPlayerRoll, rollMissing, nextTurn, isDefeated } from './dnd-master-init-order.js';
 import { getSRDMonsters } from './dnd-master-monsters.js';
 import { fightXp } from './dnd-master-levels.js';
+import { monsterSpots, tokenSize } from './dnd-master-prepared.js';
 
 let currentInitiative = null;
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
@@ -263,33 +264,27 @@ export async function spawnTokensOnMap() {
     return;
   }
   const mapData = campaign.maps[activeMapId];
-  // bgOffsetX/Y: letterbox offset stored by hub after renderMapBackground.
-  // bgScaledW: scaled image width — used to find the map's right edge in canvas pixels.
-  const bgOffX = mapData.bgOffsetX ?? 0;
-  const bgOffY = mapData.bgOffsetY ?? 0;
-  const bgW    = mapData.bgScaledW ?? 0;
-  const gs = (mapData.mapCellW && bgW > 0)
-    ? bgW / mapData.mapCellW
-    : (mapData.gridSize || 40);
-  const oy = bgOffY + (mapData.gridOffsetY || 0);
-  // Place tokens one full cell outside the map's right edge.
-  const spawnX = bgOffX + bgW + gs;
   mapData.tokens = mapData.tokens || {};
 
+  // Only the ones not on the map yet, in a column a full square right of it, on its squares (monsterSpots). A fight
+  // started before tokens had sizes finds its size in the SRD.
+  const srd = getSRDMonsters() || [];
+  const todo = currentInitiative.order.filter(c => c.type === 'monster' && !mapData.tokens[c.id])
+    .map(c => ({ ...c, size: c.size || srd.find(m => m.id === c.monsterId)?.size }));
+  const pos = monsterSpots(todo, mapData, null);
   const newTokens = [];
-  let row = 0;
-  for (const c of currentInitiative.order) {
-    if (c.type !== 'monster') continue;
-    if (mapData.tokens[c.id]) continue;
+  for (const [i, c] of todo.entries()) {
     mapData.tokens[c.id] = {
-      id: c.id, type: 'monster', name: c.name,
-      x: spawnX,
-      y: oy + row * gs + gs / 2,
+      id: c.id, type: 'monster', name: c.name, size: tokenSize(c.size),
+      x: pos[i].x,
+      y: pos[i].y,
       hp: c.hp, hpMax: c.hpMax, ac: c.ac || 10,
       conditions: [], visible: true,
+      // As a launched encounter makes them (dnd-master-encounter.js): this button is how the DM recovers a spawn that
+      // failed, and its tokens had no stat block, attacks or speed.
+      monsterId: c.monsterId || null, attacks: c.attacks || [], speed: c.speed || 30,
     };
     newTokens.push(mapData.tokens[c.id]);
-    row++;
   }
 
   if (!newTokens.length) { alert('All monsters are already on the map.'); return; }

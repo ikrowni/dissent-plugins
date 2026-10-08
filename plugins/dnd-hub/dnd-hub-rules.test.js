@@ -120,6 +120,15 @@ describe('waiting tokens', () => {
     expect(waitingSpot(2, 50, 800)).toEqual({ x: -75, y: 675 });
     expect(waitingSpot(-1, 50, 800)).toEqual({ x: -75, y: 775 }); // not a member (yet): the first row
   });
+  it('on the grid\'s squares when the grid is shifted (it sat between squares), still clear of the map', () => {
+    const at = (v, off) => Math.floor((v - off) / 50) * 50 + 25 + off; // a 1×1 drop's snap (snapToGrid)
+    for (const [ox, oy] of [[7, 3], [40, 45], [0, 0]]) {
+      const p = waitingSpot(1, 50, 790, ox, oy);
+      expect(p.x).toBe(at(p.x, ox)); expect(p.y).toBe(at(p.y, oy));
+      expect(p.x + 25).toBeLessThanOrEqual(-25); // a full half-square gap or more to the map's left edge
+      expect(p.y + 25).toBeLessThanOrEqual(790);  // inside the map's height
+    }
+  });
   it('from the top while the map\'s height is not known', () => {
     expect(waitingSpot(2, 50)).toEqual({ x: -75, y: 125 });
   });

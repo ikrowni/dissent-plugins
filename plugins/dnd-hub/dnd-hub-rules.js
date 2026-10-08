@@ -124,9 +124,13 @@ export function campaignRecord({ id, name, description = '', dmUserId, dmDisplay
  * cannot move and sees nothing (owner, 2026-10-05). It used to be put on the map at once, by the player on any
  * square the party had seen or by the DM's screen in a row near the top-left. `mapH` 0 (not known): from the top.
  */
-export function waitingSpot(memberIdx, gs, mapH = 0) {
-  const row = Math.max(0, memberIdx);
-  return { x: -gs * 1.5, y: mapH > gs ? mapH - gs * (row + 0.5) : gs * (row + 0.5) };
+export function waitingSpot(memberIdx, gs, mapH = 0, ox = 0, oy = 0) {
+  const r = Math.max(0, memberIdx);
+  // On the grid's own squares (`ox`/`oy`: where its lines start), as a drop would snap it: counted from the image's
+  // bottom edge it sat between squares whenever the height was not a whole number of squares or the grid was shifted.
+  const col = Math.floor(-ox / gs) - 2;
+  const row = mapH > gs ? Math.floor((mapH - oy) / gs) - 1 - r : r;
+  return { x: ox + (col + 0.5) * gs, y: oy + (row + 0.5) * gs };
 }
 
 /**
@@ -231,8 +235,8 @@ export function snapWallPoint(p, ends = [], grid = null, radius = 12) {
 }
 
 /** A new hero's token, waiting beside the map (waitingSpot). */
-export function newWaitingToken(uid, summary, memberIdx, gs, colorCount, mapH = 0) {
-  const { x, y } = waitingSpot(memberIdx, gs, mapH);
+export function newWaitingToken(uid, summary, memberIdx, gs, colorCount, mapH = 0, ox = 0, oy = 0) {
+  const { x, y } = waitingSpot(memberIdx, gs, mapH, ox, oy);
   return { ...newPlayerToken(uid, summary, memberIdx, x, y, colorCount), waiting: true };
 }
 

@@ -3,7 +3,7 @@
 //
 // Who they are comes from the DM's sidebar (`tavern:npcs`, sent whenever an NPC or a game setup changes, and with
 // `tavern:open`), else from this screen's copy of the campaign — which can be older than the sidebar's edits.
-import { MAP, serverData, effectiveGs } from './dnd-hub-state.js?v=20261015s';
+import { MAP, serverData, effectiveGs } from './dnd-hub-state.js?v=20261015t';
 import { talkingNpcs, npcTokenId, withinTalkRange, cleanSetup } from './lk-tavern.js';
 
 let _sent = null; // { npcs, setups } as the DM's sidebar last sent them

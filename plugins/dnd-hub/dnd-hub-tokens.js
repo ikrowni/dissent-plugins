@@ -1,22 +1,22 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261015s';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, gridOrigin, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261015t';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015s';
-import { renderFog } from './dnd-hub-fog.js?v=20261015s';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015s';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015s';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261015s';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261015s';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015s';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015s';
+import { EV } from './dnd-hub-event-types.js?v=20261015t';
+import { renderFog } from './dnd-hub-fog.js?v=20261015t';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015t';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015t';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261015t';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261015t';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015t';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015t';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { noticeMyConditions } from './dnd-hub-condition-fx.js';
-import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015s';
+import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015t';
 export { CLIENT_ID };
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
@@ -89,7 +89,7 @@ export function renderTokens() {
       toSeed.forEach(uid => {
         const idx = (campaign.members || []).indexOf(uid);
         // Beside the map, waiting for the DM to drag them in (dnd-hub-rules.js waitingSpot).
-        mapData.tokens[`player_${uid}`] = newWaitingToken(uid, summaries[uid], idx, gs, TOKEN_COLORS.length, MAP._bgImgH || 0);
+        mapData.tokens[`player_${uid}`] = newWaitingToken(uid, summaries[uid], idx, gs, TOKEN_COLORS.length, MAP._bgImgH || 0, ...gridOrigin(mapData));
         mapData.seededPlayers[uid] = true;
       });
       saveHubDm(serverData); // fire-and-forget
@@ -664,7 +664,7 @@ export function showContextMenu(token, cx, cy) {
     _addItem(menu, `💬 Talk to ${talk.name}`, async () => {
       destroyContextMenu();
       // loaded on demand: dnd-hub-tavern.js imports this file
-      (await import('./dnd-hub-tavern.js?v=20261015s')).talkToNpc(token);
+      (await import('./dnd-hub-tavern.js?v=20261015t')).talkToNpc(token);
     });
   }
 
@@ -686,7 +686,7 @@ export function showContextMenu(token, cx, cy) {
       // The roleplay stage (dnd-hub-stage.js), loaded on demand like the talk: it imports the tavern, which imports this file.
       _addItem(menu, '🎭 Bring onto the stage', async () => {
         destroyContextMenu();
-        (await import('./dnd-hub-stage.js?v=20261015s')).bringOnStage(token);
+        (await import('./dnd-hub-stage.js?v=20261015t')).bringOnStage(token);
       });
     }
 

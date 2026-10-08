@@ -110,6 +110,11 @@ export function hubFogKey(campaignId, mapId) { return `hub-fog-${campaignId}-${m
 
 // Effective grid cell size in canvas pixels. Matches renderGrid's formula.
 // Use this everywhere instead of mapData.gridSize || 40 to keep tokens/fog/grid aligned.
+/** Where the grid's lines start, in world pixels: [x, y] (the map's offset plus the DM's grid shift). */
+export function gridOrigin(mapData) {
+  return [(MAP._bgOffset?.x ?? 0) + (mapData?.gridOffsetX || 0), (MAP._bgOffset?.y ?? 0) + (mapData?.gridOffsetY || 0)];
+}
+
 export function effectiveGs(mapData) {
   return (mapData?.mapCellW && MAP._bgImgW && MAP._bgScale != null)
     ? MAP._bgImgW * MAP._bgScale / mapData.mapCellW

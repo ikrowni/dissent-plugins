@@ -175,8 +175,8 @@ export function npcToken(a, { x, y }) {
   };
 }
 
-/** The map's squares as the sidebar can know them from the stored map (no image loaded). */
-function mapGeometry(m) {
+/** The map's squares as the sidebar can know them from the stored map (no image loaded). Monsters spawn by it too. */
+export function mapGeometry(m) {
   const bgW = m.bgScaledW || 0, bgH = m.bgScaledH || 0;
   const gs = m.mapCellW && bgW > 0 ? bgW / m.mapCellW : (m.gridSize || 40);
   const ox = (m.bgOffsetX ?? 0) + (m.gridOffsetX ?? 0), oy = (m.bgOffsetY ?? 0) + (m.gridOffsetY ?? 0);
