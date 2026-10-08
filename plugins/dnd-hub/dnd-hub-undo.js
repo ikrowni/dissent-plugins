@@ -7,7 +7,7 @@
 // that arrive from elsewhere (another screen, the DM sidebar) only move the copy forward (`whileRemote`). Fog is
 // recorded around each brush stroke and reset instead, because players' sight changes it all the time.
 // An undo puts the part back and sends it the way its own tool does.
-import { MAP } from './dnd-hub-state.js?v=20261015t';
+import { MAP } from './dnd-hub-state.js?v=20261015u';
 
 export const PARTS = ['walls', 'doors', 'lights', 'pins', 'audioZones', 'triggers', 'pictures'];
 const WORDS = { walls: 'walls', doors: 'doors', lights: 'lights', pins: 'pins', audioZones: 'sound zones', triggers: 'traps', pictures: 'pictures', fogState: 'fog' };

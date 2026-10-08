@@ -3,7 +3,7 @@
 // campaign's books. Always rebuilt from those two, so one campaign's books never leak into another's, and a change of
 // rules keeps the books' spells.
 import { request } from '../../plugin-sdk.js';
-import { SRD } from '../dnd-hub-state.js?v=20261015t';
+import { SRD } from '../dnd-hub-state.js?v=20261015u';
 import { mergeContent, loadPlayerParts } from '../lk-book.js';
 
 let _edition = '2014', _parts = [];

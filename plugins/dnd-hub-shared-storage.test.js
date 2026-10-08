@@ -9,6 +9,16 @@ const sk = (k, scope) => (scope === 'user' ? 'user:' + k : k);
 vi.mock('./plugin-sdk.js', () => ({
   storageGetCompanion: vi.fn(async (_r, k, scope) => { await pause(); k = sk(k, scope); return store.has(k) && !failReads.has(k) ? JSON.parse(store.get(k)) : null; }),
   storageSetCompanion: vi.fn(async (_r, k, scope, v) => { await pause(); store.set(sk(k, scope), JSON.stringify(v)); }),
+  // A save's strict read/write (readStrict): through the mocks above, but a failed read THROWS, as request() does.
+  request: vi.fn(async (action, p) => {
+    const sdk = await import('./plugin-sdk.js');
+    if (action === 'storage:get-companion') {
+      if (failReads.has(sk(p.key, p.scope))) { await pause(); throw new Error('HTTP 429'); }
+      return { value: await sdk.storageGetCompanion(p.registryId, p.key, p.scope) };
+    }
+    if (action === 'storage:set-companion') return sdk.storageSetCompanion(p.registryId, p.key, p.scope, p.value);
+    throw new Error('unmocked ' + action);
+  }),
 }));
 
 let mod;
@@ -157,13 +167,24 @@ describe('a deleted campaign stays deleted (hub-index deletedIds)', () => {
     expect(JSON.parse(store.get('hub-index')).campaignIds).toEqual(['a']);
   });
 
-  it('a failed read of a campaign nobody deleted still saves the edit', async () => {
+  // 🔴 A refused read used to read as "nothing stored", and the save wrote this screen's older copy over the newer one:
+  // a player's sheet put back a shop's restock and the DM's log (rules playtest, 2026-10-08).
+  it('a refused read writes nothing over the stored campaign; the edit is saved, merged, once reads work again', async () => {
     seed();
     const data = await mod.loadHubDmCompanion();
+    store.set('hub-camp-a', JSON.stringify({ id: 'a', n: 1, m: 7 })); // another screen's edit, after this load
     failReads.add('hub-camp-a');
     data.campaigns.a.n = 2;
-    await mod.saveHubDmCompanion(data);
-    expect(JSON.parse(store.get('hub-camp-a')).n).toBe(2);
+    vi.useFakeTimers();
+    try {
+      const saved = mod.saveHubDmCompanion(data);
+      await vi.advanceTimersByTimeAsync(5000); // the read is retried, then the save gives up for now
+      await saved;
+      expect(JSON.parse(store.get('hub-camp-a'))).toEqual({ id: 'a', n: 1, m: 7 }); // not overwritten blind
+      failReads.delete('hub-camp-a');
+      await vi.advanceTimersByTimeAsync(6000); // the save is tried again
+      expect(JSON.parse(store.get('hub-camp-a'))).toEqual({ id: 'a', n: 2, m: 7 });
+    } finally { vi.useRealTimers(); }
   });
 
   it('a load skips a deleted campaign whose record survived', async () => {

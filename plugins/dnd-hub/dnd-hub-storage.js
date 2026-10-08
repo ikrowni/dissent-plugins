@@ -12,7 +12,7 @@
 // The legacy 'hub-dm' value is deliberately NEVER written or deleted by this
 // module. It stays exactly as it was as a rollback point; loadHubDm() only reads
 // it when no sharded index exists yet.
-import { storageGet, storageSet } from '../plugin-sdk.js';
+import { storageGet, storageSet, request } from '../plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
 import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged, deletedIdsOf, deletedForIndex } from './lk-campaign-index.js';
@@ -27,6 +27,19 @@ export const hubCampKey = id => `hub-camp-${id}`;
 // pin drag / light tweak / token move, and rewriting all shards each time would
 // burn the 60 writes/min plugin-data rate limit.
 const _lastWritten = new Map();
+
+// 🔴 A save reads and writes with these, never storageGet/storageSet: those return null for a REFUSED read (HTTP 429)
+// as for an empty one, and swallow a refused write. A save that took a refused read for "nothing stored" wrote its
+// own older copy over everyone's newer edits (a shop's restock and the DM's log went back; rules playtest
+// 2026-10-08), and a refused write was recorded as written, so the change was never sent again.
+const pause = ms => new Promise(r => setTimeout(r, ms));
+async function readStrict(key, scope = 'server', tries = 3) {
+  for (let i = 0; ; i++) {
+    try { const r = await request('storage:get', { key, scope }); return r?.value ?? null; } // null: nothing stored
+    catch (e) { if (i >= tries - 1) throw e; await pause(1500 * (i + 1)); }
+  }
+}
+const writeStrict = (key, value, scope = 'server') => request('storage:set', { key, value, scope });
 
 // Campaign ids the index advertised at last successful read. `null` means we
 // have not seen a valid index this session, which is NOT "there are none".
@@ -60,7 +73,8 @@ const _secretUnreadable = new Set();
 /** The secret record when this screen is the campaign's DM: `{ sec, ok }` (ok false = a failed read). */
 async function readSecret(id, pub) {
   if (!isCampaignDm(pub, _me)) return { sec: null, ok: true };
-  const sec = await storageGet(secretKey(id), 'user');
+  let sec;
+  try { sec = await readStrict(secretKey(id), 'user'); } catch { return { sec: null, ok: false }; } // refused: unknown
   return { sec, ok: !!sec || !pub?.secretsKept };
 }
 
@@ -174,16 +188,27 @@ let _saving = null, _again = null, _againPromise = null;
 export function saveHubDm(data, opts = {}) {
   if (!data) return Promise.resolve();
   noteSave(); // the DM's map tools: what this save changed becomes an undo step (dnd-hub-undo.js)
+  return queueSave(data, opts);
+}
+function queueSave(data, opts = {}) {
   if (_saving) {
     _again = { data, allowRemovals: !!(_again?.allowRemovals || opts.allowRemovals) };
     _againPromise ??= _saving.catch(() => {}).then(() => {
       const a = _again; _again = null; _againPromise = null;
-      return saveHubDm(a.data, { allowRemovals: a.allowRemovals });
+      return queueSave(a.data, { allowRemovals: a.allowRemovals });
     });
     return _againPromise;
   }
   _saving = _saveOnce(data, opts).finally(() => { _saving = null; });
   return _saving;
+}
+
+// A save storage refused is tried again with the newest data (nothing was recorded as written, so it still differs).
+let _retryTimer = 0, _retryData = null;
+function retryLater(data) {
+  _retryData = data;
+  if (_retryTimer) return;
+  _retryTimer = setTimeout(() => { _retryTimer = 0; const d = _retryData; _retryData = null; queueSave(d).catch(() => {}); }, 5000);
 }
 
 async function _saveOnce(data, { allowRemovals = false } = {}) {
@@ -214,7 +239,9 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
     // See dnd-campaign-merge.js for why this replaces a plain overwrite.
     const baseJson = _lastWritten.get(id);
     const localNow = JSON.parse(JSON.stringify(camp)); // what this save merges and writes
-    const merged = await _writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, localNow);
+    let merged;
+    try { merged = await _writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, localNow); }
+    catch (e) { console.warn('[dnd-hub-storage] campaign %s not saved (storage refused); trying again', id, e?.message); retryLater(data); continue; }
     if (!merged) continue; // deleted on another screen: not written back
     const mergedJson = JSON.stringify(merged);
     _lastWritten.set(id, mergedJson);
@@ -269,13 +296,12 @@ async function _isDeleted(id) {
  * public record some other way (an old record, a player's save) moves to the secret one.
  */
 async function _writeCampaign(id, base, localNow) {
-  const remotePub = await storageGet(hubCampKey(id));
-  // Its record is gone: deleted on another screen, or a failed read (the SDK returns null for both). Only a deletion
-  // the index records skips the write; anything else is written as before.
+  const remotePub = await readStrict(hubCampKey(id)); // throws when refused: the caller tries the save again later
+  // Its record is gone: deleted on another screen (the index says so: not written back), or never written.
   if (base && !remotePub && await _isDeleted(id)) return null;
   if (!isCampaignDm(localNow, _me)) {
     const merged = mergeCampaign(base, withoutStubs(localNow), remotePub);
-    await storageSet(hubCampKey(id), merged);
+    await writeStrict(hubCampKey(id), merged);
     return merged;
   }
   let { sec: remoteSec, ok } = await readSecret(id, remotePub || localNow);
@@ -289,9 +315,9 @@ async function _writeCampaign(id, base, localNow) {
   const remote = remotePub ? joinCampaign(remotePub, remoteSec) : null;
   const merged = mergeCampaign(base, localNow, remote);
   const { pub, sec } = splitCampaign(merged);
-  await storageSet(hubCampKey(id), pub);
+  await writeStrict(hubCampKey(id), pub);
   if (blind) console.warn('[dnd-hub-storage] the DM-only part of campaign %s could not be read; not writing it', id);
   // Written even when empty: a public record marked secretsKept with no secret record reads as a failed read.
-  else if (!remoteSec || JSON.stringify(sec || {}) !== JSON.stringify(remoteSec)) await storageSet(secretKey(id), sec || {}, 'user');
+  else if (!remoteSec || JSON.stringify(sec || {}) !== JSON.stringify(remoteSec)) await writeStrict(secretKey(id), sec || {}, 'user');
   return joinCampaign(pub, sec);
 }

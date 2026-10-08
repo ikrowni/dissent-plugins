@@ -6,6 +6,17 @@ const failReads = new Set(); // keys whose reads fail (the SDK returns null on a
 vi.mock('../plugin-sdk.js', () => ({
   storageGet: vi.fn(async (k, scope) => { k = scope === 'user' ? 'user:' + k : k; return store.has(k) && !failReads.has(k) ? JSON.parse(store.get(k)) : null; }),
   storageSet: vi.fn(async (k, v, scope) => { store.set(scope === 'user' ? 'user:' + k : k, JSON.stringify(v)); }),
+  // A save's strict read/write (dnd-hub-storage.js readStrict): through the mocks above, but a failed read THROWS, as
+  // the real request() does; only the SDK's storageGet turns it into null.
+  request: vi.fn(async (action, p) => {
+    const sdk = await import('../plugin-sdk.js');
+    if (action === 'storage:get') {
+      if (failReads.has(p.scope === 'user' ? 'user:' + p.key : p.key)) throw new Error('HTTP 429');
+      return { value: await sdk.storageGet(p.key, p.scope) };
+    }
+    if (action === 'storage:set') return sdk.storageSet(p.key, p.value, p.scope);
+    throw new Error('unmocked ' + action);
+  }),
 }));
 
 let mod;
@@ -17,6 +28,43 @@ beforeEach(async () => {
 });
 
 describe('saveHubDm merges with what is stored', () => {
+  // 🔴 A refused read (HTTP 429) used to read as "nothing stored": the save wrote this screen's older copy over newer
+  // edits made elsewhere (rules playtest, 2026-10-08).
+  it('a refused read writes nothing over the stored campaign; the edit is saved, merged, once reads work again', async () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
+    store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 }, b: { x: 1 } } }));
+    const data = await mod.loadHubDm();
+    store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 }, b: { x: 9 } } })); // another screen
+    failReads.add('hub-camp-c');
+    data.campaigns.c.tokens.a.x = 5;
+    vi.useFakeTimers();
+    try {
+      const saved = mod.saveHubDm(data);
+      await vi.advanceTimersByTimeAsync(5000);
+      await saved;
+      expect(JSON.parse(store.get('hub-camp-c')).tokens).toEqual({ a: { x: 1 }, b: { x: 9 } });
+      failReads.delete('hub-camp-c');
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(JSON.parse(store.get('hub-camp-c')).tokens).toEqual({ a: { x: 5 }, b: { x: 9 } });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('a refused write is sent again (it was recorded as written, and the change never reached storage)', async () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
+    store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 } } }));
+    const data = await mod.loadHubDm();
+    const sdk = await import('../plugin-sdk.js');
+    sdk.storageSet.mockImplementationOnce(async () => { throw new Error('HTTP 429'); });
+    data.campaigns.c.tokens.a.x = 5;
+    vi.useFakeTimers();
+    try {
+      await mod.saveHubDm(data);
+      expect(JSON.parse(store.get('hub-camp-c')).tokens.a.x).toBe(1);
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(JSON.parse(store.get('hub-camp-c')).tokens.a.x).toBe(5);
+    } finally { vi.useRealTimers(); }
+  });
+
   it('keeps a concurrent edit to another token', async () => {
     store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
     store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 }, b: { x: 1 } } }));

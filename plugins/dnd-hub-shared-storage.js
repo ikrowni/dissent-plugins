@@ -14,7 +14,7 @@
 // 'hub-dm' and write blobs dnd-hub never reads back.
 //
 // The legacy 'hub-dm' key is still read as a fallback and is never written here.
-import { storageGetCompanion, storageSetCompanion } from './plugin-sdk.js';
+import { storageGetCompanion, storageSetCompanion, request } from './plugin-sdk.js';
 import { mergeCampaign } from './dnd-campaign-merge.js';
 import { splitCampaign, joinCampaign, isCampaignDm, secretKey, withoutStubs } from './lk-secrets.js';
 import { needsCampaign, summariesForIndex, idsForIndex, summariesChanged, deletedIdsOf, deletedForIndex } from './lk-campaign-index.js';
@@ -48,9 +48,23 @@ let _me = null;
 export function setSecretsUser(id) { _me = id || null; }
 const _secretUnreadable = new Set();
 
+// 🔴 A save reads and writes with these, never storageGetCompanion/storageSetCompanion: those return null for a
+// REFUSED read (HTTP 429) as for an empty one, and swallow a refused write. A save that took a refused read for
+// "nothing stored" wrote its own older copy over everyone's newer edits (a player's sheet put a shop's restock and the
+// DM's log back; rules playtest 2026-10-08), and a refused write was recorded as written, so it was never sent again.
+const pause = ms => new Promise(r => setTimeout(r, ms));
+async function readStrict(key, scope = 'server', tries = 3) {
+  for (let i = 0; ; i++) {
+    try { const r = await request('storage:get-companion', { registryId: HUB, key, scope }); return r?.value ?? null; }
+    catch (e) { if (i >= tries - 1) throw e; await pause(1500 * (i + 1)); }
+  }
+}
+const writeStrict = (key, scope, value) => request('storage:set-companion', { registryId: HUB, key, scope, value });
+
 async function readSecret(id, pub) {
   if (!isCampaignDm(pub, _me)) return { sec: null, ok: true };
-  const sec = await storageGetCompanion(HUB, secretKey(id), 'user');
+  let sec;
+  try { sec = await readStrict(secretKey(id), 'user'); } catch { return { sec: null, ok: false }; } // refused: unknown
   return { sec, ok: !!sec || !pub?.secretsKept };
 }
 
@@ -134,6 +148,14 @@ export function saveHubDmCompanion(data) {
   return run;
 }
 
+// A save storage refused is tried again with the newest data (nothing was recorded as written, so it still differs).
+let _retryTimer = 0, _retryData = null;
+function retryLater(data) {
+  _retryData = data;
+  if (_retryTimer) return;
+  _retryTimer = setTimeout(() => { _retryTimer = 0; const d = _retryData; _retryData = null; saveHubDmCompanion(d).catch(() => {}); }, 5000);
+}
+
 async function saveNow(data) {
   if (!data) return;
   const { campaigns = {}, ...rest } = data;
@@ -162,7 +184,9 @@ async function saveNow(data) {
     // Re-read and three-way merge (dnd-campaign-merge.js), so a sidebar save keeps what
     // the Hub or another player changed since this sidebar loaded.
     const baseJson = _lastSeen.get(id);
-    const merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, JSON.parse(json));
+    let merged;
+    try { merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, JSON.parse(json)); }
+    catch (e) { console.warn('[dnd-hub-shared-storage] campaign %s not saved (storage refused); trying again', id, e?.message); retryLater(data); continue; }
     if (!merged) continue; // deleted on the Hub: not written back
     _lastSeen.set(id, JSON.stringify(merged));
     // What the screen changed WHILE this save was out is kept: merged over the stored result, not overwritten by it
@@ -201,12 +225,12 @@ async function isDeleted(id) {
 
 /** Merge one campaign with what is stored and write it (the DM's screen: both records); returns the merged whole. */
 async function writeCampaign(id, base, local) {
-  const remotePub = await storageGetCompanion(HUB, `hub-camp-${id}`, 'server');
-  // Gone: deleted on the Hub, or a failed read (both read as null). Only a deletion the index records skips the write.
+  const remotePub = await readStrict(`hub-camp-${id}`); // throws when refused: the caller tries the save again later
+  // Gone: deleted on the Hub (the index says so: not written back), or never written.
   if (base && !remotePub && await isDeleted(id)) return null;
   if (!isCampaignDm(local, _me)) {
     const merged = mergeCampaign(base, withoutStubs(local), remotePub);
-    await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', merged);
+    await writeStrict(`hub-camp-${id}`, 'server', merged);
     return merged;
   }
   let { sec: remoteSec, ok } = await readSecret(id, remotePub || local);
@@ -217,11 +241,11 @@ async function writeCampaign(id, base, local) {
   const remote = remotePub ? joinCampaign(remotePub, remoteSec) : null;
   const merged = mergeCampaign(base, local, remote);
   const { pub, sec } = splitCampaign(merged);
-  await storageSetCompanion(HUB, `hub-camp-${id}`, 'server', pub);
+  await writeStrict(`hub-camp-${id}`, 'server', pub);
   if (blind) console.warn('[dnd-hub-shared-storage] the DM-only part of campaign %s could not be read; not writing it', id);
   // Written even when empty: a public record marked secretsKept with no secret record reads as a failed read.
   else if (!remoteSec || JSON.stringify(sec || {}) !== JSON.stringify(remoteSec)) {
-    await storageSetCompanion(HUB, secretKey(id), 'user', sec || {});
+    await writeStrict(secretKey(id), 'user', sec || {});
   }
   return joinCampaign(pub, sec);
 }

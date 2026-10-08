@@ -3,16 +3,16 @@
 // Each round: keep your tankard steady for a few seconds (follow the ale's level with the mouse, or the arrow keys),
 // then the house rolls everyone's Constitution save. Out, and you wake up poisoned (your sheet is told).
 // Cheating: pour it in the plant pot (Sleight of Hand vs the host's eye). Rules: last-standing-rules.js.
-import * as R from './last-standing-rules.js?v=20261015t';
-import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261015t';
-import { clack, chime, buzz, thump, tick } from './tavern-sfx.js?v=20261015t';
+import * as R from './last-standing-rules.js?v=20261015u';
+import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261015u';
+import { clack, chime, buzz, thump, tick } from './tavern-sfx.js?v=20261015u';
 
 const STEADY_MS = 5000;
 const BARKS = { start: ['Tankards up! Last one standing drinks free.', 'House brew. Strong as a mule\'s kick.'], caught: ['Feeding my plant? OUT!'] };
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('ls-css', './last-standing.css?v=20261015t', import.meta.url);
+  loadCss('ls-css', './last-standing.css?v=20261015u', import.meta.url);
   const wrap = el('div', 'tk-felt ls');
   wrap.innerHTML = `<div class="ls-top"></div><div class="ls-stage"><canvas class="ls-ale"></canvas><div class="ls-results" aria-live="polite"></div></div>
     <div class="tk-row ls-btns"></div><div class="tk-note ls-status" aria-live="polite"></div>`;
