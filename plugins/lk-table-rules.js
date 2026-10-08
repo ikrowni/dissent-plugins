@@ -57,5 +57,17 @@ export function applyPreset(settings, name) {
 
 /** A new campaign's settings: Guided, 60 ft hearing range. */
 export function defaultSettings() {
-  return { ...PRESETS.guided, spatialRange: 60 };
+  return { ...PRESETS.guided, spatialRange: 60, rules: '2024' };
 }
+
+// ── Rules: 2014 or 2024 (owner, 2026-10-08) ───────────────────────────────────────────────────────────────────────
+// Which fifth-edition rules a table plays: one choice, kept out of the presets (picking Guided or Raw never changes
+// it). 2024 = the 2024 character origins (lk-origins2024.js) and weapon mastery (lk-mastery.js). A new campaign
+// starts on 2024; a campaign made before the choice existed has none and stays on 2014, so nobody's game changes
+// under them.
+export const RULES_EDITIONS = ['2014', '2024'];
+export const RULES_INFO = {
+  '2014': 'The original fifth-edition rules: ability increases from your people, no weapon mastery.',
+  '2024': 'The revised rules: ability increases and an origin feat from your background, Goliath and Orc, weapon mastery. Heroes already made keep theirs.',
+};
+export const rulesEdition = settings => (settings?.rules === '2024' ? '2024' : '2014');

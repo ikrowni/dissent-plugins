@@ -5,7 +5,7 @@ import { EV } from './dnd-hub-event-types.js';
 import { publishTo } from './lk-bus.js';
 import { allowedLevel } from './lk-levelling.js';
 import { featureDesc } from './lk-features.js';
-import { rule } from './lk-table-rules.js';
+import { rule, rulesEdition } from './lk-table-rules.js';
 import { MASTERY_OF, MASTERIES, masteryCount, defaultMasteries } from './lk-mastery.js';
 import { alertBonus } from './lk-origins2024.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
@@ -285,8 +285,8 @@ export function effectLabel(e) {
   }
 }
 
-/** Weapon mastery: LanternKeep plays the 2024 rules (owner, 2026-10-08), so it is always on. */
-export const masteryOn = () => true;
+/** Weapon mastery: on when the table plays the 2024 rules (Table rules → Rules, lk-table-rules.js rulesEdition). */
+export const masteryOn = () => rulesEdition(_getCampaign()?.settings) === '2024';
 /** The hero's mastered weapons: chosen ones, else the weapons in their pack (lk-mastery.js defaultMasteries). */
 export function heroMasteries(c = _char) {
   if (!c) return [];

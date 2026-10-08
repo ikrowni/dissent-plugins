@@ -82,3 +82,14 @@ describe('defaultSettings', () => {
     expect(defaultSettings().hints).toBe(true);
   });
 });
+
+describe('rules: 2014 or 2024', () => {
+  it('a new campaign plays 2024; one made before the choice existed stays on 2014', async () => {
+    const { rulesEdition, defaultSettings: def, applyPreset: ap } = await import('./lk-table-rules.js');
+    expect(rulesEdition(def())).toBe('2024');
+    expect(rulesEdition({})).toBe('2014');
+    expect(rulesEdition(undefined)).toBe('2014');
+    expect(rulesEdition({ rules: '2014' })).toBe('2014');
+    for (const p of ['guided', 'classic', 'raw']) expect(ap({ rules: '2024' }, p).rules).toBe('2024'); // presets leave it alone
+  });
+});

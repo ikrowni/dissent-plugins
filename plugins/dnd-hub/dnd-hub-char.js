@@ -1,15 +1,16 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261015n';
+import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015o';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015n';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015n';
+import { EV } from './dnd-hub-event-types.js?v=20261015o';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015o';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015n';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015o';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015n';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015o';
 import { validateDraft, origins2024 } from './dnd-hub-draft-rules.js';
+import { rulesEdition } from './lk-table-rules.js';
 import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
@@ -42,14 +43,38 @@ export async function loadSRD() {
       SRD[f] = await r.json();
     } catch { SRD[f] = []; }
   }));
-  // LanternKeep plays the 2024 rules (owner, 2026-10-08): new heroes take the 2024 peoples and backgrounds
-  // (lk-origins2024.js). Heroes made before keep what they have.
-  SRD.races = SPECIES_2024;
-  SRD.backgrounds = BACKGROUNDS_2024;
+  SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds;
+}
+
+/**
+ * The table's rules for the hero being made (Table rules → Rules, owner 2026-10-08): the creator and the Forge read
+ * SRD.races / SRD.backgrounds, so those two lists become the 2024 ones (lk-origins2024.js) or the bundled 2014 ones.
+ */
+export function useOrigins(campaign) {
+  if (!SRD._races2014) { SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds; }
+  const on = rulesEdition(campaign?.settings) === '2024';
+  SRD.races = on ? SPECIES_2024 : SRD._races2014;
+  SRD.backgrounds = on ? BACKGROUNDS_2024 : SRD._backgrounds2014;
+}
+
+/**
+ * The same, from a FRESH read of the campaign: a player's screen may not hold the whole campaign yet (it reads only
+ * the campaigns it is in, lk-campaign-index.js), and a hero was built on the wrong rules that way (playtest
+ * 2026-10-08). Resolves to the rules used.
+ */
+export async function useOriginsFresh(campaignId) {
+  let camp = serverData?.campaigns?.[campaignId];
+  if (!camp?.settings) {
+    const fresh = await loadHubDm().catch(() => null);
+    if (fresh?.campaigns?.[campaignId]) { setServerData(fresh); camp = fresh.campaigns[campaignId]; }
+  }
+  useOrigins(camp);
+  return rulesEdition(camp?.settings);
 }
 
 // ── Wizard shell ──────────────────────────────────────────────────────────────
 export function startCharacterCreator(campaignId) {
+  useOrigins(serverData?.campaigns?.[campaignId]);
   renderCharacterCreator(campaignId);
   // showScreen is on window (set by bootstrap from dnd-hub-state.js)
   window.showScreen('char-creator');

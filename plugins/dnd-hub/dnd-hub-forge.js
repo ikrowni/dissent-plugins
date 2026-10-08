@@ -1,10 +1,10 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20261015n';
+import { SRD } from './dnd-hub-state.js?v=20261015o';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
 import { suggestBgBonus } from './lk-origins2024.js';
-import { startCharacterCreator, finishWithDraft } from './dnd-hub-char.js?v=20261015n';
+import { startCharacterCreator, finishWithDraft, useOrigins, useOriginsFresh } from './dnd-hub-char.js?v=20261015o';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -13,12 +13,12 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20261015n';
+import { serverData, CC } from './dnd-hub-state.js?v=20261015o';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
 import { useCampaignSpells } from './book/book-spells-in-play.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015n';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015o';
 import { setGearTarget, gearChooserHtml, gearShopHtml } from './dnd-hub-gear-view.js';
 import { applyGear } from './dnd-hub-starting-gear.js';
 
@@ -28,6 +28,7 @@ const ALL_SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Dec
 const RULE_STEP = { heritage: 0, skills: 1, abilities: 2, spells: 5, details: 6 };
 let _showQuick = false, _shapeError = '';
 
+let _rulesReady = Promise.resolve();
 let _campaignId = null, _s = null, _draft = null, _fx = null, _dir = 1, _picksPlan = null;
 const _sound = createForgeSound();
 const races = () => (SRD.races || []).map(raceView);
@@ -44,6 +45,10 @@ const open = () => !root()?.classList.contains('hidden') && !!root()?.querySelec
 export function showQuickCharacter(campaignId) {
   // The campaign's books add spells to the spell step (re-drawn if they arrive while it is open).
   useCampaignSpells(serverData?.campaigns?.[campaignId]).then(() => { if (_s?.scene === 'shape') render(); }).catch(() => {});
+  // The table's rules (2014 or 2024, Table rules): from what this screen holds now, then from a fresh read. Nothing
+  // builds a hero until the fresh read has answered (_rulesReady): a player's screen built one on the wrong rules.
+  useOrigins(serverData?.campaigns?.[campaignId]);
+  _rulesReady = useOriginsFresh(campaignId).then(() => { if (_s?.scene === 'race') render(); }).catch(() => {});
   _campaignId = campaignId; _draft = null; _showQuick = false; _shapeError = '';
   _s = initForge((SRD.races || []).length, (SRD.classes || []).length);
   window.showScreen('char-creator');
@@ -106,8 +111,9 @@ function step(action, dir = 1) {
 }
 
 export function forgeSelect(i) { step({ type: 'select', index: i }, i < (_s.scene === 'class' ? _s.cls : _s.race) ? -1 : 1); }
-export function forgeChoose() {
+export async function forgeChoose() {
   if (_s.scene === 'reveal') return;
+  if (_s.scene === 'class') await _rulesReady;
   _sound.chime();
   const stageEl = document.getElementById('forge-stage');
   document.getElementById('forge-art')?.classList.add('forge-flash');
@@ -125,9 +131,10 @@ export function forgeChoose() {
 export function forgeBack() { step({ type: 'back' }, -1); }
 export function forgeToggleMute() { _sound.setMuted(!_sound.muted()); render(); }
 
-export function quickPickHero(id) {
+export async function quickPickHero(id) {
   const h = READY_HEROES.find(x => x.id === id);
   if (!h) return;
+  await _rulesReady;
   _draft = quickBuild(SRD, h.race, h.class, Math.random, h.name, h.picks || {});
   _sound.chime();
   step({ type: 'quickPick', id, race: (SRD.races || []).findIndex(r => r.id === h.race), cls: (SRD.classes || []).findIndex(c => c.id === h.class) });
