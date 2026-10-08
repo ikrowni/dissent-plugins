@@ -1,10 +1,10 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20261015r';
+import { SRD } from './dnd-hub-state.js?v=20261015s';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
 import { suggestBgBonus } from './lk-origins2024.js';
-import { startCharacterCreator, finishWithDraft, useOrigins, useOriginsFresh } from './dnd-hub-char.js?v=20261015r';
+import { startCharacterCreator, finishWithDraft, useOrigins, useOriginsFresh } from './dnd-hub-char.js?v=20261015s';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -13,12 +13,12 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20261015r';
+import { serverData, CC } from './dnd-hub-state.js?v=20261015s';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
 import { validateDraft, draftScores, origins2024 } from './dnd-hub-draft-rules.js';
 import { useCampaignSpells } from './book/book-spells-in-play.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015r';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015s';
 import { setGearTarget, gearChooserHtml, gearShopHtml } from './dnd-hub-gear-view.js';
 import { applyGear } from './dnd-hub-starting-gear.js';
 

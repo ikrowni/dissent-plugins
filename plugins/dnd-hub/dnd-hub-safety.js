@@ -4,10 +4,10 @@
 // DM's Hub keeps who asked for what in the campaign's DM-only part (`safetyByUser`, lk-secrets.js) and shares only the
 // combined, nameless list (`campaign.safety`, `safety:table`). The DM may be away when a player sets theirs, so a
 // player's Hub sends them again each time the map opens. The X (`safety:x`) shows on every screen without a name.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015r';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015s';
 import { esc, storageGet, storageSet } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015r';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015s';
 import { TOPICS, cleanPicks, combine, X_COOLDOWN_MS } from './lk-safety.js';
 
 let _mine = { topics: {}, custom: [] };

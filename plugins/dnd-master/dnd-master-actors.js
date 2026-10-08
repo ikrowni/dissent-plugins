@@ -3,8 +3,8 @@
 // An NPC can run a tavern game (owner, 2026-10-07): it carries `setupId` (a game setup from the Games tab), `greeting`
 // and `portraitFileId`, and "Place on map" stands its token on the active map, where heroes right-click it to talk.
 import { esc, genId } from '../plugin-sdk.js';
-import { uploadCampaignFile } from './dnd-master-shops.js?v=20261015r';
-import { saveActors, placeNpcs } from './dnd-master-actor-talk.js?v=20261015r';
+import { uploadCampaignFile } from './dnd-master-shops.js?v=20261015s';
+import { saveActors, placeNpcs } from './dnd-master-actor-talk.js?v=20261015s';
 import { gameType } from './lk-tavern.js';
 
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };

@@ -33,7 +33,7 @@
     },
     {
       "url": "dnd-hub-event-types.js",
-      "sha256": "e007657b4d7b7a1e691a2de035a8129c408b0f1b754c7a19d22a97d7a856c455"
+      "sha256": "3d3b5cfa64b4f805c37c87ff2b9e10bf7c0da2788bec69510d623f9d090419b7"
     },
     {
       "url": "dnd-hub-shared-storage.js",
@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "b5b29fe2187fb6b1bd9e3315792815bb85b2f3205ce630310fb401ec3a5df5ee"
+      "sha256": "01159506e2b73b69bb9b43f22ae3bf016edcce2cd5fda10bfe7f4406c376f581"
     },
     {
       "url": "dnd-player-resources.js",

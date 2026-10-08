@@ -88,6 +88,8 @@ export const EV = {
   // Shop open / volume (DM-privileged)
   SHOP_OPEN:   'shop:open',
   SHOP_VOLUME: 'shop:volume',
+  // DM sidebar → players: what a shop has now, outside a sale (an unpaid sale went back on the shelf)
+  SHOP_STOCK:  'shop:stock',
 
   // Contest dice rolling (DM-privileged — hub rolls, master receives result)
   CONTEST_ROLL:   'contest:roll',

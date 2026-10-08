@@ -1,7 +1,7 @@
 // dnd-master-encounter.js — encounter builder: monster list, roster, XP budget, launch
 import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015r';
+import { EV } from './dnd-hub-event-types.js?v=20261015s';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
 import { browsable } from './lk-srd-edition.js';
 import { setInitiativeState } from './dnd-master-initiative.js';

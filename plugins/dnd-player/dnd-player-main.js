@@ -31,7 +31,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015r';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015s';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1396,7 +1396,21 @@ async function onEvent(ev) {
     return;
   }
 
+  // What a shop has now, from the DM (an unpaid sale went back on the shelf): the open list follows.
+  if (p.type === EV.SHOP_STOCK && p.campaignId === CAMPAIGN_ID) {
+    const dm = SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.dmUserId;
+    if (dm && ev.sender_id && ev.sender_id !== dm) return;
+    if (p.shopId && p.shopId === _activeShopId && Array.isArray(p.shopItems)) {
+      _activeShopItems = _shopLines(p.shopItems, _activeItemLib);
+      if (_activeShopData) _activeShopData.shop = { ..._activeShopData.shop, items: p.shopItems };
+      _renderShopTab(_activeShopItems);
+    }
+    return;
+  }
+
   if (p.type === 'loot:resolved' && p.campaignId === CAMPAIGN_ID) {
+    // A copy of a sale already handled would charge for it again, or decline it and put it back on the shelf.
+    if (isRepeat(p)) return;
     if (p.winner === USER_ID && CHAR) {
       SERVER_DATA = await loadHubDmCompanion() || SERVER_DATA || { campaigns: {} };
       const item = _resolveItemFromLibrary(p.itemId);
@@ -1406,7 +1420,8 @@ async function onEvent(ev) {
         // The winner is told either way (owner, 2026-10-05: nothing said who won or where the item went).
         if (!_addItemToChar(item, 1, p.goldCost || 0)) {
           publishTo(['hub'], 'loot:declined', { campaignId: CAMPAIGN_ID, itemId: p.itemId, itemName: item.name,
-            goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '', shopId: p.shopId || null, slotId: p.slotId || null }).catch(() => {});
+            goldCost: p.goldCost || 0, userId: USER_ID, name: CHAR.name || '', shopId: p.shopId || null, slotId: p.slotId || null,
+            saleId: p.eid || null }).catch(() => {});
           _showPlayerToast(`You won ${item.name}, but no longer have the ${p.goldCost || 0} gp to pay for it.`);
         } else {
           _showPlayerToast(`🎉 You got ${item.name}${p.goldCost ? ` for ${p.goldCost} gp` : ''}! It is in your inventory.`);

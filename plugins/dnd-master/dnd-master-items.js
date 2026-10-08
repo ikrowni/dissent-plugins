@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015r';
+import { EV } from './dnd-hub-event-types.js?v=20261015s';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { ITEM_GROUPS, groupCounts, filterItems } from './dnd-master-item-filter.js';
 import { appendLogEntry } from './dnd-master-logs.js';
@@ -320,7 +320,9 @@ export async function resolveContest(contestKey) {
 /** A shop sale the winner could not pay for: the item goes back on its shelf (the sale took it off). */
 const _restocked = new Set(); // declined sales already put back (the message can arrive twice)
 export async function restockDeclined(p) {
-  const key = p.eid || `${p.shopId}|${p.slotId}|${p.userId}|${p.itemId}`;
+  // Once per sale: the sale's id (a resolution delivered twice made two declines, each with its own eid, and the item
+  // went back on the shelf twice — rules playtest, 2026-10-08).
+  const key = p.saleId || p.eid || `${p.shopId}|${p.slotId}|${p.userId}|${p.itemId}`;
   if (_restocked.has(key)) return;
   _restocked.add(key);
   const shop = p.shopId ? shopOf(p.shopId) : null;
@@ -332,6 +334,9 @@ export async function restockDeclined(p) {
   _state.serverData.campaigns[_state.dmCampaignId].shops = _state.dmCampaign.shops;
   await saveHubDmCompanion(_state.serverData);
   await _persistDmCatalog();
+  // Open shop lists show it again: they still said "This shop has no items", so nobody could buy it back (rules playtest).
+  await realtimePublishCompanion('dnd-player', EV.SHOP_STOCK, { type: EV.SHOP_STOCK, shopId: p.shopId,
+    shopItems: shopOf(p.shopId)?.items || [], campaignId: _state.dmCampaignId, fromUserId: _state.userId });
 }
 
 /** A shop as the Shops tab holds it — the one copy every change goes through (then copied to the campaign). */
@@ -388,6 +393,8 @@ export async function handleContestResult(p) {
 
   const payload = {
     type: EV.LOOT_RESOLVED, contestKey,
+    // One id per sale: a sheet handles a sale once (lk-bus isRepeat), and a decline names the sale it declines.
+    eid: genId(),
     winner: winner.userId, winnerName: winner.name,
     itemId: contest.itemId, itemName: contest.itemName,
     rolls, source: contest.source,
