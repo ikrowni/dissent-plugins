@@ -16,6 +16,16 @@ export function playerTokensToSeed(campaign, mapData) {
     summaries[uid] && !seeded[uid] && !mapData.tokens?.[`player_${uid}`]);
 }
 
+/**
+ * Whether two tokens stand next to each other (or overlap): their squares touch, side or corner. `na`/`nb` are their
+ * sizes in squares (SIZE_CELLS; tiny takes one). The auto-target used "centres within 1.5 squares", which missed a
+ * hero beside a Huge monster.
+ */
+export function touching(a, na, b, nb, gs) {
+  const reach = (Math.max(1, Math.round(na)) + Math.max(1, Math.round(nb))) / 2 * gs + gs / 4; // a quarter square of slack
+  return Math.abs(a.x - b.x) <= reach && Math.abs(a.y - b.y) <= reach;
+}
+
 /** Where a dragged token should be shown: the pointer, unless that crosses a wall. */
 export function dragStep(lastValid, target, crosses) {
   if (crosses(lastValid.x, lastValid.y, target.x, target.y)) return { ...lastValid, blocked: true };
@@ -184,11 +194,19 @@ export function playerSees(token, uid, { visionPolys = [], sightPolys = [], litP
  * Owner, 2026-10-05: "attacks only if the player is within the appropriate range".
  * Returns { ok, reason, mode: 'melee'|'ranged', adv, dis, feet }.
  */
-export function attackCheck({ attacker, target, reach, tokens = [], gs = 50, flanking = false }) {
-  const cell = t => ({ cx: Math.floor(t.x / gs), cy: Math.floor(t.y / gs) });
-  const a = cell(attacker), t = cell(target);
-  const sqs = (p, q) => Math.max(Math.abs(p.cx - q.cx), Math.abs(p.cy - q.cy));
-  const feet = sqs(a, t) * 5;
+export function attackCheck({ attacker, target, reach, tokens = [], gs = 50, flanking = false, ox = 0, oy = 0 }) {
+  // The squares each token covers (a Large one four), counted on the map's own grid (`ox`/`oy`: where its lines
+  // start). Distances run between the nearest squares: a Large target used to be measured from one of its four, so a
+  // hero beside it could be "10 ft away: out of reach".
+  const box = t => {
+    const n = Math.max(1, Math.round(TOKEN_CELLS[t.size || 'medium'] || 1));
+    const cx = Math.floor((t.x - ox) / gs + 1e-6) - Math.floor(n / 2), cy = Math.floor((t.y - oy) / gs + 1e-6) - Math.floor(n / 2);
+    return { x0: cx, x1: cx + n - 1, y0: cy, y1: cy + n - 1 };
+  };
+  const gap = (p, q) => Math.max(Math.max(0, q.x0 - p.x1, p.x0 - q.x1), Math.max(0, q.y0 - p.y1, p.y0 - q.y1));
+  const side = (p, q) => ({ x: p.x1 < q.x0 ? -1 : p.x0 > q.x1 ? 1 : 0, y: p.y1 < q.y0 ? -1 : p.y0 > q.y1 ? 1 : 0 });
+  const a = box(attacker), t = box(target);
+  const feet = gap(a, t) * 5;
   const name = target.name || 'That target';
   if (!reach) return { ok: false, reason: 'That is not a weapon you can attack with.', feet };
   const foe = x => x.id !== attacker.id && x.type !== attacker.type && (x.type === 'player' || x.type === 'monster')
@@ -196,14 +214,18 @@ export function attackCheck({ attacker, target, reach, tokens = [], gs = 50, fla
   if (reach.melee && feet <= reach.melee) {
     let adv = false;
     if (flanking && feet === 5) {
-      const far = { cx: 2 * t.cx - a.cx, cy: 2 * t.cy - a.cy };
-      adv = tokens.some(x => x.id !== attacker.id && x.type === attacker.type && (x.hp ?? 1) > 0 && !x.waiting
-        && sqs(cell(x), far) === 0);
+      // An ally touching the target on the side opposite mine (for one square each: the square straight across).
+      const mine = side(a, t);
+      adv = tokens.some(x => {
+        if (x.id === attacker.id || x.type !== attacker.type || (x.hp ?? 1) <= 0 || x.waiting) return false;
+        const b = box(x), theirs = side(b, t);
+        return gap(b, t) === 1 && theirs.x === -mine.x && theirs.y === -mine.y;
+      });
     }
     return { ok: true, mode: 'melee', adv, dis: false, feet, flanked: adv };
   }
   if (reach.long && feet <= reach.long) {
-    const crowded = tokens.some(x => foe(x) && sqs(cell(x), a) <= 1);
+    const crowded = tokens.some(x => foe(x) && gap(box(x), a) <= 1);
     const far = reach.normal != null && feet > reach.normal;
     return { ok: true, mode: 'ranged', adv: false, dis: crowded || far, feet, crowded, far };
   }
@@ -211,7 +233,9 @@ export function attackCheck({ attacker, target, reach, tokens = [], gs = 50, fla
   return { ok: false, reason: `${name} is ${feet} ft away: out of reach (${can}).`, feet };
 }
 
-/** May I attack now, in a fight: on my turn, with attacks left? `used` attacks so far this turn. */
+/** Squares a token covers by size, as the map draws them (dnd-hub-state.js SIZE_CELLS; tiny takes one). */
+const TOKEN_CELLS = { tiny: 1, small: 1, medium: 1, large: 2, huge: 3, gargantuan: 4 };
+
 export function attackTurnCheck({ fightOn, myTurn, used = 0, perAction = 1 }) {
   if (!fightOn) return { ok: true };
   if (!myTurn) return { ok: false, reason: 'It is not your turn: you can attack on your turn.' };

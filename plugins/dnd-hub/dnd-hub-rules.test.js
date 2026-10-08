@@ -91,7 +91,7 @@ describe('placing your own token', () => {
 });
 
 import { fogAlpha } from './dnd-hub-rules.js';
-import { campaignRecord, waitingSpot, newWaitingToken, isOwnWaitingSpawn } from './dnd-hub-rules.js';
+import { campaignRecord, waitingSpot, newWaitingToken, isOwnWaitingSpawn, touching } from './dnd-hub-rules.js';
 describe('fogAlpha', () => {
   it('players: unexplored is solid, explored is dimmed, visible is clear', () => {
     expect(fogAlpha('unexplored', false)).toBe(1);
@@ -293,6 +293,22 @@ describe('attackCheck — range, reach, flanking (owner, 2026-10-05)', () => {
     expect(attackCheck({ attacker: bob, target: at('g', 'monster', 9, 5), reach: axe })).toMatchObject({ ok: true, mode: 'ranged', dis: false });
     expect(attackCheck({ attacker: bob, target: at('g', 'monster', 15, 5), reach: axe })).toMatchObject({ ok: true, dis: true });
   });
+  it('a Large target is in reach from any square beside it (it was measured from one of its four squares)', () => {
+    // An ogre covering squares 6–7 × 5–6: its centre is the corner between them.
+    const ogre = { id: 'o', type: 'monster', x: 7 * 50, y: 6 * 50, hp: 30, name: 'Ogre', size: 'large' };
+    expect(attackCheck({ attacker: bob, target: ogre, reach: sword })).toMatchObject({ ok: true, feet: 5 });             // beside its top-left square
+    expect(attackCheck({ attacker: at('r', 'player', 8, 7), target: ogre, reach: sword })).toMatchObject({ ok: true, feet: 5 }); // its bottom-right corner
+    expect(attackCheck({ attacker: at('r', 'player', 4, 5), target: ogre, reach: sword })).toMatchObject({ ok: false, feet: 10 });
+    // A shifted grid (offsets) counts squares the same way.
+    const shifted = t => ({ ...t, x: t.x + 20, y: t.y + 20 });
+    expect(attackCheck({ attacker: shifted(bob), target: shifted(ogre), reach: sword, ox: 20, oy: 20 })).toMatchObject({ ok: true, feet: 5 });
+  });
+  it('flanking a Large target: an ally touching it on the far side', () => {
+    const ogre = { id: 'o', type: 'monster', x: 7 * 50, y: 6 * 50, hp: 30, name: 'Ogre', size: 'large' };
+    const ally = at('ria', 'player', 8, 5), above = at('ria', 'player', 6, 4);
+    expect(attackCheck({ attacker: bob, target: ogre, reach: sword, tokens: [bob, ogre, ally], flanking: true }).adv).toBe(true);
+    expect(attackCheck({ attacker: bob, target: ogre, reach: sword, tokens: [bob, ogre, above], flanking: true }).adv).toBe(false);
+  });
   it('flanking: an ally on the far side of the target gives advantage, only with the rule on', () => {
     const g = at('g', 'monster', 6, 5), ally = at('ria', 'player', 7, 5), side = at('ria', 'player', 6, 6);
     expect(attackCheck({ attacker: bob, target: g, reach: sword, tokens: [bob, g, ally], flanking: true }).adv).toBe(true);
@@ -317,5 +333,20 @@ describe('snapWallPoint', () => {
     expect(snapWallPoint({ x: 74, y: 128 }, [{ x: 300, y: 300 }], { gs: 50 })).toEqual({ x: 50, y: 150, snapped: 'grid' });
     expect(snapWallPoint({ x: 74, y: 128 }, [], { gs: 50, ox: 10, oy: 0 })).toEqual({ x: 60, y: 150, snapped: 'grid' });
     expect(snapWallPoint({ x: 74, y: 128 }, [], null)).toEqual({ x: 74, y: 128, snapped: null });
+  });
+});
+
+describe('touching: next to each other, whatever their size (the auto-target)', () => {
+  const gs = 50, at = (cx, cy, n = 1) => ({ x: (cx + n / 2) * gs, y: (cy + n / 2) * gs }); // a token covering cx.. cy..
+  it('medium beside medium, also diagonally; two squares off is not', () => {
+    expect(touching(at(0, 0), 1, at(1, 0), 1, gs)).toBe(true);
+    expect(touching(at(0, 0), 1, at(1, 1), 1, gs)).toBe(true);
+    expect(touching(at(0, 0), 1, at(2, 0), 1, gs)).toBe(false);
+  });
+  it('a hero beside a Large (2×2) or Huge (3×3) monster touches it; one square away does not', () => {
+    expect(touching(at(2, 0), 1, at(0, 0, 2), 2, gs)).toBe(true);
+    expect(touching(at(3, 0), 1, at(0, 0, 2), 2, gs)).toBe(false);
+    expect(touching(at(3, 1), 1, at(0, 0, 3), 3, gs)).toBe(true);  // was missed: centres 2 squares apart
+    expect(touching(at(4, 1), 1, at(0, 0, 3), 3, gs)).toBe(false);
   });
 });

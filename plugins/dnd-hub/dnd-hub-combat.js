@@ -1,16 +1,16 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015w';
+import { MAP, serverData, userId, effectiveGs, gridOrigin, SIZE_CELLS } from './dnd-hub-state.js?v=20261015x';
 import { storageSet, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015w';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015w';
+import { EV } from './dnd-hub-event-types.js?v=20261015x';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015x';
 import { rule, rulesEdition } from './lk-table-rules.js';
 import { conditionText } from './lk-conditions.js';
-import { attackVerdict, attackCheck, attackTurnCheck } from './dnd-hub-rules.js';
+import { attackVerdict, attackCheck, attackTurnCheck, touching } from './dnd-hub-rules.js';
 import { masteryOutcome } from './lk-mastery.js';
 import { limitingTurnId } from './dnd-hub-turn-move.js';
 import { publishTo, isRepeat } from './lk-bus.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261015w';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261015x';
 import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
@@ -183,7 +183,8 @@ export function preAttack(rollerId, weapon) {
   const key = MAP.turnMove?.key || 'none';
   const turn = attackTurnCheck({ fightOn: !!turnId, myTurn: turnId === me.id, used: _attacksUsed[key] || 0, perAction: weapon?.perAction || 1 });
   if (!turn.ok) return turn;
-  const r = attackCheck({ attacker: me, target, reach: weapon?.reach, tokens: toks, gs: effectiveGs(MAP.mapData), flanking: tableRule('flanking') });
+  const [ox, oy] = gridOrigin(MAP.mapData);
+  const r = attackCheck({ attacker: me, target, reach: weapon?.reach, tokens: toks, gs: effectiveGs(MAP.mapData), flanking: tableRule('flanking'), ox, oy });
   if (r.ok && turnId) _attacksUsed[key] = (_attacksUsed[key] || 0) + 1;
   // Vex: my last hit with a Vex weapon gives this attack advantage, once.
   const vexed = r.ok && _vex?.rollerId === rollerId && _vex.targetId === target.id && Date.now() < _vex.until;
@@ -218,7 +219,7 @@ function adjacentEnemies(uid) {
   const gs = effectiveGs(MAP.mapData);
   return tokens.filter(t => t.type === 'monster' && t.visible !== false && (t.hp ?? 1) > 0
     && MAP.tokenSprites?.[t.id]?.visible !== false // one the player can see right now
-    && Math.max(Math.abs(t.x - me.x), Math.abs(t.y - me.y)) <= gs * 1.5);
+    && touching(t, SIZE_CELLS[t.size || 'medium'] || 1, me, SIZE_CELLS[me.size || 'medium'] || 1, gs));
 }
 
 // ── Auto Damage ───────────────────────────────────────────────────────────────
