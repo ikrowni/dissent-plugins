@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "b330480b89caf550966c02be17c94ea101964fa6cc04c6f1cb60388153fc2301"
+      "sha256": "6836bfe7a029ecdc1b7573453cf168a79e28d404d01537b381fb58e551d319ab"
     },
     {
       "url": "dnd-player-resources.js",
@@ -53,7 +53,7 @@
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "a8c1b4003a52a72488ec8c88aa28fa4266d20db6e8adbe5370fb8a8f02e67aac"
+      "sha256": "1983e225cb90cf603cdb930d62f514b535a0da1d50042ccf58993f87c7f0ed49"
     },
     {
       "url": "dnd-player-spells.js",

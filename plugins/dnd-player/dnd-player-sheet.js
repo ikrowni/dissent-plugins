@@ -325,13 +325,13 @@ function _invItemCard(item, idx) {
       ).join('');
     }
     if (profile) {
-      return `<div style="font-size:9px;color:var(--muted);margin-top:2px">⚔️ ${profile.toHit >= 0 ? '+' : ''}${profile.toHit} to hit · ${esc(profile.damage)} ${esc(profile.damageType)}</div>` + _masteryLine(item);
+      return `<div style="font-size:9px;color:var(--muted);margin-top:2px">⚔️ ${profile.toHit >= 0 ? '+' : ''}${profile.toHit} to hit · ${esc(profile.damage)} ${esc(profile.damageType)}</div>`;
     }
     if (item.effectsText) {
       return `<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc(item.effectsText)}</div>`;
     }
     return '';
-  })();
+  })() + _masteryLine(item); // a kit weapon may carry effects too: its mastery shows either way
   const attackBtn = (hasWeapon && item.equipped)
     ? `<button onclick="window.weaponAttack(${idx})" style="margin-top:4px;font-size:10px;padding:3px 8px;background:var(--dnd-red,#b91c1c);border:none;border-radius:4px;color:#fff;cursor:pointer">⚔️ Attack</button>`
     : '';
