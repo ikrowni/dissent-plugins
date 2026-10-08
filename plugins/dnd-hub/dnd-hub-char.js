@@ -1,17 +1,16 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015m';
+import { CC, CC_STEPS, SRD, setServerData } from './dnd-hub-state.js?v=20261015n';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015m';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015m';
+import { EV } from './dnd-hub-event-types.js?v=20261015n';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015n';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015m';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015n';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015m';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015n';
 import { validateDraft, origins2024 } from './dnd-hub-draft-rules.js';
 import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
-import { edition } from './lk-table-rules.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
 // Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
@@ -43,23 +42,14 @@ export async function loadSRD() {
       SRD[f] = await r.json();
     } catch { SRD[f] = []; }
   }));
-}
-
-/**
- * The table's rules edition for the hero being made (Table rule origins2024, owner 2026-10-07): the creator and the
- * Forge read SRD.races / SRD.backgrounds, so those two lists become the 2024 ones (lk-origins2024.js) or go back to
- * the bundled 2014 ones. Called whenever either opens for a campaign.
- */
-export function useOrigins(campaign) {
-  if (!SRD._races2014) { SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds; }
-  const on = edition(campaign?.settings, 'origins2024');
-  SRD.races = on ? SPECIES_2024 : SRD._races2014;
-  SRD.backgrounds = on ? BACKGROUNDS_2024 : SRD._backgrounds2014;
+  // LanternKeep plays the 2024 rules (owner, 2026-10-08): new heroes take the 2024 peoples and backgrounds
+  // (lk-origins2024.js). Heroes made before keep what they have.
+  SRD.races = SPECIES_2024;
+  SRD.backgrounds = BACKGROUNDS_2024;
 }
 
 // ── Wizard shell ──────────────────────────────────────────────────────────────
 export function startCharacterCreator(campaignId) {
-  useOrigins(serverData?.campaigns?.[campaignId]);
   renderCharacterCreator(campaignId);
   // showScreen is on window (set by bootstrap from dnd-hub-state.js)
   window.showScreen('char-creator');

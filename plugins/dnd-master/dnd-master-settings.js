@@ -1,10 +1,10 @@
 // dnd-master-settings.js — the DM's Table rules page: presets, switches, then the table (hearing range, export).
 // What each preset and switch means lives in lk-table-rules.js.
-import { EV } from './dnd-hub-event-types.js?v=20261015m';
+import { EV } from './dnd-hub-event-types.js?v=20261015n';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { publishTo } from './lk-bus.js';
 import { esc } from '../plugin-sdk.js';
-import { PRESET_ORDER, PRESET_INFO, RULE_KEYS, RULE_INFO, rule, presetOf, applyPreset, defaultSettings, EDITION_KEYS, EDITION_INFO, edition } from './lk-table-rules.js';
+import { PRESET_ORDER, PRESET_INFO, RULE_KEYS, RULE_INFO, rule, presetOf, applyPreset, defaultSettings } from './lk-table-rules.js';
 
 let _state = { dmCampaignId: null, dmCampaign: null, serverData: null, userId: null };
 
@@ -37,9 +37,6 @@ export function renderSettings() {
     groups.map(g => heading(g.toUpperCase()) +
       RULE_KEYS.filter(k => RULE_INFO[k].group === g).map(k => _row(k, RULE_INFO[k].label, rule(s, k), RULE_INFO[k].desc)).join('')
     ).join('') +
-    // Which rules, not how much is automated: the presets leave these alone (lk-table-rules.js EDITION_KEYS).
-    heading('RULES EDITION') +
-    EDITION_KEYS.map(k => _row(k, EDITION_INFO[k].label, edition(s, k), EDITION_INFO[k].desc)).join('') +
     heading('TABLE') +
     '<div class="setting-row">' +
       '<div style="flex:1">' +

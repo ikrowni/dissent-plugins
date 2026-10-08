@@ -4,12 +4,12 @@
 // The DM brings an NPC on from its token's menu (dnd-hub-tokens.js → bringOnStage), clicks a portrait to choose who
 // speaks (or Narrator), and types. Each change sends the whole stage (`stage:set`, DM only); it is also kept in the
 // campaign (`campaign.stage`) so a screen that opens mid-scene shows it.
-import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015m';
+import { MAP, serverData, userId } from './dnd-hub-state.js?v=20261015n';
 import { publishTo } from './lk-bus.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015m';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015n';
 import { cleanStage, addToStage, removeFromStage, speak } from './lk-stage.js';
-import { medal } from './dnd-hub-tavern.js?v=20261015m';
-import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015m';
+import { medal } from './dnd-hub-tavern.js?v=20261015n';
+import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015n';
 
 let _stage = null, _shownLine = null, _typer = 0, _saveTimer = 0, _drawn = '';
 const campaign = () => serverData?.campaigns?.[MAP.campaignId];

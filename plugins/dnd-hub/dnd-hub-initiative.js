@@ -1,5 +1,5 @@
 // dnd-hub-initiative.js — initiative HUD and roll toast
-import { MAP, serverData } from './dnd-hub-state.js?v=20261015m';
+import { MAP, serverData } from './dnd-hub-state.js?v=20261015n';
 import { esc } from '../plugin-sdk.js';
 import { guide } from './lk-guide-ui.js';
 

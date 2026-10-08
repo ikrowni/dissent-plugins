@@ -67,17 +67,3 @@ export function applyPreset(settings, name) {
 export function defaultSettings() {
   return { ...PRESETS.guided, spatialRange: 60 };
 }
-
-// ── Rules edition (owner, 2026-10-07) ─────────────────────────────────────────────────────────────────────────────
-// Which rules a table plays, not how much the table automates: kept out of the presets, so picking Guided or Raw never
-// changes them. Both off by default: a table made before them keeps the 2014 rules it was playing.
-export const EDITION_KEYS = ['origins2024', 'weaponMastery'];
-export const EDITION_INFO = {
-  origins2024:   { label: '2024 character origins', desc: 'New heroes take their ability increases and an origin feat from their background (four backgrounds); Goliath and Orc join the peoples. Heroes already made keep theirs' },
-  weaponMastery: { label: 'Weapon mastery (2024)', desc: 'Fighters, barbarians, paladins, rangers and rogues master some weapons: Graze, Vex, Topple and the rest' },
-};
-
-/** One rules-edition switch; off unless the DM turned it on. */
-export function edition(settings, key) {
-  return settings?.[key] === true;
-}

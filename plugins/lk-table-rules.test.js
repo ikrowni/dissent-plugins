@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { PRESETS, RULE_KEYS, PRESET_ORDER, RULE_INFO, rule, presetOf, applyPreset, defaultSettings } from './lk-table-rules.js';
-import { edition, EDITION_KEYS, applyPreset as applyP } from './lk-table-rules.js';
 
 // The spec's table (2026-10-03 flow design §4), written out so a change to PRESETS must change this too.
 const SPEC = {
@@ -81,14 +80,5 @@ describe('defaultSettings', () => {
     expect(a.spatialRange).toBe(60);
     a.hints = false;
     expect(defaultSettings().hints).toBe(true);
-  });
-});
-
-describe('rules edition', () => {
-  it('is off unless the DM turned it on, and no preset touches it', () => {
-    expect(edition({}, 'origins2024')).toBe(false);
-    expect(edition({ origins2024: true }, 'origins2024')).toBe(true);
-    for (const p of ['guided', 'classic', 'raw']) expect(applyP({ weaponMastery: true }, p).weaponMastery).toBe(true);
-    expect(EDITION_KEYS).toEqual(['origins2024', 'weaponMastery']);
   });
 });
