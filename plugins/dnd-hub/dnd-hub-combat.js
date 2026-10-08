@@ -1,15 +1,16 @@
 // dnd-hub-combat.js — combat automation: conditions, auto hit/miss, damage, death saves
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015q';
-import { storageSet } from '../plugin-sdk.js';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015r';
+import { storageSet, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015q';
-import { rule } from './lk-table-rules.js';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015r';
+import { rule, rulesEdition } from './lk-table-rules.js';
+import { conditionText } from './lk-conditions.js';
 import { attackVerdict, attackCheck, attackTurnCheck } from './dnd-hub-rules.js';
 import { masteryOutcome } from './lk-mastery.js';
 import { limitingTurnId } from './dnd-hub-turn-move.js';
 import { publishTo, isRepeat } from './lk-bus.js';
-import { renderTokens } from './dnd-hub-tokens.js?v=20261015q';
+import { renderTokens } from './dnd-hub-tokens.js?v=20261015r';
 import { moveToast } from './dnd-hub-turn-move.js';
 
 // ── 5e Conditions ─────────────────────────────────────────────────────────────
@@ -50,10 +51,12 @@ export function showConditionPicker(token, cx, cy) {
   div.style.minWidth = '170px';
   _condPicker = div;
 
+  // Each condition says what it does under the table's rules (2014 or 2024, lk-conditions.js) when pointed at.
+  const ed = rulesEdition(serverData?.campaigns?.[MAP.campaignId]?.settings);
   div.innerHTML =
     '<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.05em">CONDITIONS</div>' +
     CONDITIONS.map(c =>
-      `<label style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:11px">` +
+      `<label title="${esc(conditionText(c.id, ed))}" style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:11px">` +
       `<input type="checkbox" data-id="${c.id}" ${current.has(c.id) ? 'checked' : ''} style="accent-color:${c.color}">` +
       `${c.icon} ${c.id}</label>`
     ).join('') +

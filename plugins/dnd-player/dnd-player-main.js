@@ -7,7 +7,8 @@ import { setCampaignGetter, setSheetState, setInventoryImageUrls, renderAll, ren
   rollAbilityCheck, rollSkillCheck, debounceSaveNotes,
   toggleFeatureExpand, saveFeatureDesc,
   computeEffectiveStats, effectiveChar, announceHp, setPendingDamageIdx, clearPendingDamageIdx, toggleInventoryItem,
-  heroMasteries, masteryOn, toggleMastery } from './dnd-player-sheet.js';
+  heroMasteries, masteryOn, toggleMastery, rules as sheetRules } from './dnd-player-sheet.js';
+import { exhaustionD20 } from './lk-conditions.js';
 import { masteryFor } from './lk-mastery.js';
 import { alertBonus } from './lk-origins2024.js';
 import { setSpellState, setBookParts, loadSRDSpells, renderSpells, toggleSpellExpand, expendSpellSlot,
@@ -30,7 +31,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015q';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015r';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -280,11 +281,14 @@ function setDiceRollLabel(label, forceMod) {
 async function rollDice(rollType = null, weapon = null) {
   const sides  = parseInt(selectedDie.replace('d', ''), 10);
   const count  = Math.max(1, parseInt(document.getElementById('dice-count').value, 10) || 1);
-  const mod    = parseInt(document.getElementById('dice-mod').value, 10) || 0;
-  const label  = document.getElementById('roll-label').textContent || selectedDie;
-  const expression = `${count}${selectedDie}${mod >= 0 ? '+' : ''}${mod}`;
+  let mod      = parseInt(document.getElementById('dice-mod').value, 10) || 0;
+  let label    = document.getElementById('roll-label').textContent || selectedDie;
   const ts     = Date.now();
   const advMode = (rollAdvMode && selectedDie === 'd20' && count === 1) ? rollAdvMode : null;
+  // 2024 Exhaustion: −2 a level on every d20 roll (lk-conditions.js). Folded into the modifier and named in the label.
+  const tired = selectedDie === 'd20' && count === 1 && rollType !== 'damage' ? exhaustionD20(CHAR?.exhaustion, sheetRules()) : 0;
+  if (tired) { mod += tired; label += ` (Exhaustion ${tired})`; }
+  const expression = `${count}${selectedDie}${mod >= 0 ? '+' : ''}${mod}`;
 
   // Show rolling state while physics runs
   document.getElementById('roll-result').textContent = '…';
@@ -553,6 +557,7 @@ function initTabHTML() {
         <button class="btn btn-ghost btn-sm" onclick="changeExhaustion(-1)">−</button>
         <button class="btn btn-ghost btn-sm" onclick="changeExhaustion(1)">+</button>
       </div>
+      <div id="exhaustion-note" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
     </div>
     <div id="death-saves-section" style="margin-bottom:14px;display:none">
       <div style="font-size:11px;font-weight:700;color:var(--dnd-gold);margin-bottom:8px">DEATH SAVING THROWS</div>

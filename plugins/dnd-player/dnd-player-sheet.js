@@ -6,6 +6,7 @@ import { publishTo } from './lk-bus.js';
 import { allowedLevel } from './lk-levelling.js';
 import { featureDesc } from './lk-features.js';
 import { rule, rulesEdition } from './lk-table-rules.js';
+import { conditionText, exhaustionNow, exhaustionD20, exhaustedSpeed } from './lk-conditions.js';
 import { MASTERY_OF, MASTERIES, masteryCount, defaultMasteries } from './lk-mastery.js';
 import { alertBonus } from './lk-origins2024.js';
 import { applyDamage, applyHealing, markDeathSave, rollDeathSave, shortRestSpend, longRest, hitDieFor, profBonus as profBonusFor,
@@ -156,17 +157,18 @@ export function renderMain() {
   document.getElementById('temp-hp').value = _char.hpTemp || 0;
   document.getElementById('stat-ac').textContent = _effectiveStats.ac ?? _char.ac ?? '—';
   document.getElementById('stat-init').textContent = fmtMod(abilityMod((_effectiveStats.abilities['dex'] ?? _char.dex) ?? 10) + alertBonus(_char)); // + Alert (2024 origin feat)
-  document.getElementById('stat-speed').textContent = (_char.speed || 30) + 'ft';
+  document.getElementById('stat-speed').textContent = exhaustedSpeed(_char.speed || 30, _char.exhaustion, rules()) + 'ft';
   document.getElementById('stat-insp').textContent = _char.inspiration ? '★' : '☆';
   const extraConds = _effectiveStats.extraConditions || [];
   document.getElementById('conditions-grid').innerHTML =
     CONDITIONS.map(c =>
-      `<div class="condition-chip ${(_char.conditions||[]).includes(c)?'active':''}" onclick="toggleCondition('${c}')">${c}</div>`
+      `<div class="condition-chip ${(_char.conditions||[]).includes(c)?'active':''}" title="${esc(conditionText(c, rules()))}" onclick="toggleCondition('${c}')">${c}</div>`
     ).join('') +
     extraConds.map(c =>
       `<div class="condition-chip active" style="color:#f0c040;border-color:#f0c040" title="From equipped item">${esc(c)}</div>`
     ).join('');
   document.getElementById('exhaustion-level').textContent = _char.exhaustion || 0;
+  _exhaustionNote();
   const dsSection = document.getElementById('death-saves-section');
   dsSection.style.display = (_char.hp <= 0) ? 'block' : 'none';
   if (_char.hp <= 0 && !_char.dead) guide('sheet:down');
@@ -287,6 +289,8 @@ export function effectLabel(e) {
 
 /** Weapon mastery: on when the table plays the 2024 rules (Table rules → Rules, lk-table-rules.js rulesEdition). */
 export const masteryOn = () => rulesEdition(_getCampaign()?.settings) === '2024';
+/** The table's rules, 2014 or 2024 (Table rules → Rules): conditions and Exhaustion follow them. */
+export const rules = () => rulesEdition(_getCampaign()?.settings);
 /** The hero's mastered weapons: chosen ones, else the weapons in their pack (lk-mastery.js defaultMasteries). */
 export function heroMasteries(c = _char) {
   if (!c) return [];
@@ -521,7 +525,7 @@ export async function toggleDeathSave(type, index) {
 export async function rollDeathSaveNow() {
   if (!_char || (_char.hp || 0) > 0 || _char.dead || _char.stable) return;
   const d20 = Math.floor(Math.random() * 20) + 1;
-  Object.assign(_char, rollDeathSave(_char, d20));
+  Object.assign(_char, rollDeathSave(_char, d20, exhaustionD20(_char.exhaustion, rules())));
   await _saveChar();
   renderMain();
   const msg = _char.dead ? 'died' : (_char.hp > 0 ? 'rolled a 20 and is back up!' : _char.stable ? 'is stable' : 'rolled ' + d20);
@@ -537,6 +541,16 @@ export async function changeExhaustion(delta) {
   _char.exhaustion = Math.max(0, Math.min(6, (_char.exhaustion || 0) + delta));
   await _saveChar();
   document.getElementById('exhaustion-level').textContent = _char.exhaustion;
+  _exhaustionNote();
+  document.getElementById('stat-speed').textContent = exhaustedSpeed(_char.speed || 30, _char.exhaustion, rules()) + 'ft';
+}
+
+/** What the hero's Exhaustion does now, under the table's rules (lk-conditions.js), under the counter. */
+function _exhaustionNote() {
+  const el = document.getElementById('exhaustion-note');
+  if (!el) return;
+  el.textContent = exhaustionNow(_char.exhaustion, rules());
+  el.title = conditionText('Exhaustion', rules());
 }
 
 export async function toggleInspiration() {

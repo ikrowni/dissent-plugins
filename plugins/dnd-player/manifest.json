@@ -45,7 +45,7 @@
     },
     {
       "url": "dnd-player-main.js",
-      "sha256": "f51b3dd6581f5bb27f08e9073a816092cb35b7765ee04d151e8ec3255d0fdf3c"
+      "sha256": "b5b29fe2187fb6b1bd9e3315792815bb85b2f3205ce630310fb401ec3a5df5ee"
     },
     {
       "url": "dnd-player-resources.js",
@@ -53,11 +53,11 @@
     },
     {
       "url": "dnd-player-sheet.js",
-      "sha256": "3500c09d031e0b494d166aae98e298e074707370ef3e2e38570e317dc87b38d0"
+      "sha256": "774ffb537beda422943bc6909891b6fb7638de821177db4a169682540f92c988"
     },
     {
       "url": "dnd-player-spells.js",
-      "sha256": "7fa9304c45b8dcabede9babff5a9e34191559dc1dd08609406939829c3d009d2"
+      "sha256": "abf6445efe4974b116f30d63c982f655253b0d46c9175affcc421bc54433349b"
     },
     {
       "url": "dnd-player-styles.css",
@@ -82,6 +82,10 @@
     {
       "url": "dnd-srd/feats.json",
       "sha256": "2138c36e199fa69c9dca6fc70468ddc292c3d831883dba955fe03a74c95e3a33"
+    },
+    {
+      "url": "dnd-srd/spells-2024.json",
+      "sha256": "956562ec9138f8c2d0558c830e5628778798f7226d57b250fb161ae2f81e46a6"
     },
     {
       "url": "dnd-srd/spells.json",
@@ -118,6 +122,10 @@
     {
       "url": "lk-classes2024.js",
       "sha256": "cd44ae1aced6e2a3f9a725009a0cbe79223fc447a35de4a9fc8219f256dab303"
+    },
+    {
+      "url": "lk-conditions.js",
+      "sha256": "0f4788eb2e98df243aaa8b35295aba380b563f694c576c1d9652197a4199c356"
     },
     {
       "url": "lk-content-pack.js",
@@ -157,7 +165,7 @@
     },
     {
       "url": "lk-rules5e.js",
-      "sha256": "14724acddac84ceda1c362e722a6bab1c766ebd1117dab37de8fb7c4a835fb92"
+      "sha256": "52cd9495faf8971ee941c9e39ecf05d8ddc89a95a08ee06d5679f3ea76b6df5c"
     },
     {
       "url": "lk-sealed.js",
@@ -166,6 +174,10 @@
     {
       "url": "lk-secrets.js",
       "sha256": "8e07bc8f4cd649b01386aaf64f50bc0a217173ec05b9fed5007afe5cd293b798"
+    },
+    {
+      "url": "lk-srd-edition.js",
+      "sha256": "31163731b64cfd1d626b4c2bbd54dae56b347ee04bd03f717293b76374bb612b"
     },
     {
       "url": "lk-table-rules.js",

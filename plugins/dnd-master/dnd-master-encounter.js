@@ -1,8 +1,9 @@
 // dnd-master-encounter.js — encounter builder: monster list, roster, XP budget, launch
 import { storageGet, storageSet, storageGetCompanion, storageSetCompanion, realtimePublish, realtimePublishCompanion, localPublish, esc, genId } from '../plugin-sdk.js';
 import { publicPayload } from './lk-secrets.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
 import { XP_THRESHOLDS, CR_XP } from './dnd-master-monsters.js';
+import { browsable } from './lk-srd-edition.js';
 import { setInitiativeState } from './dnd-master-initiative.js';
 import { adjustedEncounterXp } from './lk-rules5e.js';
 import { preparedToDraft, spawnPositions } from './dnd-master-prepared.js';
@@ -139,7 +140,7 @@ function _wireEncDivider() {
   });
 }
 
-// The SRD and book monsters plus the DM's own NPCs and creatures.
+// The SRD (the table's rules only: lk-srd-edition.js) and book monsters plus the DM's own NPCs and creatures.
 function _encPool() {
   const customAsMonsters = Object.values(_state.dmCampaign?.customActors || {}).map(a => ({
     id: 'custom_' + a.id,
@@ -147,7 +148,7 @@ function _encPool() {
     dex: a.dex || 10, hp_dice: String(a.hp),
     _isCustom: true,
   }));
-  return [..._state.srdMonsters, ...customAsMonsters];
+  return [...browsable(_state.srdMonsters), ...customAsMonsters];
 }
 
 function _renderEncFilters() {

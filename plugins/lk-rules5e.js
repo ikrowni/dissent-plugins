@@ -163,12 +163,13 @@ export function parseHpEntry(text) {
 }
 
 /** A rolled death save (d20 = the die). */
-export function rollDeathSave(state, d20) {
+export function rollDeathSave(state, d20, mod = 0) {
   if (state.dead || state.stable || (state.hp || 0) > 0) return { ...state };
   if (d20 === 20) return applyHealing(state, 1);
   const ds = { ...(state.deathSaves || freshSaves()) };
+  // `mod`: what changes the roll (2024 Exhaustion's −2 a level, lk-conditions.js); a natural 1 or 20 is the die alone.
   if (d20 === 1) ds.failures += 2;
-  else if (d20 >= 10) ds.successes += 1;
+  else if (d20 + mod >= 10) ds.successes += 1;
   else ds.failures += 1;
   return settleDeath({ ...state, deathSaves: ds });
 }
@@ -276,7 +277,7 @@ export function characterSummary(c, eff = {}) {
     name: c.name || 'Unknown', race: c.race || '', class: c.class || '', level: c.level || 1,
     hp: c.hp ?? 0, hpMax: eff.hpMax ?? c.hpMax ?? 0, hpTemp: c.hpTemp || 0,
     ac: eff.ac ?? c.ac ?? 10, dex: eff.dex ?? c.dex ?? 10, passivePerception: pp, speed: c.speed || 30,
-    conditions: [...(c.conditions || [])], dead: !!c.dead, stable: !!c.stable,
+    conditions: [...(c.conditions || [])], exhaustion: c.exhaustion || 0, dead: !!c.dead, stable: !!c.stable,
     portraitUrl: c.portraitUrl || '', portraitFileId: c.portraitFileId || '',
     concentration: c.concentration?.spellName || null,
     deathSaves: { successes: c.deathSaves?.successes || 0, failures: c.deathSaves?.failures || 0 },

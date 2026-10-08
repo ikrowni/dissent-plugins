@@ -44,6 +44,31 @@ describe('2024 layout (SRD 5.2)', () => {
     const [it] = findItems([H('Reed Blade', 12), L('Weapon (Dagger, Shortsword, or Scimitar),'), L('Rare (Requires Attunement)'), L('It bends.')]);
     expect(it).toMatchObject({ name: 'Reed Blade', rarity: 'Rare', requires_attunement: true });
   });
+  // Found building the bundled 2024 data from SRD 5.2.1 (2026-10-08).
+  const block = (name, extra) => [H(name, 12), L('Medium Plant, Unaligned'), L('AC 5'), L('HP 13 (3d8)'), L('Speed 5 ft.'),
+    L('Str 1 −5 −5 Dex 1 −5 −5 Con 10 +0 +0'), L('Int 1 −5 −5 Wis 3 −4 −4 Cha 1 −5 −5'), ...extra];
+  it('an Immunities line of conditions only (no semicolon) is condition immunities', () => {
+    const [m] = findMonsters(block('Mumble Cap', [L('Immunities Blinded, Charmed, Deafened'), L('CR 0 (XP 10; PB +2)'),
+      H('Reactions', 12), N('It mumbles.', 'Mumble.')]));
+    expect(m).toMatchObject({ damage_immunities: [], condition_immunities: ['Blinded', 'Charmed', 'Deafened'] });
+    expect(m.problems).toEqual([]); // a creature with only a reaction has no "no actions" problem
+  });
+  it('a stat block printed inside an item: the item\'s text goes on after it, and the block takes none of it', () => {
+    const lines = [H('Carved Beasts', 12), L('Wondrous Item, Rare'), L('Each carving becomes a beast.'),
+      ...block('Wooden Moth', [L('CR 0 (XP 10; PB +2)'), N('It flaps.', 'Oak Moth (Rare).')]), N('It becomes a lion.', 'Oak Lion (Rare).'),
+      H('Cord of Tying', 12), L('Wondrous Item, Common'), L('It ties.')];
+    const items = findItems(lines);
+    expect(items.map(i => i.name)).toEqual(['Carved Beasts', 'Cord of Tying']);
+    expect(items[0].desc).toBe('Wondrous Item, Rare\nEach carving becomes a beast. Oak Moth (Rare). It flaps. Oak Lion (Rare). It becomes a lion.');
+    const [moth] = findMonsters(lines);
+    expect(moth.special_abilities).toEqual([]);
+  });
+  it('an item name that wraps onto a second line stays one name', () => {
+    const items = findItems([H('Bell of Calling', 12), L('Wondrous Item, Common'), L('It rings.'),
+      H('Charm of Hiding from Hounds', 12), H('and Hawks', 12), L('Wondrous Item, Uncommon'), L('It hides you.')]);
+    expect(items.map(i => [i.name, i.desc.split('\n')[1]])).toEqual([['Bell of Calling', 'It rings.'],
+      ['Charm of Hiding from Hounds and Hawks', 'It hides you.']]);
+  });
 });
 
 describe('Black Flag / Tales of the Valiant', () => {

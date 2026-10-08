@@ -1,7 +1,8 @@
 // dnd-master-monsters.js — SRD monster viewer, stat blocks, combat instances
 import { mergeContent } from './lk-book.js';
+import { loadSrd, browsable } from './lk-srd-edition.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
 import { applyFilter, filterBarHtml, getFilter, onFilterChange, typesIn, moreLine } from './dnd-master-monster-filter.js';
 
 let SRD_MONSTERS = [];
@@ -20,13 +21,13 @@ export function setMonstersState({ userId, campaignId, shownRolls }) {
 export const shownRolls = () => _shownRolls;
 const rollMarks = () => ({ fromSidebar: true, shown: _shownRolls, campaignId: _campaignId });
 
-export async function loadSRDMonsters() {
-  try {
-    // A vendored copy of dnd-hub's SRD (scripts/vendor-shared.mjs): plugins may not read each other's files.
-    const base = new URL('./dnd-srd/', document.baseURI).href;
-    const r = await fetch(base + 'monsters.json');
-    SRD_MONSTERS = await r.json();
-  } catch (err) { SRD_MONSTERS = []; }
+/**
+ * The SRD monsters for the table's rules (Table rules → Rules: `edition` '2014' or '2024', lk-srd-edition.js): the list
+ * shows that edition's; an encounter or tracker row saved under the other rules still finds its monster by id.
+ */
+export async function loadSRDMonsters(edition) {
+  // A vendored copy of dnd-hub's SRD (scripts/vendor-shared.mjs): plugins may not read each other's files.
+  SRD_MONSTERS = await loadSrd(new URL('./dnd-srd/', document.baseURI).href, 'monsters', edition);
 }
 
 // Monsters from the books the open campaign uses (sent by the DM's Hub, which holds the library: a plugin's personal
@@ -77,14 +78,14 @@ export function refreshMonsterSearch() { _renderMonsterFilters(); _renderMonster
 function _renderMonsterFilters() {
   const el = document.getElementById('mon-filters');
   if (!el) return;
-  const all = getSRDMonsters();
+  const all = browsable(getSRDMonsters());
   el.innerHTML = filterBarHtml('mon', getFilter('mon'), typesIn(all), { hasBook: all.some(m => m.source?.title) });
 }
 
 function _renderMonsterList() {
   const listEl = document.getElementById('mon-list');
   if (!listEl) return;
-  const found = applyFilter(getSRDMonsters(), getFilter('mon'));
+  const found = applyFilter(browsable(getSRDMonsters()), getFilter('mon'));
   const matches = found.slice(0, 40);
   if (!matches.length) {
     listEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px">No monsters found</div>';
@@ -116,15 +117,27 @@ export function expandMonster(id) {
   renderInstances();
 }
 
+const _short = d => { const t = String(d || ''); return t.length > 120 ? t.slice(0, 120) + '\u2026' : t; };
+
 function _buildStatblockHtml(m) {
   const ABILITIES = ['str','dex','con','int','wis','cha'];
   const speedParts = [];
   if (m.speed) { Object.keys(m.speed).forEach(k => speedParts.push(k + ' ' + m.speed[k])); }
   const speedStr = speedParts.join(', ');
 
+  // Traits, actions, bonus actions (2024 stat blocks lean on them), reactions, legendary actions: each under its name.
+  const section = (title, list) => {
+    if (!list || !list.length) return '';
+    return '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">' +
+      (title ? '<div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--gold);margin-bottom:2px">' + title + '</div>' : '') +
+      list.map(a => '<div class="action-row"><strong style="font-size:11px">' + esc(a.name) + '</strong>' +
+        '<div style="font-size:10px;color:var(--muted);line-height:1.4;margin-top:2px">' + esc(_short(a.desc)) + '</div></div>').join('') +
+    '</div>';
+  };
   let actionsHtml = '';
   if (m.actions && m.actions.length) {
-    actionsHtml = '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">';
+    actionsHtml = '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">' +
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--gold);margin-bottom:2px">ACTIONS</div>';
     m.actions.forEach(a => {
       let rollBtns = '';
       if (a.attack_bonus != null) {
@@ -133,8 +146,7 @@ function _buildStatblockHtml(m) {
       if (a.damage_dice) {
         rollBtns += '<button class="roll-btn" onclick="quickRollExpr(\'' + esc(m.name) + '\',\'' + esc(a.name) + ' dmg\',\'' + a.damage_dice + '\')">Dmg</button>';
       }
-      let desc = esc(a.desc || '');
-      if (desc.length > 120) desc = desc.slice(0, 120) + '\u2026';
+      const desc = esc(_short(a.desc));
       actionsHtml += '<div class="action-row">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">' +
           '<strong style="font-size:11px">' + esc(a.name) + '</strong>' +
@@ -164,8 +176,12 @@ function _buildStatblockHtml(m) {
     extraSections += '<div class="sb-section"><strong>Skills</strong> ' +
       m.skills.map(s => esc(s.name) + ' ' + fmtMod(s.bonus)).join(', ') + '</div>';
   }
-  if (m.damage_immunities && m.damage_immunities.length) {
-    extraSections += '<div class="sb-section"><strong>Immunities</strong> ' + esc(m.damage_immunities.join(', ')) + '</div>';
+  if (m.damage_resistances && m.damage_resistances.length) {
+    extraSections += '<div class="sb-section"><strong>Resistances</strong> ' + esc(m.damage_resistances.join(', ')) + '</div>';
+  }
+  const immune = [...(m.damage_immunities || []), ...(m.condition_immunities || [])];
+  if (immune.length) {
+    extraSections += '<div class="sb-section"><strong>Immunities</strong> ' + esc(immune.join(', ')) + '</div>';
   }
   if (m.senses) {
     const senseParts = [];
@@ -193,7 +209,11 @@ function _buildStatblockHtml(m) {
     '</div>' +
     '<div class="stat-grid">' + statsHtml + '</div>' +
     extraSections +
+    section('TRAITS', m.special_abilities) +
     actionsHtml +
+    section('BONUS ACTIONS', m.bonus_actions) +
+    section('REACTIONS', m.reactions) +
+    section('LEGENDARY ACTIONS', m.legendary_actions) +
   '</div>';
 }
 

@@ -1,11 +1,12 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { ITEM_GROUPS, groupCounts, filterItems } from './dnd-master-item-filter.js';
 import { appendLogEntry } from './dnd-master-logs.js';
 
 import { guarded } from './lk-upload.js';
+import { loadSrdItems, srdItemsHtml } from './dnd-master-srd-items.js';
 let _state = { dmCampaign: null, dmCampaignId: null, serverData: null, userId: null };
 let _pendingItemImg = null;
 const _itemImageUrls = {};
@@ -52,7 +53,7 @@ export async function renderItemsTab() {
   const el = document.getElementById('tab-items');
   if (!el) return;
   const items = Object.values(_state.dmCampaign?.items || {});
-  await _resolveItemImageUrls(items);
+  await Promise.all([_resolveItemImageUrls(items), loadSrdItems(_state.dmCampaign?.settings)]);
 
   const _contests = Object.entries(_lootContests);
   const _contestsHtml = _contests.length === 0 ? '' :
@@ -80,7 +81,8 @@ export async function renderItemsTab() {
         '<input id="item-lib-search" type="search" placeholder="Search items…" aria-label="Search items" value="' + esc(_libQuery) + '"' +
         ' oninput="itemLibSearch(this.value)" style="width:100%;margin-bottom:6px;font-size:11px">' +
         '<div id="item-lib-list">' + _libList(items) + '</div>'
-    );
+    ) +
+    srdItemsHtml(items.map(it => it.id));
 
   // Re-render effects list after DOM is built
   _renderForgeEffects();

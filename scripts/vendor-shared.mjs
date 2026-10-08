@@ -130,6 +130,8 @@ const VENDORED = [
   { source: "lk-mastery.js", targets: ["dnd-hub/lk-mastery.js", "dnd-player/lk-mastery.js"] },
   { source: "lk-origins2024.js", targets: ["dnd-hub/lk-origins2024.js", "dnd-player/lk-origins2024.js"] },
   { source: "lk-classes2024.js", targets: ["dnd-hub/lk-classes2024.js", "dnd-master/lk-classes2024.js", "dnd-player/lk-classes2024.js"] },
+  { source: "lk-srd-edition.js", targets: ["dnd-hub/lk-srd-edition.js", "dnd-master/lk-srd-edition.js", "dnd-player/lk-srd-edition.js"] },
+  { source: "lk-conditions.js", targets: ["dnd-hub/lk-conditions.js", "dnd-player/lk-conditions.js"] },
   // How the three LanternKeep plugins reach each other (a plain realtimePublish reaches only itself).
   {
     source: "lk-bus.js",
@@ -170,10 +172,10 @@ const VENDORED = [
   // 2026-10-02 every mirrored plugin has its OWN origin (<label>.<PLUGIN_HOST_DOMAIN>),
   // and the node refuses to serve one plugin's files from another's origin — so that
   // fetch is a CORS failure and the sidebar never loads. Each plugin carries what it reads.
-  ...["monsters.json"].map((f) => ({
+  ...["monsters.json", "monsters-2024.json", "magic-items.json", "magic-items-2024.json"].map((f) => ({
     source: `dnd-hub/dnd-srd/${f}`, raw: true, targets: [`dnd-master/dnd-srd/${f}`],
   })),
-  ...["classes.json", "feats.json", "spells.json"].map((f) => ({
+  ...["classes.json", "feats.json", "spells.json", "spells-2024.json"].map((f) => ({
     source: `dnd-hub/dnd-srd/${f}`, raw: true, targets: [`dnd-player/dnd-srd/${f}`],
   })),
 ];

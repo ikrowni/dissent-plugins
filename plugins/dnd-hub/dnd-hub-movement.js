@@ -5,6 +5,8 @@
 // path walked this turn is what counts, not the straight line. These are fog-safety rules, so no
 // Table rules preset turns them off. The DM moves anything, any time.
 
+import { holdsInPlace, exhaustedSpeed } from './lk-conditions.js';
+
 /** One cell of the grid, by its column and row. */
 export const cellAt = (x, y, ox, oy, gs) => ({ cx: Math.floor((x - ox) / gs), cy: Math.floor((y - oy) / gs) });
 export const cellCentre = (c, ox, oy, gs) => ({ x: ox + c.cx * gs + gs / 2, y: oy + c.cy * gs + gs / 2 });
@@ -75,12 +77,13 @@ export function checkReportedPath(turn, reported, speedFt, blocked = () => false
   return { ok: true, path: reported };
 }
 
-/** Conditions that make a creature's speed 0 (SRD 5.1 appendix A). */
-const STOPPED = ['Grappled', 'Restrained', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
-
-/** Feet this token may walk on its turn: its own speed, else its character's, else 30; 0 while held. */
-export function speedOf(token, summary) {
-  if ((token?.conditions || []).some(c => STOPPED.includes(c))) return 0;
-  return Number(token?.speed) || Number(summary?.speed) || 30;
+/**
+ * Feet this token may walk on its turn: its own speed, else its character's, else 30; 0 while a condition holds it
+ * in place; less with its character's Exhaustion. Both under the table's rules (`edition`, lk-conditions.js): 2024's
+ * Stunned no longer stops movement, and its Exhaustion takes 5 ft a level where 2014's halves speed from level 2.
+ */
+export function speedOf(token, summary, edition = '2014') {
+  if (holdsInPlace(token?.conditions, edition)) return 0;
+  return exhaustedSpeed(Number(token?.speed) || Number(summary?.speed) || 30, summary?.exhaustion, edition);
 }
 

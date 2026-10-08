@@ -1,17 +1,17 @@
 // dnd-hub-levelup.js — the level-up scene (spec 2026-10-03 growing your hero §1), in the map area, built from the
 // Hero Forge's pieces. Nothing is saved until the last step; several waiting levels run one after another.
-import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261015q';
-import { loadHubDm } from './dnd-hub-storage.js?v=20261015q';
+import { SRD, serverData, userId } from './dnd-hub-state.js?v=20261015r';
+import { loadHubDm } from './dnd-hub-storage.js?v=20261015r';
 import { storageGetUser } from '../plugin-sdk.js';
 import { rule } from './lk-table-rules.js';
-import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel } from './lk-levelling.js';
+import { levelPlan, checkChoice, choiceKey, applyLevel, allowedLevel, heroRules } from './lk-levelling.js';
 import { raceView, classView } from './lk-hero-data.js';
-import { useCampaignSpells } from './book/book-spells-in-play.js';
+import { useCampaignSpells, useSpellEdition } from './book/book-spells-in-play.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
 import { createForgeSound } from './dnd-hub-forge-sound.js';
 import { reveal, countUp } from './dnd-hub-forge-view.js';
 import { previewStatsOfHero } from './dnd-hub-quick.js';
-import { saveHero } from './dnd-hub-char.js?v=20261015q';
+import { saveHero } from './dnd-hub-char.js?v=20261015r';
 import { header, body, footer } from './dnd-hub-levelup-view.js';
 import { moveToast } from './dnd-hub-turn-move.js';
 
@@ -40,6 +40,7 @@ export async function openLevelUp(campaignId, onDone = null) {
     if (waiting()) break;
     if (attempt === 0 && !onDone) await new Promise(r => setTimeout(r, 2500));
   }
+  useSpellEdition(heroRules(hero)); // a hero levels by its own rules' spells (2014 or 2024), whatever the table plays now
   await useCampaignSpells(camp).catch(() => {}); // the campaign's books add spells to the choices
   if (!waiting()) {
     if (!onDone) moveToast('No level is waiting yet. If the DM just granted one, try again in a moment.');

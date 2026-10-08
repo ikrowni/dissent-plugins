@@ -1,36 +1,38 @@
 // dnd-master-main.js — bootstrap: init, tab switching, event dispatch
 import { handleSDKMessage, getIdentity, storageGetCompanion, storageGet, storageSet, localPublish, genId } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
 import { monsterFilterSet, monsterFilterClear } from './dnd-master-monster-filter.js';
 import { loadSRDMonsters, getSRDMonsters, setBookMonsters, bookMonstersCampaign, shownRolls, renderMonsterSearch, filterMonsterSearch, refreshMonsterSearch, setMonstersState,
   expandMonster, addInstance, adjHP, setInstanceHP, deleteInstance, quickRoll, quickRollExpr } from './dnd-master-monsters.js';
 import { renderEncounterBuilder, setEncounterState, loadEncounterDraft, filterMonsters, refreshEncounterMonsters, addMonsterToEncounter, loadPreparedEncounter,
   changeCount, removeCreature, clearEncounter, launchEncounter, setEncounterTargetDifficulty,
-  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261015q';
+  toggleLootPanel, setLootItem } from './dnd-master-encounter.js?v=20261015r';
 import { renderInitiativeTracker, setInitiativeState, setInitiativeSharedState,
   getInitiativeState, moveInitiative, rerollInitiative, endEncounter, updateHP,
   toggleInitRow, applyMassHP, spawnTokensOnMap, acceptInitiativeRoll, rollMissingInitiative, syncRowHp } from './dnd-master-initiative.js';
-import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset, setRulesEdition } from './dnd-master-settings.js?v=20261015q';
+import { renderSettings, setSettingsState, toggleSetting, setSpatialRange, exportCampaign, pickPreset, setRulesEdition } from './dnd-master-settings.js?v=20261015r';
 import { renderMapsTab,   setMapsState,   activateMapFromList, uploadNewMap, deleteMap, renameMapInline } from './dnd-master-maps.js';
 import { renderActorsTab, setActorsState, saveNewActor, deleteActor, addPendingAttack, removePendingAttack,
   editActor, cancelEditActor, placeActorOnMap, renderActorsTabKeep, getCustomActors } from './dnd-master-actors.js';
-import { setActorTalkState } from './dnd-master-actor-talk.js?v=20261015q';
+import { setActorTalkState } from './dnd-master-actor-talk.js?v=20261015r';
 import { renderItemsTab,  setItemsState,  saveNewItem, deleteItem,
   onItemImgSelected, handleLootInterest, resolveContest,
-  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems, addBookItem, itemLibGroup, itemLibSearch } from './dnd-master-items.js?v=20261015q';
+  addForgeEffect, removeForgeEffect, handleContestResult, restockDeclined, dismissContestPanel, lootContests, currentItems, addBookItem, itemLibGroup, itemLibSearch } from './dnd-master-items.js?v=20261015r';
 import { campaignItemFromBook } from './lk-book.js';
+import { rulesEdition } from './lk-table-rules.js';
+import { srdItem, toggleSrdItems, srdItemSearch } from './dnd-master-srd-items.js';
 import { renderNotesTab,  setNotesState  } from './dnd-master-notes.js';
 import { renderHomebrewTab, setHomebrewState, addHomebrewSubclass, addHomebrewFeat, deleteHomebrew } from './dnd-master-homebrew.js';
 import { renderLogsTab,   setLogsState,   appendLogEntry, clearLog, exportLog } from './dnd-master-logs.js';
-import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261015q';
+import { renderScenesTab,  setScenesState,  saveNewScene, deleteScene, loadScene, onSceneVideoSelected, onSceneAudioSelected } from './dnd-master-scenes.js?v=20261015r';
 import { renderJournalsTab, setJournalsState, newJournal, editJournal, closeJournalEditor, saveJournal, deleteJournal, pushHandout, setJournalVisibility } from './dnd-master-journals.js';
 import { renderSoundsTab,  setSoundsState,  uploadNewSound, testSound, stopLocalSound, broadcastSound, deleteSoundEntry, updateSoundVolume } from './dnd-master-sounds.js';
 import { renderTriggersTab, setTriggersState } from './dnd-master-triggers.js';
-import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261015q';
-import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261015q';
-import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected, persistDmCatalog } from './dnd-master-shops.js?v=20261015q';
+import { renderTavernsTab, setTavernsState, currentTaverns } from './dnd-master-taverns.js?v=20261015r';
+import { renderGamesTab, setGamesState, currentGameSetups } from './dnd-master-games.js?v=20261015r';
+import { renderShopsTab, setShopsState, currentShops, saveNewShop, deleteShop, addItemToShop, removeShopItem, loadShop, onShopVolumeChange, onShopSoundSelected, onShopMediaSelected, persistDmCatalog } from './dnd-master-shops.js?v=20261015r';
 import { migrateTaverns } from './lk-tavern.js';
-import { setLaunchCallback } from './dnd-master-encounter.js?v=20261015q';
+import { setLaunchCallback } from './dnd-master-encounter.js?v=20261015r';
 import { setEndCallback    } from './dnd-master-initiative.js';
 import { renderPlayersTab, playersLoaded, setPlayersState, dmBackToList, dmOpenPlayer,
   dmEditHP, dmToggleCondition, dmEditAbility, dmToggleSpellSlot,
@@ -43,9 +45,9 @@ import { sealedHtml } from './lk-sealed.js';
 import { isRepeat } from './lk-bus.js';
 import { setPartyState, applyPartyUpdate, renderPartyPanel } from './dnd-master-party.js';
 import * as Levels from './dnd-master-levels.js';
-import { setPrepState, renderPrepTab, currentPrep } from './dnd-master-prep.js?v=20261015q';
+import { setPrepState, renderPrepTab, currentPrep } from './dnd-master-prep.js?v=20261015r';
 import { setScheduleState, openSchedule, closeScheduleWindow, askSchedule, pickSchedule, newScheduleQuestion, onScheduleVote,
-  currentNextSession } from './dnd-master-schedule.js?v=20261015q';
+  currentNextSession } from './dnd-master-schedule.js?v=20261015r';
 import { setSessionState, renderSessionBar, openStartSession, startSessionNow, onSessionSceneChange, closeSessionWindow,
   openEndSession, saveEndSession } from './dnd-master-session.js';
 
@@ -72,6 +74,15 @@ function renderNav() {
 function switchSection(id) {
   const s = SECTIONS.find(x => x.id === id);
   if (s) switchDMTab(_lastTabOf[id] || s.tabs[0]);
+}
+
+/** The table's rules changed (2014 ↔ 2024): the monster lists show that edition's SRD (lk-srd-edition.js). */
+async function useRulesMonsters() {
+  if (!dmCampaign) return;
+  await loadSRDMonsters(rulesEdition(dmCampaign.settings));
+  setEncounterState({ dmCampaign, dmCampaignId, serverData, srdMonsters: getSRDMonsters(), switchDMTab, userId });
+  if (document.getElementById('enc-monster-list')) refreshEncounterMonsters();
+  if (document.getElementById('mon-list')) refreshMonsterSearch();
 }
 
 function switchDMTab(name) {
@@ -183,7 +194,7 @@ async function onInit(data) {
   document.getElementById('dm-rolls-btn').innerHTML = icon('dices', { size: 16 });
   renderNav();
 
-  await loadSRDMonsters();
+  await loadSRDMonsters(rulesEdition(myCampaign.settings));
   if (bookMonstersCampaign() && bookMonstersCampaign() !== dmCampaignId) setBookMonsters([], null);
   const srdMonsters = getSRDMonsters();
   const sharedState = { dmCampaign, dmCampaignId, serverData, userId };
@@ -279,6 +290,7 @@ function onEvent(ev) {
   if (p.type === 'combat:settings' && p.campaignId === dmCampaignId) {
     if (dmCampaign) dmCampaign.settings = p.settings;
     setSettingsState({ dmCampaign, dmCampaignId, serverData, userId });
+    useRulesMonsters().catch(e => console.warn('[dnd-master] rules monsters', e));
     const el = document.getElementById('tab-settings');
     if (el && !el.classList.contains('hidden')) renderSettings();
   }
@@ -357,7 +369,7 @@ window.__dmInitiative = () => getInitiativeState();
 window.__dmItems = () => currentItems(); // what the Items and Shops tabs hold, which is what the DM sees
 window.__dmShops = () => currentShops();
 window.__dmTaverns = () => currentTaverns();
-window.setRulesEdition = setRulesEdition;
+window.setRulesEdition = v => setRulesEdition(v).then(useRulesMonsters);
 window.__dmNextSession = () => currentNextSession();
 window.__dmPrep = () => currentPrep();
 window.openSchedule = openSchedule; window.closeScheduleWindow = closeScheduleWindow; window.askSchedule = askSchedule;
@@ -412,6 +424,11 @@ window.saveNewItem          = saveNewItem;
 window.deleteItem           = deleteItem;
 window.itemLibGroup         = itemLibGroup;
 window.itemLibSearch        = itemLibSearch;
+window.toggleSrdItems       = () => { toggleSrdItems(); renderItemsTab(); };
+window.srdItemSearch        = srdItemSearch;
+// An SRD magic item into the campaign's items (dnd-master-srd-items.js), the way a book's item arrives.
+window.addSrdItem           = id => addBookItem(campaignItemFromBook(srdItem(id))).then(() => renderItemsTab())
+  .catch(e => console.warn('[dnd-master] SRD item', e));
 window.onItemImgSelected    = onItemImgSelected;
 window.resolveContest       = resolveContest;
 window.addForgeEffect       = addForgeEffect;

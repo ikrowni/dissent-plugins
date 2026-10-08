@@ -1,16 +1,17 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015q';
+import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015r';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015q';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015q';
+import { EV } from './dnd-hub-event-types.js?v=20261015r';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015r';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015q';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015r';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015q';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015r';
 import { validateDraft, origins2024 } from './dnd-hub-draft-rules.js';
 import { rulesEdition } from './lk-table-rules.js';
+import { useSpellEdition } from './book/book-spells-in-play.js';
 import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
 import { features2024 } from './lk-classes2024.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
@@ -34,7 +35,7 @@ let _onFinish = null;
 export function onFinishRegister(cb) { _onFinish = cb; }
 
 // ── SRD loader ────────────────────────────────────────────────────────────────
-const SRD_FILES = ['races', 'classes', 'backgrounds', 'equipment', 'magic-items', 'feats', 'spells'];
+const SRD_FILES = ['races', 'classes', 'backgrounds', 'equipment', 'magic-items', 'feats', 'spells', 'spells-2024'];
 
 export async function loadSRD() {
   const base = new URL('.', document.baseURI).href;
@@ -44,7 +45,7 @@ export async function loadSRD() {
       SRD[f] = await r.json();
     } catch { SRD[f] = []; }
   }));
-  SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds;
+  SRD._races2014 = SRD.races; SRD._backgrounds2014 = SRD.backgrounds; SRD._spells2014 = SRD.spells;
 }
 
 /**
@@ -56,6 +57,7 @@ export function useOrigins(campaign) {
   const on = rulesEdition(campaign?.settings) === '2024';
   SRD.races = on ? SPECIES_2024 : SRD._races2014;
   SRD.backgrounds = on ? BACKGROUNDS_2024 : SRD._backgrounds2014;
+  useSpellEdition(on ? '2024' : '2014'); // and the SRD 5.2.1 spells (book-spells-in-play.js)
 }
 
 /**

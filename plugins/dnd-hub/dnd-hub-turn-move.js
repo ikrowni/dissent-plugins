@@ -3,12 +3,13 @@
 //
 // 🔴 The trail is drawn UNDER the fog layer. Another player's path through fog must not show
 // them the shape of rooms they have not seen.
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015q';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015q';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015r';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015r';
 import { activeTokenId } from './dnd-hub-rules.js';
 import { guide } from './lk-guide-ui.js';
 import { turnChanged } from './dnd-hub-fx-combat.js';
 import { cellAt, cellCentre, turnKey, moveMode, pathFeet, speedOf, checkReportedPath } from './dnd-hub-movement.js';
+import { rulesEdition } from './lk-table-rules.js';
 
 const STORE = id => `lk-turnmove:${id}`;
 
@@ -53,7 +54,8 @@ export const modeFor = tokenId => moveMode({ isDM: MAP.isDM, activeTurnTokenId: 
 export function speedFor(tokenId) {
   const tok = MAP.mapData?.tokens?.[tokenId];
   const uid = tok?.userId || (tokenId.startsWith('player_') ? tokenId.slice(7) : null);
-  return speedOf(tok, uid ? serverData?.campaigns?.[MAP.campaignId]?.characterSummaries?.[uid] : null);
+  const camp = serverData?.campaigns?.[MAP.campaignId];
+  return speedOf(tok, uid ? camp?.characterSummaries?.[uid] : null, rulesEdition(camp?.settings));
 }
 
 /** This turn's record for `tokenId`, its path started at the token if empty. Null when it is not its turn. */

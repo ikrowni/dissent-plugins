@@ -1,5 +1,7 @@
 // dnd-player-spells.js — spell list, slots, SRD data
 import { mergeContent } from './lk-book.js';
+import { loadSrd } from './lk-srd-edition.js';
+import { heroRules } from './lk-levelling.js';
 import { esc } from '../plugin-sdk.js';
 import { spellSaveDC, spellAttackBonus } from './lk-rules5e.js';
 
@@ -10,14 +12,15 @@ let _saveChar = null;
 export function setSpellState(char, saveCharFn) { _char = char; _saveChar = saveCharFn; }
 
 // The SRD's spells plus those of the campaign's books (lk-book.js; their player part, read by dnd-player-main.js).
-let _srdBase = null, _bookParts = [];
+// The SRD's are the hero's own rules' (a hero made under 2024 rules has SRD 5.2.1 spells), then the other edition's,
+// so a spell picked under either still shows (lk-srd-edition.js).
+let _srdBase = null, _srdEdition = null, _bookParts = [];
 export async function loadSRDSpells() {
-  if (_srdSpells) return _srdSpells;
-  if (!_srdBase) {
-    try {
-      const r = await fetch(new URL('./dnd-srd/spells.json', document.baseURI).href);
-      _srdBase = await r.json();
-    } catch { _srdBase = []; }
+  const edition = heroRules(_char);
+  if (_srdSpells && _srdEdition === edition) return _srdSpells;
+  if (!_srdBase || _srdEdition !== edition) {
+    _srdBase = await loadSrd(new URL('./dnd-srd/', document.baseURI).href, 'spells', edition);
+    _srdEdition = edition;
   }
   _srdSpells = mergeContent(_srdBase, _bookParts, 'spells');
   return _srdSpells;
@@ -31,7 +34,7 @@ function findSpell(id) {
 
 export function renderSpells() {
   if (!_char) return;
-  if (!_srdSpells) { loadSRDSpells().then(() => renderSpells()); return; }
+  if (!_srdSpells || _srdEdition !== heroRules(_char)) { loadSRDSpells().then(() => renderSpells()); return; }
 
   const slotsEl = document.getElementById('spell-slots-grid');
   const slots = _char.spellSlots || [];

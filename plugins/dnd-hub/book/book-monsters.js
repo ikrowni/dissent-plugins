@@ -18,6 +18,8 @@ const SCORES_2024 = /\b(Str|Dex|Con|Int|Wis|Cha)\s*(\d+)\s+([+−–-]\d+)\s+([+
 // "Traits" heads the traits in 2024 books (SRD 5.2); taken for a chapter heading, it ended every block there.
 const SECTIONS = { 'Traits': 'special_abilities', 'Actions': 'actions', 'Reactions': 'reactions', 'Legendary Actions': 'legendary_actions', 'Bonus Actions': 'bonus_actions' };
 const ABIL = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+// The conditions: a 2024 "Immunities" line with no damage part has no semicolon ("Blinded, Charmed, Deafened").
+const CONDITIONS = /^(blinded|charmed|deafened|exhaustion|frightened|grappled|incapacitated|invisible|paralyzed|petrified|poisoned|prone|restrained|stunned|unconscious)$/i;
 /**
  * How tall a line must be to be a heading in this book: 11.5 pt for the usual ~10 pt body text, and more in a book set
  * larger (Free5e's body is 12 pt: a fixed 11.5 ended every spell at its first line). Body = the size most text is in.
@@ -86,10 +88,17 @@ export function findMonsters(lines) {
       else if (lines[end].size >= BLOCK_HEADING && (acted || /^(chapter|appendix)\b/i.test(t.trim()))) break;
       end++;
     }
-    out.push(readBlock(lines, i, end - 1));
-    i = end - 1;
+    const m = readBlock(lines, i, end - 1);
+    out.push(m);
+    i = m.lines[1];
   }
   return out;
+}
+
+/** The last line of the stat block starting at `i` (book-items.js steps over a block printed inside an item). */
+export function blockEnd(lines, i) {
+  const [m] = findMonsters(lines.slice(i, i + 150));
+  return m ? i + m.lines[1] : i;
 }
 
 /**
@@ -172,6 +181,7 @@ function readBlock(lines, start, last, scan = null) {
   const body = bodyFont(lines.slice(first, last + 1));
   const entryAt = k => (scan ? textEntry(lines[k].text) : entryStart(lines[k], body));
   let i = first, label = null, section = 'special_abilities', entry = null, intro = false, entryX = null, scored = false, actionsX = null, scoreLine = null;
+  let is2024 = false, headed = false, cut = false;
   const close = () => { if (entry) m[section].push(entry); entry = null; };
 
   for (; i <= last; i++) {
@@ -194,6 +204,7 @@ function readBlock(lines, start, last, scan = null) {
     }
     // 2024: "Str 8 −1 −1 Dex 15 +2 +2 Con 10 +0 +0" on two lines; a save above the modifier is a proficiency.
     if (!scan && /^Str\s*\d+\s+[+−–-]\d/i.test(t)) {
+      is2024 = true;
       for (const k of [i, i + 1]) for (const x of (lines[k]?.text || '').matchAll(SCORES_2024)) {
         const a = x[1].toLowerCase(), mod = num(x[3]), save = num(x[4]);
         m[a] = +x[2];
@@ -225,10 +236,13 @@ function readBlock(lines, start, last, scan = null) {
     const lab = LABELS.find(l => t === l || t.startsWith(l + ' '));
     if (lab && !m.cr) { label = lab; fields[lab] = t.slice(lab.length).trim(); continue; }
     const sec = sectionHeading(t, SECTIONS);
-    if (sec) { close(); label = null; section = sec; intro = section === 'legendary_actions'; if (!m[section]) m[section] = []; continue; }
+    if (sec) { headed = true; close(); label = null; section = sec; intro = section === 'legendary_actions'; if (!m[section]) m[section] = []; continue; }
     if (label && !entryAt(i) && label !== 'Challenge' && label !== 'CR') { fields[label] = joinText(fields[label], t); continue; }
     label = null;
     const e = entryAt(i);
+    // A 2024 block heads every entry ("Traits", "Actions"): an entry before any heading is the text around a block
+    // printed inside something else (the Giant Fly inside Figurine of Wondrous Power took the figurine's text).
+    if (e && is2024 && !headed) { cut = true; break; }
     // A scan, after the actions: an entry in another column, or the "Ideal." of a roleplaying sidebar, is not this
     // creature's (NPC pages put a "<Name>'s Traits" box and more story right after the block).
     if (e && scan && section === 'actions' && m.actions.length + (entry ? 1 : 0) > 0
@@ -249,7 +263,11 @@ function readBlock(lines, start, last, scan = null) {
   m.skills = (fields['Skills'] || '').split(/,\s*/).map(s => s.match(/^(.+?)\s+([+−–-]\d+)$/)).filter(Boolean)
     .map(x => ({ name: x[1], bonus: num(x[2]) }));
   // 2024 puts damage and conditions on one "Immunities" line, split by a semicolon: "Poison; Poisoned".
-  const [imm24, cond24] = (fields['Immunities'] || '').split(/;\s*/);
+  let [imm24, cond24] = (fields['Immunities'] || '').split(/;\s*/);
+  if (imm24 && cond24 == null) {
+    const all = list(imm24);
+    [imm24, cond24] = [all.filter(x => !CONDITIONS.test(x)).join(', '), all.filter(x => CONDITIONS.test(x)).join(', ')];
+  }
   const [immBf, condBf] = (fields['Immune'] || '').split(/;\s*/);
   m.damage_resistances = list(fields['Damage Resistances'] || fields['Resistances'] || fields['Resistant']);
   m.damage_immunities = list(fields['Damage Immunities'] || imm24 || immBf);
@@ -274,7 +292,7 @@ function readBlock(lines, start, last, scan = null) {
   if (m.cr == null && /^[—–-]/.test((fields['Challenge'] || fields['CR'] || '').trim())) m.noCr = true;
 
   if (scan && m.con != null && !scoresFitHp(m.con, m.hp_dice)) for (const a of ABIL) m[a] = null;
-  const out = { ...m, lines: [start, last], page: lines[start].page };
+  const out = { ...m, lines: [start, cut ? i - 1 : last], page: lines[start].page };
   if (scan) { out.scan = true; out.unnamed = !name; out.farName = !!(name && scan.far); }
   // Where the score row sits, while its scores are unread: the review can cut that strip out of the page for the
   // on-device AI to read (book-ai-scores.js). A line index, like `lines`; book-parse.js turns it into a region.
@@ -298,7 +316,7 @@ export function withProblems(m) {
   if (m.hp == null) problems.push('no hit points');
   if (ABIL.some(a => m[a] == null)) problems.push('ability scores not read');
   if (m.cr == null && !m.noCr) problems.push('no challenge rating');
-  if (!m.actions.length) problems.push('no actions');
+  if (!m.actions.length && !m.reactions?.length && !m.bonus_actions?.length) problems.push('no actions');
   // A scan's reading is ticked only when it checks itself (owner, 2026-10-06: a whole scanned book came out unticked):
   // nothing else missing, the hit points are the average of the hit dice, and Constitution gives the dice's bonus.
   // "read from a scan" stays on it as a note.

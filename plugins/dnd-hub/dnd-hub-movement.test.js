@@ -95,5 +95,12 @@ describe('speedOf', () => {
   it('is 0 while grappled or restrained', () => {
     expect(speedOf({ speed: 30, conditions: ['Grappled'] })).toBe(0);
   });
+  it('follows the table\'s rules: a Stunned token moves under 2024, and Exhaustion slows a hero', () => {
+    expect(speedOf({ conditions: ['Stunned'] }, null, '2014')).toBe(0);
+    expect(speedOf({ conditions: ['Stunned'] }, null, '2024')).toBe(30);
+    expect(speedOf({}, { speed: 30, exhaustion: 2 }, '2024')).toBe(20);
+    expect(speedOf({}, { speed: 30, exhaustion: 2 }, '2014')).toBe(15);
+    expect(speedOf({}, { speed: 30, exhaustion: 2 })).toBe(15); // no rules set = 2014
+  });
 });
 
