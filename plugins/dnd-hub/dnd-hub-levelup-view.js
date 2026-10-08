@@ -3,7 +3,7 @@ import { esc } from '../plugin-sdk.js';
 import { emblem } from './dnd-hub-emblems.js';
 
 const TITLES = { hp: 'Hit points', subclass: 'Choose your path', fightingStyle: 'Fighting style', expertise: 'Expertise',
-  pactBoon: 'Pact boon', invocations: 'Eldritch invocations', metamagic: 'Metamagic', asi: 'Grow stronger',
+  pactBoon: 'Pact boon', order: 'Your calling', invocations: 'Eldritch invocations', metamagic: 'Metamagic', asi: 'Grow stronger',
   spells: 'New magic', features: 'What you gain' };
 const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -25,7 +25,7 @@ export function body(step, choice, hero) {
         <span>Roll it at the table or here, then CON ${step.conMod >= 0 ? '+' : ''}${step.conMod}${step.hillDwarf ? ' and 1 (hill dwarf) are' : ' is'} added.</span>
         <div style="display:flex;gap:6px;margin-top:6px"><input id="lvl-roll" type="number" min="1" max="${step.die}" value="${choice?.roll ?? ''}" style="width:70px" oninput="levelupRoll(this.value)">
         <button class="btn btn-ghost btn-sm" onclick="levelupRollDie(${step.die})">Roll</button></div></div></div>`;
-    case 'subclass': case 'fightingStyle': case 'pactBoon':
+    case 'subclass': case 'fightingStyle': case 'pactBoon': case 'order':
       return `<div class="lvl-grid">${step.options.map(o => card(o.id, o.name + (o.homebrew ? ' ✦' : ''), [o.desc, o.levels].filter(Boolean).join(' — '), choice === o.id, step.kind, false)).join('')}</div>`
         + (step.options.some(o => o.homebrew) ? '<div class="lvl-note">✦ added by your DM: its numbers are applied by hand.</div>' : '');
     case 'expertise':
@@ -37,8 +37,13 @@ export function body(step, choice, hero) {
       const rows = Object.keys(ABILITY_NAMES).map(k => `<div class="lvl-ab"><span>${ABILITY_NAMES[k]}</span><b>${hero[k] ?? 10}${plus[k] ? ` → ${Math.min(20, (hero[k] ?? 10) + plus[k])}` : ''}</b>
         <button class="btn btn-ghost btn-sm" onclick="levelupAbility('${k}',-1)" aria-label="Less ${ABILITY_NAMES[k]}">−</button>
         <button class="btn btn-ghost btn-sm" onclick="levelupAbility('${k}',1)" aria-label="More ${ABILITY_NAMES[k]}" ${(hero[k] ?? 10) + (plus[k] || 0) >= 20 ? 'disabled' : ''}>+</button></div>`).join('');
-      return `<div class="lvl-note">Spend two points: +2 to one ability or +1 to two (20 at most).</div><div class="lvl-abs">${rows}</div>`
-        + (step.feats.length ? `<div class="forge-title" style="font-size:11px;margin:14px 0 6px">Or take a feat</div><div class="lvl-grid">${step.feats.map(f => card(f.id, f.name + (f.homebrew ? ' ✦' : ''), [f.prerequisite, f.desc].filter(Boolean).join(' — ').slice(0, 220), choice?.kind === 'feat' && choice.id === f.id, 'feat', false)).join('')}</div>` : '');
+      // Level 19 (2024): an Epic Boon raises one ability by 1, up to 30.
+      const boon = choice?.kind === 'feat' ? step.feats.find(f => f.id === choice.id && f.plus1) : null;
+      const boonPick = boon ? `<div class="lvl-note">${esc(boon.name)} also raises one ability by 1 (up to 30):</div><div class="lvl-grid">${boon.plus1.map(k =>
+        card(k, ABILITY_NAMES[k], `${hero[k] ?? 10} → ${Math.min(30, (hero[k] ?? 10) + 1)}`, choice.ability === k, 'boonAbility', false)).join('')}</div>` : '';
+      return (step.epic ? '<div class="lvl-note">Level 19: take an <b>Epic Boon</b>, a powerful feat that also raises one ability, or any other feat or ability increase.</div>' : '')
+        + `<div class="lvl-note">Spend two points: +2 to one ability or +1 to two (20 at most).</div><div class="lvl-abs">${rows}</div>`
+        + (step.feats.length ? `<div class="forge-title" style="font-size:11px;margin:14px 0 6px">Or take a feat</div><div class="lvl-grid">${step.feats.map(f => card(f.id, f.name + (f.homebrew ? ' ✦' : ''), [f.prerequisite, f.desc].filter(Boolean).join(' — ').slice(0, 220), choice?.kind === 'feat' && choice.id === f.id, 'feat', false)).join('')}</div>` : '') + boonPick;
     }
     case 'spells': {
       const c = choice?.cantrips || [], s = choice?.spells || [];

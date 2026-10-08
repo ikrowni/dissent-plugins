@@ -133,7 +133,7 @@ export function quickBuild(srd, raceId, classId, rng = Math.random, name = null,
   const rec = RECOMMENDED_SPELLS[classId];
   if (rec) {
     draft.cantrips = rec.cantrips.slice(0, CANTRIPS_KNOWN[classId] ?? 0);
-    draft.spells = rec.spells.slice(0, spellLimitL1(classId, draftScores(draft, srd.races, srd.backgrounds).wis));
+    draft.spells = rec.spells.slice(0, spellLimitL1(classId, draftScores(draft, srd.races, srd.backgrounds).wis, o24));
   }
   const pool = NAMES[raceId] || ['Hero'];
   draft.name = name || pool[Math.floor(rng() * pool.length) % pool.length];

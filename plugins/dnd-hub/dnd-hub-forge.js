@@ -1,10 +1,10 @@
 // dnd-hub-forge.js — the Hero Forge, drawn in #screen-char-creator (spec 2026-10-03 hero forge). Replaces the plain
 // Quick character page; the builder behind it (dnd-hub-quick.js) and the save path (finishWithDraft) are unchanged.
-import { SRD } from './dnd-hub-state.js?v=20261015o';
+import { SRD } from './dnd-hub-state.js?v=20261015p';
 import { storageSetUser } from '../plugin-sdk.js';
 import { quickBuild, previewStats, READY_HEROES, CLASS_PRIORITY, STARTING_KITS } from './dnd-hub-quick.js';
 import { suggestBgBonus } from './lk-origins2024.js';
-import { startCharacterCreator, finishWithDraft, useOrigins, useOriginsFresh } from './dnd-hub-char.js?v=20261015o';
+import { startCharacterCreator, finishWithDraft, useOrigins, useOriginsFresh } from './dnd-hub-char.js?v=20261015p';
 import { raceView, classView } from './lk-hero-data.js';
 import { initForge, forgeStep } from './dnd-hub-forge-state.js';
 import { createForgeFx, FORGE_SHELL, setAura } from './dnd-hub-forge-fx.js';
@@ -13,12 +13,12 @@ import { topBar, quickStrip, stage, emblemRow, reveal, countUp } from './dnd-hub
 import { firstLevelPicks, applyFirstPicks } from './lk-levelling.js';
 import { skillProficiencies } from './lk-rules5e.js';
 import { openFirstPicks, openLevelUp, levelCtx } from './dnd-hub-levelup.js';
-import { serverData, CC } from './dnd-hub-state.js?v=20261015o';
+import { serverData, CC } from './dnd-hub-state.js?v=20261015p';
 import { shapeSteps, swapScore, rollScores, toggleLimited, skillStep, spellStep, kitNames } from './dnd-hub-forge-shape.js';
 import { shapeHeader, shapeBody, shapeFooter } from './dnd-hub-forge-shape-view.js';
-import { validateDraft, draftScores } from './dnd-hub-draft-rules.js';
+import { validateDraft, draftScores, origins2024 } from './dnd-hub-draft-rules.js';
 import { useCampaignSpells } from './book/book-spells-in-play.js';
-import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015o';
+import { getStartingGold } from './dnd-hub-char-steps.js?v=20261015p';
 import { setGearTarget, gearChooserHtml, gearShopHtml } from './dnd-hub-gear-view.js';
 import { applyGear } from './dnd-hub-starting-gear.js';
 
@@ -37,7 +37,7 @@ const root = () => document.getElementById('screen-char-creator');
 // The draft as a hero, enough for level-1 picks: its class and skills (expertise chooses among them).
 function draftHero(d) {
   const bg = (SRD.backgrounds || []).find(b => b.id === d.background);
-  return { class: d.class, race: d.race, name: d.name,
+  return { class: d.class, race: d.race, name: d.name, rules: origins2024(SRD) ? '2024' : '2014',
     skills: skillProficiencies({ race: d.race, classSkills: d.proficiencyChoices || [], extraSkills: d.extraSkills || [] }, bg), features: [] };
 }
 const open = () => !root()?.classList.contains('hidden') && !!root()?.querySelector('.forge');
@@ -83,6 +83,10 @@ function render() {
         _draft.subclass = picked.subclass || null;
         _draft.fightingStyle = picked.fightingStyle || null;
         _draft.expertise = Object.entries(picked.skills).filter(([, v]) => v === 'expertise').map(([k]) => k);
+        // 2024: a cleric's or druid's Order, a warlock's first invocation, and the lines they add to the sheet.
+        _draft.order = picked.order || null;
+        _draft.invocations = picked.invocations || [];
+        _draft.pickFeatures = (picked.features || []).filter(f => /^(Divine|Primal) Order: /.test(f));
         step({ type: 'choose' });
       },
       onBack: () => step({ type: 'back' }, -1) });

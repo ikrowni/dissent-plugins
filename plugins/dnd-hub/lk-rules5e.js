@@ -44,14 +44,17 @@ export const isCaster = cls => {
   return FULL_CASTERS.includes(c) || HALF_CASTERS.includes(c) || c === 'warlock';
 };
 
-/** Max slots per slot level (array of 10, index = slot level). */
-export function maxSlotsFor(cls, level) {
+/**
+ * Max slots per slot level (array of 10, index = slot level). `rules` '2024': paladins and rangers have slots from
+ * level 1 (the 2014 table without its level-1 gap; SRD 5.2.1 class tables).
+ */
+export function maxSlotsFor(cls, level, rules = '2014') {
   const c = String(cls || '').toLowerCase();
   const lv = Math.min(20, Math.max(1, level || 1));
   const out = new Array(10).fill(0);
   let row = null;
   if (FULL_CASTERS.includes(c)) row = FULL[lv];
-  else if (HALF_CASTERS.includes(c) && lv >= 2) row = FULL[Math.ceil(lv / 2)];
+  else if (HALF_CASTERS.includes(c) && (lv >= 2 || rules === '2024')) row = FULL[Math.ceil(lv / 2)];
   else if (c === 'warlock') { const [n, at] = PACT[lv]; out[at] = n; return out; }
   (row || []).forEach((n, i) => { out[i + 1] = n; });
   return out;
@@ -85,9 +88,9 @@ export function normalizeSlots(slots, maxes) {
 }
 
 /** Slots for a new class level: spent stay spent, every slot gained is ready to use. */
-export function withSlotsForLevel(slots, cls, level) {
+export function withSlotsForLevel(slots, cls, level, rules = '2014') {
   const cur = normalizeSlots(slots);
-  const max = maxSlotsFor(cls, level);
+  const max = maxSlotsFor(cls, level, rules);
   return max.map((m, l) => {
     if (l === 0) return [0, 0];
     const [c, oldMax] = cur[l];

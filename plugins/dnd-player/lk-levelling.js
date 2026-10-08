@@ -10,11 +10,17 @@
 // ⚠️ SOURCE; vendored into dnd-hub, dnd-master and dnd-player (scripts/vendor-shared.mjs). Pure: no DOM, no storage.
 // Option names are SRD 5.1 names; every description is original. Never write the trademark in user-facing text.
 import { abilityMod, hitDieFor, isAsiLevel, maxSlotsFor, withSlotsForLevel } from './lk-rules5e.js';
+import { features2024, isAsiLevel2024, EPIC_BOON_LEVEL, EXPERTISE_2024, SCHOLAR_SKILLS, STYLE_AT_2024, METAMAGIC_AT_2024,
+  INVOCATIONS_2024, CANTRIPS_2024, PREPARED_2024, DIVINE_ORDERS, PRIMAL_ORDERS, PACT_INVOCATIONS, EPIC_BOONS } from './lk-classes2024.js';
+
+/** The rules a hero was made under: '2024' (Table rules → Rules: 2024 at creation) or '2014' (everyone before). */
+export const heroRules = hero => (hero?.rules === '2024' || hero?.origins === '2024' ? '2024' : '2014');
 
 export const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
 const SUBCLASS_AT = { cleric: 1, sorcerer: 1, warlock: 1, druid: 2, wizard: 2 };
-export const subclassLevel = cls => SUBCLASS_AT[cls] || 3;
+/** 2024: every class chooses its subclass at level 3. */
+export const subclassLevel = (cls, rules = '2014') => (rules === '2024' ? 3 : SUBCLASS_AT[cls] || 3);
 
 /** One line for each SRD subclass (the SRD data has names only). */
 export const SRD_SUBCLASS_DESC = {
@@ -135,7 +141,7 @@ export const CLASS_FEATURES = {
 
 const PREPARES = ['cleric', 'druid', 'paladin'];
 const cap = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
-const highestSlot = (cls, level) => { const m = maxSlotsFor(cls, level); for (let l = 9; l >= 1; l--) if (m[l] > 0) return l; return 0; };
+const highestSlot = (cls, level, rules) => { const m = maxSlotsFor(cls, level, rules); for (let l = 9; l >= 1; l--) if (m[l] > 0) return l; return 0; };
 const meets = (hero, prereqs) => (prereqs || []).every(p => (hero[String(p.ability || '').toLowerCase()] ?? 0) >= (p.minimum ?? 0));
 
 function subclassOptions(hero, ctx) {
@@ -157,12 +163,15 @@ function featOptions(hero, ctx) {
 }
 
 function spellsStep(hero, level, ctx) {
-  const cls = hero.class;
-  const cantrips = (CANTRIPS[cls]?.[level] ?? 0) - (CANTRIPS[cls]?.[level - 1] ?? 0);
-  const spells = cls === 'wizard' ? (level > 1 ? 2 : 0) : PREPARES.includes(cls) ? 0
-    : (SPELLS_KNOWN[cls]?.[level] ?? 0) - (SPELLS_KNOWN[cls]?.[level - 1] ?? 0);
+  const cls = hero.class, rules = heroRules(hero);
+  // 2024: every caster prepares a set number of spells (PREPARED_2024); a wizard still writes two a level in the book.
+  const C = rules === '2024' ? CANTRIPS_2024 : CANTRIPS;
+  const cantrips = (C[cls]?.[level] ?? 0) - (C[cls]?.[level - 1] ?? 0);
+  const spells = cls === 'wizard' ? (level > 1 ? 2 : 0)
+    : rules === '2024' ? (PREPARED_2024[cls]?.[level] ?? 0) - (PREPARED_2024[cls]?.[level - 1] ?? 0)
+      : PREPARES.includes(cls) ? 0 : (SPELLS_KNOWN[cls]?.[level] ?? 0) - (SPELLS_KNOWN[cls]?.[level - 1] ?? 0);
   if (cantrips <= 0 && spells <= 0) return null;
-  const maxLevel = highestSlot(cls, level);
+  const maxLevel = highestSlot(cls, level, rules);
   const known = new Set(hero.spells || []);
   const ofClass = (ctx.srd.spells || []).filter(s => (s.classes || []).includes(cap(cls)) && !known.has(s.id));
   return {
@@ -176,6 +185,7 @@ function spellsStep(hero, level, ctx) {
 
 /** The choice steps of `level` for `hero` (no hit points, spells or feature list). */
 function pickSteps(hero, level, ctx) {
+  if (heroRules(hero) === '2024') return pickSteps2024(hero, level, ctx);
   const cls = hero.class, steps = [];
   if (level === subclassLevel(cls) && !hero.subclass) steps.push({ kind: 'subclass', options: subclassOptions(hero, ctx) });
   if (STYLE_AT[cls] === level && !hero.fightingStyle) {
@@ -203,6 +213,46 @@ function pickSteps(hero, level, ctx) {
   return steps;
 }
 
+/** The 2024 choice steps (lk-classes2024.js): an Order at 1 (cleric, druid), subclass at 3, invocations with pacts. */
+function pickSteps2024(hero, level, ctx) {
+  const cls = hero.class, steps = [];
+  if (level === 1 && cls === 'cleric' && !hero.order) steps.push({ kind: 'order', title: 'Divine Order', options: DIVINE_ORDERS });
+  if (level === 1 && cls === 'druid' && !hero.order) steps.push({ kind: 'order', title: 'Primal Order', options: PRIMAL_ORDERS });
+  if (level === 3 && !hero.subclass) steps.push({ kind: 'subclass', options: subclassOptions(hero, ctx) });
+  if (STYLE_AT_2024[cls] === level && !hero.fightingStyle) {
+    steps.push({ kind: 'fightingStyle', options: FIGHTING_STYLES.filter(s => s.classes.includes(cls)) });
+  }
+  const ex = EXPERTISE_2024[cls]?.[level];
+  if (ex) {
+    let options = Object.entries(hero.skills || {}).filter(([, v]) => v === 'proficient').map(([k]) => k);
+    if (cls === 'wizard') options = options.filter(s => SCHOLAR_SKILLS.includes(s)); // Scholar: lore skills only
+    if (options.length) steps.push({ kind: 'expertise', count: Math.min(ex, options.length), options });
+  }
+  if (cls === 'warlock') {
+    const gain = INVOCATIONS_2024[level] - (INVOCATIONS_2024[level - 1] || 0);
+    if (gain > 0) {
+      const have = new Set(hero.invocations || []);
+      const pact = ['blade', 'chain', 'tome'].find(p => have.has(`pact-of-the-${p}`)) || hero.pactBoon || null;
+      const ok = i => !have.has(i.id) && (i.minLevel || 0) <= level
+        && (!i.needs?.cantrip || (hero.spells || []).includes(i.needs.cantrip)) && (!i.needs?.pact || pact === i.needs.pact);
+      steps.push({ kind: 'invocations', count: gain, options: [...PACT_INVOCATIONS, ...INVOCATIONS].filter(ok) });
+    }
+  }
+  if (cls === 'sorcerer' && METAMAGIC_AT_2024[level]) {
+    const have = new Set(hero.metamagic || []);
+    steps.push({ kind: 'metamagic', count: METAMAGIC_AT_2024[level], options: METAMAGIC.filter(m => !have.has(m.id)) });
+  }
+  return steps;
+}
+
+/** Level 19 in 2024: an Epic Boon, or any other feat (an ability increase is a feat too). */
+function epicBoonStep(hero, ctx) {
+  const casts = !!(hero.spellcastingAbility || ['bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard'].includes(hero.class));
+  const have = new Set(hero.feats || []);
+  const boons = EPIC_BOONS.filter(b => !have.has(b.id) && (!b.needsCasting || casts)).map(b => ({ ...b, homebrew: false }));
+  return { kind: 'asi', epic: true, feats: [...boons, ...featOptions(hero, { ...ctx, featsAllowed: true })] };
+}
+
 /**
  * What the next level offers `hero`, in the order the scene asks: hp, subclass, class picks, asi, spells, features.
  * ctx = { srd: { classes, feats, spells }, library: { subclasses, feats }, featsAllowed }. Null at level 20.
@@ -213,11 +263,13 @@ export function levelPlan(hero, ctx) {
   const die = hitDieFor(hero.class);
   const steps = [{ kind: 'hp', die, average: Math.floor(die / 2) + 1, conMod: abilityMod(hero.con), hillDwarf: hero.subrace === 'hill-dwarf' }];
   steps.push(...pickSteps(hero, level, ctx));
-  if (isAsiLevel(hero.class, level)) steps.push({ kind: 'asi', feats: featOptions(hero, ctx) });
+  const o24 = heroRules(hero) === '2024';
+  if (o24 && level === EPIC_BOON_LEVEL) steps.push(epicBoonStep(hero, ctx));
+  else if (o24 ? isAsiLevel2024(hero.class, level) : isAsiLevel(hero.class, level)) steps.push({ kind: 'asi', feats: featOptions(hero, ctx) });
   const sp = spellsStep(hero, level, ctx);
   if (sp) steps.push(sp);
-  const feat = CLASS_FEATURES[hero.class]?.[level];
-  steps.push({ kind: 'features', list: feat ? feat.split(', ') : [] });
+  const feat = o24 ? null : CLASS_FEATURES[hero.class]?.[level];
+  steps.push({ kind: 'features', list: o24 ? features2024(hero.class, level) : feat ? feat.split(', ') : [] });
   return { level, steps };
 }
 
@@ -225,7 +277,7 @@ export function levelPlan(hero, ctx) {
 export function firstLevelPicks(hero, ctx) {
   return { level: 1, steps: pickSteps({ ...hero, level: 1 }, 1, ctx) };
 }
-const STEP_KEY = { hp: 'hp', subclass: 'subclass', fightingStyle: 'fightingStyle', expertise: 'expertise',
+const STEP_KEY = { hp: 'hp', subclass: 'subclass', order: 'order', fightingStyle: 'fightingStyle', expertise: 'expertise',
   pactBoon: 'pactBoon', invocations: 'invocations', metamagic: 'metamagic', asi: 'asi', spells: 'spells' };
 export const choiceKey = kind => STEP_KEY[kind] || null;
 const ids = list => new Set((list || []).map(o => (typeof o === 'string' ? o : o.id)));
@@ -239,12 +291,17 @@ export function checkChoice(step, choice) {
       if (choice?.mode === 'average') return null;
       if (choice?.mode === 'roll' && Number.isInteger(choice.roll) && choice.roll >= 1 && choice.roll <= step.die) return null;
       return `Take the average, or roll a number between 1 and ${step.die}.`;
-    case 'subclass': case 'fightingStyle': case 'pactBoon':
+    case 'subclass': case 'fightingStyle': case 'pactBoon': case 'order':
       return ids(step.options).has(choice) ? null : 'Choose one.';
     case 'expertise': case 'invocations': case 'metamagic':
       return exactly(choice, step.count, ids(step.options)) ? null : `Choose ${step.count}.`;
     case 'asi': {
-      if (choice?.kind === 'feat') return ids(step.feats).has(choice.id) ? null : 'Choose a feat.';
+      if (choice?.kind === 'feat') {
+        const f = (step.feats || []).find(x => x.id === choice.id);
+        if (!f) return 'Choose a feat.';
+        // An Epic Boon also raises one ability by 1.
+        return f.plus1 && !f.plus1.includes(choice.ability) ? `Choose which ability ${f.name} raises.` : null;
+      }
       const plus = choice?.plus || {};
       const vals = Object.entries(plus).filter(([k]) => ABILITY_KEYS.includes(k)).map(([, v]) => v);
       const ok = vals.reduce((a, b) => a + b, 0) === 2 && vals.every(v => v === 1 || v === 2) && vals.length === Object.keys(plus).length;
@@ -284,13 +341,22 @@ export function applyLevel(hero, plan, choices) {
         h.hpMax = (h.hpMax || 0) + gain; h.hp = (h.hp || 0) + gain; break;
       }
       case 'subclass': h.subclass = c; h.features.push(`${optName(step, c)} (subclass)`); break;
+      case 'order': h.order = c; h.features.push(`${step.title}: ${optName(step, c)}`); break;
       case 'fightingStyle': h.fightingStyle = c; h.features.push(`Fighting Style: ${optName(step, c)}`); break;
       case 'pactBoon': h.pactBoon = c; h.features.push(optName(step, c)); break;
       case 'expertise': for (const s of c) h.skills[s] = 'expertise'; break;
       case 'invocations': h.invocations = [...(hero.invocations || []), ...c]; break;
       case 'metamagic': h.metamagic = [...(hero.metamagic || []), ...c]; break;
       case 'asi':
-        if (c.kind === 'feat') { h.feats = [...(hero.feats || []), c.id]; h.features.push(`Feat: ${optName(step, c.id)}`); }
+        if (c.kind === 'feat') {
+          h.feats = [...(hero.feats || []), c.id]; h.features.push(`Feat: ${optName(step, c.id)}`);
+          const boon = (step.feats || []).find(x => x.id === c.id);
+          if (boon?.plus1 && c.ability) {
+            const before = h[c.ability] ?? 10, after = Math.min(30, before + 1); // an Epic Boon may go past 20
+            if (c.ability === 'con') { const extra = (abilityMod(after) - abilityMod(before)) * level; h.hpMax += extra; h.hp += extra; }
+            h[c.ability] = after;
+          }
+        }
         else for (const [k, v] of Object.entries(c.plus)) {
           const before = h[k] ?? 10, after = Math.min(20, before + v);
           if (k === 'con') { const extra = (abilityMod(after) - abilityMod(before)) * level; h.hpMax += extra; h.hp += extra; }
@@ -302,7 +368,7 @@ export function applyLevel(hero, plan, choices) {
       default: break;
     }
   }
-  h.spellSlots = withSlotsForLevel(hero.spellSlots, hero.class, level);
+  h.spellSlots = withSlotsForLevel(hero.spellSlots, hero.class, level, heroRules(hero));
   h.updatedAt = new Date().toISOString();
   return h;
 }
@@ -318,6 +384,8 @@ export function applyFirstPicks(hero, plan, choices) {
   for (const step of plan.steps) {
     const c = choices[choiceKey(step.kind)];
     if (step.kind === 'subclass') { h.subclass = c; h.features.push(`${optName(step, c)} (subclass)`); }
+    if (step.kind === 'order') { h.order = c; h.features.push(`${step.title}: ${optName(step, c)}`); }
+    if (step.kind === 'invocations') h.invocations = [...(h.invocations || []), ...c];
     if (step.kind === 'fightingStyle') { h.fightingStyle = c; h.features.push(`Fighting Style: ${optName(step, c)}`); }
     if (step.kind === 'expertise') for (const s of c) h.skills[s] = 'expertise';
   }

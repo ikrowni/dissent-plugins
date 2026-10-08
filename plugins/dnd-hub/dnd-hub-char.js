@@ -1,17 +1,18 @@
 // dnd-hub-char.js — character creator wizard shell, SRD loader, finish callback
-import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015o';
+import { CC, CC_STEPS, SRD, setServerData, serverData } from './dnd-hub-state.js?v=20261015p';
 import { storageGetUser, storageSetUser, storageSet, storageGet, localPublish, getIdentity, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015o';
-import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015o';
+import { EV } from './dnd-hub-event-types.js?v=20261015p';
+import { renderCCRace, renderCCClass, renderCCAbilityScores, renderCCBackground, renderCCEquipment, renderCCSpells, renderCCDescription, renderCCReview, getStartingGold } from './dnd-hub-char-steps.js?v=20261015p';
 import { goldLeft } from './dnd-hub-gear-view.js';
-import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015o';
+import { saveHubDm, loadHubDm } from './dnd-hub-storage.js?v=20261015p';
 import { hitDieFor, profBonus, abilityMod, withSlotsForLevel, armorClass, skillProficiencies,
   characterSummary, isWeaponId } from './lk-rules5e.js';
-import { draftScores } from './dnd-hub-char-steps.js?v=20261015o';
+import { draftScores } from './dnd-hub-char-steps.js?v=20261015p';
 import { validateDraft, origins2024 } from './dnd-hub-draft-rules.js';
 import { rulesEdition } from './lk-table-rules.js';
 import { SPECIES_2024, BACKGROUNDS_2024 } from './lk-origins2024.js';
+import { features2024 } from './lk-classes2024.js';
 import { pruneDeadHeroes } from './dnd-campaign-merge.js';
 
 // Level-1 class features (SRD 5.1). The "features" list used to hold the first three class
@@ -212,11 +213,11 @@ export async function finishCharacterCreation({ enter = true } = {}) {
     ac: armorClass({ class: CC.draft.class, ...finalScores }, equipment.filter(e => e.equipped)),
     initiative: abilityMod(finalScores.dex),
     speed: lineage?.speed || race?.speed || 30, // a 2024 wood elf: 35
-    ...(o24 ? { origins: '2024' } : {}), // made with the 2024 origins (Table rule)
+    ...(o24 ? { origins: '2024', rules: '2024', order: CC.draft.order || null } : {}), // made under Rules: 2024 (levels by lk-classes2024.js)
     proficiencyBonus: profBonus(1),
     spellcastingAbility: cls?.spellcasting_ability?.toLowerCase().slice(0, 3) || null,
     // One shape everywhere: index = slot level, [current, max]; only casters get slots (audit A2, A3).
-    spellSlots: withSlotsForLevel(null, CC.draft.class, 1),
+    spellSlots: withSlotsForLevel(null, CC.draft.class, 1, o24 ? '2024' : '2014'), // 2024 paladins and rangers cast at 1
     spells: [...(CC.draft.spells || []), ...(CC.draft.cantrips || [])],
     savingThrows: cls?.saving_throws?.map(s => s.toLowerCase().slice(0, 3)) || [],
     skills: skillProficiencies({ race: CC.draft.race, classSkills: CC.draft.proficiencyChoices || [],
@@ -229,11 +230,12 @@ export async function finishCharacterCreation({ enter = true } = {}) {
     gold: CC.draft.useStartingGold ? goldLeft(CC.draft, SRD, getStartingGold()) : 0, // what the shop left
     silver: 0, copper: 0, platinum: 0, electrum: 0,
     fightingStyle: CC.draft.fightingStyle || null,
-    invocations: [], metamagic: [], feats: [], pactBoon: null,
+    invocations: [...(CC.draft.invocations || [])], metamagic: [], feats: [], pactBoon: null,
     features: [
       ...(race?.traits?.map(t => t.name) || []),
       ...(o24 ? (lineage?.traits || []).map(t => t.name) : []), // a 2024 lineage's own gifts
-      ...(L1_FEATURES[CC.draft.class] || []),
+      ...(o24 ? features2024(CC.draft.class, 1) : L1_FEATURES[CC.draft.class] || []),
+      ...(CC.draft.pickFeatures || []), // 2024: Divine / Primal Order
       ...(background?.feature?.name ? [background.feature.name] : []),
     ],
     personalityTraits: CC.draft.personalityTraits,

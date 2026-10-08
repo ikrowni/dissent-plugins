@@ -63,7 +63,7 @@ export const extraCount = (draft, srd) => (draft.race === 'half-elf' ? 2 : origi
 export function spellStep(draft, srd) {
   const cls = (srd.classes || []).find(c => c.id === draft.class);
   const list = (srd.spells || []).filter(s => Array.isArray(s.classes) && cls && s.classes.includes(cls.name));
-  const spells = spellLimitL1(draft.class, draftScores(draft, srd.races, srd.backgrounds).wis);
+  const spells = spellLimitL1(draft.class, draftScores(draft, srd.races, srd.backgrounds).wis, origins2024(srd));
   return { cantrips: CANTRIPS_KNOWN[draft.class] ?? 0, spells,
     prepared: draft.class === 'cleric' || draft.class === 'druid',
     options: { cantrips: list.filter(s => s.level === 0), spells: spells > 0 ? list.filter(s => s.level === 1) : [] } };

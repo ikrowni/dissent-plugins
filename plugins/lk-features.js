@@ -7,6 +7,7 @@
 // description is original. Never write the trademark in user-facing text.
 import { SRD_SUBCLASS_DESC, FIGHTING_STYLES, PACT_BOONS } from './lk-levelling.js';
 import { SPECIES_2024, ORIGIN_FEATS } from './lk-origins2024.js';
+import { FEATURE_DESC_2024, EPIC_BOONS, DIVINE_ORDERS, PRIMAL_ORDERS, PACT_INVOCATIONS } from './lk-classes2024.js';
 
 const RACE_TRAITS = {
   'darkvision': 'You see in dim light within 60 ft as if it were bright, and in darkness as if it were dim (no colours, only shades of grey).',
@@ -178,9 +179,17 @@ export function featureDesc(name, { feats = [] } = {}) {
   const sub = raw.match(/^(.+?)\s*\(subclass\)$/i);
   if (sub) return SRD_SUBCLASS_DESC[norm(sub[1]).replace(/\s+/g, '-')] || SRD_SUBCLASS_DESC[norm(sub[1]).split(' ').pop()] || '';
   const feat = raw.match(/^Feat:\s*(.+)$/i);
-  if (feat) return feats.find(f => norm(f.name) === norm(feat[1]))?.desc || '';
+  if (feat) {
+    const known = feats.find(f => norm(f.name) === norm(feat[1]))?.desc;
+    if (known) return known;
+  }
   const boon = PACT_BOONS.find(b => norm(b.name) === norm(raw));
   if (boon) return boon.desc;
   const key = norm(raw).replace(/\s*\(.*\)\s*$/, '').replace(/\s+improvement$/, '');
-  return RACE_TRAITS[key] || CLASS_FEATURES[key] || BACKGROUND_FEATURES[key] || ORIGINS_2024[key] || '';
+  const order = raw.match(/^(?:Divine|Primal) Order:\s*(.+)$/i); // 2024: "Divine Order: Protector"
+  if (order) return [...DIVINE_ORDERS, ...PRIMAL_ORDERS].find(o => norm(o.name) === norm(order[1]))?.desc || '';
+  const epic = feat && EPIC_BOONS.find(b => norm(b.name) === norm(feat[1]));
+  if (epic) return epic.desc;
+  return RACE_TRAITS[key] || CLASS_FEATURES[key] || BACKGROUND_FEATURES[key] || ORIGINS_2024[key] || FEATURE_DESC_2024[key]
+    || PACT_INVOCATIONS.find(p => norm(p.name) === key)?.desc || '';
 }

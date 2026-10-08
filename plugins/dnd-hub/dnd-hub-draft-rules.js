@@ -2,13 +2,18 @@
 // and Quick character (dnd-hub-quick.js) both use these, so "a valid hero" means one thing.
 import { abilityMod } from './lk-rules5e.js';
 import { bgBonusScores, bgIncreases, extraSkillsFor } from './lk-origins2024.js';
+import { PREPARED_2024 } from './lk-classes2024.js';
 
 export const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 export const CANTRIPS_KNOWN = { bard: 2, cleric: 3, druid: 2, sorcerer: 4, warlock: 2, wizard: 3 };
 const SPELLS_KNOWN_L1 = { bard: 4, sorcerer: 2, warlock: 2, wizard: 6 }; // wizard: six in the spellbook
 
-/** 1st-level spells a new hero takes. Clerics/druids prepare WIS mod + 1 (min 1); paladins/rangers none until 2. */
-export function spellLimitL1(classId, wisScore) {
+/**
+ * 1st-level spells a new hero takes. 2014: clerics/druids prepare WIS mod + 1 (min 1); paladins/rangers none until 2.
+ * 2024 (`rules2024`): the class table's prepared spells at level 1 (a wizard still writes six into the book).
+ */
+export function spellLimitL1(classId, wisScore, rules2024 = false) {
+  if (rules2024 && classId !== 'wizard' && PREPARED_2024[classId]) return PREPARED_2024[classId][1];
   if (SPELLS_KNOWN_L1[classId] != null) return SPELLS_KNOWN_L1[classId];
   if (classId === 'cleric' || classId === 'druid') return Math.max(1, abilityMod(wisScore) + 1);
   return 0;
@@ -73,7 +78,7 @@ export function validateDraft(d, srd) {
   if (d.class) {
     const wis = draftScores(d, srd.races, srd.backgrounds).wis;
     if ((d.cantrips || []).length > (CANTRIPS_KNOWN[d.class] ?? 0)) add(5, 'Too many cantrips for your class.');
-    if ((d.spells || []).length > spellLimitL1(d.class, wis)) add(5, 'Too many 1st-level spells for your class.');
+    if ((d.spells || []).length > spellLimitL1(d.class, wis, origins2024(srd))) add(5, 'Too many 1st-level spells for your class.');
   }
   if (!String(d.name || '').trim()) add(6, 'Please enter a character name.');
   return out;

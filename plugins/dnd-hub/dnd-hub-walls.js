@@ -1,10 +1,10 @@
 // dnd-hub-walls.js — wall/door rendering and toolbar tool state
-import { MAP, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261015o';
-import { renderFog } from './dnd-hub-fog.js?v=20261015o';
-import { renderLights } from './dnd-hub-lights.js?v=20261015o';
-import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261015o';
-import { renderTriggers } from './dnd-hub-triggers.js?v=20261015o';
-import { renderTemplates } from './dnd-hub-templates.js?v=20261015o';
+import { MAP, segmentsIntersect, effectiveGs } from './dnd-hub-state.js?v=20261015p';
+import { renderFog } from './dnd-hub-fog.js?v=20261015p';
+import { renderLights } from './dnd-hub-lights.js?v=20261015p';
+import { renderAudioZones } from './dnd-hub-audio-zones.js?v=20261015p';
+import { renderTriggers } from './dnd-hub-triggers.js?v=20261015p';
+import { renderTemplates } from './dnd-hub-templates.js?v=20261015p';
 
 // Convert a stored wall/door segment to canvas pixel coordinates.
 // Handles both formats:

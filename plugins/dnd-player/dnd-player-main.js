@@ -16,7 +16,7 @@ import { renderCombat, clearActionEconomy, toggleAction, setInitiativeData, setC
 import { rule } from './lk-table-rules.js';
 import { saveBonus, trapPrompt, trapResult, needsMyRoll, deathSaveTurn } from './dnd-player-table.js';
 import { playerStrip, playerStripHtml } from './lk-party.js';
-import { setResourceState, renderResources, toggleResourcePip,
+import { setResourceState, renderResources, toggleResourcePip, setResourceValue,
          restoreResourcesOnShortRest, restoreResourcesOnLongRest } from './dnd-player-resources.js';
 import { loadHubDmCompanion, saveHubDmCompanion, cachedIndexIds, setSecretsUser } from './dnd-hub-shared-storage.js';
 import { sealedHtml } from './lk-sealed.js';
@@ -30,7 +30,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015o';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015p';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -1559,6 +1559,7 @@ window.clearConcentration = clearConcentration;
 window.toggleAction = toggleAction;
 window.clearActionEconomy = clearActionEconomy;
 window.toggleResourcePip = toggleResourcePip;
+window.setResourceValue = setResourceValue;
 window.startLevelUp        = startLevelUp;
 window.renderAll           = renderAll;
 window.toggleFeatureExpand  = toggleFeatureExpand;

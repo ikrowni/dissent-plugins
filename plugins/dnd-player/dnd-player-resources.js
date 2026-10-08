@@ -1,5 +1,7 @@
 // dnd-player-resources.js — class resource tracker (Phase 9)
 
+import { heroRules } from './lk-levelling.js';
+
 let _char = null;
 let _saveChar = null;
 
@@ -25,10 +27,33 @@ const RESOURCES = {
   wizard: [{ id: 'arcane_recovery', label: 'Arcane Recovery', recharge: 'long', maxFn: () => 1 }],
 };
 
+// The 2024 rules (a hero made under Table rules → Rules: 2024; SRD 5.2.1 class tables). Uses that come back one at a
+// time on a short rest are marked 'short' here: the sheet refills them all, a simplification the table can correct.
+const by = (rows, l) => rows.filter(([from]) => l >= from).pop()?.[1] ?? 0;
+const RESOURCES_2024 = {
+  barbarian: [{ id: 'rage', label: 'Rage', recharge: 'long', maxFn: c => by([[1, 2], [3, 3], [6, 4], [12, 5], [17, 6]], c.level) }],
+  monk: [{ id: 'ki', label: 'Focus Points', recharge: 'short', minLevel: 2, maxFn: c => c.level }],
+  bard: RESOURCES.bard,
+  cleric: [{ id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short', minLevel: 2, maxFn: c => by([[2, 2], [6, 3], [18, 4]], c.level) }],
+  paladin: [
+    { id: 'lay_on_hands', label: 'Lay On Hands (HP)', recharge: 'long', pool: true, maxFn: c => 5 * c.level },
+    { id: 'channel_divinity', label: 'Channel Divinity', recharge: 'short', minLevel: 3, maxFn: c => by([[3, 2], [11, 3]], c.level) },
+  ],
+  druid: [{ id: 'wild_shape', label: 'Wild Shape', recharge: 'short', minLevel: 2, maxFn: c => by([[2, 2], [6, 3], [17, 4]], c.level) }],
+  fighter: [
+    { id: 'action_surge', label: 'Action Surge', recharge: 'short', minLevel: 2, maxFn: c => c.level >= 17 ? 2 : 1 },
+    { id: 'second_wind', label: 'Second Wind', recharge: 'short', maxFn: c => by([[1, 2], [4, 3], [10, 4]], c.level) },
+  ],
+  ranger: [{ id: 'favored_enemy', label: "Hunter's Mark (free)", recharge: 'long', maxFn: c => by([[1, 2], [5, 3], [9, 4], [13, 5], [17, 6]], c.level) }],
+  sorcerer: RESOURCES.sorcerer,
+  wizard: RESOURCES.wizard,
+};
+
 // minLevel: the class level that grants it (audit L1 — Ki, Channel Divinity, Wild Shape, Action Surge and
 // Sorcery Points all used to show at level 1).
 function getClassResources(char) {
-  return (RESOURCES[char?.class?.toLowerCase()] || []).filter(r => (char.level || 1) >= (r.minLevel || 1));
+  const table = heroRules(char) === '2024' ? RESOURCES_2024 : RESOURCES;
+  return (table[char?.class?.toLowerCase()] || []).filter(r => (char.level || 1) >= (r.minLevel || 1));
 }
 
 function getMax(def, char) {
@@ -54,8 +79,10 @@ export function renderResources() {
           <span style="font-size:12px;font-weight:600;color:var(--text)">${def.label}</span>
           <span style="font-size:10px;color:var(--muted)">${cur}/${max} · ${recharge} rest</span>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${Array.from({length: max}, (_, i) =>
+        ${def.pool ? `<input type="number" min="0" max="${max}" value="${cur}" aria-label="${def.label} left"
+            onchange="setResourceValue('${def.id}', this.value, ${max})" style="width:80px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px">` : ''}
+        <div style="display:${def.pool ? 'none' : 'flex'};gap:6px;flex-wrap:wrap">
+          ${def.pool ? '' : Array.from({length: max}, (_, i) =>
             `<div onclick="toggleResourcePip('${def.id}',${i},${max})" style="width:24px;height:24px;border-radius:50%;
               cursor:pointer;border:2px solid var(--dnd-gold);
               background:${i < cur ? 'var(--dnd-gold)' : 'transparent'};
@@ -65,6 +92,15 @@ export function renderResources() {
       </div>`;
   }).join('') +
   '<div style="padding-top:10px;font-size:10px;color:var(--muted);text-align:center">Use Short/Long Rest in the main tab to restore resources.</div>';
+}
+
+/** A pool spent by number (Lay On Hands): what is left, 0 to max. */
+export function setResourceValue(id, value, max) {
+  if (!_char) return;
+  if (!_char.resources) _char.resources = {};
+  _char.resources[id] = Math.max(0, Math.min(max, parseInt(value, 10) || 0));
+  _saveChar().catch(() => {});
+  renderResources();
 }
 
 export function toggleResourcePip(id, index, max) {
