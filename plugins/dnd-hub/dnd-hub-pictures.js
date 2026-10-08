@@ -4,10 +4,10 @@
 // player sees one only where the fog is open.
 //
 // `mapData.pictures`: [{ id, fileId, mime, cx, cy, w (in grid squares), ar (height / width) }].
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015u';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015v';
 import { genId, request, requestWithTransfer } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015u';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015v';
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { guarded } from './lk-upload.js';
 

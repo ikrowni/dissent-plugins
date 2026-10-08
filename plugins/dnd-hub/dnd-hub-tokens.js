@@ -1,22 +1,22 @@
 // dnd-hub-tokens.js — token rendering and drag interaction
-import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, gridOrigin, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261015u';
+import { MAP, serverData, userId, TOKEN_COLORS, effectiveGs, gridOrigin, SIZE_SCALE, SIZE_CELLS } from './dnd-hub-state.js?v=20261015v';
 import { storageSet, localPublish, debounceStorageSet, request, esc } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015u';
-import { renderFog } from './dnd-hub-fog.js?v=20261015u';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015u';
-import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015u';
-import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261015u';
-import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261015u';
-import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015u';
+import { EV } from './dnd-hub-event-types.js?v=20261015v';
+import { renderFog } from './dnd-hub-fog.js?v=20261015v';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015v';
+import { wouldCrossWall } from './dnd-hub-walls.js?v=20261015v';
+import { startRuler, updateRuler, clearRuler, showActiveTurnRing, hideActiveTurnRing } from './dnd-hub-ruler.js?v=20261015v';
+import { COND_HEX, showConditionPicker, setTokenAC, damageTokens } from './dnd-hub-combat.js?v=20261015v';
+import { showTriggerToast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015v';
 import { playerTokensToSeed, dragStep, snapToGrid, newWaitingToken, playerSees } from './dnd-hub-rules.js';
 
 // This screen's id and a move counter: every token move carries both, so receivers can drop this screen's own
 // echoes and any move older than one already applied (dnd-hub-rules.js acceptMove; audit O6).
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { noticeMyConditions } from './dnd-hub-condition-fx.js';
-import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015u';
+import { talkFor } from './dnd-hub-tavern-npcs.js?v=20261015v';
 export { CLIENT_ID };
 let _moveSeq = 0;
 export const moveStamp = () => ({ clientId: CLIENT_ID, seq: ++_moveSeq });
@@ -377,9 +377,34 @@ async function _loadPortrait(fileId) {
   _portraitCache.set(fileId, texture);
 }
 
+/**
+ * A player clicking a token that is not theirs makes it their target (one at a time; click again to clear).
+ * Only the DM could select before, so a player's attack was never judged and its damage never applied
+ * (owner, 2026-10-05: "hit an 8 hp enemy for 16, nothing happened").
+ */
+function toggleTarget(token) {
+  const was = MAP.selectedTokens.has(token.id);
+  MAP.selectedTokens.clear();
+  if (!was) MAP.selectedTokens.add(token.id);
+  renderTokens();
+  if (!was) moveToast(`Target: ${token.name || 'token'}. Your next attack roll is against it.`);
+}
+
 function setupTokenDrag(container, token) {
   const canDrag = MAP.isDM || token.userId === userId;
-  if (!canDrag) return;
+  // 🔴 Someone else's token: clickable to target it. This used to return with no handler at all, so the target
+  // code below never ran for a player and a click on a monster did nothing (rules playtest "attack-click", open
+  // since 2026-10-05; only the adjacent auto-target worked).
+  if (!canDrag) {
+    container.eventMode = 'static';
+    container.cursor = 'crosshair';
+    container.on('pointerdown', e => {
+      if (MAP.activeTool !== 'select') return;
+      toggleTarget(token);
+      e.stopPropagation();
+    });
+    return;
+  }
 
   if (token.locked) {
     container.eventMode = 'static';
@@ -396,18 +421,6 @@ function setupTokenDrag(container, token) {
 
   container.on('pointerdown', e => {
     if (MAP.activeTool !== 'select') return;
-    // A player clicking a token that is not theirs makes it their target (one at a time; click again to clear).
-    // Only the DM could select before, so a player's attack was never judged and its damage never applied
-    // (owner, 2026-10-05: "hit an 8 hp enemy for 16, nothing happened").
-    if (!MAP.isDM && token.userId !== userId) {
-      const was = MAP.selectedTokens.has(token.id);
-      MAP.selectedTokens.clear();
-      if (!was) MAP.selectedTokens.add(token.id);
-      renderTokens();
-      if (!was) moveToast(`Target: ${token.name || 'token'}. Your next attack roll is against it.`);
-      e.stopPropagation();
-      return;
-    }
     // Shift-click: DM multi-select
     if (e.shiftKey && MAP.isDM) {
       if (MAP.selectedTokens.has(token.id)) MAP.selectedTokens.delete(token.id);
@@ -664,7 +677,7 @@ export function showContextMenu(token, cx, cy) {
     _addItem(menu, `💬 Talk to ${talk.name}`, async () => {
       destroyContextMenu();
       // loaded on demand: dnd-hub-tavern.js imports this file
-      (await import('./dnd-hub-tavern.js?v=20261015u')).talkToNpc(token);
+      (await import('./dnd-hub-tavern.js?v=20261015v')).talkToNpc(token);
     });
   }
 
@@ -686,7 +699,7 @@ export function showContextMenu(token, cx, cy) {
       // The roleplay stage (dnd-hub-stage.js), loaded on demand like the talk: it imports the tavern, which imports this file.
       _addItem(menu, '🎭 Bring onto the stage', async () => {
         destroyContextMenu();
-        (await import('./dnd-hub-stage.js?v=20261015u')).bringOnStage(token);
+        (await import('./dnd-hub-stage.js?v=20261015v')).bringOnStage(token);
       });
     }
 

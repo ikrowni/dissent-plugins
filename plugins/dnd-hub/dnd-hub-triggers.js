@@ -1,17 +1,18 @@
 // dnd-hub-triggers.js — trigger tile rendering, placement, and activation (Phase 7)
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015u';
+import { MAP, serverData, userId, effectiveGs, SIZE_CELLS } from './dnd-hub-state.js?v=20261015v';
+import { footprint } from './dnd-hub-movement.js';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { publishTo } from './lk-bus.js'; // trap events carry an id (isRepeat): a sheet that hears one twice applies it once
-import { EV } from './dnd-hub-event-types.js?v=20261015u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015u';
+import { EV } from './dnd-hub-event-types.js?v=20261015v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015v';
 import { rule } from './lk-table-rules.js';
 
 import { guarded } from './lk-upload.js';
 import { pickCell } from './dnd-hub-trigger-pick.js';
-import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261015u';
+import { publishMove, moveStamp, renderTokens } from './dnd-hub-tokens.js?v=20261015v';
 import { toPoint, clampToMap, turnFor, commitPath } from './dnd-hub-turn-move.js';
-import { renderLights } from './dnd-hub-lights.js?v=20261015u';
-import { renderFog } from './dnd-hub-fog.js?v=20261015u';
+import { renderLights } from './dnd-hub-lights.js?v=20261015v';
+import { renderFog } from './dnd-hub-fog.js?v=20261015v';
 let _triggerSprites = [];  // { id, gfx, label } — tracked for selective removal
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
@@ -127,7 +128,7 @@ export async function saveTriggersAndBroadcast() {
 
 // ── Token entry check (DM-only) ────────────────────────────────────────────────
 
-const _lastCell = {}; // tokenId → "cx,cy" last checked: live drag frames on one square must not fire it again
+const _lastFoot = {}; // tokenId → squares it covered when last checked: live drag frames on one square must not fire it again
 
 /**
  * The DM's screen springs traps on the squares a token entered: `cells` is every square of the move (a fight
@@ -136,11 +137,14 @@ const _lastCell = {}; // tokenId → "cx,cy" last checked: live drag frames on o
  */
 export async function checkTriggers(tokenId, cells) {
   if (!MAP.isDM || !MAP.mapData?.triggers?.length || !cells?.length) return;
-  for (const { cx, cy } of cells) {
-    const key = `${cx},${cy}`;
-    if (_lastCell[tokenId] === key) continue;
-    _lastCell[tokenId] = key;
-    const hit = MAP.mapData.triggers.filter(t => t.cx === cx && t.cy === cy && !t.disabled);
+  // A Large token covers four squares, and springs a trap under any of them (footprint).
+  const n = SIZE_CELLS[MAP.mapData.tokens?.[tokenId]?.size || 'medium'] || 1;
+  for (const cell of cells) {
+    const foot = new Set(footprint(cell, n).map(c => `${c.cx},${c.cy}`));
+    const before = _lastFoot[tokenId] || new Set();
+    if (foot.size === before.size && [...foot].every(k => before.has(k))) continue;
+    _lastFoot[tokenId] = foot;
+    const hit = MAP.mapData.triggers.filter(t => foot.has(`${t.cx},${t.cy}`) && !before.has(`${t.cx},${t.cy}`) && !t.disabled);
     for (const trig of hit) {
       // Only the DM's screen gets here, so it asks its own DM: no round trip through the node (the prompt used to
       // wait for the echo of a message the DM's screen sent itself).
@@ -255,11 +259,17 @@ export async function fireTrigger(trigger, tokenId) {
 function teleportToken(tokenId, cx, cy) {
   const tok = MAP.mapData?.tokens?.[tokenId];
   if (!tok || cy == null) return false;
-  const { x, y } = clampToMap(toPoint({ cx, cy }));
+  // An even-sized token (2×2) stands on a grid corner, as a drop snaps it: the exit square is the one down and right
+  // of its centre (footprint). On the square's middle it sat half a square off the grid.
+  const n = SIZE_CELLS[tok.size || 'medium'] || 1;
+  const half = Math.round(n) % 2 ? 0 : effectiveGs(MAP.mapData) / 2;
+  const mid = toPoint({ cx, cy });
+  const { x, y } = clampToMap({ x: mid.x - half, y: mid.y - half });
   tok.x = x; tok.y = y;
   const spr = MAP.tokenSprites?.[tokenId];
   if (spr) { spr.x = x; spr.y = y; }
-  _lastCell[tokenId] = `${cx},${cy}`; // arriving is not stepping onto: a trigger on the destination does not fire
+  // Arriving is not stepping onto: a trigger under the token where it lands does not fire.
+  _lastFoot[tokenId] = new Set(footprint({ cx, cy }, n).map(c => `${c.cx},${c.cy}`));
   let moved = false;
   for (const light of MAP.mapData.lights || []) if (light.tokenId === tokenId) { light.x = x; light.y = y; moved = true; }
   if (moved) { renderLights(); renderFog(); }

@@ -2,7 +2,7 @@
 import { mergeContent } from './lk-book.js';
 import { loadSrd, browsable } from './lk-srd-edition.js';
 import { esc, genId, realtimePublish, realtimePublishCompanion, localPublish } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015u';
+import { EV } from './dnd-hub-event-types.js?v=20261015v';
 import { applyFilter, filterBarHtml, getFilter, onFilterChange, typesIn, moreLine } from './dnd-master-monster-filter.js';
 
 let SRD_MONSTERS = [];

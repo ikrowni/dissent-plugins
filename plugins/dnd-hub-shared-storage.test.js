@@ -167,6 +167,21 @@ describe('a deleted campaign stays deleted (hub-index deletedIds)', () => {
     expect(JSON.parse(store.get('hub-index')).campaignIds).toEqual(['a']);
   });
 
+  // 🔴 A player's sheet loads a copy to sync its summary, then a newer one when it wins a sale; saving the OLDER copy
+  // merged against the newer copy's base, so its older shop and log won (rules playtest, 2026-10-08).
+  it('saving an older copy after a newer one was loaded keeps the newer edits', async () => {
+    seed();
+    const older = await mod.loadHubDmCompanion();
+    store.set('hub-camp-a', JSON.stringify({ id: 'a', n: 1, shop: [], log: ['took'] })); // the DM's sale
+    const newer = await mod.loadHubDmCompanion();
+    store.set('hub-camp-a', JSON.stringify({ id: 'a', n: 1, shop: [{ slotId: 's', qty: 1 }], log: ['took', 'back'] })); // restock
+    newer.campaigns.a.rewards = [];
+    await mod.saveHubDmCompanion(newer);
+    older.campaigns.a.summary = 'gold 3';
+    await mod.saveHubDmCompanion(older);
+    expect(JSON.parse(store.get('hub-camp-a'))).toEqual({ id: 'a', n: 1, shop: [{ slotId: 's', qty: 1 }], log: ['took', 'back'], rewards: [], summary: 'gold 3' });
+  });
+
   // 🔴 A refused read used to read as "nothing stored", and the save wrote this screen's older copy over the newer one:
   // a player's sheet put back a shop's restock and the DM's log (rules playtest, 2026-10-08).
   it('a refused read writes nothing over the stored campaign; the edit is saved, merged, once reads work again', async () => {

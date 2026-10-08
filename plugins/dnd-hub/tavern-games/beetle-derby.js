@@ -3,15 +3,15 @@
 // Pick a beetle (odds pay that many times your bet), then the house runs the race and every screen plays the same
 // frames. Insight brings a whisper about one beetle. Cheating: slip your beetle a sugar cube (Sleight of Hand vs
 // the host's eye, judged by the DM's Hub). Rules: beetle-derby-rules.js.
-import * as R from './beetle-derby-rules.js?v=20261015u';
-import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261015u';
-import { tick, chime, thump } from './tavern-sfx.js?v=20261015u';
+import * as R from './beetle-derby-rules.js?v=20261015v';
+import { guardFrame, useKit, loadCss, el, btn, banner, coins, sleep, pick, chips, tableClient, esc } from './kit.js?v=20261015v';
+import { tick, chime, thump } from './tavern-sfx.js?v=20261015v';
 
 const BARKS = { start: ['Place your bets! Six shells, one chalk line.', 'Back a beetle, friend. Any beetle.'], caught: ['Feeding the runners? Disqualified — and so are you!'] };
 
 export async function play(root, ctx) {
   useKit();
-  loadCss('bd-css', './beetle-derby.css?v=20261015u', import.meta.url);
+  loadCss('bd-css', './beetle-derby.css?v=20261015v', import.meta.url);
   const wrap = el('div', 'tk-felt bd');
   wrap.innerHTML = `<div class="bd-top"></div><div class="bd-trackbox"><canvas class="bd-track"></canvas></div><div class="bd-call" aria-live="polite"></div>
     <div class="bd-board"></div><div class="tk-row bd-btns"></div><div class="tk-note bd-status" aria-live="polite"></div>`;

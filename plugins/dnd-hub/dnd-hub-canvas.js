@@ -1,25 +1,25 @@
 // dnd-hub-canvas.js — PixiJS app init, layer setup, mouse event wiring
-import { MAP, serverData, userId, effectiveGs, gridOrigin, TOKEN_COLORS } from './dnd-hub-state.js?v=20261015u';
+import { MAP, serverData, userId, effectiveGs, gridOrigin, TOKEN_COLORS, SIZE_CELLS } from './dnd-hub-state.js?v=20261015v';
 import { storageSet, debounceStorageSet, genId } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015u';
-import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261015u';
-import { renderGrid } from './dnd-hub-grid.js?v=20261015u';
-import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261015u';
-import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261015u';
-import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015u';
-import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015u';
-import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261015u';
-import { showPinDialog } from './dnd-hub-pins.js?v=20261015u';
+import { EV } from './dnd-hub-event-types.js?v=20261015v';
+import { renderFog, applyBrushAt, saveFogState } from './dnd-hub-fog.js?v=20261015v';
+import { renderGrid } from './dnd-hub-grid.js?v=20261015v';
+import { renderWalls, wallPx, pxToCell, wouldCrossWall } from './dnd-hub-walls.js?v=20261015v';
+import { renderTokens, moveStamp, publishMove } from './dnd-hub-tokens.js?v=20261015v';
+import { computeLocalPlayerLOS } from './dnd-hub-los.js?v=20261015v';
+import { showPingAnimation, updateRuler, clearRuler } from './dnd-hub-ruler.js?v=20261015v';
+import { showContextMenu, destroyContextMenu } from './dnd-hub-tokens.js?v=20261015v';
+import { showPinDialog } from './dnd-hub-pins.js?v=20261015v';
 import { undoMap, redoMap, fogBefore, fogAfter } from './dnd-hub-undo.js';
 import { tellSheetWhereIAm } from './dnd-hub-zone-pos.js';
 import { pictureToolDown, pictureToolMove, pictureToolUp } from './dnd-hub-pictures.js';
-import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015u';
-import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261015u';
-import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015u';
-import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261015u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015u';
-import { refreshGuide } from './dnd-hub-map-bg.js?v=20261015u';
+import { renderLights, saveLightsAndBroadcast } from './dnd-hub-lights.js?v=20261015v';
+import { renderAudioZones, saveZonesAndBroadcast, showZoneDialog, showZoneContextMenu } from './dnd-hub-audio-zones.js?v=20261015v';
+import { renderTriggers, showTriggerDialog, saveTriggersAndBroadcast, checkTriggers, triggerCell } from './dnd-hub-triggers.js?v=20261015v';
+import { startTemplateDraw, updateTemplatePreview, finishTemplateDraw, cancelTemplateDraw, renderTemplates, removeTemplate } from './dnd-hub-templates.js?v=20261015v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015v';
+import { refreshGuide } from './dnd-hub-map-bg.js?v=20261015v';
 import { findDoorAt, nextDoorState, playerMayToggleDoor, placeOwnTokenVerdict, newWaitingToken, panFor, snapWallPoint } from './dnd-hub-rules.js';
 import { onMap, toCell, turnFor, commitPath, modeFor, speedFor, refusal, moveToast, renderTrail, resetTrailGraphics, cellBlocked } from './dnd-hub-turn-move.js';
 import { extendPath } from './dnd-hub-movement.js';
@@ -621,7 +621,7 @@ export async function initPixiApp() {
     // Check for token hit (any user can right-click their own token; DM can right-click any)
     for (const [tokenId, spr] of Object.entries(MAP.tokenSprites)) {
       const dx = wx - spr.x, dy = wy - spr.y;
-      if (Math.sqrt(dx * dx + dy * dy) < gs * 0.45) {
+      if (Math.sqrt(dx * dx + dy * dy) < hitRadius(tokenId, gs)) {
         const token = MAP.mapData.tokens[tokenId];
         if (token) { showContextMenu(token, e.clientX, e.clientY); return; }
       }
@@ -639,14 +639,19 @@ export async function initPixiApp() {
     const wx = (e.clientX - rect.left - MAP.panX) / MAP.zoom;
     const wy = (e.clientY - rect.top  - MAP.panY) / MAP.zoom;
     const gs = effectiveGs(MAP.mapData);
-    const hitToken = Object.entries(MAP.tokenSprites).some(([, spr]) =>
-      Math.sqrt((wx - spr.x) ** 2 + (wy - spr.y) ** 2) < gs * 0.45
+    const hitToken = Object.entries(MAP.tokenSprites).some(([id, spr]) =>
+      Math.sqrt((wx - spr.x) ** 2 + (wy - spr.y) ** 2) < hitRadius(id, gs)
     );
     if (!hitToken && MAP.selectedTokens.size > 0) {
       MAP.selectedTokens.clear();
       renderTokens();
     }
   });
+}
+
+/** How near a token's centre a click is on it: a Large token is two squares wide (its edge read as empty map). */
+function hitRadius(tokenId, gs) {
+  return gs * 0.45 * (SIZE_CELLS[MAP.mapData?.tokens?.[tokenId]?.size || 'medium'] || 1);
 }
 
 let _keysBound = false;
@@ -862,7 +867,7 @@ function _showTemplateContextMenu(clientX, clientY, wx, wy) {
 
 window._placeTemplateAt = async (type, wx, wy) => {
   document.getElementById('tmpl-ctx-menu')?.remove();
-  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261015u');
+  const { addTemplate } = await import('./dnd-hub-templates.js?v=20261015v');
   await addTemplate(type, wx, wy, 10, 0, 10, 0xff4444, userId);
 };
 

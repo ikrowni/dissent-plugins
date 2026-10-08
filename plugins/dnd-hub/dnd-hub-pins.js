@@ -1,14 +1,14 @@
 // dnd-hub-pins.js — map pin placement, rendering, and journal overlay
-import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015u';
+import { MAP, serverData, userId, effectiveGs } from './dnd-hub-state.js?v=20261015v';
 import { storageSet, genId, esc, request } from '../plugin-sdk.js';
 import { realtimePublish } from './dnd-hub-publish.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015u';
-import { saveHubDm } from './dnd-hub-storage.js?v=20261015u';
+import { EV } from './dnd-hub-event-types.js?v=20261015v';
+import { saveHubDm } from './dnd-hub-storage.js?v=20261015v';
 
 import { CLIENT_ID } from './dnd-hub-client-id.js';
 import { canTravel, travelFields, travelSummary } from './dnd-hub-pin-travel.js';
 import { campaignScenes, travelToScene, requestTravel, travelNotice } from './dnd-hub-travel.js';
-import { setTool } from './dnd-hub-walls.js?v=20261015u';
+import { setTool } from './dnd-hub-walls.js?v=20261015v';
 import { moveToast } from './dnd-hub-turn-move.js';
 let _pinSprites = []; // PixiJS containers currently on the ui layer
 

@@ -28,6 +28,17 @@ beforeEach(async () => {
 });
 
 describe('saveHubDm merges with what is stored', () => {
+  it('saving an older copy after a newer one was loaded keeps the newer edits', async () => {
+    store.set('hub-index', JSON.stringify({ campaignIds: ['c'], rest: {} }));
+    store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 }, b: { x: 1 } } }));
+    const older = await mod.loadHubDm();
+    store.set('hub-camp-c', JSON.stringify({ id: 'c', tokens: { a: { x: 1 }, b: { x: 9 } } }));
+    await mod.loadHubDm(); // a newer copy, left unchanged
+    older.campaigns.c.tokens.a.x = 5;
+    await mod.saveHubDm(older);
+    expect(JSON.parse(store.get('hub-camp-c')).tokens).toEqual({ a: { x: 5 }, b: { x: 9 } });
+  });
+
   // 🔴 A refused read (HTTP 429) used to read as "nothing stored": the save wrote this screen's older copy over newer
   // edits made elsewhere (rules playtest, 2026-10-08).
   it('a refused read writes nothing over the stored campaign; the edit is saved, merged, once reads work again', async () => {

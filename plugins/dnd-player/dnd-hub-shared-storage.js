@@ -33,6 +33,12 @@ const HUB = 'dnd-hub';
 // actually changed — companion writes go through the same 60/min plugin-data
 // rate limit as everything else.
 const _lastSeen = new Map();
+// 🔴 The merge base of each campaign OBJECT: what that copy was loaded or last written as. Screens load more than one
+// copy (a player's sheet loads one to sync its summary and another when it wins a sale); a save of the older copy
+// merged against the newer copy's base, so every older value in it read as this screen's edit and won: a shop's
+// restock and the DM's log went back (rules playtest, 2026-10-08). Falls back to the id's last-seen copy.
+const _baseOf = new WeakMap();
+const seen = (id, camp, json = JSON.stringify(camp)) => { _lastSeen.set(id, json); _baseOf.set(camp, json); };
 
 // The campaign ids hub-index advertised the last time we successfully read it.
 // `null` means we have not seen a valid index this session — which is NOT the
@@ -88,7 +94,7 @@ export async function joinSecrets(data, id) {
   for (const k of Object.keys(camp)) if (!(k in joined)) delete camp[k];
   Object.assign(camp, joined);
   _joined.add(id); _joinedObjs.add(camp);
-  _lastSeen.set(id, JSON.stringify(camp));
+  seen(id, camp);
   return camp;
 }
 
@@ -116,7 +122,7 @@ export async function loadHubDmCompanion() {
         _joinedObjs.add(camp);
       }
       campaigns[id] = camp;
-      _lastSeen.set(id, JSON.stringify(camp));
+      seen(id, camp);
     }
     return { ...(idx.rest ?? {}), campaigns };
   }
@@ -188,21 +194,23 @@ async function saveNow(data) {
   const written = {}; // merged with what is stored by this save: the only campaigns whose summary is current
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
-    if (_lastSeen.get(id) === json) continue;
+    const baseJson = _baseOf.has(camp) ? _baseOf.get(camp) : _lastSeen.get(id);
+    if (baseJson === json) continue; // this copy changed nothing since it was read
     // Re-read and three-way merge (dnd-campaign-merge.js), so a sidebar save keeps what
     // the Hub or another player changed since this sidebar loaded.
-    const baseJson = _lastSeen.get(id);
     let merged;
     try { merged = await writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, JSON.parse(json)); }
     catch (e) { console.warn('[dnd-hub-shared-storage] campaign %s not saved (storage refused); trying again', id, e?.message); retryLater(data); continue; }
     if (!merged) continue; // deleted on the Hub: not written back
-    _lastSeen.set(id, JSON.stringify(merged));
+    const mergedJson = JSON.stringify(merged);
+    _lastSeen.set(id, mergedJson);
     // What the screen changed WHILE this save was out is kept: merged over the stored result, not overwritten by it
     // (it was: a host added during a slow save vanished). Left unsaved here; the next save writes it.
     const now = JSON.stringify(camp);
     const result = now === json ? merged : mergeCampaign(JSON.parse(json), JSON.parse(now), merged);
     for (const k of Object.keys(camp)) if (!(k in result)) delete camp[k];
     Object.assign(camp, result);
+    _baseOf.set(camp, mergedJson); // this copy now stands on what was written
     written[id] = merged;
   }
   for (const id of [..._lastSeen.keys()]) {

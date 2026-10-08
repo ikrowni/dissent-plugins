@@ -1,6 +1,6 @@
 // plugins/dnd-hub/dnd-hub-movement.test.js
 import { describe, it, expect } from 'vitest';
-import { cellAt, turnKey, moveMode, pathFeet, cellsBetween, extendPath, checkReportedPath, speedOf } from './dnd-hub-movement.js';
+import { cellAt, turnKey, moveMode, pathFeet, cellsBetween, extendPath, checkReportedPath, speedOf, footprint } from './dnd-hub-movement.js';
 
 const c = (cx, cy) => ({ cx, cy });
 
@@ -104,3 +104,22 @@ describe('speedOf', () => {
   });
 });
 
+
+describe('footprint: the squares a token covers', () => {
+  const keys = a => a.map(c => `${c.cx},${c.cy}`).sort();
+  it('medium and small cover the one square under their centre', () => {
+    expect(keys(footprint({ cx: 4, cy: 2 }, 1))).toEqual(['4,2']);
+  });
+  it('a 2×2 sits on a corner: the square its centre falls in (floor) and the three up and left of it', () => {
+    // centre on the corner between squares 3–4 and 1–2 → floor gives 4,2
+    expect(keys(footprint({ cx: 4, cy: 2 }, 2))).toEqual(['3,1', '3,2', '4,1', '4,2']);
+  });
+  it('a 3×3 is centred on its middle square', () => {
+    expect(footprint({ cx: 5, cy: 5 }, 3)).toHaveLength(9);
+    expect(keys(footprint({ cx: 5, cy: 5 }, 3))).toContain('4,4');
+    expect(keys(footprint({ cx: 5, cy: 5 }, 3))).toContain('6,6');
+  });
+  it('tiny counts as one square', () => {
+    expect(footprint({ cx: 1, cy: 1 }, 0.5)).toEqual([{ cx: 1, cy: 1 }]);
+  });
+});

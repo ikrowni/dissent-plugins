@@ -31,7 +31,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015u';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015v';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -768,17 +768,12 @@ function _shopLines(lines, itemLib) {
 }
 
 async function _openShopTab(shopId) {
-  // Read the DM's authoritative catalog first — the hub can't overwrite this namespace.
-  // Fall back to hub-dm for backwards compatibility with sessions before dm-catalog was written.
-  const dmCatalog = await storageGetCompanion('dnd-master', 'dm-catalog');
-  const dmCamp    = dmCatalog?.campaigns?.[CAMPAIGN_ID];
-
+  // The campaign's own record. (It used to read the DM sidebar's dm-catalog first: a player may not read dnd-master's
+  // storage, so that was a 403 on every shop opened, against the read limit, and fell through to this anyway.)
   SERVER_DATA = await loadHubDmCompanion() || SERVER_DATA || { campaigns: {} };
   const hubCamp = SERVER_DATA?.campaigns?.[CAMPAIGN_ID];
-
-  // Prefer dm-catalog for items and shops; fall back to hub-dm
-  const itemLib = dmCamp?.items || hubCamp?.items || {};
-  const shopDef = dmCamp?.shops?.[shopId] || hubCamp?.shops?.[shopId];
+  const itemLib = hubCamp?.items || {};
+  const shopDef = hubCamp?.shops?.[shopId];
   if (!shopDef) return;
 
   _activeItemLib = itemLib;

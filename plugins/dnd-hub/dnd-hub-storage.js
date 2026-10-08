@@ -27,6 +27,11 @@ export const hubCampKey = id => `hub-camp-${id}`;
 // pin drag / light tweak / token move, and rewriting all shards each time would
 // burn the 60 writes/min plugin-data rate limit.
 const _lastWritten = new Map();
+// 🔴 The merge base of each campaign OBJECT: what that copy was loaded or last written as (dnd-hub-shared-storage.js
+// has the story: a save of an older copy merged against a newer copy's base, and its older values won). Falls back
+// to the id's last-written copy.
+const _baseOf = new WeakMap();
+const seen = (id, camp, json = JSON.stringify(camp)) => { _lastWritten.set(id, json); _baseOf.set(camp, json); };
 
 // 🔴 A save reads and writes with these, never storageGet/storageSet: those return null for a REFUSED read (HTTP 429)
 // as for an empty one, and swallow a refused write. A save that took a refused read for "nothing stored" wrote its
@@ -95,7 +100,7 @@ export async function joinSecrets(data, id) {
   for (const k of Object.keys(camp)) if (!(k in joined)) delete camp[k];
   Object.assign(camp, joined);
   _joined.add(id); _joinedObjs.add(camp);
-  _lastWritten.set(id, JSON.stringify(camp));
+  seen(id, camp);
   return camp;
 }
 
@@ -129,7 +134,7 @@ export async function loadHubDm() {
         _joined.add(id); _joinedObjs.add(camp);
       }
       campaigns[id] = camp;
-      if (moving) { _lastWritten.delete(id); moveOut = true; } else _lastWritten.set(id, JSON.stringify(camp));
+      if (moving) { _lastWritten.delete(id); moveOut = true; } else seen(id, camp);
     }
     const data = { ...(idx.rest ?? {}), campaigns };
     if (moveOut) queueMicrotask(() => saveHubDm(data).catch(e => console.warn('[dnd-hub-storage] moving DM secrets out failed', e)));
@@ -161,7 +166,7 @@ export async function loadCampaign(data, id) {
   data.campaigns = data.campaigns || {};
   data.campaigns[id] = pub;
   _skipped.delete(id);
-  _lastWritten.set(id, JSON.stringify(pub));
+  seen(id, pub);
   return pub;
 }
 
@@ -234,10 +239,10 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
   const written = {}; // campaigns this save merged with what is stored: the only ones whose summary is current
   for (const [id, camp] of Object.entries(campaigns)) {
     const json = JSON.stringify(camp);
-    if (_lastWritten.get(id) === json) continue;
+    const baseJson = _baseOf.has(camp) ? _baseOf.get(camp) : _lastWritten.get(id);
+    if (baseJson === json) continue; // this copy changed nothing since it was read
     // Re-read and three-way merge, so edits made elsewhere since we loaded survive.
     // See dnd-campaign-merge.js for why this replaces a plain overwrite.
-    const baseJson = _lastWritten.get(id);
     const localNow = JSON.parse(JSON.stringify(camp)); // what this save merges and writes
     let merged;
     try { merged = await _writeCampaign(id, baseJson ? JSON.parse(baseJson) : undefined, localNow); }
@@ -254,6 +259,7 @@ async function _saveOnce(data, { allowRemovals = false } = {}) {
       Object.assign(camp, adopted);
       _onRemoteMerged?.(id);
     }
+    _baseOf.set(camp, mergedJson); // this copy now stands on what was written
     written[id] = merged;
   }
 

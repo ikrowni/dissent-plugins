@@ -42,6 +42,20 @@ export function cellsBetween(a, b) {
 }
 
 /**
+ * The squares a token covers, from the square its centre falls in (`cell`, floor of the centre) and its size in
+ * squares (`n`: SIZE_CELLS). Odd sizes are centred on that square; an even size's centre is a grid corner, so the
+ * floor is the square down and right of it. Traps check every square a token covers: a Large monster used to set
+ * one off from a single square of its four.
+ */
+export function footprint(cell, n) {
+  const k = Math.max(1, Math.round(n));
+  const first = { cx: cell.cx - Math.floor(k / 2), cy: cell.cy - Math.floor(k / 2) };
+  const out = [];
+  for (let dy = 0; dy < k; dy++) for (let dx = 0; dx < k; dx++) out.push({ cx: first.cx + dx, cy: first.cy + dy });
+  return out;
+}
+
+/**
  * Walk the path toward `cell`, one adjacent cell at a time. Steps back over cells not yet committed
  * (`committed` = how many cells of the path are already spent; a drag can retrace itself before the
  * drop, a finished move cannot be taken back). Stops at a wall (`blocked(from, to)`) or when the next
