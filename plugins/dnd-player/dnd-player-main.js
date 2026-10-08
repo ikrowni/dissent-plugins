@@ -31,7 +31,7 @@ import { zoneVolume } from './dnd-player-zones.js';
 import { isRepeat, publishTo } from './lk-bus.js';
 
 import { guarded } from './lk-upload.js';
-import { handleTavern } from './dnd-player-tavern.js?v=20261015v';
+import { handleTavern } from './dnd-player-tavern.js?v=20261015w';
 let CHAR = null;
 let CAMPAIGN_ID = null;
 let USER_ID = null;
@@ -721,9 +721,18 @@ async function onInit(data) {
     SERVER_DATA.campaigns[CAMPAIGN_ID].pendingRewards[USER_ID] = [];
     await saveHubDmCompanion(SERVER_DATA);
     for (const reward of pendingRewards) {
+      // The same sale's live message, before or after this, is handled once (lk-bus isRepeat: the sale id is its eid).
+      if (reward.saleId && isRepeat({ eid: reward.saleId })) continue;
       const item = _resolveItemFromLibrary(reward.itemId);
       if (!item) continue;
-      _addItemToChar(item, reward.qty || 1, reward.goldCost || 0);
+      // Won while away, and the gold is gone: declined as a live sale is (the DM is told; a shop item goes back on its
+      // shelf). It used to vanish: no item, no word to anyone.
+      if (!_addItemToChar(item, reward.qty || 1, reward.goldCost || 0)) {
+        publishTo(['hub'], 'loot:declined', { campaignId: CAMPAIGN_ID, itemId: reward.itemId, itemName: item.name,
+          goldCost: reward.goldCost || 0, userId: USER_ID, name: CHAR.name || '', shopId: reward.shopId || null,
+          slotId: reward.slotId || null, saleId: reward.saleId || null }).catch(() => {});
+        _showPlayerToast(`You won ${item.name}, but no longer have the ${reward.goldCost || 0} gp to pay for it.`);
+      }
     }
     await saveChar();
     _resolveInventoryImages().then(() => renderAll()).catch(() => {});
@@ -1424,7 +1433,7 @@ async function onEvent(ev) {
         // Clear the pending reward so onInit doesn't add it again as a duplicate (or try a sale that failed again)
         const pr = SERVER_DATA?.campaigns?.[CAMPAIGN_ID]?.pendingRewards?.[USER_ID];
         if (pr?.length) {
-          const i = pr.findIndex(r => r.itemId === p.itemId);
+          const i = pr.findIndex(r => (r.saleId && p.eid) ? r.saleId === p.eid : r.itemId === p.itemId);
           if (i !== -1) pr.splice(i, 1);
           saveHubDmCompanion(SERVER_DATA).catch(() => {});
         }

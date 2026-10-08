@@ -1,6 +1,6 @@
 // dnd-master-items.js — Items tab: item forge + item library
 import { storageGet, storageSet, storageSetCompanion, esc, genId, requestWithTransfer, request, realtimePublish, realtimePublishCompanion } from '../plugin-sdk.js';
-import { EV } from './dnd-hub-event-types.js?v=20261015v';
+import { EV } from './dnd-hub-event-types.js?v=20261015w';
 import { saveHubDmCompanion } from './dnd-hub-shared-storage.js';
 import { ITEM_GROUPS, groupCounts, filterItems } from './dnd-master-item-filter.js';
 import { appendLogEntry } from './dnd-master-logs.js';
@@ -355,12 +355,15 @@ export async function handleContestResult(p) {
     contestants: contest.interested.map(c => ({ userId: c.userId, name: c.displayName })),
     rolls, winner: p.winner, winnerName: p.winnerName };
 
-  // Write pendingRewards for offline-safe delivery
+  // Write pendingRewards for offline-safe delivery. It names the sale (and its shelf), so a sheet that claims it on
+  // its next load can decline it the way a live sheet does when the gold is gone — it was lost without a word.
+  const saleId = genId();
   const camp = _state.serverData.campaigns[_state.dmCampaignId];
   if (!camp.pendingRewards) camp.pendingRewards = {};
   camp.pendingRewards[winner.userId] = [
     ...(camp.pendingRewards[winner.userId] || []),
-    { itemId: contest.itemId, qty: 1, source: contest.source, goldCost: contest.goldCost || 0, awardedAt: Date.now() },
+    { itemId: contest.itemId, itemName: contest.itemName, qty: 1, source: contest.source, goldCost: contest.goldCost || 0,
+      shopId: contest.shopId || null, slotId: contest.slotId || null, saleId, awardedAt: Date.now() },
   ];
 
   // A shop sells what it has: one fewer of that line, gone at none (it stayed for sale forever, owner 2026-10-05).
@@ -394,7 +397,7 @@ export async function handleContestResult(p) {
   const payload = {
     type: EV.LOOT_RESOLVED, contestKey,
     // One id per sale: a sheet handles a sale once (lk-bus isRepeat), and a decline names the sale it declines.
-    eid: genId(),
+    eid: saleId,
     winner: winner.userId, winnerName: winner.name,
     itemId: contest.itemId, itemName: contest.itemName,
     rolls, source: contest.source,
