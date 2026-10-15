@@ -81,7 +81,21 @@ body {
 #brand .title { font-family: var(--f-display); font-size: 20px; font-weight: 800; letter-spacing: 0.01em; }
 #brand .sub { font-size: 11px; color: var(--text-2); }
 
-#nav { display: flex; gap: 4px; margin-left: auto; }
+/* Seven sections do not fit a phone's width. The row scrolls sideways rather than
+   running off the screen with no way to reach the rest (owner, phone browser,
+   2026-10-15) — and on a narrow screen it takes a row of its own under the brand. */
+#nav {
+  display: flex; gap: 4px; margin-left: auto; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#nav::-webkit-scrollbar { display: none; }
+#nav button { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 760px) {
+  #topbar { flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; }
+  #sfx-toggle { margin-left: auto; }
+  #nav { order: 3; flex: 1 0 100%; margin-left: 0; }
+}
 
 #nav button {
   appearance: none; border: 1px solid transparent; background: transparent;

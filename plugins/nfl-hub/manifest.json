@@ -471,7 +471,7 @@
     },
     {
       "url": "styles/base.css",
-      "sha256": "357f1bc5dae83d224f750815509f082358756a1daa7a438509661dcba79a6161"
+      "sha256": "2330c5e5816b473222fced4d532496fc89da49d8f6065cc5cec94b5624fc958a"
     },
     {
       "url": "styles/booth.css",
@@ -515,7 +515,7 @@
     },
     {
       "url": "styles/stadium.css",
-      "sha256": "a76b1bdfd73dd64e5282d27177cb69076a7ec5cd0c9484338b6002789e20b07e"
+      "sha256": "8c80bccfeffcff5bf3cab51045297ca685374eb44643dd13e28d729b38668f30"
     },
     {
       "url": "styles/wire.css",
