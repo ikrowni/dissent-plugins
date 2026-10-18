@@ -313,6 +313,21 @@ export function saveToDevice(data, name, mime = 'application/octet-stream') {
   return requestWithTransfer('files:saveToDevice', { data, name, mime }, [], 120000);
 }
 
+/**
+ * Sparks ✦ — this server's play currency. sparksBalance/sparksRules need sparks:read. sparksCharge/sparksStake need
+ * sparks:charge and ALWAYS show Dissent's own confirm first; they reject with 'declined' when the member says no and
+ * 'busy' while a confirm is already open. A charge resolves a receipt — the plugin's server module must check it
+ * (server-sdk sparks.receipt) before delivering anything. A page can never award Sparks; only a server module can.
+ */
+export async function sparksBalance() { return request('sparks.balance', {}); }
+export async function sparksRules() { return request('sparks.rules', {}); }
+export function sparksCharge({ amount, reason, key }) {
+  return request('sparks.charge', { amount, reason, key }, INTERACTIVE_TIMEOUT_MS);
+}
+export function sparksStake({ betId, answer, amount, key, reason }) {
+  return request('sparks.stake', { betId, answer, amount, key, reason }, INTERACTIVE_TIMEOUT_MS);
+}
+
 export async function storageGetCompanion(registryId, key, scope = 'server') {
   try { const r = await request('storage:get-companion', { registryId, key, scope }); return r?.value ?? null; } catch { return null; }
 }
