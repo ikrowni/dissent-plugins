@@ -1,0 +1,24 @@
+{
+  "id": "lobby-probe",
+  "name": "Lobby Probe",
+  "version": "1.0.0",
+  "description": "Test game for the games hub (spec 2026-10-19 §6): shows its table, says hello to the other players through the node, and lists what it hears. Not seeded into any market.",
+  "author": "Dissent test",
+  "tier": 1,
+  "context": ["games", "sidebar"],
+  "url": "https://plugins.dissent.chat/plugins/lobby-probe/plugin.html",
+  "declared_permissions": [],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["testing"],
+  "sdk_version": "1",
+  "resources": [],
+  "game": {
+    "api": 1,
+    "placement": "chat",
+    "players": [2, 8],
+    "watchers": true,
+    "drop_in": false,
+    "blurb": "A test game: everyone says hello."
+  }
+}

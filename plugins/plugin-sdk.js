@@ -44,7 +44,11 @@ export function requestWithTransfer(action, params, transfers, timeoutMs = 60000
 // onEvent receives dissent:event messages.
 // Change listeners (caching spec 2026-10-01, piece 1): the host says this plugin's stored data or
 // friends:link links changed, so a plugin re-reads instead of polling.
-const _changeListeners = { 'storage:changed': [], 'links:changed': [] };
+const _changeListeners = {
+  'storage:changed': [], 'links:changed': [],
+  // Games (spec 2026-10-19 §6.3): host cues to a game frame about its own table.
+  'game.lobby': [], 'game.message': [], 'game.rate_limited': [],
+};
 /** Called with { scope, key } when this plugin's stored data changes (any writer, a scope you hold).
  *  Never the value — re-read what you need. Keep a slow safety poll: a server module's writes are not announced. */
 export function onStorageChange(fn) { _changeListeners['storage:changed'].push(fn); }
@@ -69,6 +73,34 @@ export function handleSDKMessage(e, onInit, onEvent) {
     }
   }
   if (e.data?.type === 'dissent:event' && onEvent) onEvent(e.data);
+}
+
+// ── Games (spec 2026-10-19 §6.3) ─────────────────────────────────────────────────────────────────
+// Only in a game frame opened at a table (init context contextType 'games', with lobbyId and
+// placement 'fullscreen' | 'panel' | 'chat'); gameLobbies() also works in the same plugin's sidebar.
+// No permission to ask for: it is what every member already sees in the games room.
+
+/** The table: seats, members with names, host, your seat ({ user_id, role, seat } or null), settings. */
+export function gameLobby() { return request('games.lobby', {}); }
+/** The table changed — re-read it with gameLobby(). `{ closed: true, reason }` when it closed. Returns an unsubscribe. */
+export function onGameLobby(fn) { return _addListener('game.lobby', fn); }
+/** To everyone else at the table, through the node: at most 1 KB of JSON, 20 a second. Watchers can't send.
+ *  Send whole state, not changes: a missed message is not resent. */
+export function gameSend(data) { return request('games.send', { data }); }
+/** Another player's message, fn(from, data). Never your own. Returns an unsubscribe. */
+export function onGameMessage(fn) { return _addListener('game.message', (m) => fn(m.from, m.data)); }
+/** Your messages are being dropped for going over 20 a second. */
+export function onGameRateLimited(fn) { return _addListener('game.rate_limited', () => fn()); }
+/** Host only, before Start: the game's own settings (≤ 4 KB JSON object). */
+export function gameSetSettings(settings) { return request('games.setSettings', { settings }); }
+/** Host only, after Start: ends the game; the summary (plain text) shows in the room for a while. */
+export function gameFinish(summary) { return request('games.finish', summary ? { summary } : {}); }
+/** This game's open tables on this server (also from the sidebar). */
+export function gameLobbies() { return request('games.lobbies', {}); }
+
+function _addListener(event, fn) {
+  _changeListeners[event].push(fn);
+  return () => { _changeListeners[event] = _changeListeners[event].filter((f) => f !== fn); };
 }
 
 export async function storageGet(key, scope = 'server') {

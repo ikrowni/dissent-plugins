@@ -156,3 +156,28 @@ describe('change listeners', () => {
     expect(seen).toContain('storage:changed');
   });
 });
+
+// Games (spec 2026-10-19 §6.3): the shim's game helpers speak the same actions as the built SDK.
+import { gameSend, onGameMessage, onGameLobby } from './plugin-sdk.js';
+
+describe('game helpers', () => {
+  it('gameSend asks for games.send with the data', () => {
+    void gameSend({ x: 1 }).catch(() => {});
+    expect(posted[posted.length - 1]).toMatchObject({ type: 'dissent:request', action: 'games.send', params: { data: { x: 1 } } });
+  });
+
+  it('onGameMessage hands (from, data) to the game and can be removed', () => {
+    const seen = [];
+    const off = onGameMessage((from, data) => seen.push([from, data]));
+    const cue = () => handleSDKMessage({ data: { type: 'dissent:event', event: 'game.message', data: { from: 'u2', data: { pos: 3 } } } });
+    cue(); off(); cue();
+    expect(seen).toEqual([['u2', { pos: 3 }]]);
+  });
+
+  it('onGameLobby hears the table change', () => {
+    const seen = [];
+    onGameLobby((c) => seen.push(c));
+    handleSDKMessage({ data: { type: 'dissent:event', event: 'game.lobby', data: { id: 'l1', closed: true } } });
+    expect(seen).toEqual([{ id: 'l1', closed: true }]);
+  });
+});
