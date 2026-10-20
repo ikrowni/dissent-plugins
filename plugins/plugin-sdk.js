@@ -48,6 +48,8 @@ const _changeListeners = {
   'storage:changed': [], 'links:changed': [],
   // Games (spec 2026-10-19 §6.3): host cues to a game frame about its own table.
   'game.lobby': [], 'game.message': [], 'game.rate_limited': [],
+  // Spec 2026-10-20-tower-plugin-design §5: the app's sound volume and deafen, for a game to follow.
+  'game.sound': [],
 };
 /** Called with { scope, key } when this plugin's stored data changes (any writer, a scope you hold).
  *  Never the value — re-read what you need. Keep a slow safety poll: a server module's writes are not announced. */
@@ -77,7 +79,7 @@ export function handleSDKMessage(e, onInit, onEvent) {
 
 // ── Games (spec 2026-10-19 §6.3) ─────────────────────────────────────────────────────────────────
 // Only in a game frame opened at a table (init context contextType 'games', with lobbyId and
-// placement 'fullscreen' | 'panel' | 'chat'); gameLobbies() also works in the same plugin's sidebar.
+// placement 'fullscreen' | 'panel' | 'chat' | 'over_chat'); gameLobbies() also works in the same plugin's sidebar.
 // No permission to ask for: it is what every member already sees in the games room.
 
 /** The table: seats, members with names, host, your seat ({ user_id, role, seat } or null), settings. */
@@ -97,6 +99,24 @@ export function gameSetSettings(settings) { return request('games.setSettings', 
 export function gameFinish(summary) { return request('games.finish', summary ? { summary } : {}); }
 /** This game's open tables on this server (also from the sidebar). */
 export function gameLobbies() { return request('games.lobbies', {}); }
+
+// ── Rounds (spec 2026-10-20-tower-plugin-design §2–5) — for a game whose manifest declares `rounds` ────────
+// gameLobby() also carries { seed, round, started_at, result }: build the round's world from seed, count its clock
+// from started_at. Older apps answer these calls with an error — carry on without them.
+
+/** Once per round: { round, places: [{ user_id, place, score?, label? }] } — every seated player, ranked, ties
+ *  sharing a place (1, 1, 3). Score: higher is better (report a time negative); label is how people see it.
+ *  🔴 Rank from what every player SHARED (each one's own finish), never from local timing: copies that order by
+ *  what each saw disagree on a close finish, and a round whose reports disagree has no result. */
+export function gameReport(report) { return request('games.report', report); }
+/** Play again: host only, on an open table. */
+export function gameStart() { return request('games.start', {}); }
+/** Give up your seat and go back to the games room — the Leave of a game that draws its own menu. */
+export function gameLeave() { return request('games.leave', {}); }
+/** { volume: 0..1, deafened }: the app's sound volume and the user's deafen. Follow both. */
+export function gameSound() { return request('games.sound', {}); }
+/** The volume or deafen changed: fn({ volume, deafened }). Returns an unsubscribe. */
+export function onGameSound(fn) { return _addListener('game.sound', fn); }
 
 function _addListener(event, fn) {
   _changeListeners[event].push(fn);

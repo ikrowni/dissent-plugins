@@ -181,3 +181,29 @@ describe('game helpers', () => {
     expect(seen).toEqual([{ id: 'l1', closed: true }]);
   });
 });
+
+// Rounds (spec 2026-10-20-tower-plugin-design §2–5): the same actions as the built SDK's game.report/start/leave/sound.
+import { gameReport, gameStart, gameLeave, gameSound, onGameSound } from './plugin-sdk.js';
+
+describe('round helpers', () => {
+  it('each asks for its games.* action', () => {
+    const report = { round: 2, places: [{ user_id: 'u1', place: 1, score: 40, label: 'Floor 40' }] };
+    for (const [call, action, params] of [
+      [() => gameReport(report), 'games.report', report],
+      [gameStart, 'games.start', {}],
+      [gameLeave, 'games.leave', {}],
+      [gameSound, 'games.sound', {}],
+    ]) {
+      void call().catch(() => {});
+      expect(posted[posted.length - 1]).toMatchObject({ type: 'dissent:request', action, params });
+    }
+  });
+
+  it('onGameSound hears the volume and deafen, and can be removed', () => {
+    const seen = [];
+    const off = onGameSound((s) => seen.push(s));
+    const cue = () => handleSDKMessage({ data: { type: 'dissent:event', event: 'game.sound', data: { volume: 0.4, deafened: true } } });
+    cue(); off(); cue();
+    expect(seen).toEqual([{ volume: 0.4, deafened: true }]);
+  });
+});
