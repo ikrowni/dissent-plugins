@@ -8,16 +8,22 @@ import { stepPickups } from './ul-pickups.js';
 import { makeEnemy, stepEnemies } from './ul-enemies.js';
 import { rng } from './ul-rng.js';
 
-export const DEATH_CARD_AFTER = 1.3, CLEAR_CARD_AFTER = 0.9;
+export const DEATH_CARD_AFTER = 1.3, CLEAR_CARD_AFTER = 0.9, OIL_CACHE = 20;
 
-/** over: null while playing, then 'dead' or 'cleared' (the room shows its card). */
-export function newGame(rows, { seed = 1, tune = DEFAULT_TUNE } = {}) {
+/**
+ * over: null while playing, then 'dead', 'exit' (you reached the stairs down, X) or, in a room with no stairs,
+ * 'cleared'. carry: { hp, oil, flask } brought from the level before.
+ */
+export function newGame(rows, { seed = 1, tune = DEFAULT_TUNE, carry = null } = {}) {
   const room = parseRoom(rows), start = room.spawns.find((s) => s.ch === 'P');
   const S = { room, segs: buildSegs(room), T: { ...tune }, rng: rng(seed), t: 0, hitStop: 0, fx: [], over: null, clearT: 0,
     player: newPlayer(start.x, start.y), lantern: { state: 'held', x: 0, y: 0, vx: 0, vy: 0, hitSet: new Set() },
-    enemies: [], sconces: [], drops: [], stats: { parries: 0, dodges: 0, hits: 0 }, nextId: 1 };
+    enemies: [], sconces: [], drops: [], stats: { parries: 0, dodges: 0, hits: 0 }, nextId: 1, exit: null };
+  if (carry) Object.assign(S.player, carry);
   for (const s of room.spawns) {
     if (s.ch === 'S') S.sconces.push({ x: s.x, y: s.y, lit: false });
+    else if (s.ch === 'X') S.exit = { x: s.x, y: s.y };
+    else if (s.ch === 'o') S.drops.push({ x: s.x, y: s.y, vx: 0, vy: 0, amt: OIL_CACHE, t: 1 });
     else if (s.ch !== 'P') S.enemies.push(makeEnemy(S, s.ch, s.x, s.y));
   }
   return S;
@@ -31,12 +37,17 @@ export function step(S, inp, dt) {
   stepLantern(S, dt);
   stepEnemies(S, dt, L);
   stepPickups(S, dt);
-  if (S.player.dead) { if (S.player.deadT > DEATH_CARD_AFTER) S.over = 'dead'; }
+  const p = S.player;
+  if (p.dead) { if (p.deadT > DEATH_CARD_AFTER) S.over = 'dead'; }
+  else if (S.exit) { if (atExit(p, S.exit)) S.over = 'exit'; } // a level ends at the stairs; killing everything is not asked
   else if (S.enemies.length > 0 && S.enemies.every((e) => e.dead)) { // a room with no enemies never clears itself
     S.clearT += dt;
     if (S.clearT > CLEAR_CARD_AFTER) S.over = 'cleared';
   }
 }
+
+/** Your body touches the stairs' tile. The solver uses the same box (ul-solver.js). */
+export const atExit = (p, e) => p.x < e.x + 12 && p.x + p.w > e.x - 12 && p.y < e.y + 12 && p.y + p.h > e.y - 12;
 
 /**
  * Run whole fixed steps for the time banked in acc (seconds); returns what is left over.
