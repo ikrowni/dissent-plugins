@@ -1,0 +1,62 @@
+// ul-sound.js — every sound is synthesised (nothing to download, nothing to license). Plays the fx 'sfx' events.
+let AC = null, master = null, noiseBuf = null, muted = false;
+
+/** Call from a click or key press: browsers only start audio after one. */
+export function unlockAudio() {
+  if (!AC) {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    AC = new C(); master = AC.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(AC.destination);
+  }
+  if (AC.state === 'suspended') AC.resume();
+}
+export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; }
+export const isMuted = () => muted;
+
+function tone(f, d, { type = 'sine', vol = 0.2, to = null, at = 0, attack = 0.005 } = {}) {
+  if (!AC || muted) return;
+  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.02);
+}
+function noise(d, { type = 'lowpass', freq = 1000, q = 0.7, vol = 0.3, at = 0, to = null } = {}) {
+  if (!AC || muted) return;
+  if (!noiseBuf) {
+    noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+    const ch = noiseBuf.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; // texture only; never game state
+  }
+  const t = AC.currentTime + at, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+  if (to) f.frequency.exponentialRampToValueAtTime(to, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + d + 0.02);
+}
+
+export const SFX = {
+  jump: () => tone(260, 0.09, { type: 'triangle', vol: 0.06, to: 380 }),
+  land: () => noise(0.08, { freq: 260, vol: 0.12 }),
+  swing: () => noise(0.13, { type: 'bandpass', freq: 1500, to: 500, q: 1.2, vol: 0.16 }),
+  hit: () => { tone(110, 0.1, { type: 'square', vol: 0.1, to: 70 }); noise(0.07, { freq: 1800, vol: 0.14 }); },
+  parry: () => { tone(1320, 0.5, { vol: 0.16 }); tone(1985, 0.35, { vol: 0.09 }); tone(660, 0.2, { type: 'triangle', vol: 0.08 }); },
+  block: () => tone(420, 0.06, { type: 'square', vol: 0.07 }),
+  hurt: () => { tone(190, 0.22, { type: 'sawtooth', vol: 0.12, to: 85 }); noise(0.12, { freq: 600, vol: 0.12 }); },
+  dodge: () => tone(1250, 0.07, { vol: 0.05, to: 1600 }),
+  roll: () => noise(0.16, { type: 'bandpass', freq: 700, to: 300, q: 0.8, vol: 0.08 }),
+  shadeTell: () => noise(0.5, { type: 'highpass', freq: 2600, to: 5200, vol: 0.12 }),
+  mothTell: () => { tone(70, 0.5, { type: 'sawtooth', vol: 0.06, to: 150 }); noise(0.5, { type: 'bandpass', freq: 300, q: 4, vol: 0.08 }); },
+  snuffTell: () => noise(0.8, { freq: 260, to: 1700, vol: 0.16 }),
+  snuffed: () => { noise(0.3, { freq: 900, to: 120, vol: 0.2 }); tone(240, 0.4, { vol: 0.09, to: 100 }); },
+  sconce: () => { noise(0.35, { freq: 500, to: 2400, vol: 0.12 }); tone(660, 0.6, { vol: 0.07, at: 0.08 }); tone(990, 0.7, { vol: 0.05, at: 0.14 }); },
+  throw: () => noise(0.2, { type: 'bandpass', freq: 600, to: 1600, q: 1, vol: 0.1 }),
+  recall: () => noise(0.2, { type: 'bandpass', freq: 1600, to: 600, q: 1, vol: 0.1 }),
+  oil: () => tone(880, 0.1, { vol: 0.06, to: 1320 }),
+  die: () => { noise(0.3, { freq: 1200, to: 200, vol: 0.14 }); tone(300, 0.3, { type: 'triangle', vol: 0.07, to: 90 }); },
+  beat: () => { tone(58, 0.16, { vol: 0.22 }); tone(52, 0.16, { vol: 0.18, at: 0.2 }); },
+  drink: () => { tone(500, 0.12, { vol: 0.06, to: 700 }); tone(600, 0.12, { vol: 0.05, at: 0.15, to: 800 }); },
+};
+
+/** Play this frame's sound events. */
+export function playFx(events) { for (const ev of events) if (ev.k === 'sfx' && SFX[ev.n]) SFX[ev.n](); }
