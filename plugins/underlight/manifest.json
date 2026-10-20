@@ -18,6 +18,22 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "biomes/cellars-entrances.js",
+      "sha256": "ca3499dc6a7cb8cffd18ff375c00fa87223673a07a3f5e8f653b6ad386d3ff26"
+    },
+    {
+      "url": "biomes/cellars-paths.js",
+      "sha256": "c08848413feb205c269c733bb0c4eb31b5709a9c079de734be5a27d622547cce"
+    },
+    {
+      "url": "biomes/cellars-sides.js",
+      "sha256": "6a500e8a43d060f74a5fc622c3e6a476669adb21e24231224e2ac2e8eb6e3dd0"
+    },
+    {
+      "url": "biomes/cellars.js",
+      "sha256": "19d9a4ffc171b0a2f615107ec5b6302d8983150c5319af2ffe5c63c58fe5fc33"
+    },
+    {
       "url": "rooms/cellars-01.js",
       "sha256": "1eee53d47125089c4280549be58c68cd7a4c18438c47ead89c84faee85947c84"
     },
@@ -27,7 +43,11 @@
     },
     {
       "url": "ul-cards.js",
-      "sha256": "1f9afebf7303c9a61322aec82b8e6ae7933b417af85a77fcc87594854afd7e93"
+      "sha256": "3a3241035d554225b4956db6455ca416fa9665bdaf11f312712f76c6e0532b61"
+    },
+    {
+      "url": "ul-chunk.js",
+      "sha256": "d3abafdcbdeeb7d53c355dc0ef52bc47582733679338cfbeafc8e93c0cec165a"
     },
     {
       "url": "ul-combat.js",
@@ -39,7 +59,7 @@
     },
     {
       "url": "ul-enemies.js",
-      "sha256": "225bf51d88fdef73226e437db7fd7515e9ad270f899e7ce62b46a480d1dfca1b"
+      "sha256": "2ff7b13b3ed63be3c6703715df8fb0c9e03b26a21c99547848df937f46534ae7"
     },
     {
       "url": "ul-enemy.js",
@@ -55,11 +75,11 @@
     },
     {
       "url": "ul-game.js",
-      "sha256": "957863f2a9db61e4f5194150fa0c934a0641704b713f12cff57c8ac31e3d7052"
+      "sha256": "d086f014e9ab0a40da971ca5bab82b498c8a74f2de0c0574573accc91b47e6a3"
     },
     {
       "url": "ul-hud.js",
-      "sha256": "6de8c9028cba53476c01b2aae32ccd2f1a7247c5546e14c4bbbe181e14be251f"
+      "sha256": "23f16c38e29eaa3e25dc5051fe9f6db3f5b10efc79992e45ecea34ab73e4c58f"
     },
     {
       "url": "ul-input.js",
@@ -70,12 +90,20 @@
       "sha256": "b992f02476d2468529df2aff81146f3db387c81d242918ab9eddeda2ce8123f3"
     },
     {
+      "url": "ul-layout.js",
+      "sha256": "f7715686714a4e4071bf041c47b38a64a21865d1de93831c88797ae49e216f1b"
+    },
+    {
+      "url": "ul-level.js",
+      "sha256": "74b620cf524e350f54e6a44005cb870ac073053ca25383ab69ee790a0717a531"
+    },
+    {
       "url": "ul-light.js",
       "sha256": "b69b4a19491130d0441cad0953c6f78641f7a355530d1927f2daa12106cb1820"
     },
     {
       "url": "ul-main.js",
-      "sha256": "fb4b77c71395bbdeffd25c5f86b665d7683e9499c2cbef532532d1a55f47a72d"
+      "sha256": "42519e73655217d339478cdab6342698fef54073f0641d948cfa234cf87c0a37"
     },
     {
       "url": "ul-moth.js",
@@ -99,7 +127,7 @@
     },
     {
       "url": "ul-render.js",
-      "sha256": "2a9b0935c3332dd552c96493d3e03bb29324a1678fd10b15e19aa8ceab41ec59"
+      "sha256": "049508cfa56b129c0d749d7b4c822ee7369cdad39d773b6b14a8ed58a253052a"
     },
     {
       "url": "ul-rng.js",
@@ -107,7 +135,11 @@
     },
     {
       "url": "ul-room.js",
-      "sha256": "5d7e06d4e167ad8ad0026fc51d5390e625e07cb78d073b54afe48258fe0a7c1e"
+      "sha256": "4c0b7c9110d6097ede3bdb97299f30ae9077c6fa928f7b4ddb42811d9df0b8a2"
+    },
+    {
+      "url": "ul-run.js",
+      "sha256": "88a39d39dbb0edbe487b8541eaeb7ae8444352ce1b8b695294f81c2f1e5b73b0"
     },
     {
       "url": "ul-shade.js",
@@ -116,6 +148,10 @@
     {
       "url": "ul-snuffer.js",
       "sha256": "134708b854203f45d1a787f7a04f38791e96281c16596db71f8c846c6287fb3e"
+    },
+    {
+      "url": "ul-solver.js",
+      "sha256": "82f0f82bbfdbab7b6958c47263f464bed69c20bde84a70ec7b35daf851037051"
     },
     {
       "url": "ul-sound.js",

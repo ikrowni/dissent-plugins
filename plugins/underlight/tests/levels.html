@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Underlight Levels</title>
+<style>
+  /* For reviewing levels, never shipped (tests/ is not a plugin resource). Serve the plugins folder and open
+     /underlight/tests/levels.html: cd ~/dissent-plugins/plugins && python3 -m http.server 5781 */
+  body { margin: 0; background: #0b0b10; color: #eee; font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; background: #05050a; border-bottom: 1px solid #222; }
+  header b { color: #ffbe76; }
+  button, input { font: inherit; color: inherit; background: #1a1a24; border: 1px solid #333; border-radius: 8px; padding: 4px 10px; }
+  button[aria-pressed="true"] { background: #4a3720; border-color: #8a6a3a; }
+  main { padding: 16px; }
+  .key { color: #aaa; font-size: 12.5px; }
+  .key i { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; vertical-align: -1px; border-radius: 2px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  figure { margin: 0; } figcaption { font-size: 12.5px; color: #bbb; margin-top: 4px; } figcaption b { color: #fff; }
+  canvas { image-rendering: pixelated; display: block; max-width: 100%; border: 1px solid #222; }
+  pre { color: #f88; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <b>Underlight · Cellars</b>
+  <button id="levelBtn" aria-pressed="true">A level</button>
+  <button id="chunkBtn" aria-pressed="false">Every chunk</button>
+  <span id="seedBox">seed <input id="seed" type="number" value="1" style="width:90px"> <button id="prev">◀</button> <button id="next">▶</button> <label><input type="checkbox" id="reachBox" checked> what you can reach</label></span>
+  <span class="key"><i style="background:#3a3f4a"></i>stone<i style="background:#a0703a"></i>ledge<i style="background:#e0453a"></i>spikes<i style="background:#ffd27a"></i>sconce<i style="background:#ff9a3a"></i>oil<i style="background:#7fe08a"></i>start<i style="background:#7ab8ff"></i>stairs<i style="background:#c9b8ff"></i>enemy<i style="background:#2f8f5a"></i>reachable</span>
+</header>
+<main id="out"></main>
+<script type="module">
+import { buildLevel } from '../ul-level.js';
+import { CELLARS } from '../biomes/cellars.js';
+import { parseRoom } from '../ul-room.js';
+import { solve } from '../ul-solver.js';
+import { DEFAULT_TUNE } from '../ul-const.js';
+import { targetsOf } from '../ul-level.js';
+import { openings } from '../ul-chunk.js';
+
+const COLORS = { '#': '#3a3f4a', '-': '#a0703a', '^': '#e0453a', S: '#ffd27a', '?': '#b89a5a', o: '#ff9a3a', P: '#7fe08a', X: '#7ab8ff', h: '#c9b8ff', m: '#c9b8ff', n: '#c9b8ff', g: '#6a5a8a', a: '#4a5a8a', '*': '#5a5f6a' };
+const out = document.getElementById('out');
+let mode = 'level';
+
+function draw(rows, px, reach) {
+  const c = document.createElement('canvas'); c.width = rows[0].length * px; c.height = rows.length * px;
+  const g = c.getContext('2d'); g.fillStyle = '#121218'; g.fillRect(0, 0, c.width, c.height);
+  if (reach) { g.fillStyle = '#2f8f5a'; for (const [x, y] of reach) g.fillRect(x * px, y * px, px, px); }
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ' ') return;
+    g.fillStyle = COLORS[ch] ?? '#f0f'; const small = 'hmngaSo?PX'.includes(ch);
+    if (small) { g.beginPath(); g.arc(x * px + px / 2, y * px + px / 2, px * 0.45, 0, Math.PI * 2); g.fill(); } else g.fillRect(x * px, y * px, px, px);
+  }));
+  return c;
+}
+
+function showLevel() {
+  const seed = Number(document.getElementById('seed').value) || 1;
+  out.replaceChildren();
+  try {
+    const t0 = performance.now(), L = buildLevel(CELLARS, seed), ms = performance.now() - t0;
+    let reach = null;
+    if (document.getElementById('reachBox').checked) {
+      const room = parseRoom(L.rows), res = solve(room, DEFAULT_TUNE, room.spawns.find((s) => s.ch === 'P'), targetsOf(room));
+      reach = [...res.reach].map((k) => res.cr(k));
+    }
+    const fig = document.createElement('figure');
+    fig.append(draw(L.rows, 5, reach));
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<b>seed ${seed}</b> · built in ${ms.toFixed(0)} ms, try ${L.tries} · chunks: ${L.picks.join(', ')}`;
+    fig.append(cap); out.append(fig);
+  } catch (e) { const p = document.createElement('pre'); p.textContent = e.message; out.append(p); }
+}
+
+function showChunks() {
+  out.replaceChildren();
+  const grid = document.createElement('div'); grid.className = 'grid';
+  for (const k of CELLARS.chunks) {
+    const fig = document.createElement('figure'); fig.append(draw(k.rows, 10));
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<b>${k.id}</b> · ${k.role} · opens ${[...openings(k.rows)].sort().join('') || 'nowhere'} — ${k.note}`;
+    fig.append(cap); grid.append(fig);
+  }
+  out.append(grid);
+}
+
+const render = () => (mode === 'level' ? showLevel() : showChunks());
+const setMode = (m) => { mode = m; document.getElementById('levelBtn').setAttribute('aria-pressed', m === 'level'); document.getElementById('chunkBtn').setAttribute('aria-pressed', m === 'chunks'); document.getElementById('seedBox').hidden = m !== 'level'; render(); };
+document.getElementById('levelBtn').onclick = () => setMode('level');
+document.getElementById('chunkBtn').onclick = () => setMode('chunks');
+document.getElementById('seed').onchange = render;
+document.getElementById('reachBox').onchange = render;
+document.getElementById('prev').onclick = () => { const s = document.getElementById('seed'); s.value = Math.max(1, Number(s.value) - 1); render(); };
+document.getElementById('next').onclick = () => { const s = document.getElementById('seed'); s.value = Number(s.value) + 1; render(); };
+render();
+</script>
+</body>
+</html>

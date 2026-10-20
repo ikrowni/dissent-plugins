@@ -6,7 +6,12 @@ describe('CARDS', () => {
   it('names what killed you and how long you lasted', () => {
     const S = settled(flatRoom());
     S.player.cause = 'a Shade'; S.t = 83;
-    expect(CARDS.dead(S).lines[0]).toBe('Killed by a Shade after 1:23, with 0 still in the room.');
+    expect(CARDS.dead(S, 'Cellars · level 2 of 3').lines[0]).toBe('Killed by a Shade on Cellars · level 2 of 3, 1:23 in.');
+  });
+  it('says what you carry down the stairs', () => {
+    const S = settled(flatRoom());
+    S.player.hp = 61.4; S.player.oil = 40; S.player.flask = 0;
+    expect(CARDS.down(S, 'Lamp post').lines).toEqual(['Next: Lamp post.', 'You carry 61 body, 40 oil and an empty flask.']);
   });
   it('counts the sconces you lit when the room is cleared', () => {
     const S = settled(flatRoom());

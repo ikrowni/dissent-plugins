@@ -1,14 +1,15 @@
 // ul-main.js — boot: the canvas, keys and controller, the clock, the cards, and the table it was opened at.
 // In Dissent it runs in a games frame (contextType 'games'); opened on its own it plays standalone, for testing.
 import { handleSDKMessage, gameLobby, onGameLobby } from '../plugin-sdk.js';
-import { newGame, advance } from './ul-game.js';
+import { advance } from './ul-game.js';
+import { newRun, openStep, closeStep, stepLabel, hashSeed } from './ul-run.js';
+import { CELLARS, LAMP_POST } from './biomes/cellars.js';
 import { Input, padKeys, applyPad } from './ul-input.js';
 import { Renderer } from './ul-render.js';
 import { takeFx } from './ul-fx.js';
 import { playFx, unlockAudio, setMuted, isMuted } from './ul-sound.js';
 import { drawHud } from './ul-hud.js';
 import { showCard, hideCard, CARDS } from './ul-cards.js';
-import { CELLARS_01 } from './rooms/cellars-01.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view'), card = $('card');
@@ -18,12 +19,21 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
 renderer.reduced = reduceMQ.matches;
 reduceMQ.addEventListener?.('change', (e) => { renderer.reduced = e.matches; });
 
-/** phase: 'card' (a card is up, nothing steps), 'play', 'paused', 'over' (the room's end card), 'closed'. */
-let S = null, phase = 'card', acc = 0, last = 0, padPrev = new Set(), started = false;
+/** phase: 'card' (a card is up, nothing steps), 'play', 'paused', 'over' (died, or the act is done: R starts again),
+ *  'down' (between steps), 'closed'. */
+let S = null, run = null, where = '', phase = 'card', acc = 0, last = 0, padPrev = new Set(), started = false;
+/** At a table the levels come from its id (the node made it) and how many runs it has started; alone, the clock. */
+let tableId = null, runs = 0;
 
 function start() {
   unlockAudio();
-  S = newGame(CELLARS_01, { seed: (Date.now() & 0x7fffffff) || 1 });
+  runs++;
+  run = newRun(tableId ? hashSeed(`${tableId}#${runs}`) : (Date.now() & 0x7fffffff) || 1);
+  openCurrent();
+}
+function openCurrent() {
+  S = openStep(run, CELLARS, LAMP_POST);
+  where = stepLabel(run, CELLARS);
   renderer.setRoom(S);
   acc = 0; input.clear(); phase = 'play'; hideCard(card); canvas.focus();
 }
@@ -38,7 +48,11 @@ function togglePause() {
 }
 function endCard() {
   phase = 'over';
-  showCard(card, { ...(S.over === 'dead' ? CARDS.dead(S) : CARDS.cleared(S)), buttons: [{ label: S.over === 'dead' ? 'Try again (Enter)' : 'Again (Enter)', primary: true, onClick: start }] });
+  if (S.over === 'dead') { showCard(card, { ...CARDS.dead(S, where), buttons: [{ label: 'Try again (Enter)', primary: true, onClick: start }] }); return; }
+  const done = closeStep(run, S) === 'act-done';
+  if (done) { showCard(card, { ...CARDS.actDone(S), buttons: [{ label: 'Go down again (Enter)', primary: true, onClick: start }] }); return; }
+  phase = 'down'; // not 'over': R must not throw the run away here
+  showCard(card, { ...CARDS.down(S, stepLabel(run, CELLARS)), buttons: [{ label: 'Continue (Enter)', primary: true, onClick: openCurrent }] });
 }
 
 addEventListener('keydown', (e) => {
@@ -73,7 +87,7 @@ function frame(ts) {
   const events = takeFx(S);
   playFx(events);
   renderer.frame(S, phase === 'play' ? dt : 0, events);
-  drawHud(hud, S);
+  drawHud(hud, S, where);
   if (phase === 'play' && S.over) endCard();
 }
 requestAnimationFrame(frame);
@@ -82,6 +96,7 @@ requestAnimationFrame(frame);
 addEventListener('message', (e) => handleSDKMessage(e, async (msg) => {
   const ctx = msg.context ?? {};
   if (ctx.contextType !== 'games') { titleCard(); return; }
+  tableId = ctx.lobbyId ?? null;
   onGameLobby((info) => {
     if (!info?.closed) return;
     phase = 'closed'; showCard(card, { ...CARDS.closed(), buttons: [] });
@@ -92,5 +107,9 @@ addEventListener('message', (e) => handleSDKMessage(e, async (msg) => {
   } catch { /* an old host without the lobby call: just play */ }
   titleCard();
 }));
-if (window.parent === window) titleCard();
+if (window.parent === window) {
+  titleCard();
+  // Opened on its own (never inside Dissent): let the local check see the game. Read-only by intent.
+  window.__ul = { get S() { return S; }, get run() { return run; }, get phase() { return phase; } };
+}
 else setTimeout(titleCard, 3000); // a host that never sends init: still let the game be played

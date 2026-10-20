@@ -12,8 +12,8 @@ export function statusLine(S) {
 }
 export const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-/** els: { hp, oil, flask, status, corner }. */
-export function drawHud(els, S) {
+/** els: { hp, oil, flask, status, corner }. where: the step's name ("Cellars · level 2 of 3"). */
+export function drawHud(els, S, where) {
   const p = S.player;
   els.hp.style.width = `${Math.max(0, p.hp)}%`;
   els.oil.style.width = `${Math.max(0, p.oil)}%`;
@@ -21,7 +21,6 @@ export function drawHud(els, S) {
   const st = statusLine(S);
   els.status.textContent = st ? st.text : '';
   els.status.className = `status ${st ? st.tone : ''}`;
-  const left = S.enemies.filter((e) => !e.dead).length;
-  els.corner.textContent = `${left} left · ${clock(S.t)}`;
+  els.corner.textContent = `${where} · ${clock(S.t)}`;
   els.corner.title = `attacking you: ${attackersNow(S)} of ${S.T.tokens}`;
 }
