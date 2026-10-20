@@ -74,6 +74,7 @@ export class Renderer {
     }
     g.globalCompositeOperation = 'source-over';
     drawTiles(g, room, vis, v);
+    if (S.exit) drawStairs(g, S.exit);
     for (const s of S.sconces) { // brackets
       g.fillStyle = '#050505'; g.fillRect(s.x - 6, s.y + 4, 12, 3); g.fillRect(s.x - 1.5, s.y + 4, 3, 10);
       g.beginPath(); g.moveTo(s.x - 5, s.y + 4); g.lineTo(s.x - 3, s.y - 4); g.lineTo(s.x + 3, s.y - 4); g.lineTo(s.x + 5, s.y + 4); g.fill();
@@ -118,6 +119,11 @@ export class Renderer {
         g.save(); g.shadowColor = '#ffb060'; g.shadowBlur = 18; g.fillStyle = '#ffd59a';
         g.beginPath(); g.ellipse(s.x, s.y - 6, 3 * fl, 6 * fl, 0, 0, Math.PI * 2); g.fill(); g.restore();
       } else { g.fillStyle = `rgba(255,120,50,${0.45 + Math.sin(S.t * 3 + s.x) * 0.2})`; g.beginPath(); g.arc(s.x, s.y - 3, 1.6, 0, Math.PI * 2); g.fill(); }
+    }
+    if (S.exit) { // a faint glow from below, so the stairs can be found in the dark
+      const a = 0.25 + (this.reduced ? 0 : Math.sin(S.t * 2) * 0.08), gr = g.createRadialGradient(S.exit.x, S.exit.y + 6, 2, S.exit.x, S.exit.y + 6, 26);
+      gr.addColorStop(0, `rgba(255,170,90,${a})`); gr.addColorStop(1, 'rgba(255,170,90,0)');
+      g.fillStyle = gr; g.fillRect(S.exit.x - 26, S.exit.y - 20, 52, 52);
     }
     for (const d of S.drops) {
       g.save(); g.shadowColor = '#ffb060'; g.shadowBlur = 10; g.fillStyle = '#ffcf86';
@@ -185,6 +191,15 @@ export class Renderer {
       g.beginPath(); g.moveTo(10, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.fill(); g.restore();
     }
   }
+}
+
+/** The stairs down (X): an arch with steps sinking into it. */
+function drawStairs(g, e) {
+  const x = e.x, y = e.y + 12; // the floor under the stairs' tile
+  g.fillStyle = '#020203';
+  g.beginPath(); g.moveTo(x - 16, y); g.lineTo(x - 16, y - 30); g.quadraticCurveTo(x, y - 46, x + 16, y - 30); g.lineTo(x + 16, y); g.fill();
+  g.fillStyle = '#0c0d10';
+  for (let i = 0; i < 4; i++) g.fillRect(x - 13 + i * 2, y - 6 - i * 6, 26 - i * 4, 2.5);
 }
 
 function polyPath(g, p) { g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]); g.closePath(); }
