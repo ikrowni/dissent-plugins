@@ -5,7 +5,7 @@ import { solid, solidPt } from './ul-room.js';
 /** Your light's reach from your oil (spec §4.1). At zero it is a spark. */
 export const oilRadius = (oil) => (oil <= 0 ? 34 : 70 + oil * 2.3);
 export const SNUFFED_RADIUS = 30, HAND_RADIUS = 46, SCONCE_RADIUS = 175, EMBER_RADIUS = 22;
-export const LANTERN_RGB = [255, 182, 100], SCONCE_RGB = [255, 170, 90];
+export const LANTERN_RGB = [255, 182, 100], SCONCE_RGB = [255, 170, 90], FIRE_RGB = [255, 140, 60], FIRE_RADIUS = 240;
 
 /** Every boundary between stone and air, merged into long runs: the edges that cast shadows. [x0, y0, x1, y1]. */
 export function buildSegs(room) {
@@ -67,7 +67,7 @@ export function los(room, x0, y0, x1, y1) {
 
 /**
  * Every light right now: { x, y, r, rgb, kind }. kind is player (in your hand), lantern (thrown), hand (the faint
- * glow you keep while it's thrown), sconce (lit), ember (an unlit sconce's coal, too faint to count).
+ * glow you keep while it's thrown), sconce (lit), ember (an unlit sconce's coal, too faint to count), fire (a camp's).
  */
 export function makeLights(S) {
   const p = S.player, L = [];
@@ -79,6 +79,7 @@ export function makeLights(S) {
       L.push({ x: p.x + p.w / 2, y: p.y + 18, r: HAND_RADIUS, rgb: LANTERN_RGB, kind: 'hand' });
     }
   }
+  if (S.fire) L.push({ x: S.fire.x, y: S.fire.y - 8, r: FIRE_RADIUS, rgb: FIRE_RGB, kind: 'fire' });
   for (const s of S.sconces) L.push({ x: s.x, y: s.y, r: s.lit ? SCONCE_RADIUS : EMBER_RADIUS, rgb: SCONCE_RGB, kind: s.lit ? 'sconce' : 'ember' });
   return L;
 }

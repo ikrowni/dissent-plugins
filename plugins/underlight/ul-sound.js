@@ -69,6 +69,7 @@ export const SFX = {
   roar: () => { tone(60, 1.0, { type: 'sawtooth', vol: 0.12, to: 40 }); noise(1.0, { freq: 500, to: 150, vol: 0.14 }); for (let i = 0; i < 4; i++) tone(1900 + i * 300, 0.08, { type: 'square', vol: 0.02, at: 0.1 + i * 0.12 }); },
   chew: () => { for (let i = 0; i < 3; i++) noise(0.07, { type: 'bandpass', freq: 600, q: 2, vol: 0.1, at: i * 0.1 }); tone(240, 0.4, { vol: 0.07, to: 90, at: 0.3 }); },
   kingHurt: () => { tone(110, 0.4, { type: 'sawtooth', vol: 0.1, to: 260 }); noise(0.3, { type: 'highpass', freq: 2500, vol: 0.08 }); },
+  rest: () => { for (let i = 0; i < 6; i++) noise(0.05, { type: 'bandpass', freq: 1800 + i * 300, q: 3, vol: 0.05, at: i * 0.09 }); tone(130, 1.2, { vol: 0.06, to: 98, attack: 0.3 }); },
   kingDie: () => { tone(80, 1.6, { type: 'sawtooth', vol: 0.14, to: 30 }); noise(1.4, { freq: 800, to: 80, vol: 0.18 }); for (let i = 0; i < 8; i++) tone(2400 - i * 150, 0.06, { type: 'square', vol: 0.02, at: 0.2 + i * 0.09 }); },
 };
 
