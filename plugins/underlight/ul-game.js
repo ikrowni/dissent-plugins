@@ -8,6 +8,7 @@ import { stepPickups } from './ul-pickups.js';
 import { makeEnemy, stepEnemies } from './ul-enemies.js';
 import { rng } from './ul-rng.js';
 import { stepShots, stepHazards } from './ul-hazards.js';
+import { makeRatKing, stepBoss } from './ul-ratking.js';
 
 export const DEATH_CARD_AFTER = 1.3, CLEAR_CARD_AFTER = 0.9, OIL_CACHE = 20;
 
@@ -23,6 +24,7 @@ export function newGame(rows, { seed = 1, tune = DEFAULT_TUNE, carry = null, lit
   if (carry) Object.assign(S.player, carry);
   for (const s of room.spawns) {
     if (s.ch === 'S') S.sconces.push({ x: s.x, y: s.y, lit: litSconces });
+    else if (s.ch === 'K') S.enemies.push(...makeRatKing(S, s.x, s.y));
     else if (s.ch === 'X') S.exit = { x: s.x, y: s.y };
     else if (s.ch === 'o') S.drops.push({ x: s.x, y: s.y, vx: 0, vy: 0, amt: OIL_CACHE, t: 1 });
     else if (s.ch !== 'P') S.enemies.push(...makeEnemy(S, s.ch, s.x, s.y));
@@ -36,6 +38,7 @@ export function step(S, inp, dt) {
   const L = makeLights(S);
   stepPlayer(S, inp, dt);
   stepLantern(S, dt);
+  stepBoss(S, dt);
   stepEnemies(S, dt, L);
   stepPickups(S, dt);
   stepShots(S, dt);
