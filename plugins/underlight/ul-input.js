@@ -10,12 +10,14 @@ export const BINDINGS = Object.freeze({
 });
 
 export class Input {
-  constructor() { this.keys = new Set(); this.pressed = new Set(); }
+  /** bindings: action → keys (ul-settings.js bindingsFor); the defaults if not given. */
+  constructor(bindings = BINDINGS) { this.keys = new Set(); this.pressed = new Set(); this.bindings = bindings; }
+  setBindings(b) { this.bindings = b; this.clear(); }
   down(k) { if (!this.keys.has(k)) this.pressed.add(k); this.keys.add(k); }
   up(k) { this.keys.delete(k); }
   clear() { this.keys.clear(); this.pressed.clear(); }
-  held(action) { return BINDINGS[action].some((k) => this.keys.has(k)); }
-  hit(action) { return BINDINGS[action].some((k) => this.pressed.has(k)); }
+  held(action) { return this.bindings[action].some((k) => this.keys.has(k)); }
+  hit(action) { return this.bindings[action].some((k) => this.pressed.has(k)); }
   /** What a step sees. Presses stay until consume(). */
   read() {
     return {

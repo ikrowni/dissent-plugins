@@ -1,20 +1,28 @@
 // ul-sound.js — every sound is synthesised (nothing to download, nothing to license). Plays the fx 'sfx' events.
-let AC = null, master = null, noiseBuf = null, muted = false;
+let AC = null, master = null, noiseBuf = null, muted = false, volume = 1, appVolume = 1, deafened = false;
+
+/** How loud, 0..0.5: your game volume times the app's volume (a games-hub rule: follow game.sound), nothing when
+ *  deafened or muted. */
+export const soundLevel = () => (muted || deafened ? 0 : 0.5 * volume * appVolume);
+const apply = () => { if (master) master.gain.value = soundLevel(); };
+export function setVolume(v) { volume = Math.max(0, Math.min(1, v)); apply(); }
+/** From the host's game.sound: { volume: 0..1, deafened }. */
+export function setAppSound(s) { if (!s) return; appVolume = Math.max(0, Math.min(1, Number(s.volume ?? 1))); deafened = Boolean(s.deafened); apply(); }
 
 /** Call from a click or key press: browsers only start audio after one. */
 export function unlockAudio() {
   if (!AC) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
-    AC = new C(); master = AC.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(AC.destination);
+    AC = new C(); master = AC.createGain(); master.gain.value = soundLevel(); master.connect(AC.destination);
   }
   if (AC.state === 'suspended') AC.resume();
 }
-export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; }
+export function setMuted(m) { muted = m; apply(); }
 export const isMuted = () => muted;
 
 function tone(f, d, { type = 'sine', vol = 0.2, to = null, at = 0, attack = 0.005 } = {}) {
-  if (!AC || muted) return;
+  if (!AC || !soundLevel()) return;
   const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t);
   if (to) o.frequency.exponentialRampToValueAtTime(to, t + d);
@@ -22,7 +30,7 @@ function tone(f, d, { type = 'sine', vol = 0.2, to = null, at = 0, attack = 0.00
   o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.02);
 }
 function noise(d, { type = 'lowpass', freq = 1000, q = 0.7, vol = 0.3, at = 0, to = null } = {}) {
-  if (!AC || muted) return;
+  if (!AC || !soundLevel()) return;
   if (!noiseBuf) {
     noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
     const ch = noiseBuf.getChannelData(0);
