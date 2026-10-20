@@ -1,8 +1,15 @@
-// ul-enemies.js — which letter in a room is which enemy, and stepping them all. Piece 1c adds more kinds here.
+// ul-enemies.js — which letter in a room is which enemy, and stepping them all. Piece 1c adds kinds here.
 import { tickTimers } from './ul-enemy.js';
+import { makeShade, stepShade } from './ul-shade.js';
+import { makeMoth, stepMoth } from './ul-moth.js';
+import { makeSnuffer, stepSnuffer } from './ul-snuffer.js';
 
 /** Room letter → the enemy it spawns. */
-export const ENEMY_KINDS = {}; // the Shade, Moth and Snuffer arrive in Task 6
+export const ENEMY_KINDS = {
+  h: { kind: 'shade', make: makeShade, step: stepShade },
+  m: { kind: 'moth', make: makeMoth, step: stepMoth },
+  n: { kind: 'snuffer', make: makeSnuffer, step: stepSnuffer },
+};
 const STEP = Object.fromEntries(Object.values(ENEMY_KINDS).map((k) => [k.kind, k.step]));
 
 /** x, y: the spawn tile's centre. */
