@@ -5,8 +5,8 @@ import { VIEW_H, SWING, TELL } from './ul-const.js';
 import { makeLights, visPoly, lightLevel, handPos, LANTERN_RGB } from './ul-light.js';
 import { buildBackdrop, drawBackdrop } from './ul-backdrop.js';
 import { drawTiles } from './ul-tiles.js';
-import { drawLamplighter, drawLanternCage, ENEMY_SHAPES, TELL_OF, EYES } from './ul-figures.js';
-import { ATTACK_STATES } from './ul-combat.js';
+import { drawLamplighter, drawLanternCage, ENEMY_SHAPES, tellOf, EYES } from './ul-figures.js';
+import { TELL_STATES } from './ul-combat.js';
 import { Particles } from './ul-particles.js';
 import { rng } from './ul-rng.js';
 
@@ -74,14 +74,16 @@ export class Renderer {
     }
     g.globalCompositeOperation = 'source-over';
     drawTiles(g, room, vis, v);
-    if (S.exit) drawStairs(g, S.exit);
+    drawHazards(g, S);
+    if (S.exit) drawStairs(g, S.exit, Boolean(S.boss && !S.boss.dead));
     for (const s of S.sconces) { // brackets
       g.fillStyle = '#050505'; g.fillRect(s.x - 6, s.y + 4, 12, 3); g.fillRect(s.x - 1.5, s.y + 4, 3, 10);
       g.beginPath(); g.moveTo(s.x - 5, s.y + 4); g.lineTo(s.x - 3, s.y - 4); g.lineTo(s.x + 3, s.y - 4); g.lineTo(s.x + 5, s.y + 4); g.fill();
     }
     for (const e of S.enemies) { // a Shade outside the light is only its eyes
       if (e.dead || !this.onScreen(e)) continue;
-      e.vis = e.kind === 'shade' ? clamp(lightLevel(room, vis, e.x + e.w / 2, e.y + e.h / 2).v * 3, 0, 1) : 1;
+      const hides = e.kind === 'shade' || (e.kind === 'king' && S.boss?.phase === 3); // things that only show in light
+      e.vis = hides ? clamp(lightLevel(room, vis, e.x + e.w / 2, e.y + e.h / 2).v * 3, 0, 1) : 1;
       g.globalAlpha = e.vis;
       rimAndFill(g, vis, e.x + e.w / 2, e.y + e.h / 2, () => ENEMY_SHAPES[e.kind](g, e, S.T), e.flash > 0 ? '#3a2f2a' : '#030304');
       g.globalAlpha = 1;
@@ -125,6 +127,13 @@ export class Renderer {
       gr.addColorStop(0, `rgba(255,170,90,${a})`); gr.addColorStop(1, 'rgba(255,170,90,0)');
       g.fillStyle = gr; g.fillRect(S.exit.x - 26, S.exit.y - 20, 52, 52);
     }
+    for (const h of S.hazards) if (h.kind === 'glass') { // broken glass catches any light: it must be seen to be fair
+      g.fillStyle = `rgba(210,235,245,${0.35 + Math.sin(S.t * 9 + h.x) * 0.25})`;
+      for (let i = 0; i < 3; i++) g.fillRect(h.x + 4 + i * 7, h.y + 1, 1.4, 1.4);
+    }
+    for (const e of S.enemies) if (!e.dead && e.kind === 'king' && e.form === 'crown') { // the crown's glint
+      g.fillStyle = `rgba(255,200,90,${0.5 + Math.sin(S.t * 4) * 0.2})`; g.fillRect(e.x + e.w / 2 - 1, e.y - 1, 2, 2);
+    }
     for (const d of S.drops) {
       g.save(); g.shadowColor = '#ffb060'; g.shadowBlur = 10; g.fillStyle = '#ffcf86';
       g.beginPath(); g.moveTo(d.x, d.y - 6); g.quadraticCurveTo(d.x + 4, d.y, d.x, d.y + 3); g.quadraticCurveTo(d.x - 4, d.y, d.x, d.y - 6); g.fill(); g.restore();
@@ -136,18 +145,18 @@ export class Renderer {
     }
     for (const e of S.enemies) {
       if (e.dead || !this.onScreen(e)) continue;
-      if (ATTACK_STATES.includes(e.state)) { // tells show through the dark: nothing attacks unwarned (spec §7.2)
-        const col = TELL[TELL_OF[e.kind]], pulse = e.state === 'windup' ? 0.55 + 0.45 * Math.sin(S.t * 30) : 0.9;
+      if (TELL_STATES.includes(e.state)) { // tells show through the dark: nothing attacks unwarned (spec §7.2)
+        const col = TELL[tellOf(e)], pulse = e.state === 'windup' ? 0.55 + 0.45 * Math.sin(S.t * 30) : 0.9;
         g.save(); g.shadowColor = col; g.shadowBlur = 16; g.globalAlpha = pulse; g.fillStyle = g.strokeStyle = col; ENEMY_SHAPES[e.kind](g, e, S.T);
         g.shadowBlur = 0; g.fillStyle = g.strokeStyle = '#030304';
-        if (e.vis > 0.3 || e.kind !== 'shade') { g.globalAlpha = Math.max(0.65, e.vis); ENEMY_SHAPES[e.kind](g, e, S.T); }
+        if (e.vis > 0.3) { g.globalAlpha = Math.max(0.65, e.vis); ENEMY_SHAPES[e.kind](g, e, S.T); }
         g.restore();
       }
       if (e.exposedT > 0) { g.strokeStyle = `rgba(255,240,200,${0.4 + Math.sin(S.t * 20) * 0.3})`; g.lineWidth = 1.2; g.beginPath(); g.arc(e.x + e.w / 2, e.y - 8, 4, 0, Math.PI * 2); g.stroke(); }
       const ex = e.x + e.w / 2 + e.face * (e.kind === 'snuffer' ? 8 : e.kind === 'moth' ? 2 : 3), ey = e.y + (e.kind === 'snuffer' ? 8 : 6);
       g.save(); g.shadowColor = EYES[e.kind]; g.shadowBlur = 6; g.fillStyle = EYES[e.kind];
       g.beginPath(); g.arc(ex, ey, 1.4, 0, Math.PI * 2); g.arc(ex - e.face * 4, ey + 0.5, 1.2, 0, Math.PI * 2); g.fill(); g.restore();
-      if (e.hp < e.maxHp) {
+      if (!e.boss && e.hp < e.maxHp) { // a boss's health is the bar at the top
         g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x + e.w / 2 - 12, e.y - 6, 24, 2.5);
         g.fillStyle = 'rgba(230,120,100,0.9)'; g.fillRect(e.x + e.w / 2 - 12, e.y - 6, (24 * Math.max(0, e.hp)) / e.maxHp, 2.5);
       }
@@ -182,24 +191,39 @@ export class Renderer {
     g.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
     const vw = v.W / v.dpr, vh = v.H / v.dpr;
     for (const e of S.enemies) {
-      if (e.dead || !ATTACK_STATES.includes(e.state)) continue;
+      if (e.dead || !TELL_STATES.includes(e.state)) continue;
       const sx = ((e.x + e.w / 2 - v.camL) * v.S) / v.dpr, sy = ((e.y + e.h / 2 - v.camT) * v.S) / v.dpr;
       if (sx > 0 && sx < vw && sy > 0 && sy < vh) continue;
       const x = clamp(sx, 14, vw - 14), y = clamp(sy, 14, vh - 14);
       g.save(); g.translate(x, y); g.rotate(Math.atan2(sy - y, sx - x));
-      g.fillStyle = TELL[TELL_OF[e.kind]]; g.shadowColor = g.fillStyle; g.shadowBlur = 10;
+      g.fillStyle = TELL[tellOf(e)]; g.shadowColor = g.fillStyle; g.shadowBlur = 10;
       g.beginPath(); g.moveTo(10, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.fill(); g.restore();
     }
   }
 }
 
-/** The stairs down (X): an arch with steps sinking into it. */
-function drawStairs(g, e) {
+/** The stairs down (X): an arch with steps sinking into it; barred by a grate while a boss lives. */
+function drawStairs(g, e, shut) {
   const x = e.x, y = e.y + 12; // the floor under the stairs' tile
   g.fillStyle = '#020203';
   g.beginPath(); g.moveTo(x - 16, y); g.lineTo(x - 16, y - 30); g.quadraticCurveTo(x, y - 46, x + 16, y - 30); g.lineTo(x + 16, y); g.fill();
   g.fillStyle = '#0c0d10';
   for (let i = 0; i < 4; i++) g.fillRect(x - 13 + i * 2, y - 6 - i * 6, 26 - i * 4, 2.5);
+  if (shut) { g.fillStyle = '#1b1a1d'; for (let i = -12; i <= 12; i += 6) g.fillRect(x + i - 1, y - 38, 2, 38); g.fillRect(x - 15, y - 24, 30, 2); }
+}
+
+/** Bottles in the air, glass on the floor, a slam's shockwave. */
+function drawHazards(g, S) {
+  for (const b of S.shots) { g.save(); g.translate(b.x, b.y); g.rotate(b.spin); g.fillStyle = '#060607'; g.beginPath(); g.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2); g.fill(); g.fillRect(-1, -11, 2, 5); g.restore(); }
+  for (const h of S.hazards) {
+    if (h.kind === 'glass') {
+      g.fillStyle = '#05060a';
+      for (let i = 0; i < 5; i++) { const x = h.x + 2 + i * 4.5; g.beginPath(); g.moveTo(x, h.y + h.h); g.lineTo(x + 1.5, h.y + (i % 2 ? 0 : 2)); g.lineTo(x + 3, h.y + h.h); g.fill(); }
+    } else if (h.kind === 'wave') {
+      g.fillStyle = 'rgba(30,26,22,0.95)';
+      g.beginPath(); g.moveTo(h.x, h.y + h.h); g.quadraticCurveTo(h.x + h.w / 2, h.y - 6, h.x + h.w, h.y + h.h); g.fill();
+    }
+  }
 }
 
 function polyPath(g, p) { g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]); g.closePath(); }

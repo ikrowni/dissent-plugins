@@ -4,6 +4,7 @@ import { handleSDKMessage, gameLobby, onGameLobby } from '../plugin-sdk.js';
 import { advance } from './ul-game.js';
 import { newRun, openStep, closeStep, stepLabel, hashSeed } from './ul-run.js';
 import { CELLARS, LAMP_POST } from './biomes/cellars.js';
+import { RAT_KING_ARENA } from './biomes/cellars-arena.js';
 import { Input, padKeys, applyPad } from './ul-input.js';
 import { Renderer } from './ul-render.js';
 import { takeFx } from './ul-fx.js';
@@ -13,7 +14,7 @@ import { showCard, hideCard, CARDS } from './ul-cards.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view'), card = $('card');
-const hud = { hp: $('hpFill'), oil: $('oilFill'), flask: $('flask'), status: $('status'), corner: $('corner') };
+const hud = { hp: $('hpFill'), oil: $('oilFill'), flask: $('flask'), status: $('status'), corner: $('corner'), boss: $('boss'), bossName: $('bossName'), bossFill: $('bossFill') };
 const renderer = new Renderer(canvas), input = new Input();
 const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
 renderer.reduced = reduceMQ.matches;
@@ -32,7 +33,7 @@ function start() {
   openCurrent();
 }
 function openCurrent() {
-  S = openStep(run, CELLARS, LAMP_POST);
+  S = openStep(run, CELLARS, LAMP_POST, RAT_KING_ARENA);
   where = stepLabel(run, CELLARS);
   renderer.setRoom(S);
   acc = 0; input.clear(); phase = 'play'; hideCard(card); canvas.focus();

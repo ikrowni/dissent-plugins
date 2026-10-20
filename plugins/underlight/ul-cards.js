@@ -38,8 +38,8 @@ export const CARDS = {
     `You carry ${Math.round(S.player.hp)} body, ${Math.round(S.player.oil)} oil and ${S.player.flask ? 'a full flask' : 'an empty flask'}.`,
   ] }),
   actDone: (S) => ({ title: 'Through the Cellars', lines: [
-    `You came out of the third level with ${Math.round(S.player.hp)} body and ${Math.round(S.player.oil)} oil.`,
-    'Something waits below. The Rat King comes in the next version.',
+    `The Rat King is dead. You came through with ${Math.round(S.player.hp)} body and ${Math.round(S.player.oil)} oil.`,
+    'Below the Cellars the way goes on, but it is still being dug out. A camp to rest and save at comes next.',
   ] }),
   closed: () => ({ title: 'The table closed', lines: ['Open a new table in the games room to play again.'] }),
   watching: () => ({ title: 'Watching', lines: ['Watching a descent comes with co-op, in a later version.'] }),
