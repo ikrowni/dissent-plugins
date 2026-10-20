@@ -56,6 +56,20 @@ export const SFX = {
   die: () => { noise(0.3, { freq: 1200, to: 200, vol: 0.14 }); tone(300, 0.3, { type: 'triangle', vol: 0.07, to: 90 }); },
   beat: () => { tone(58, 0.16, { vol: 0.22 }); tone(52, 0.16, { vol: 0.18, at: 0.2 }); },
   drink: () => { tone(500, 0.12, { vol: 0.06, to: 700 }); tone(600, 0.12, { vol: 0.05, at: 0.15, to: 800 }); },
+  // piece 1c: the Cellars' new foes and the Rat King. Underlight's own voice: noise and low tones, never the app's pluck
+  squeak: () => { tone(2200, 0.06, { type: 'square', vol: 0.03, to: 3100 }); tone(2600, 0.05, { type: 'square', vol: 0.025, at: 0.07, to: 1900 }); },
+  toss: () => noise(0.18, { type: 'bandpass', freq: 900, to: 400, q: 1.5, vol: 0.08 }),
+  bottleTell: () => { noise(0.3, { type: 'bandpass', freq: 350, q: 3, vol: 0.06 }); tone(150, 0.3, { type: 'sawtooth', vol: 0.04, to: 220 }); },
+  glass: () => { noise(0.18, { type: 'highpass', freq: 3500, vol: 0.14 }); for (const [f, at] of [[3100, 0.02], [4200, 0.06], [3700, 0.1]]) tone(f, 0.12, { vol: 0.025, at }); },
+  clank: () => { tone(230, 0.18, { type: 'square', vol: 0.06, to: 180 }); noise(0.1, { type: 'bandpass', freq: 1400, q: 5, vol: 0.1 }); },
+  lidTell: () => noise(0.5, { type: 'bandpass', freq: 220, to: 120, q: 2, vol: 0.12 }),
+  kingTell: () => { tone(70, 0.6, { type: 'sawtooth', vol: 0.1, to: 55 }); noise(0.6, { freq: 300, to: 900, vol: 0.1 }); },
+  slamTell: () => { tone(90, 0.5, { type: 'sawtooth', vol: 0.09, to: 160 }); noise(0.5, { type: 'highpass', freq: 1200, to: 3000, vol: 0.06 }); },
+  shockwave: () => { tone(45, 0.6, { vol: 0.28, to: 30 }); noise(0.5, { freq: 180, to: 60, vol: 0.22 }); },
+  roar: () => { tone(60, 1.0, { type: 'sawtooth', vol: 0.12, to: 40 }); noise(1.0, { freq: 500, to: 150, vol: 0.14 }); for (let i = 0; i < 4; i++) tone(1900 + i * 300, 0.08, { type: 'square', vol: 0.02, at: 0.1 + i * 0.12 }); },
+  chew: () => { for (let i = 0; i < 3; i++) noise(0.07, { type: 'bandpass', freq: 600, q: 2, vol: 0.1, at: i * 0.1 }); tone(240, 0.4, { vol: 0.07, to: 90, at: 0.3 }); },
+  kingHurt: () => { tone(110, 0.4, { type: 'sawtooth', vol: 0.1, to: 260 }); noise(0.3, { type: 'highpass', freq: 2500, vol: 0.08 }); },
+  kingDie: () => { tone(80, 1.6, { type: 'sawtooth', vol: 0.14, to: 30 }); noise(1.4, { freq: 800, to: 80, vol: 0.18 }); for (let i = 0; i < 8; i++) tone(2400 - i * 150, 0.06, { type: 'square', vol: 0.02, at: 0.2 + i * 0.09 }); },
 };
 
 /** Play this frame's sound events. */

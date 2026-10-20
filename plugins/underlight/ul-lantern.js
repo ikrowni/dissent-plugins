@@ -5,8 +5,9 @@ import { tileAt, solidPt, isSolidTile } from './ul-room.js';
 import { handPos } from './ul-light.js';
 import { hurtEnemy } from './ul-combat.js';
 import { sfx, text } from './ul-fx.js';
+import { lightSconce } from './ul-pickups.js';
 
-export const THROW_COST = 8;
+export const THROW_COST = 8, LIGHTS_SCONCE = 40; // a thrown lantern this close to an unlit sconce lights it
 
 export function throwOrRecall(S) {
   const p = S.player, l = S.lantern;
@@ -42,8 +43,11 @@ export function stepLantern(S, dt) {
     l.x += (dx / d) * move; l.y += (dy / d) * move;
     for (const e of S.enemies) {
       if (e.dead || l.hitSet.has(e)) continue;
-      if (l.x + 8 > e.x && l.x - 8 < e.x + e.w && l.y + 8 > e.y && l.y - 8 < e.y + e.h) { l.hitSet.add(e); hurtEnemy(S, e, 10, 10, Math.sign(dx) * 150); }
+      if (l.x + 8 > e.x && l.x - 8 < e.x + e.w && l.y + 8 > e.y && l.y - 8 < e.y + e.h) { l.hitSet.add(e); hurtEnemy(S, e, 10, 10, Math.sign(dx) * 150, l.x); }
     }
+  }
+  if (l.state === 'rest' || l.state === 'fly') {
+    for (const s of S.sconces) if (!s.lit && Math.hypot(s.x - l.x, s.y - l.y) < LIGHTS_SCONCE) lightSconce(S, s);
   }
   if (l.state === 'rest' && !p.dead && Math.hypot(l.x - (p.x + p.w / 2), l.y - (p.y + p.h / 2)) < 26) l.state = 'held';
 }

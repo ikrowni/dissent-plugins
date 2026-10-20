@@ -101,8 +101,54 @@ function snuffer(g, e, T) {
   g.lineTo(c + (22 + breath * 4) * f, b - 20 - mouth); g.lineTo(c + (22 + breath * 4) * f, b - 12 + mouth * 0.4); g.lineTo(c + 13 * f, b - 10);
   g.lineTo(c + 12, b - 4 - stepY); g.lineTo(c + 13, b); g.closePath(); g.fill();
 }
+function gnawer(g, e) {
+  const c = e.x + e.w / 2, b = e.y + e.h, f = e.face, run = Math.sin(e.anim * 22) * (Math.abs(e.vx) > 20 ? 1.5 : 0.3);
+  g.beginPath(); g.ellipse(c - f, b - 5, 7, 4.2, 0, 0, Math.PI * 2); g.fill();          // body
+  g.beginPath(); g.moveTo(c + f * 4, b - 7); g.lineTo(c + f * 11, b - 4); g.lineTo(c + f * 4, b - 2); g.fill(); // snout
+  g.lineWidth = 1.2; g.beginPath(); g.moveTo(c - f * 7, b - 5); g.quadraticCurveTo(c - f * 13, b - 9 + run, c - f * 17, b - 3); g.stroke(); // tail
+  g.lineWidth = 1.6; g.beginPath(); g.moveTo(c - 3, b - 2); g.lineTo(c - 3 + run, b); g.moveTo(c + 3, b - 2); g.lineTo(c + 3 - run, b); g.stroke();
+}
+function bottler(g, e, T) {
+  const c = e.x + e.w / 2, b = e.y + e.h, f = e.face, wind = e.state === 'windup' ? 1 - Math.max(0, e.t) / T.tell : 0;
+  const sway = Math.sin(e.anim * 2.2) * 2; // he's drunk
+  g.beginPath(); g.ellipse(c + sway * 0.3, b - 18, 10, 13, 0, 0, Math.PI * 2); g.fill();        // the belly
+  g.beginPath(); g.arc(c + sway, b - 35, 6.5, 0, Math.PI * 2); g.fill();                         // head
+  g.fillRect(c + sway - 7, b - 42, 14, 3); g.fillRect(c + sway - 4, b - 47, 8, 6);                // a battered hat
+  g.lineWidth = 3.2; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(c - 4, b - 6); g.lineTo(c - 6, b); g.moveTo(c + 4, b - 6); g.lineTo(c + 5, b); g.stroke(); // legs
+  const ax = c + f * (6 - wind * 14), ay = b - 28 - wind * 14;                                    // the arm draws back to throw
+  g.beginPath(); g.moveTo(c + f * 4, b - 26); g.lineTo(ax, ay); g.stroke();
+  if (e.state !== 'recover') { g.beginPath(); g.ellipse(ax, ay - 5, 2.6, 6, f * -0.4, 0, Math.PI * 2); g.fill(); } // the bottle
+}
+function lidbearer(g, e) {
+  const c = e.x + e.w / 2, b = e.y + e.h, f = e.face, step = Math.sin(e.anim * 6) * (Math.abs(e.vx) > 5 ? 2 : 0);
+  g.lineWidth = 4.5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(c - 4, b - 14); g.lineTo(c - 6 + step, b); g.moveTo(c + 4, b - 14); g.lineTo(c + 6 - step, b); g.stroke();
+  g.beginPath(); g.moveTo(c - 10, b - 14); g.lineTo(c - 11, b - 34); g.quadraticCurveTo(c, b - 40, c + 11, b - 34); g.lineTo(c + 10, b - 14); g.fill(); // broad body
+  g.beginPath(); g.arc(c, b - 40, 6, 0, Math.PI * 2); g.fill();
+  if (e.lidDownT > 0) { g.beginPath(); g.ellipse(c - f * 14, b - 10, 15, 4, f * 0.5, 0, Math.PI * 2); g.fill(); } // knocked aside, low
+  else { g.beginPath(); g.ellipse(c + f * 13, b - 24, 4.5, 17, 0, 0, Math.PI * 2); g.fill(); }                  // the lid, raised
+}
+function king(g, e) {
+  const c = e.x + e.w / 2, b = e.y + e.h, f = e.face, crown = e.form === 'crown', s = crown ? 1 : 0.7, t = e.anim;
+  // a knot of rat bodies, writhing
+  for (let i = 0; i < (crown ? 9 : 6); i++) {
+    const a = i * 2.39 + t * 1.3, rx = Math.cos(a) * 16 * s, ry = Math.sin(a * 1.3) * 8 * s;
+    g.beginPath(); g.ellipse(c + rx, b - 18 * s + ry, 13 * s, 9 * s, a, 0, Math.PI * 2); g.fill();
+  }
+  g.beginPath(); g.ellipse(c, b - 14 * s, 28 * s, 14 * s, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(c + f * 22 * s, b - 26 * s); g.lineTo(c + f * 36 * s, b - 18 * s); g.lineTo(c + f * 22 * s, b - 12 * s); g.fill(); // the leading snout
+  g.lineWidth = 1.6;
+  for (let i = 0; i < 7; i++) { const a = i * 0.9 + Math.sin(t * 3 + i) * 0.3; g.beginPath(); g.moveTo(c - f * 10 * s, b - 12 * s); g.quadraticCurveTo(c - f * (24 + i * 3) * s, b - (30 - i * 4) * s, c - f * (30 + i * 4) * s * Math.cos(a), b - (4 + i * 3) * s); g.stroke(); }
+  if (crown) { g.beginPath(); g.moveTo(c - 12, b - 38); g.lineTo(c - 12, b - 46); g.lineTo(c - 6, b - 41); g.lineTo(c, b - 49); g.lineTo(c + 6, b - 41); g.lineTo(c + 12, b - 46); g.lineTo(c + 12, b - 38); g.closePath(); g.fill(); }
+}
 /** kind → draw(g, e, T). */
-export const ENEMY_SHAPES = { shade, moth, snuffer };
-/** kind → its attack's tell colour name (spec §7.2). */
-export const TELL_OF = { shade: 'white', moth: 'red', snuffer: 'violet' };
-export const EYES = { shade: 'rgba(200,225,255,0.95)', moth: 'rgba(255,180,90,0.9)', snuffer: 'rgba(190,150,255,0.95)' };
+export const ENEMY_SHAPES = { shade, moth, snuffer, gnawer, bottler, lidbearer, king };
+/** What an attack's glow says (spec §7.2): white block or parry it, red dodge it, violet it puts out your lantern. */
+export function tellOf(e) {
+  if (e.kind === 'bottler') return e.mode === 'throw' ? 'red' : 'white';
+  if (e.kind === 'king') return e.move === 'slam' ? 'red' : 'white';
+  return { shade: 'white', moth: 'red', snuffer: 'violet', gnawer: 'white', lidbearer: 'white' }[e.kind];
+}
+export const EYES = { shade: 'rgba(200,225,255,0.95)', moth: 'rgba(255,180,90,0.9)', snuffer: 'rgba(190,150,255,0.95)',
+  gnawer: 'rgba(255,90,70,0.9)', bottler: 'rgba(255,210,150,0.8)', lidbearer: 'rgba(220,220,200,0.85)', king: 'rgba(255,60,40,0.95)' };

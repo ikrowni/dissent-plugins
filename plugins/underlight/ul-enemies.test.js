@@ -9,7 +9,7 @@ import { settled, flatRoom, run, idle } from './tests/kit.js';
 /** A wide flat room with the player at the left and enemies added by hand. */
 function arena(add) {
   const S = settled(flatRoom(60, 10));
-  for (const [ch, x] of add) S.enemies.push(makeEnemy(S, ch, x, 8 * 24 + 12));
+  for (const [ch, x] of add) S.enemies.push(...makeEnemy(S, ch, x, 8 * 24 + 12));
   run(S, 0.3);
   S.fx = [];
   return S;

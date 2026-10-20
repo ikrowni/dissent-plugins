@@ -18,6 +18,10 @@
   "sdk_version": "1",
   "resources": [
     {
+      "url": "biomes/cellars-arena.js",
+      "sha256": "c7b2ef2bf32bcc3ae923378c9acbaa8578aee00efc6d0046dd4233dc9e2b1d89"
+    },
+    {
       "url": "biomes/cellars-entrances.js",
       "sha256": "ca3499dc6a7cb8cffd18ff375c00fa87223673a07a3f5e8f653b6ad386d3ff26"
     },
@@ -31,7 +35,7 @@
     },
     {
       "url": "biomes/cellars.js",
-      "sha256": "19d9a4ffc171b0a2f615107ec5b6302d8983150c5319af2ffe5c63c58fe5fc33"
+      "sha256": "773b73d4da6bdf85c7ff3eaa987b39e033408875fee4506ff90944afe0b5d137"
     },
     {
       "url": "rooms/cellars-01.js",
@@ -42,8 +46,12 @@
       "sha256": "24d654234054bc8fc4788a1de6bc266e2f015571778d3bbd4ee16bb98e8e32ba"
     },
     {
+      "url": "ul-bottler.js",
+      "sha256": "99a96812bbc02f62d78651b39dea587913dcb9b8f0dde305d48f4def6966909f"
+    },
+    {
       "url": "ul-cards.js",
-      "sha256": "3a3241035d554225b4956db6455ca416fa9665bdaf11f312712f76c6e0532b61"
+      "sha256": "c1d8ffde9dae7fb096b9574494dba7bba8a9e339e293721f233e7f0fffdda9ee"
     },
     {
       "url": "ul-chunk.js",
@@ -51,7 +59,7 @@
     },
     {
       "url": "ul-combat.js",
-      "sha256": "5afc1943847b4a3819e683ef430f95f96f7434efc7a2408e08ec22c9edb61c82"
+      "sha256": "b57c21b11e220b0585cd9be9958b7049bc78371500066892ecfb98336f73143d"
     },
     {
       "url": "ul-const.js",
@@ -59,7 +67,7 @@
     },
     {
       "url": "ul-enemies.js",
-      "sha256": "2ff7b13b3ed63be3c6703715df8fb0c9e03b26a21c99547848df937f46534ae7"
+      "sha256": "d58979958aedbc8310e7d8a772f3997ae50f7d2e627e8e78a4faa6cb27ac12cf"
     },
     {
       "url": "ul-enemy.js",
@@ -67,7 +75,7 @@
     },
     {
       "url": "ul-figures.js",
-      "sha256": "fa95020bb05b3267f0f01ab4b63f1aac53daa9817595cffe53fb6da291983573"
+      "sha256": "1af01a9e5f0fb74218477e666732970d6c07990ed9472c6a3e1804bfc3351155"
     },
     {
       "url": "ul-fx.js",
@@ -75,11 +83,19 @@
     },
     {
       "url": "ul-game.js",
-      "sha256": "d086f014e9ab0a40da971ca5bab82b498c8a74f2de0c0574573accc91b47e6a3"
+      "sha256": "87dbfc945d1b89595208e6c2465a6b7c4d62a85da19fda5a6af41f52d452e8bf"
+    },
+    {
+      "url": "ul-gnawer.js",
+      "sha256": "78640d5a8b32c9e2570a3a1515ff4c353e0b56475f3d1980ed51e980a3991407"
+    },
+    {
+      "url": "ul-hazards.js",
+      "sha256": "ed6ec0363428d973ed0b94c127076d26f5047665ea71b7b55a646d368858c91c"
     },
     {
       "url": "ul-hud.js",
-      "sha256": "23f16c38e29eaa3e25dc5051fe9f6db3f5b10efc79992e45ecea34ab73e4c58f"
+      "sha256": "7907f2a517601f99f167dabdceb85d34a4c7d6a4c9e9389930463b8706c05fb1"
     },
     {
       "url": "ul-input.js",
@@ -87,7 +103,7 @@
     },
     {
       "url": "ul-lantern.js",
-      "sha256": "b992f02476d2468529df2aff81146f3db387c81d242918ab9eddeda2ce8123f3"
+      "sha256": "415380c3ec6bd17378feb86c46933aef50ee44532c257c52c75a0cedf023f1c8"
     },
     {
       "url": "ul-layout.js",
@@ -95,7 +111,11 @@
     },
     {
       "url": "ul-level.js",
-      "sha256": "74b620cf524e350f54e6a44005cb870ac073053ca25383ab69ee790a0717a531"
+      "sha256": "f608f5d95f751a81e99173ef0f84269a97cd726d54c16e77141da6df671b4e02"
+    },
+    {
+      "url": "ul-lidbearer.js",
+      "sha256": "68b5f0b40e39897937bb4beb97dfd0356b2319e729af006f4a6d408ddd4a0b05"
     },
     {
       "url": "ul-light.js",
@@ -103,7 +123,7 @@
     },
     {
       "url": "ul-main.js",
-      "sha256": "42519e73655217d339478cdab6342698fef54073f0641d948cfa234cf87c0a37"
+      "sha256": "00e3d340e4142054c560e864c879ff3747df3447c9d435a173e1e23585ccd927"
     },
     {
       "url": "ul-moth.js",
@@ -119,15 +139,19 @@
     },
     {
       "url": "ul-pickups.js",
-      "sha256": "d6c15795d1bf4d0a20619c9219224199e43842540b9edebc3cbcd3acc30567a3"
+      "sha256": "772e0c60b6b1fd32cfa625c6f00d1bb1b585a9be5384b13441a8dc8526170128"
     },
     {
       "url": "ul-player.js",
-      "sha256": "e362e90d5fd4882aa2975f75f2f0cc3c5a452e1342567429fa8935bb5e693eb4"
+      "sha256": "60ab438e70f479c9a8db7eb3bd08008456765619bc59fe2768d628c4ed7fed7c"
+    },
+    {
+      "url": "ul-ratking.js",
+      "sha256": "21f1bd46b17ab89451310838f3aef706883e59dbc9ae55865a4c13f98aa915b1"
     },
     {
       "url": "ul-render.js",
-      "sha256": "049508cfa56b129c0d749d7b4c822ee7369cdad39d773b6b14a8ed58a253052a"
+      "sha256": "e00f32c733cc24c800d0510031eb3e87f4f64f02f4228097990dae35e02474e8"
     },
     {
       "url": "ul-rng.js",
@@ -135,11 +159,11 @@
     },
     {
       "url": "ul-room.js",
-      "sha256": "4c0b7c9110d6097ede3bdb97299f30ae9077c6fa928f7b4ddb42811d9df0b8a2"
+      "sha256": "34b2104cdf6283aa6af069b8125f6ec275ab98aa1993a9bffb6ff667f1e675c7"
     },
     {
       "url": "ul-run.js",
-      "sha256": "88a39d39dbb0edbe487b8541eaeb7ae8444352ce1b8b695294f81c2f1e5b73b0"
+      "sha256": "847c86041c7207e42395dc2a43e2687e7fca002678a089adaea92f7dbc780820"
     },
     {
       "url": "ul-shade.js",
@@ -155,7 +179,7 @@
     },
     {
       "url": "ul-sound.js",
-      "sha256": "2daf0a3ea2fe74501a80d47256f87ce2ffc4ab8e4ae7340d4bb68de52a0389a7"
+      "sha256": "815f17966381f6f5e7e8a58e7e1f2c7f89b8826afac257f38e9b58e8946fc882"
     },
     {
       "url": "ul-tiles.js",

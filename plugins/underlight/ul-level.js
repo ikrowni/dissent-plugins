@@ -11,7 +11,13 @@ import { DEFAULT_TUNE } from './ul-const.js';
 
 export const MAX_TRIES = 12;
 /** What each enemy costs from a cell's budget. */
-export const COST = { h: 2, m: 2, n: 3 };
+export const COST = { h: 2, m: 2, n: 3, r: 3, b: 3, l: 3 };
+/** Who fills a biome's slots: per slot type, the enemies with a cost, a weight, and at most `max` in one chunk.
+ *  A biome without its own list gets this one (the 1b mix: Shades, one Snuffer, Moths). */
+export const DEFAULT_FOES = {
+  ground: [{ ch: 'h', w: 1.9 }, { ch: 'n', w: 1, max: 1 }],
+  air: [{ ch: 'm', w: 1 }],
+};
 
 /** A chunk for this cell: its role's pool, openings covering the need, not used already in this level if avoidable. */
 export function pickChunk(biome, cell, used, r) {
@@ -22,8 +28,8 @@ export function pickChunk(biome, cell, used, r) {
   return from[Math.floor(r() * from.length)];
 }
 
-/** Slots → tiles and spawns: '*' maybe stone, '?' maybe a sconce, g/a enemies bought from the budget. */
-export function fill(rows, budget, r) {
+/** Slots → tiles and spawns: '*' maybe stone, '?' maybe a sconce, g/a enemies bought from the budget (foes: who). */
+export function fill(rows, budget, r, foes = DEFAULT_FOES) {
   const g = rows.map((row) => [...row]), slots = [];
   for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
     const ch = g[y][x];
@@ -32,12 +38,14 @@ export function fill(rows, budget, r) {
     else if (ch === 'g' || ch === 'a') { slots.push([y, x, ch]); g[y][x] = ' '; }
   }
   for (let i = slots.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [slots[i], slots[j]] = [slots[j], slots[i]]; }
-  let left = budget, snuffers = 0;
+  let left = budget;
+  const placed = {};
   for (const [y, x, kind] of slots) {
-    if (left < 2) break;
-    if (kind === 'a') { g[y][x] = 'm'; left -= COST.m; continue; }
-    if (snuffers === 0 && left >= COST.n && r() < 0.35) { g[y][x] = 'n'; left -= COST.n; snuffers++; continue; }
-    g[y][x] = 'h'; left -= COST.h;
+    const can = foes[kind === 'a' ? 'air' : 'ground'].filter((f) => COST[f.ch] <= left && (placed[f.ch] ?? 0) < (f.max ?? Infinity));
+    if (!can.length) continue;
+    let pick = r() * can.reduce((a, f) => a + f.w, 0), f = can[0];
+    for (const c of can) { pick -= c.w; if (pick <= 0) { f = c; break; } }
+    g[y][x] = f.ch; left -= COST[f.ch]; placed[f.ch] = (placed[f.ch] ?? 0) + 1;
   }
   return g.map((row) => row.join(''));
 }
@@ -68,7 +76,7 @@ export function buildLevel(biome, seed, tune = DEFAULT_TUNE) {
       const chunk = pickChunk(biome, cell, used, r);
       used.add(chunk.id);
       const shut = SIDES.filter((s) => !cell.need.has(s));
-      placed.push({ cell, id: chunk.id, rows: fill(seal(chunk.rows, shut), cell.budget, r) });
+      placed.push({ cell, id: chunk.id, rows: fill(seal(chunk.rows, shut), cell.budget, r, biome.foes) });
     }
     const rows = stitch(layout, placed), room = parseRoom(rows);
     const res = solve(room, tune, room.spawns.find((s) => s.ch === 'P'), targetsOf(room));

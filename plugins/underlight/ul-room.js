@@ -2,11 +2,12 @@
 import { TS } from './ul-const.js';
 
 /** Spawn letters a room may hold. Anything else that isn't a tile is a mistake in the room, not air. */
-export const SPAWN_LETTERS = 'PShmnXo';
+export const SPAWN_LETTERS = 'PShmnXorblK';
 
 /**
  * '#' stone, '^' spikes (solid, hurt from above), '-' a thin ledge you can jump up through, ' ' air.
- * Letters are spawns (P you, S sconce, h Shade, m Moth, n Snuffer, X the stairs down, o an oil cache) and leave air behind.
+ * Letters are spawns (P you, S sconce, h Shade, m Moth, n Snuffer, r a pack of Gnawers, b Bottler, l Lid-bearer, X the stairs down,
+ * o an oil cache, K the Rat King) and leave air behind.
  * Rows shorter than the widest are padded with air. Exactly one P.
  */
 export function parseRoom(rows) {
