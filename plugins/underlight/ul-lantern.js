@@ -42,7 +42,7 @@ export function stepLantern(S, dt) {
     l.x += (dx / d) * move; l.y += (dy / d) * move;
     for (const e of S.enemies) {
       if (e.dead || l.hitSet.has(e)) continue;
-      if (l.x + 8 > e.x && l.x - 8 < e.x + e.w && l.y + 8 > e.y && l.y - 8 < e.y + e.h) { l.hitSet.add(e); hurtEnemy(S, e, 10, 10, Math.sign(dx) * 150); }
+      if (l.x + 8 > e.x && l.x - 8 < e.x + e.w && l.y + 8 > e.y && l.y - 8 < e.y + e.h) { l.hitSet.add(e); hurtEnemy(S, e, 10, 10, Math.sign(dx) * 150, l.x); }
     }
   }
   if (l.state === 'rest' && !p.dead && Math.hypot(l.x - (p.x + p.w / 2), l.y - (p.y + p.h / 2)) < 26) l.state = 'held';

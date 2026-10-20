@@ -132,7 +132,7 @@ function swingHits(S) {
   for (const e of S.enemies) {
     if (e.dead || p.atkHit.has(e)) continue;
     if (box.x < e.x + e.w && box.x + box.w > e.x && box.y < e.y + e.h && box.y + box.h > e.y) {
-      p.atkHit.add(e); hurtEnemy(S, e, heavy ? 20 : 12, heavy ? 22 : 12, p.face * (heavy ? 320 : 170));
+      p.atkHit.add(e); hurtEnemy(S, e, heavy ? 20 : 12, heavy ? 22 : 12, p.face * (heavy ? 320 : 170), p.x + p.w / 2);
     }
   }
 }
