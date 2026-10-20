@@ -1,0 +1,24 @@
+{
+  "id": "underlight",
+  "name": "Underlight",
+  "version": "0.1.0",
+  "description": "A hard side-on roguelike under the lantern town. Your lantern is your light and your fuel; when it runs dry, the Dark comes.",
+  "author": "KROWN",
+  "tier": 1,
+  "context": ["games"],
+  "url": "https://plugins.dissent.chat/plugins/underlight/plugin.html",
+  "declared_permissions": [],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": ["gaming"],
+  "sdk_version": "1",
+  "resources": [],
+  "game": {
+    "api": 1,
+    "placement": "chat",
+    "players": [1, 4],
+    "watchers": true,
+    "drop_in": false,
+    "blurb": "Go down under the lantern town. Keep your light."
+  }
+}
