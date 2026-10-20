@@ -1,0 +1,140 @@
+{
+  "id": "underlight",
+  "name": "Underlight",
+  "version": "0.1.0",
+  "description": "A hard side-on roguelike under the lantern town. Your lantern is your light and your fuel; when it runs dry, the Dark comes.",
+  "author": "KROWN",
+  "tier": 1,
+  "context": [
+    "games"
+  ],
+  "url": "https://plugins.dissent.chat/plugins/underlight/plugin.html",
+  "declared_permissions": [],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": [
+    "gaming"
+  ],
+  "sdk_version": "1",
+  "resources": [
+    {
+      "url": "rooms/cellars-01.js",
+      "sha256": "1eee53d47125089c4280549be58c68cd7a4c18438c47ead89c84faee85947c84"
+    },
+    {
+      "url": "ul-backdrop.js",
+      "sha256": "24d654234054bc8fc4788a1de6bc266e2f015571778d3bbd4ee16bb98e8e32ba"
+    },
+    {
+      "url": "ul-cards.js",
+      "sha256": "1f9afebf7303c9a61322aec82b8e6ae7933b417af85a77fcc87594854afd7e93"
+    },
+    {
+      "url": "ul-combat.js",
+      "sha256": "5afc1943847b4a3819e683ef430f95f96f7434efc7a2408e08ec22c9edb61c82"
+    },
+    {
+      "url": "ul-const.js",
+      "sha256": "7980d16bd1edb435b3f1e47cbf2e3b4e15644d42385cb97190b5122a0d2420aa"
+    },
+    {
+      "url": "ul-enemies.js",
+      "sha256": "225bf51d88fdef73226e437db7fd7515e9ad270f899e7ce62b46a480d1dfca1b"
+    },
+    {
+      "url": "ul-enemy.js",
+      "sha256": "88fccdec68130bbbd388288a138ce762f6a0fcd9103c0ba1c4c08aa43979cfc4"
+    },
+    {
+      "url": "ul-figures.js",
+      "sha256": "fa95020bb05b3267f0f01ab4b63f1aac53daa9817595cffe53fb6da291983573"
+    },
+    {
+      "url": "ul-fx.js",
+      "sha256": "98c5b08d9fcebf4844a8160523f13546e56e88bf1aef6e5ff55f303a50921e4d"
+    },
+    {
+      "url": "ul-game.js",
+      "sha256": "957863f2a9db61e4f5194150fa0c934a0641704b713f12cff57c8ac31e3d7052"
+    },
+    {
+      "url": "ul-hud.js",
+      "sha256": "6de8c9028cba53476c01b2aae32ccd2f1a7247c5546e14c4bbbe181e14be251f"
+    },
+    {
+      "url": "ul-input.js",
+      "sha256": "77cd49c1002df789b4a57356369a9f49c43553e9f3bc3fb1fa96dfdae5d6291a"
+    },
+    {
+      "url": "ul-lantern.js",
+      "sha256": "b992f02476d2468529df2aff81146f3db387c81d242918ab9eddeda2ce8123f3"
+    },
+    {
+      "url": "ul-light.js",
+      "sha256": "b69b4a19491130d0441cad0953c6f78641f7a355530d1927f2daa12106cb1820"
+    },
+    {
+      "url": "ul-main.js",
+      "sha256": "fb4b77c71395bbdeffd25c5f86b665d7683e9499c2cbef532532d1a55f47a72d"
+    },
+    {
+      "url": "ul-moth.js",
+      "sha256": "acb2e26e98b2ba42869ef2804a6370040ec23b10e3b48807ba6aa198f66e7c57"
+    },
+    {
+      "url": "ul-particles.js",
+      "sha256": "f3bbe74d546e323823da21d26d32b20b1a62f963f8bd5ebadda495a63b8ae5d6"
+    },
+    {
+      "url": "ul-physics.js",
+      "sha256": "1c9fde257b73c78b16a73973fc4b42cdb49f76fe48848a05e86303632f8243ec"
+    },
+    {
+      "url": "ul-pickups.js",
+      "sha256": "d6c15795d1bf4d0a20619c9219224199e43842540b9edebc3cbcd3acc30567a3"
+    },
+    {
+      "url": "ul-player.js",
+      "sha256": "e362e90d5fd4882aa2975f75f2f0cc3c5a452e1342567429fa8935bb5e693eb4"
+    },
+    {
+      "url": "ul-render.js",
+      "sha256": "2a9b0935c3332dd552c96493d3e03bb29324a1678fd10b15e19aa8ceab41ec59"
+    },
+    {
+      "url": "ul-rng.js",
+      "sha256": "b1787afff8a2be5c7f9f071f9e3c5b7e47a4f0676cc29c73a5f62b5a584acffa"
+    },
+    {
+      "url": "ul-room.js",
+      "sha256": "5d7e06d4e167ad8ad0026fc51d5390e625e07cb78d073b54afe48258fe0a7c1e"
+    },
+    {
+      "url": "ul-shade.js",
+      "sha256": "7a8803642e5cf29fb0bb383704b30c877f1e61419159ec432c5e8f42dbeaf4d1"
+    },
+    {
+      "url": "ul-snuffer.js",
+      "sha256": "134708b854203f45d1a787f7a04f38791e96281c16596db71f8c846c6287fb3e"
+    },
+    {
+      "url": "ul-sound.js",
+      "sha256": "2daf0a3ea2fe74501a80d47256f87ce2ffc4ab8e4ae7340d4bb68de52a0389a7"
+    },
+    {
+      "url": "ul-tiles.js",
+      "sha256": "7d093b98e759c1847593d21e161a4496de08b9bc4bcc2d9709a4c61b2333e2a9"
+    }
+  ],
+  "game": {
+    "api": 1,
+    "placement": "chat",
+    "players": [
+      1,
+      4
+    ],
+    "watchers": true,
+    "drop_in": false,
+    "blurb": "Go down under the lantern town. Keep your light."
+  }
+}
