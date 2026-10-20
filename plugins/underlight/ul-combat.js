@@ -3,6 +3,9 @@
 import { sfx, text, burst, shake } from './ul-fx.js';
 
 export const ATTACK_STATES = ['windup', 'attack', 'dive', 'breath'];
+/** A block stops a white hit completely (owner, 2026-10-20: "blocking didn't seem to work" when it let 30% through)
+ *  and costs this much oil instead. Red and violet go through a block. */
+export const BLOCK_OIL = 3;
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
 /**
@@ -25,15 +28,20 @@ export function hurtPlayer(S, src, dmg, kind, fromX, cause) {
     burst(S, cx + p.face * 14, p.y + 16, 16, '255,250,230', { glow: true });
     return 'parried';
   }
-  let result = 'hit';
+  if (src && kind === 'white' && p.blocking && facing) {
+    p.oil = Math.max(0, p.oil - BLOCK_OIL); p.vx = -p.face * 150; p.blockFlash = 0.18;
+    sfx(S, 'block'); shake(S, 2); text(S, p.x + 9, p.y - 8, 'blocked', '#e9e3d6');
+    burst(S, cx + p.face * 14, p.y + 14, 8, '255,225,180', { glow: true, spread: 160 });
+    return 'blocked';
+  }
+  if (p.blocking && facing && src) text(S, p.x + 9, p.y - 20, "can't block — roll!", kind === 'violet' ? '#c4a6ff' : '#ff8f7a');
   if (kind === 'violet') { p.snuffT = 4; sfx(S, 'snuffed'); text(S, p.x + 9, p.y - 8, 'snuffed!', '#c4a6ff'); }
-  else if (src && kind === 'white' && p.blocking && facing) { dmg *= 0.3; result = 'blocked'; sfx(S, 'block'); text(S, p.x + 9, p.y - 8, 'blocked', '#e9e3d6'); }
   p.hp -= dmg; p.inv = 0.6; p.hurtT = 0.25;
   p.vx = (Math.sign(cx - fromX) || 1) * 260; p.vy = Math.min(p.vy, -240);
   p.rollT = 0; p.atkT = 0; p.drinkT = 0; p.hang = null;
   sfx(S, 'hurt'); shake(S, 5);
   if (p.hp <= 0) killPlayer(S, cause || (src ? 'a ' + cap(src.kind) : 'the room'));
-  return result;
+  return 'hit';
 }
 
 export function killPlayer(S, cause) {

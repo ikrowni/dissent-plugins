@@ -1,11 +1,12 @@
-// ul-input.js — keyboard and controller into one set of held keys and presses.
+// ul-input.js — keyboard, mouse buttons and controller into one set of held keys and presses.
+// Mouse buttons arrive as 'mouse0' (left: attack) and 'mouse2' (right: block, and its press parries).
 // 🔴 A press is kept until a fixed step uses it (the tower's lesson): clearing presses every frame drops jumps on
 // screens over 120 Hz, where some frames run no step, and during the hit-stop freeze.
 
 export const BINDINGS = Object.freeze({
   left: ['a', 'arrowleft', 'pad:left'], right: ['d', 'arrowright', 'pad:right'], down: ['s', 'arrowdown', 'pad:down'],
-  jump: ['w', ' ', 'arrowup', 'pad:jump'], roll: ['shift', 'l', 'pad:roll'], attack: ['j', 'pad:attack'],
-  block: ['k', 'pad:block'], throwL: ['e', 'i', 'pad:throw'], flask: ['f', 'pad:flask'],
+  jump: ['w', ' ', 'arrowup', 'pad:jump'], roll: ['shift', 'l', 'pad:roll'], attack: ['j', 'mouse0', 'pad:attack'],
+  block: ['k', 'mouse2', 'pad:block'], throwL: ['e', 'i', 'pad:throw'], flask: ['f', 'pad:flask'],
 });
 
 export class Input {

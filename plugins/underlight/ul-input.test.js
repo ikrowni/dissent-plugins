@@ -21,6 +21,11 @@ describe('Input', () => {
     inp.down('d'); expect(inp.read().dir).toBe(0);
     inp.up('a'); expect(inp.read().dir).toBe(1);
   });
+  it('left mouse attacks and right mouse blocks (a press of it is the parry)', () => {
+    const inp = new Input();
+    inp.down('mouse0'); inp.down('mouse2');
+    expect(inp.read()).toMatchObject({ attack: true, block: true, blockPress: true });
+  });
   it('clear forgets everything (the window lost focus)', () => {
     const inp = new Input();
     inp.down('d'); inp.clear();

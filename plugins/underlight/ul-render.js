@@ -154,9 +154,11 @@ export class Renderer {
         g.beginPath(); if (p.atkN === 2) g.arc(6, 14, 34, -1.9, 0.9); else g.arc(6, 10, 34, -1.2, 1.3); g.stroke(); g.restore();
       }
     }
-    if (p.parryT > 0 && !p.dead) {
-      g.strokeStyle = `rgba(255,250,235,${(p.parryT / S.T.parry) * 0.7})`; g.lineWidth = 1.5;
-      g.beginPath(); g.arc(pc.x + p.face * 8, p.y + 18, 18, p.face > 0 ? -1.2 : 1.9, p.face > 0 ? 1.2 : 4.3); g.stroke();
+    if ((p.blocking || p.parryT > 0 || p.blockFlash > 0) && !p.dead) {
+      const a = Math.max(p.blocking ? 0.22 : 0, (p.parryT / S.T.parry) * 0.8, (p.blockFlash / 0.18) * 0.9);
+      g.save(); g.strokeStyle = `rgba(255,236,200,${a})`; g.shadowColor = '#ffd59a'; g.shadowBlur = p.blockFlash > 0 ? 12 : 4;
+      g.lineWidth = p.blockFlash > 0 ? 2.4 : 1.5;
+      g.beginPath(); g.arc(pc.x + p.face * 6, p.y + 20, 22, p.face > 0 ? -1.25 : 1.9, p.face > 0 ? 1.25 : 4.4); g.stroke(); g.restore();
     }
     for (const mo of this.B.motes) {
       const mx = mo.x + Math.sin(S.t * 0.4 * mo.s + mo.a) * 20, my = mo.y + Math.cos(S.t * 0.3 * mo.s + mo.a) * 14;

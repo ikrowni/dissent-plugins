@@ -14,13 +14,14 @@ export function newPlayer(x, y) {
   return { x: x - 9, y: y + TS / 2 - 40, w: 18, h: 40, vx: 0, vy: 0, face: 1, onGround: false, wasGround: false,
     coyT: 0, bufT: 0, dropT: 0, jumpCut: false, rollT: 0, rollCd: 0, rollDir: 1, atkT: 0, atkN: 0, atkQ: false,
     atkHit: new Set(), blocking: false, parryT: 0, hp: 100, flask: 1, drinkT: 0, inv: 0, oil: 100, snuffT: 0,
-    darkT: 0, beatT: 0, hang: null, mantleT: 0, phase: 0, dead: false, deadT: 0, cause: '', hurtT: 0 };
+    darkT: 0, beatT: 0, blockFlash: 0, hang: null, mantleT: 0, phase: 0, dead: false, deadT: 0, cause: '', hurtT: 0 };
 }
 
 export function stepPlayer(S, inp, dt) {
   const p = S.player, T = S.T, room = S.room;
   p.inv = Math.max(0, p.inv - dt); p.rollCd = Math.max(0, p.rollCd - dt); p.parryT = Math.max(0, p.parryT - dt);
   p.snuffT = Math.max(0, p.snuffT - dt); p.dropT = Math.max(0, p.dropT - dt); p.hurtT = Math.max(0, p.hurtT - dt);
+  p.blockFlash = Math.max(0, p.blockFlash - dt);
   if (p.dead) {
     p.deadT += dt; p.vy += T.gravity * dt; p.vx *= 0.9;
     moveY(room, p, p.vy * dt, true); moveX(room, p, p.vx * dt);

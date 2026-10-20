@@ -21,7 +21,7 @@ export function hideCard(card) { card.classList.remove('show'); card.replaceChil
 export const CARDS = {
   title: () => ({ title: 'Under the lantern town', lines: [
     'One room of the Cellars. Your lantern is your light and your skills’ fuel. It drains as you go; at zero, the Dark comes for you.',
-    'White glow: block it, or tap K as it lands to parry. Red glow: roll out of it. Violet glow: it puts out your lantern; roll.',
+    'White glow: hold right click (or K) to block it, or click right as it lands to parry. Red glow: you can\u2019t block it, roll (Shift). Violet glow: it puts out your lantern; roll.',
     'Shades fear the light and come when it fails. Moths chase the brightest light: throw your lantern (E) to lure them. Snuffers breathe out lanterns.',
   ] }),
   paused: () => ({ title: 'Paused', lines: ['The Dark waits for you, this once.'] }),

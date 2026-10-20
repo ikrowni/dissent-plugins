@@ -13,13 +13,16 @@ export function drawLamplighter(g, x, feet, face, ph, run, st, t) {
   }
   const sw = Math.sin(ph) * 0.65 * run, sw2 = Math.sin(ph + Math.PI) * 0.65 * run, bob = Math.abs(Math.sin(ph)) * 1.5 * run;
   const air = st.air ? 0.5 : 0, hang = st.hang;
+  if (st.block && !air) g.translate(0, 3); // the guard sits lower
   g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 4.2;
   const leg = (a, lift) => {
     g.beginPath(); g.moveTo(0, -17 - bob);
     const kx = Math.sin(a) * 9, ky = -9 - bob - lift;
     g.lineTo(kx, ky); g.lineTo(kx + Math.sin(a - 0.6 - air) * 9, -bob * 0.3 - lift * 0.4 + (hang ? -6 : 0)); g.stroke();
   };
-  if (hang) { leg(-0.2, 2); leg(0.25, 0); } else { leg(sw - air, air * 6); leg(sw2 + air, 0); }
+  if (hang) { leg(-0.2, 2); leg(0.25, 0); }
+  else if (st.block && !air) { leg(0.55, 1); leg(-0.5, 0); } // feet apart, braced
+  else { leg(sw - air, air * 6); leg(sw2 + air, 0); }
   const flut = Math.sin(t * 6 + x * 0.1) * 1.4 * (run + air);
   g.beginPath();
   g.moveTo(-5.5, -34 - bob); g.lineTo(6, -34 - bob); g.lineTo(8 + flut, -12 - bob * 0.5); g.lineTo(2, -14 - bob * 0.5); g.lineTo(-11 - flut * 1.6, -11 - bob * 0.5);
@@ -32,12 +35,19 @@ export function drawLamplighter(g, x, feet, face, ph, run, st, t) {
     g.beginPath(); g.moveTo(-2, -33); g.lineTo(7, -43); g.stroke();
     g.restore(); return;
   }
+  if (st.block) {
+    g.beginPath(); g.moveTo(4, -32); g.lineTo(11, -27); g.lineTo(8, -21); g.stroke();      // bent front arm
+    const bx = 8, by = -21, ba = -1.0;                                                       // blade up and forward
+    g.lineWidth = 2.6; g.beginPath(); g.moveTo(bx - Math.cos(ba) * 5, by - Math.sin(ba) * 5); g.lineTo(bx + Math.cos(ba) * 27, by + Math.sin(ba) * 27); g.stroke();
+    g.lineWidth = 3.4; g.beginPath(); g.moveTo(bx - 4, by - 2); g.lineTo(bx + 4, by + 2); g.stroke();   // crossguard
+    g.lineWidth = 3.2; g.beginPath(); g.moveTo(-3, -32); g.lineTo(-10, -24); g.stroke();   // the lantern hand, pulled back
+    g.restore(); return;
+  }
   let a = 0.9 + sw * 0.3;
   if (st.atk) { const k = st.atk.prog, n = st.atk.n; a = n === 2 ? -1.9 + k * 3.6 : n === 3 ? -2.6 + k * 4.2 : 2.2 - k * 3.8; }
-  if (st.block) a = -0.4;
   const sx = 4, sy = -32 - bob, hx = sx + Math.cos(a) * 9, hy = sy + Math.sin(a) * 9 + 6;
   g.beginPath(); g.moveTo(sx, sy); g.lineTo(hx, hy); g.stroke();
-  const ba = st.block ? -Math.PI / 2 + 0.15 : a - 0.25;
+  const ba = a - 0.25;
   g.lineWidth = 2.4; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + Math.cos(ba) * 24, hy + Math.sin(ba) * 24); g.stroke();
   g.lineWidth = 3.4; g.beginPath();
   g.moveTo(hx - Math.cos(ba + 1.57) * 4, hy - Math.sin(ba + 1.57) * 4); g.lineTo(hx + Math.cos(ba + 1.57) * 4, hy + Math.sin(ba + 1.57) * 4); g.stroke();

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DT } from './ul-const.js';
 import { newGame, step } from './ul-game.js';
-import { hurtPlayer } from './ul-combat.js';
+import { hurtPlayer, BLOCK_OIL } from './ul-combat.js';
 import { flatRoom, settled, run, idle, press } from './tests/kit.js';
 
 const highest = (S, inp, seconds = 0.8) => {
@@ -84,16 +84,31 @@ describe('getting hit', () => {
       expect(e.state).toBe('attack');
     }
   });
-  it('after the window, holding block takes 30% of a white hit; red goes straight through', () => {
+  it('after the window, holding block stops a white hit completely and costs a little oil instead', () => {
     const S = settled(flatRoom());
     const e = enemy(S.player.x + 40);
     step(S, press({ block: true, blockPress: true }), DT);
     run(S, 0.2, press({ block: true }));
+    const oil = S.player.oil;
     expect(hurtPlayer(S, e, 20, 'white', e.x)).toBe('blocked');
-    expect(S.player.hp).toBe(94);
-    S.player.inv = 0;
-    expect(hurtPlayer(S, e, 20, 'red', e.x)).toBe('hit');
-    expect(S.player.hp).toBe(74);
+    expect(S.player.hp).toBe(100);
+    expect(oil - S.player.oil).toBe(BLOCK_OIL);
+    expect(S.player.vx).toBeLessThan(0); // pushed back, away from the attacker
+  });
+  it('a block from behind does nothing', () => {
+    const S = settled(flatRoom());
+    run(S, 0.2, press({ block: true }));
+    expect(hurtPlayer(S, enemy(S.player.x - 40), 20, 'white', S.player.x - 40)).toBe('hit');
+  });
+  it('blocking a red or violet attack still hurts, and says to roll', () => {
+    for (const kind of ['red', 'violet']) {
+      const S = settled(flatRoom());
+      run(S, 0.2, press({ block: true }));
+      S.fx = [];
+      expect(hurtPlayer(S, enemy(S.player.x + 40), 20, kind, S.player.x + 40)).toBe('hit');
+      expect(S.player.hp).toBe(80);
+      expect(S.fx.some((ev) => ev.k === 'text' && ev.s === "can't block — roll!")).toBe(true);
+    }
   });
   it('a violet hit puts the lantern out for 4 s, block or not', () => {
     const S = settled(flatRoom());
