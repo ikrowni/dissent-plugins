@@ -73,6 +73,10 @@ export function stepPlayer(S, inp, dt) {
   p.blocking = inp.block && !rolling && p.drinkT <= 0 && p.atkT <= 0;
   if (inp.blockPress && !rolling) p.parryT = T.parry;
 
+  // You can't turn mid-swing, but pressing the other way drops the swing and turns you at once (owner, 2026-10-21:
+  // waiting the swing out felt clunky). Any hits it already landed stand.
+  if (p.atkT > 0 && inp.dir && inp.dir !== p.face) { p.atkT = 0; p.atkQ = false; p.atkN = 0; p.face = inp.dir; }
+
   // Three-hit chain; a press during a swing queues the next one
   if (p.atkT > 0) {
     if (inp.attack) p.atkQ = true;
