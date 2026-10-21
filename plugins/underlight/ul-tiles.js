@@ -34,3 +34,25 @@ export function drawTiles(g, room, L, v) {
     }
   }
 }
+
+/** Spikes, drawn again over the darkness (owner, 2026-10-21: "very hard to see even in the light"): a pale steel
+ *  edge on each point and a red tip. Strong where there is light, faint but never gone in the dark, so a spike
+ *  never hurts you unseen. The same 4 points as drawTiles. */
+export function drawSpikeGlints(g, room, L, v, t, reduced) {
+  const c0 = Math.max(0, Math.floor(v.camL / TS) - 1), c1 = Math.min(room.cols - 1, Math.ceil((v.camL + v.VW) / TS) + 1);
+  const r0 = Math.max(0, Math.floor(v.camT / TS) - 1), r1 = Math.min(room.rows - 1, Math.ceil((v.camT + VIEW_H) / TS) + 1);
+  g.save(); g.lineWidth = 1.1;
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (room.tiles[r][c] !== '^') continue;
+    const x = c * TS, y = r * TS;
+    let k = 0;
+    for (const l of L) { const d = Math.hypot(x + TS / 2 - l.x, y - l.y); if (d < l.r) k = Math.max(k, 1 - d / l.r); }
+    const a = Math.min(1, 0.28 + k * 1.2) * (reduced ? 1 : 0.9 + Math.sin(t * 2 + c) * 0.1);
+    g.strokeStyle = `rgba(215,205,195,${a * 0.85})`; g.beginPath();
+    for (let i = 0; i < 4; i++) { g.moveTo(x + i * 6, y + 12); g.lineTo(x + i * 6 + 3, y + 1); g.lineTo(x + i * 6 + 6, y + 12); }
+    g.stroke();
+    g.fillStyle = `rgba(230,70,50,${a})`;
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x + i * 6 + 1.6, y + 4.5); g.lineTo(x + i * 6 + 3, y + 1); g.lineTo(x + i * 6 + 4.4, y + 4.5); g.fill(); }
+  }
+  g.restore();
+}

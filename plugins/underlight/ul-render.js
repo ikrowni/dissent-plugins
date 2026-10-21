@@ -4,7 +4,7 @@
 import { VIEW_H, SWING, TELL } from './ul-const.js';
 import { makeLights, visPoly, lightLevel, handPos, LANTERN_RGB } from './ul-light.js';
 import { buildBackdrop, drawBackdrop } from './ul-backdrop.js';
-import { drawTiles } from './ul-tiles.js';
+import { drawTiles, drawSpikeGlints } from './ul-tiles.js';
 import { drawLamplighter, drawLanternCage, ENEMY_SHAPES, tellOf, EYES } from './ul-figures.js';
 import { TELL_STATES } from './ul-combat.js';
 import { breathCone } from './ul-snuffer.js';
@@ -121,6 +121,7 @@ export class Renderer {
   /** Drawn over the darkness: flames, oil, the lantern, every attack's tell glow, eyes, the blade's arc, motes, sparks. */
   afterDark(S, L, pc) {
     const g = this.g, p = S.player, v = this.v;
+    drawSpikeGlints(g, S.room, L, v, S.t, this.reduced);
     for (const s of S.sconces) {
       if (s.lit) {
         const fl = 1 + (this.reduced ? 0 : Math.sin(S.t * 17 + s.x) * 0.15);

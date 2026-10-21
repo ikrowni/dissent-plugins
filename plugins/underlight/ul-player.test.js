@@ -165,4 +165,21 @@ describe('the sword', () => {
     run(S, 1, (i) => { seen.add(S.player.atkN); return press({ attack: i % 20 === 0 && i < 60 }); });
     expect([...seen].sort()).toEqual([0, 1, 2, 3]);
   });
+  it('turning during a swing cancels it and turns you at once (owner, 2026-10-21: "clunky")', () => {
+    const S = settled(flatRoom());
+    S.player.x = 300; S.player.face = 1;
+    step(S, press({ attack: true }), DT);
+    expect(S.player.atkT).toBeGreaterThan(0);
+    run(S, 0.05); // part way through the swing
+    step(S, press({ dir: -1 }), DT);
+    expect([S.player.face, S.player.atkT, S.player.atkN]).toEqual([-1, 0, 0]);
+  });
+  it('holding the way you face keeps the swing', () => {
+    const S = settled(flatRoom());
+    S.player.x = 300; S.player.face = 1;
+    step(S, press({ attack: true }), DT);
+    run(S, 0.05, press({ dir: 1 }));
+    expect(S.player.atkT).toBeGreaterThan(0);
+    expect(S.player.face).toBe(1);
+  });
 });
