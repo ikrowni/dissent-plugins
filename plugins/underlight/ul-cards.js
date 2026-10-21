@@ -23,12 +23,15 @@ export const CARDS = {
     'The Cellars: three levels down, a lamp post between each. Find the stairs; you don\u2019t have to kill everything. Your lantern is your light and your skills\u2019 fuel. It drains as you go; at zero, the Dark comes for you.',
     'White glow: hold right click (or K) to block it, or click right as it lands to parry. Red glow: you can\u2019t block it, roll (Shift). Violet glow: it puts out your lantern; roll.',
     'Shades fear the light and come when it fails. Moths chase the brightest light: throw your lantern (E) to lure them. Snuffers breathe out lanterns.',
+    CARDS.coop(),
   ] }),
+  /** Until co-op (spec §13, piece 3), friends at one table each play alone. Said plainly (owner's playtest, 2026-10-21). */
+  coop: () => 'Co-op isn\u2019t built yet: at a table with friends, each of you plays alone, on the same levels.',
   paused: () => ({ title: 'Paused', lines: ['The Dark waits for you, this once.'] }),
   /** What saving can do here, in a line: store.state from ul-store.js. */
   saving: (state) => ({
     ok: 'Your run saves at the camp after the Rat King.', unknown: 'Your run saves at the camp after the Rat King.',
-    refused: 'Saving is off: when Underlight first opened you chose \u201cView Without Joining\u201d. To let it save, click \u201cViewing only \u00b7 Change\u201d on the bar above the game.',
+    refused: 'Saving is off: when Underlight first opened you chose \u201cView Without Joining\u201d. Choose \u201cLet it save\u201d to answer again.',
     standalone: 'Opened on its own, so nothing saves. Play it at a table in Dissent to save.',
     error: 'Saving isn\u2019t answering right now. You can still play.',
   })[state] ?? '',
@@ -54,6 +57,6 @@ export const CARDS = {
     `The Rat King is dead. You came through with ${Math.round(S.player.hp)} body and ${Math.round(S.player.oil)} oil.`,
     'Below the Cellars the way goes on, but it is still being dug out. A camp to rest and save at comes next.',
   ] }),
-  closed: () => ({ title: 'The table closed', lines: ['Open a new table in the games room to play again.'] }),
+  closed: () => ({ title: 'The table closed', lines: ['Leave, then open a new table in the games room to play again.'] }),
   watching: () => ({ title: 'Watching', lines: ['Watching a descent comes with co-op, in a later version.'] }),
 };

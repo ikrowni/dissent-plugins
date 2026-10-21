@@ -1,7 +1,7 @@
 {
   "id": "underlight",
   "name": "Underlight",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A hard side-on roguelike under the lantern town. Your lantern is your light and your fuel; when it runs dry, the Dark comes.",
   "author": "KROWN",
   "tier": 1,
@@ -53,11 +53,11 @@
     },
     {
       "url": "ul-bottler.js",
-      "sha256": "99a96812bbc02f62d78651b39dea587913dcb9b8f0dde305d48f4def6966909f"
+      "sha256": "0d152548ec8673189de1a71f5ce3e90aac513d7798048ef5b9980c828e36501e"
     },
     {
       "url": "ul-cards.js",
-      "sha256": "194a2fe3c6e634db4d3d40d88776b85ef46a1ab3f68cdcfa1fa0f515ec0207a3"
+      "sha256": "9065ab0575afb44573519288bc84419db27b516d7fc4625fbcc8978ebf7b1b2b"
     },
     {
       "url": "ul-chunk.js",
@@ -65,7 +65,7 @@
     },
     {
       "url": "ul-combat.js",
-      "sha256": "b57c21b11e220b0585cd9be9958b7049bc78371500066892ecfb98336f73143d"
+      "sha256": "65e8d6dc4f401c86da5db9737f00b921e17ea87978ac34c20d1113f5b19dfc3a"
     },
     {
       "url": "ul-const.js",
@@ -77,11 +77,11 @@
     },
     {
       "url": "ul-enemy.js",
-      "sha256": "88fccdec68130bbbd388288a138ce762f6a0fcd9103c0ba1c4c08aa43979cfc4"
+      "sha256": "26fa8314c1c236924deef4b2f55ab98298ca49f36288f16a2507ea4e15779417"
     },
     {
       "url": "ul-figures.js",
-      "sha256": "1af01a9e5f0fb74218477e666732970d6c07990ed9472c6a3e1804bfc3351155"
+      "sha256": "98747d088200819721347f04c3fff74fc6dec4b3f710bf8577c084d2e0625cb0"
     },
     {
       "url": "ul-fx.js",
@@ -121,7 +121,7 @@
     },
     {
       "url": "ul-lidbearer.js",
-      "sha256": "68b5f0b40e39897937bb4beb97dfd0356b2319e729af006f4a6d408ddd4a0b05"
+      "sha256": "20b4c88ff6d84780ddcef6769a058370d7d777a580aaeb2441fed5a4ecb6fe5b"
     },
     {
       "url": "ul-light.js",
@@ -129,7 +129,7 @@
     },
     {
       "url": "ul-main.js",
-      "sha256": "af387096e8a8d04ca4d6ec8d2f7a97451ce66fe06efdaa417ab01c1f0d5a2b24"
+      "sha256": "2ae21bc802cb889f59ef693da61eb66e97ca12a75f65eca4fff22faafc8380e0"
     },
     {
       "url": "ul-moth.js",
@@ -157,7 +157,7 @@
     },
     {
       "url": "ul-render.js",
-      "sha256": "a801b71494b3a45bad917f511d021aafdb2e1fd2ce9e81e489dc399fda14376c"
+      "sha256": "7d3af9d4f4f30ae2f70bfc94783748fc313e3c641c8e0cb5136b2fee13fee564"
     },
     {
       "url": "ul-rng.js",
@@ -185,7 +185,7 @@
     },
     {
       "url": "ul-shade.js",
-      "sha256": "7a8803642e5cf29fb0bb383704b30c877f1e61419159ec432c5e8f42dbeaf4d1"
+      "sha256": "a4d32d3a2f2191d762ab41d93af7db4292188d4fc7edf604046e241816d606f2"
     },
     {
       "url": "ul-snuffer.js",
@@ -210,7 +210,7 @@
   ],
   "game": {
     "api": 1,
-    "placement": "chat",
+    "placement": "over_chat",
     "players": [
       1,
       4

@@ -41,6 +41,8 @@ export function hurtPlayer(S, src, dmg, kind, fromX, cause) {
   if (p.blocking && facing && src) text(S, p.x + 9, p.y - 20, "can't block — roll!", kind === 'violet' ? '#c4a6ff' : '#ff8f7a');
   if (kind === 'violet') { p.snuffT = 4; sfx(S, 'snuffed'); text(S, p.x + 9, p.y - 8, 'snuffed!', '#c4a6ff'); }
   p.hp -= dmg; p.inv = 0.6; p.hurtT = 0.25;
+  // where it landed: a splash on your side facing the blow, so you can see what hit you
+  burst(S, cx + (Math.sign(fromX - cx) || 1) * p.w / 2, p.y + 16, 10, '255,120,90', { glow: true, spread: 140 });
   p.vx = (Math.sign(cx - fromX) || 1) * 260; p.vy = Math.min(p.vy, -240);
   p.rollT = 0; p.atkT = 0; p.drinkT = 0; p.hang = null;
   sfx(S, 'hurt'); shake(S, 5);

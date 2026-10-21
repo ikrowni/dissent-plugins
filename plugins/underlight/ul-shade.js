@@ -8,7 +8,7 @@ import { sfx, burst } from './ul-fx.js';
 
 export const SHADE_FEAR = 0.5;      // light above this sends it running (at full oil: within ~150 units of you)
 export const SHADE_BURN = 0.6;      // light above this burns it, after 0.9 s in it
-export const SHADE_DMG = 20;
+export const SHADE_DMG = 20, CLAW_REACH = 24; // how far past its body the lunging claw hits: where it is drawn
 
 export function makeShade(S, x, y) { return baseEnemy(S, 'shade', x - 8, y + 12 - 46, 16, 46, 40, 20); }
 
@@ -47,7 +47,8 @@ function committed(S, e, dt, dx, cx) {
     e.vy = Math.min(e.vy + S.T.gravity * dt, 900);
     moveX(S.room, e, e.vx * dt); moveY(S.room, e, e.vy * dt, true); // a lunge stops at stone
     const p = S.player;
-    if (!e.hitDone && e.x - 6 < p.x + p.w && e.x + e.w + 6 > p.x && e.y < p.y + p.h && e.y + e.h > p.y) { e.hitDone = true; hurtPlayer(S, e, SHADE_DMG, 'white', cx); }
+    const x0 = e.face > 0 ? e.x : e.x - CLAW_REACH, x1 = e.face > 0 ? e.x + e.w + CLAW_REACH : e.x + e.w; // body and claw
+    if (!e.hitDone && x0 < p.x + p.w && x1 > p.x && e.y < p.y + p.h && e.y + e.h > p.y) { e.hitDone = true; hurtPlayer(S, e, SHADE_DMG, 'white', cx); }
     if (e.t <= 0) { e.state = 'recover'; e.t = 0.55; e.cd = 0.9; }
   } else {
     e.vx *= Math.pow(0.02, dt); walk(S, e, dt, 0, 0);
