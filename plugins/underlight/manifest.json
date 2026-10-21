@@ -1,7 +1,7 @@
 {
   "id": "underlight",
   "name": "Underlight",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A hard side-on roguelike under the lantern town. Your lantern is your light and your fuel; when it runs dry, the Dark comes.",
   "author": "KROWN",
   "tier": 1,
@@ -57,7 +57,7 @@
     },
     {
       "url": "ul-cards.js",
-      "sha256": "6f6ad13919a6e5634d4bfb70a5c4b2e6a7fd24b42eb556aafa0d24a3ba5f11a9"
+      "sha256": "194a2fe3c6e634db4d3d40d88776b85ef46a1ab3f68cdcfa1fa0f515ec0207a3"
     },
     {
       "url": "ul-chunk.js",

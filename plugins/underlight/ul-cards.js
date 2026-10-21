@@ -28,7 +28,7 @@ export const CARDS = {
   /** What saving can do here, in a line: store.state from ul-store.js. */
   saving: (state) => ({
     ok: 'Your run saves at the camp after the Rat King.', unknown: 'Your run saves at the camp after the Rat King.',
-    refused: 'Saving is off: when Underlight first opened you chose \u201cView Without Joining\u201d, and Dissent can\u2019t change that answer yet.',
+    refused: 'Saving is off: when Underlight first opened you chose \u201cView Without Joining\u201d. To let it save, click \u201cViewing only \u00b7 Change\u201d on the bar above the game.',
     standalone: 'Opened on its own, so nothing saves. Play it at a table in Dissent to save.',
     error: 'Saving isn\u2019t answering right now. You can still play.',
   })[state] ?? '',
