@@ -18,8 +18,11 @@ describe('CARDS', () => {
     S.sconces = [{ lit: true }, { lit: false }];
     expect(CARDS.cleared(S).lines[1]).toMatch(/sconces lit 1 of 2$/);
   });
-  it('when saving is refused, says how to change that answer (Dissent\'s "Viewing only · Change" chip)', () => {
+  it('when saving is refused, says how to change that answer (the title\'s "Let it save", which asks Dissent again)', () => {
     expect(CARDS.saving('refused')).toMatch(/^Saving is off/);
-    expect(CARDS.saving('refused')).toContain('\u201cViewing only \u00b7 Change\u201d');
+    expect(CARDS.saving('refused')).toContain('\u201cLet it save\u201d');
+  });
+  it('the title says co-op isn\'t built yet', () => {
+    expect(CARDS.title().lines.at(-1)).toMatch(/^Co-op isn\u2019t built yet/);
   });
 });

@@ -59,6 +59,14 @@ function openCurrent() {
   renderer.setRoom(S);
   acc = 0; input.clear(); phase = 'play'; hideCard(card); canvas.focus();
 }
+/** The game covers the whole chat panel (placement over_chat), with no bar of Dissent's: its own cards carry Leave.
+ *  Asked for with request by hand, like the sound (see the top): an older app answers with an error, ignored. */
+function leaveTable() { request('games.leave', {}).catch(() => {}); }
+const withLeave = (buttons) => (standalone ? buttons : [...buttons, { label: 'Leave the table', onClick: leaveTable }]);
+/** Saving was refused (View Without Joining): ask Dissent to show its consent card again. The frame reopens after
+ *  the answer, so nothing waits on it. */
+function askToSave() { request('consent.ask', {}).catch(() => {}); }
+
 function titleCard() {
   phase = 'card';
   const extra = save ? [CARDS.continued(save)] : [];
@@ -67,7 +75,8 @@ function titleCard() {
   const buttons = save
     ? [{ label: 'Continue from the camp (Enter)', primary: true, onClick: continueRun }, { label: 'Start a new descent', onClick: confirmNew }, settingsBtn]
     : [{ label: 'Go down (Enter)', primary: true, onClick: start }, settingsBtn];
-  showCard(card, { ...CARDS.title(lines), buttons });
+  if (store.state === 'refused') buttons.push({ label: 'Let it save', onClick: askToSave });
+  showCard(card, { ...CARDS.title(lines), buttons: withLeave(buttons) });
 }
 function confirmNew() {
   showCard(card, { ...CARDS.confirmNew(), buttons: [
@@ -86,7 +95,7 @@ function pauseCard() {
   const buttons = [{ label: 'Resume (Enter)', primary: true, onClick: togglePause }, { label: 'Settings', onClick: () => openSettings(pauseCard) }];
   if (STEPS[run.step] === 'camp' && save) buttons.push({ label: 'Leave for now (saved)', onClick: leave });
   phase = 'paused';
-  showCard(card, { ...CARDS.paused(), buttons });
+  showCard(card, { ...CARDS.paused(), buttons: withLeave(buttons) });
 }
 function togglePause() {
   if (phase === 'play') pauseCard();
@@ -107,7 +116,7 @@ async function endCard() {
   if (S.over === 'dead') {
     phase = 'over';
     if (save && save.base === run.base) { await store.del(SAVE_KEY); save = null; } // a lost run's save goes with it
-    showCard(card, { ...CARDS.dead(S, where), buttons: [{ label: 'Try again (Enter)', primary: true, onClick: start }] });
+    showCard(card, { ...CARDS.dead(S, where), buttons: withLeave([{ label: 'Try again (Enter)', primary: true, onClick: start }]) });
     return;
   }
   if (STEPS[run.step] === 'camp') { // the stairs below the camp: act 2 is still being dug out
@@ -120,7 +129,7 @@ async function endCard() {
   }
   const done = closeStep(run, S) === 'act-done';
   phase = 'down'; // not 'over': R must not throw the run away here
-  if (done) { showCard(card, { ...CARDS.actDone(S), buttons: [{ label: 'Go down again (Enter)', primary: true, onClick: start }] }); return; }
+  if (done) { showCard(card, { ...CARDS.actDone(S), buttons: withLeave([{ label: 'Go down again (Enter)', primary: true, onClick: start }]) }); return; }
   showCard(card, { ...CARDS.down(S, stepLabel(run, CELLARS)), buttons: [{ label: 'Continue (Enter)', primary: true, onClick: openCurrent }] });
 }
 
@@ -182,12 +191,12 @@ async function onInit(msg) {
   tableId = ctx.lobbyId ?? null;
   onGameLobby((info) => {
     if (!info?.closed) return;
-    phase = 'closed'; showCard(card, { ...CARDS.closed(), buttons: [] });
+    phase = 'closed'; showCard(card, { ...CARDS.closed(), buttons: withLeave([]) });
   });
   try { setAppSound(await request('games.sound', {})); } catch { /* an older app: our own volume only */ }
   try {
     const lobby = await gameLobby();
-    if (lobby?.you?.role === 'watcher') { booted = true; phase = 'closed'; showCard(card, { ...CARDS.watching(), buttons: [] }); return; }
+    if (lobby?.you?.role === 'watcher') { booted = true; phase = 'closed'; showCard(card, { ...CARDS.watching(), buttons: withLeave([]) }); return; }
   } catch { /* an old host without the lobby call: just play */ }
   boot();
 }
