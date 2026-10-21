@@ -10,7 +10,7 @@ import { rng } from './ul-rng.js';
 import { stepShots, stepHazards } from './ul-hazards.js';
 import { makeRatKing, stepBoss } from './ul-ratking.js';
 
-export const DEATH_CARD_AFTER = 1.3, CLEAR_CARD_AFTER = 0.9, OIL_CACHE = 20;
+export const DEATH_CARD_AFTER = 1.3, CLEAR_CARD_AFTER = 0.9, OIL_CACHE = 20, REST_REACH = 46, REST_OIL = 40;
 
 /**
  * over: null while playing, then 'dead', 'exit' (you reached the stairs down, X) or, in a room with no stairs,
@@ -20,11 +20,12 @@ export function newGame(rows, { seed = 1, tune = DEFAULT_TUNE, carry = null, lit
   const room = parseRoom(rows), start = room.spawns.find((s) => s.ch === 'P');
   const S = { room, segs: buildSegs(room), T: { ...tune }, rng: rng(seed), t: 0, hitStop: 0, fx: [], over: null, clearT: 0,
     player: newPlayer(start.x, start.y), lantern: { state: 'held', x: 0, y: 0, vx: 0, vy: 0, hitSet: new Set() },
-    enemies: [], sconces: [], drops: [], shots: [], hazards: [], stats: { parries: 0, dodges: 0, hits: 0 }, nextId: 1, exit: null, boss: null };
+    enemies: [], sconces: [], drops: [], shots: [], hazards: [], stats: { parries: 0, dodges: 0, hits: 0 }, nextId: 1, exit: null, boss: null, fire: null };
   if (carry) Object.assign(S.player, carry);
   for (const s of room.spawns) {
     if (s.ch === 'S') S.sconces.push({ x: s.x, y: s.y, lit: litSconces });
     else if (s.ch === 'K') S.enemies.push(...makeRatKing(S, s.x, s.y));
+    else if (s.ch === 'F') S.fire = { x: s.x, y: s.y, rested: false };
     else if (s.ch === 'X') S.exit = { x: s.x, y: s.y };
     else if (s.ch === 'o') S.drops.push({ x: s.x, y: s.y, vx: 0, vy: 0, amt: OIL_CACHE, t: 1 });
     else if (s.ch !== 'P') S.enemies.push(...makeEnemy(S, s.ch, s.x, s.y));
@@ -42,6 +43,7 @@ export function step(S, inp, dt) {
   stepEnemies(S, dt, L);
   stepPickups(S, dt);
   stepShots(S, dt);
+  stepRest(S);
   stepHazards(S, dt);
   const p = S.player;
   if (p.dead) { if (p.deadT > DEATH_CARD_AFTER) S.over = 'dead'; }
@@ -50,6 +52,15 @@ export function step(S, inp, dt) {
     S.clearT += dt;
     if (S.clearT > CLEAR_CARD_AFTER) S.over = 'cleared';
   }
+}
+
+/** At a camp's fire, once: half your lost body back, a full flask, some oil. The boot code saves on the 'rest' event. */
+export function stepRest(S) {
+  const f = S.fire, p = S.player;
+  if (!f || f.rested || p.dead || Math.hypot(p.x + p.w / 2 - f.x, p.y + p.h / 2 - f.y) > REST_REACH) return;
+  f.rested = true;
+  p.hp += (100 - p.hp) / 2; p.flask = 1; p.oil = Math.min(100, p.oil + REST_OIL);
+  S.fx.push({ k: 'rest' }); S.fx.push({ k: 'sfx', n: 'rest' }); S.fx.push({ k: 'text', x: f.x, y: f.y - 30, s: 'you rest by the fire', col: '#ffcf86' });
 }
 
 /** Your body touches the stairs' tile. The solver uses the same box (ul-solver.js). */

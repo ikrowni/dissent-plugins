@@ -19,12 +19,25 @@ export function hideCard(card) { card.classList.remove('show'); card.replaceChil
 
 /** The words on each card (pure, tested). */
 export const CARDS = {
-  title: () => ({ title: 'Under the lantern town', lines: [
+  title: (extra = []) => ({ title: 'Under the lantern town', lines: [...extra,
     'The Cellars: three levels down, a lamp post between each. Find the stairs; you don\u2019t have to kill everything. Your lantern is your light and your skills\u2019 fuel. It drains as you go; at zero, the Dark comes for you.',
     'White glow: hold right click (or K) to block it, or click right as it lands to parry. Red glow: you can\u2019t block it, roll (Shift). Violet glow: it puts out your lantern; roll.',
     'Shades fear the light and come when it fails. Moths chase the brightest light: throw your lantern (E) to lure them. Snuffers breathe out lanterns.',
   ] }),
   paused: () => ({ title: 'Paused', lines: ['The Dark waits for you, this once.'] }),
+  /** What saving can do here, in a line: store.state from ul-store.js. */
+  saving: (state) => ({
+    ok: 'Your run saves at the camp after the Rat King.', unknown: 'Your run saves at the camp after the Rat King.',
+    refused: 'Saving is off: when Underlight first opened you chose \u201cView Without Joining\u201d, and Dissent can\u2019t change that answer yet.',
+    standalone: 'Opened on its own, so nothing saves. Play it at a table in Dissent to save.',
+    error: 'Saving isn\u2019t answering right now. You can still play.',
+  })[state] ?? '',
+  continued: (save) => `Saved at the camp: ${Math.round(save.carry.hp)} body, ${Math.round(save.carry.oil)} oil, ${save.carry.flask ? 'a full flask' : 'an empty flask'}.`,
+  confirmNew: () => ({ title: 'Start a new descent?', lines: ['This ends your saved run at the camp. It can\u2019t be undone.'] }),
+  dugOut: (state) => ({ title: 'The way down', lines: [
+    'Below the camp the way goes on into the second act, but it is still being dug out.',
+    state === 'ok' ? 'Your run is saved here. Leave now and you\u2019ll come back to this fire.' : CARDS.saving(state),
+  ] }),
   dead: (S, where) => ({ title: 'Your light went out', lines: [
     `Killed by ${S.player.cause} on ${where}, ${clock(S.t)} in.`,
     `Parries ${S.stats.parries} · dodges ${S.stats.dodges} · hits landed ${S.stats.hits}`,
