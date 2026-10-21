@@ -117,6 +117,10 @@ export function gameLeave() { return request('games.leave', {}); }
 export function gameSound() { return request('games.sound', {}); }
 /** The volume or deafen changed: fn({ volume, deafened }). Returns an unsubscribe. */
 export function onGameSound(fn) { return _addListener('game.sound', fn); }
+/** This game's leaderboard on this server (spec 2026-10-20-tower-plugin-design §6b): { board, period, boards,
+ *  wins: [...], best: [...] }, the top 10 by wins and by best, each with your own row wherever it falls.
+ *  opts: { board?, period?: 'all' | 'week' }; no board = the board of your table. Rejects with leaderboards_off. */
+export function gameLeaderboard(opts = {}) { return request('games.leaderboard', opts); }
 
 function _addListener(event, fn) {
   _changeListeners[event].push(fn);

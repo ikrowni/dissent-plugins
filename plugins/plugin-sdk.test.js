@@ -183,7 +183,7 @@ describe('game helpers', () => {
 });
 
 // Rounds (spec 2026-10-20-tower-plugin-design §2–5): the same actions as the built SDK's game.report/start/leave/sound.
-import { gameReport, gameStart, gameLeave, gameSound, onGameSound } from './plugin-sdk.js';
+import { gameReport, gameStart, gameLeave, gameSound, onGameSound, gameLeaderboard } from './plugin-sdk.js';
 
 describe('round helpers', () => {
   it('each asks for its games.* action', () => {
@@ -193,6 +193,7 @@ describe('round helpers', () => {
       [gameStart, 'games.start', {}],
       [gameLeave, 'games.leave', {}],
       [gameSound, 'games.sound', {}],
+      [() => gameLeaderboard({ period: 'week' }), 'games.leaderboard', { period: 'week' }],
     ]) {
       void call().catch(() => {});
       expect(posted[posted.length - 1]).toMatchObject({ type: 'dissent:request', action, params });
