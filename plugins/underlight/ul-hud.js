@@ -12,13 +12,14 @@ export function statusLine(S) {
 }
 export const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-/** els: { hp, oil, flask, status, corner, boss, bossName, bossFill }. where: the step's name ("Cellars · level 2 of 3"). */
-export function drawHud(els, S, where) {
+/** els: { hp, oil, flask, status, corner, boss, bossName, bossFill }. where: the step's name ("Cellars · level 2 of 3").
+ *  note: { text, tone } to show instead of the status line ("Rested · saved"), or null. */
+export function drawHud(els, S, where, note) {
   const p = S.player;
   els.hp.style.width = `${Math.max(0, p.hp)}%`;
   els.oil.style.width = `${Math.max(0, p.oil)}%`;
   els.flask.textContent = p.drinkT > 0 ? 'drinking…' : p.flask ? 'flask ready (F)' : 'flask empty';
-  const st = statusLine(S);
+  const st = note ?? statusLine(S);
   els.status.textContent = st ? st.text : '';
   els.status.className = `status ${st ? st.tone : ''}`;
   els.corner.textContent = `${where} · ${clock(S.t)}`;
