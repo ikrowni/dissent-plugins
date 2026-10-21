@@ -18,4 +18,8 @@ describe('CARDS', () => {
     S.sconces = [{ lit: true }, { lit: false }];
     expect(CARDS.cleared(S).lines[1]).toMatch(/sconces lit 1 of 2$/);
   });
+  it('when saving is refused, says how to change that answer (Dissent\'s "Viewing only · Change" chip)', () => {
+    expect(CARDS.saving('refused')).toMatch(/^Saving is off/);
+    expect(CARDS.saving('refused')).toContain('\u201cViewing only \u00b7 Change\u201d');
+  });
 });
