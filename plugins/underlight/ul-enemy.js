@@ -10,6 +10,10 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export function attackersNow(S) { return S.enemies.filter((e) => !e.dead && ATTACK_STATES.includes(e.state)).length; }
 export const canAttack = (S) => !S.player.dead && attackersNow(S) < S.T.tokens;
 
+/** The space in front of an enemy that its attack reaches: `reach` beyond its body, on the side it faces. dy, h: how
+ *  high, from its top. The figures draw the arm or lid out to the same place (ul-figures.js). */
+export const reachBox = (e, reach, dy, h) => ({ x: e.face > 0 ? e.x + e.w : e.x - reach, y: e.y + dy, w: reach, h });
+
 /** The fields every enemy has. */
 export function baseEnemy(S, kind, x, y, w, h, hp, poise) {
   return { id: S.nextId++ & 255, kind, x, y, w, h, vx: 0, vy: 0, face: -1, state: 'idle', t: 0, cd: 0.3 + S.rng() * 0.9,

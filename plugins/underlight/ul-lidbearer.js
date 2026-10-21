@@ -1,11 +1,11 @@
 // ul-lidbearer.js — the Lid-bearer (spec §7.1's shield): a barrel lid stops anything from the front (ul-combat.js).
 // Ways in: roll through him and hit his back while he turns (slowly); parry his WHITE shove, which knocks the lid
 // aside for 2.5 s; or throw your lantern past him: he turns his lid toward the light.
-import { baseEnemy, walk, canAttack } from './ul-enemy.js';
+import { baseEnemy, walk, canAttack, reachBox } from './ul-enemy.js';
 import { hurtPlayer } from './ul-combat.js';
 import { sfx } from './ul-fx.js';
 
-export const LID_SHOVE_DMG = 14, TURN_TIME = 0.6;
+export const LID_SHOVE_DMG = 14, TURN_TIME = 0.6, LID_REACH = 24; // how far past his body the lid shoves (drawn the same)
 
 export function makeLidbearer(S, x, y) {
   const e = baseEnemy(S, 'lidbearer', x - 12, y + 12 - 44, 24, 44, 70, 60);
@@ -30,7 +30,7 @@ export function stepLidbearer(S, e, dt, L, pc) {
   if (e.state === 'windup') { walk(S, e, dt, 0, 0); if (e.t <= 0) { e.state = 'attack'; e.t = 0.18; e.hitDone = false; e.vx = e.face * 160; } return; }
   if (e.state === 'attack') {
     walk(S, e, dt, 160, e.face);
-    const box = { x: e.face > 0 ? e.x + e.w : e.x - 40, y: e.y + 4, w: 40, h: 36 };
+    const box = reachBox(e, LID_REACH, 4, 36);
     if (!e.hitDone && box.x < p.x + p.w && box.x + box.w > p.x && box.y < p.y + p.h && box.y + box.h > p.y) {
       e.hitDone = true;
       if (hurtPlayer(S, e, LID_SHOVE_DMG, 'white', cx) === 'hit') p.vx = e.face * 420; // the shove throws you

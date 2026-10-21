@@ -1,13 +1,13 @@
 // ul-bottler.js — the Bottler (spec §7.1's ranged role): a drunk cellarman who keeps his distance and lobs bottles in
 // an arc with a RED tell (dodge, don't block). Where a bottle breaks it leaves glass for a few seconds. Get close and
 // he backs off, or shoves you (WHITE) if you're right on him.
-import { baseEnemy, walk, canAttack } from './ul-enemy.js';
+import { baseEnemy, walk, canAttack, reachBox } from './ul-enemy.js';
 import { hurtPlayer } from './ul-combat.js';
 import { los } from './ul-light.js';
 import { throwBottle } from './ul-hazards.js';
 import { sfx } from './ul-fx.js';
 
-export const SHOVE_DMG = 8;
+export const SHOVE_DMG = 8, SHOVE_REACH = 24; // how far past his belly his arms reach (drawn the same)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function makeBottler(S, x, y) { const e = baseEnemy(S, 'bottler', x - 10, y + 12 - 44, 20, 44, 45, 25); e.aim = null; return e; }
@@ -28,7 +28,7 @@ export function stepBottler(S, e, dt, L, pc) {
   }
   if (e.state === 'attack') { // the shove
     walk(S, e, dt, 0, 0);
-    const box = { x: e.face > 0 ? e.x + e.w : e.x - 30, y: e.y + 6, w: 30, h: 30 };
+    const box = reachBox(e, SHOVE_REACH, 6, 30);
     if (!e.hitDone && box.x < p.x + p.w && box.x + box.w > p.x && box.y < p.y + p.h && box.y + box.h > p.y) { e.hitDone = true; hurtPlayer(S, e, SHOVE_DMG, 'white', cx); }
     if (e.t <= 0) { e.state = 'recover'; e.t = 0.5; e.cd = 1.2; }
     return;
@@ -36,7 +36,8 @@ export function stepBottler(S, e, dt, L, pc) {
   if (e.state === 'recover' || e.state === 'stagger') { e.vx *= Math.pow(0.05, dt); walk(S, e, dt, 0, 0); if (e.t <= 0) e.state = 'idle'; return; }
   if (dist < 460 && Math.abs(dy) < 220) {
     e.face = Math.sign(dx) || e.face;
-    if (dist < 56 && Math.abs(dy) < 40 && e.cd <= 0 && canAttack(S)) { e.state = 'windup'; e.mode = 'shove'; e.t = S.T.tell; return; }
+    // only when the shove can land: his half width, the reach, your half width
+    if (dist < e.w / 2 + SHOVE_REACH + 9 && Math.abs(dy) < 40 && e.cd <= 0 && canAttack(S)) { e.state = 'windup'; e.mode = 'shove'; e.t = S.T.tell; return; }
     if (dist >= 120 && e.cd <= 0 && canAttack(S) && los(S.room, cx, e.y + 8, pc.x, pc.y)) { e.state = 'windup'; e.mode = 'throw'; e.t = S.T.tell; sfx(S, 'bottleTell'); return; }
     e.state = 'keep';
     walk(S, e, dt, 70, dist < 150 ? -Math.sign(dx) : dist > 300 ? Math.sign(dx) : 0); // keep his distance

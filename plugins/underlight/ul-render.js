@@ -7,6 +7,7 @@ import { buildBackdrop, drawBackdrop } from './ul-backdrop.js';
 import { drawTiles } from './ul-tiles.js';
 import { drawLamplighter, drawLanternCage, ENEMY_SHAPES, tellOf, EYES } from './ul-figures.js';
 import { TELL_STATES } from './ul-combat.js';
+import { breathCone } from './ul-snuffer.js';
 import { Particles } from './ul-particles.js';
 import { rng } from './ul-rng.js';
 
@@ -167,6 +168,11 @@ export class Renderer {
         g.shadowBlur = 0; g.fillStyle = g.strokeStyle = '#030304';
         if (e.vis > 0.3) { g.globalAlpha = Math.max(0.65, e.vis); ENEMY_SHAPES[e.kind](g, e, S.T); }
         g.restore();
+      }
+      if (e.kind === 'snuffer' && e.state === 'breath') { // the breath, as far as it puts lanterns out (breathCone)
+        const c = breathCone(e), x0 = e.face > 0 ? c.x : c.x + c.w, x1 = e.face > 0 ? c.x + c.w : c.x;
+        const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, 'rgba(170,120,255,0.45)'); gr.addColorStop(1, 'rgba(170,120,255,0.08)');
+        g.save(); g.fillStyle = gr; g.beginPath(); g.moveTo(x0, e.y + 6); g.lineTo(x1, c.y); g.lineTo(x1, c.y + c.h); g.lineTo(x0, e.y + 18); g.closePath(); g.fill(); g.restore();
       }
       if (e.exposedT > 0) { g.strokeStyle = `rgba(255,240,200,${0.4 + Math.sin(S.t * 20) * 0.3})`; g.lineWidth = 1.2; g.beginPath(); g.arc(e.x + e.w / 2, e.y - 8, 4, 0, Math.PI * 2); g.stroke(); }
       const ex = e.x + e.w / 2 + e.face * (e.kind === 'snuffer' ? 8 : e.kind === 'moth' ? 2 : 3), ey = e.y + (e.kind === 'snuffer' ? 8 : 6);

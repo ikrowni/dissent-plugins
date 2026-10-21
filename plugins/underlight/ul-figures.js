@@ -1,6 +1,8 @@
 // ul-figures.js — the silhouettes (spec §12): dark shapes on a skeleton, drawn in code. Each draw function only
 // builds and fills paths in the current fillStyle/strokeStyle, so the renderer can draw a shape twice: once in
 // lantern colour nudged toward the light (the rim), once in black over it.
+import { SHOVE_REACH } from './ul-bottler.js';
+import { LID_REACH } from './ul-lidbearer.js';
 
 /** The Lamplighter. st: { air, hang, roll (0..1 through a roll), block, atk: { prog, n } | null }. */
 export function drawLamplighter(g, x, feet, face, ph, run, st, t) {
@@ -116,6 +118,12 @@ function bottler(g, e, T) {
   g.fillRect(c + sway - 7, b - 42, 14, 3); g.fillRect(c + sway - 4, b - 47, 8, 6);                // a battered hat
   g.lineWidth = 3.2; g.lineCap = 'round';
   g.beginPath(); g.moveTo(c - 4, b - 6); g.lineTo(c - 6, b); g.moveTo(c + 4, b - 6); g.lineTo(c + 5, b); g.stroke(); // legs
+  if (e.state === 'attack' && e.mode === 'shove') { // both arms straight out, as far as the shove hits (SHOVE_REACH)
+    const hx = c + f * (e.w / 2 + SHOVE_REACH);
+    g.beginPath(); g.moveTo(c + f * 4, b - 28); g.lineTo(hx - f * 3, b - 30); g.moveTo(c + f * 4, b - 22); g.lineTo(hx - f * 3, b - 22); g.stroke();
+    g.beginPath(); g.arc(hx - f * 2, b - 30, 2.6, 0, Math.PI * 2); g.arc(hx - f * 2, b - 22, 2.6, 0, Math.PI * 2); g.fill(); // hands
+    return;
+  }
   const ax = c + f * (6 - wind * 14), ay = b - 28 - wind * 14;                                    // the arm draws back to throw
   g.beginPath(); g.moveTo(c + f * 4, b - 26); g.lineTo(ax, ay); g.stroke();
   if (e.state !== 'recover') { g.beginPath(); g.ellipse(ax, ay - 5, 2.6, 6, f * -0.4, 0, Math.PI * 2); g.fill(); } // the bottle
@@ -127,7 +135,11 @@ function lidbearer(g, e) {
   g.beginPath(); g.moveTo(c - 10, b - 14); g.lineTo(c - 11, b - 34); g.quadraticCurveTo(c, b - 40, c + 11, b - 34); g.lineTo(c + 10, b - 14); g.fill(); // broad body
   g.beginPath(); g.arc(c, b - 40, 6, 0, Math.PI * 2); g.fill();
   if (e.lidDownT > 0) { g.beginPath(); g.ellipse(c - f * 14, b - 10, 15, 4, f * 0.5, 0, Math.PI * 2); g.fill(); } // knocked aside, low
-  else { g.beginPath(); g.ellipse(c + f * 13, b - 24, 4.5, 17, 0, 0, Math.PI * 2); g.fill(); }                  // the lid, raised
+  else { // the lid, raised; thrust out as far as the shove hits (LID_REACH)
+    const lx = e.state === 'attack' ? c + f * (e.w / 2 + LID_REACH - 4.5) : c + f * 13;
+    if (e.state === 'attack') { g.lineWidth = 4; g.beginPath(); g.moveTo(c + f * 8, b - 26); g.lineTo(lx, b - 24); g.stroke(); } // the arms behind it
+    g.beginPath(); g.ellipse(lx, b - 24, 4.5, 17, 0, 0, Math.PI * 2); g.fill();
+  }
 }
 function king(g, e) {
   const c = e.x + e.w / 2, b = e.y + e.h, f = e.face, crown = e.form === 'crown', s = crown ? 1 : 0.7, t = e.anim;
