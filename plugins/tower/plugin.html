@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Tower</title>
+<style>
+/* The Tower's look (the Night tower). Fraunces is bundled (OFL, fonts/OFL.txt): a plugin can't load the app's fonts. */
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 500 700; font-display: swap; src: url("fonts/fraunces-latin.woff2") format("woff2"); }
+@font-face { font-family: "Fraunces"; font-style: italic; font-weight: 500 700; font-display: swap; src: url("fonts/fraunces-latin-italic.woff2") format("woff2"); }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+.tw-root { position: absolute; inset: 0; background: #0b0e20; overflow: hidden; color: #f3e6cf;
+  font-family: "Fraunces", "Iowan Old Style", Georgia, serif; outline: none;
+  animation: tw-in .6s ease-out both; }
+/* The game fades in when it opens (the owner's pick, 2026-10-20, in place of the crash intro). */
+@keyframes tw-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tw-root { animation-duration: .2s; } }
+.tw-root canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tw-box { background: rgb(12 14 30 / .66); border: 1px solid rgb(255 190 118 / .28); border-radius: 12px; padding: 8px 12px;
+  backdrop-filter: blur(6px); }
+.tw-tl { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; pointer-events: none; }
+.tw-tr { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; align-items: stretch; }
+.tw-stat small { display: block; font: 600 10.5px/1.3 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: rgb(243 230 207 / .62); }
+.tw-stat b { font-size: 22px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.tw-stat b i { font-style: normal; font-size: 13px; color: rgb(243 230 207 / .62); }
+.tw-leave { border: 1px solid rgb(255 190 118 / .28); background: rgb(12 14 30 / .66); color: #f3e6cf; border-radius: 12px;
+  padding: 0 12px; font: 13px system-ui, sans-serif; cursor: pointer; }
+.tw-leave:hover { background: rgb(255 190 118 / .14); }
+.tw-banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: 64px; font-weight: 700;
+  opacity: 0; text-shadow: 0 0 22px rgb(255 190 118 / .8); pointer-events: none; }
+.tw-banner.show { animation: tw-pop 1s ease-out forwards; }
+.tw-banner.small { font-size: 30px; top: 22%; }
+.tw-banner.combo { font-size: 40px; top: 18%; color: #ffbe76; }
+@keyframes tw-pop { 0% { opacity: 0; transform: scale(1.6); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(.96) translateY(-8px); } }
+.tw-feed { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; pointer-events: none; }
+.tw-feed div { font-size: 13px; padding: 5px 10px; animation: tw-feed 3.6s ease forwards; }
+@keyframes tw-feed { 0% { opacity: 0; transform: translateY(6px); } 8%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.tw-keys { position: absolute; right: 12px; bottom: 12px; max-width: 46%; text-align: right;
+  font: 12px/1.5 system-ui, sans-serif; color: rgb(243 230 207 / .62); transition: opacity .6s; pointer-events: none; }
+.tw-keys kbd { font: 11px system-ui, sans-serif; padding: 1px 5px; border-radius: 4px; border: 1px solid rgb(255 190 118 / .28); }
+.tw-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, 86%); padding: 18px 20px;
+  text-align: center; background: rgb(14 16 34 / .95); animation: tw-card .35s ease-out; }
+@keyframes tw-card { from { opacity: 0; transform: translate(-50%, -46%); } }
+.tw-card h3 { margin: 0 0 4px; font-size: 28px; }
+.tw-card p { margin: 0 0 12px; color: rgb(243 230 207 / .62); font-size: 13px; }
+.tw-card ol { list-style: none; margin: 0 0 14px; padding: 0; text-align: left; font-size: 15px; }
+.tw-card li { display: flex; gap: 10px; align-items: center; padding: 6px 4px; border-top: 1px solid rgb(255 190 118 / .2); }
+.tw-card li i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.tw-card li span { margin-left: auto; color: rgb(243 230 207 / .62); font-variant-numeric: tabular-nums; }
+.tw-card .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.tw-card button { border: 1px solid rgb(255 190 118 / .28); background: transparent; color: #f3e6cf; border-radius: 9px; padding: 7px 14px; font: inherit; cursor: pointer; }
+.tw-card button.pri { background: #ffbe76; color: #111; border-color: transparent; font-weight: 700; }
+.tw-card small { display: block; margin-top: 10px; font: 11.5px system-ui, sans-serif; color: rgb(243 230 207 / .62); }
+@media (prefers-reduced-motion: reduce) { .tw-banner.show { animation-duration: .01s; opacity: 1; } }
+
+.tw-item { display: flex; gap: 10px; align-items: center; min-width: 130px; pointer-events: none; }
+.tw-item .g { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 19px; border: 1px dashed rgb(255 190 118 / .28); }
+.tw-item.has .g { border-style: solid; border-color: #ffbe76; color: #ffbe76; box-shadow: 0 0 14px rgb(255 190 118 / .4); }
+.tw-item kbd { font: 11px system-ui, sans-serif; padding: 1px 5px; border-radius: 4px; border: 1px solid rgb(255 190 118 / .28); }
+
+.tw-audio { display: flex; gap: 14px; justify-content: center; align-items: center; margin: 0 0 12px; font: 13px system-ui, sans-serif; color: rgb(243 230 207 / .8); }
+.tw-audio label { display: inline-flex; gap: 6px; align-items: center; }
+.tw-audio input[type="range"] { width: 110px; accent-color: #ffbe76; }
+
+.tw-card .best { color: #ffbe76; font-size: 13px; }
+</style>
+</head>
+<body class="tw-root">
+  <canvas id="view" tabindex="0" aria-label="The Tower: the game"></canvas>
+  <div id="hud"></div>
+  <script type="module" src="tower-main.js?v=1"></script>
+</body>
+</html>

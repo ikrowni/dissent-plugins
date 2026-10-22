@@ -1,0 +1,219 @@
+{
+  "id": "tower",
+  "name": "The Tower",
+  "version": "1.0.0",
+  "description": "Race up a tower at night while the mist rises. Up to 8 players, five playstyles, punches and pick-ups.",
+  "author": "KROWN",
+  "tier": 1,
+  "context": [
+    "games"
+  ],
+  "url": "https://plugins.dissent.chat/plugins/tower/plugin.html",
+  "declared_permissions": [],
+  "allowed_fetch_domains": [],
+  "config_schema": null,
+  "categories": [
+    "gaming"
+  ],
+  "sdk_version": "1",
+  "game": {
+    "api": 1,
+    "placement": "over_chat",
+    "players": [
+      1,
+      8
+    ],
+    "watchers": true,
+    "drop_in": false,
+    "blurb": "Race up the tower. Mind the mist.",
+    "cover": "cover.png",
+    "rounds": true,
+    "settings": [
+      {
+        "key": "mode",
+        "label": "Playstyle",
+        "default": "race",
+        "options": [
+          {
+            "value": "race",
+            "label": "First to the top",
+            "hint": "Race to the top floor. The mist puts you back a little."
+          },
+          {
+            "value": "last",
+            "label": "Last standing",
+            "hint": "No top. The mist rises faster each time someone's out."
+          },
+          {
+            "value": "chaos",
+            "label": "Chaos",
+            "hint": "Crates everywhere, and the strong pick-ups come up a lot."
+          },
+          {
+            "value": "nohit",
+            "label": "No hitting",
+            "hint": "A clean race: no punches, only pick-ups that help you."
+          },
+          {
+            "value": "koth",
+            "label": "King of the hill",
+            "hint": "Hold the crown on the top ledge for 60 seconds in total."
+          }
+        ]
+      },
+      {
+        "key": "floors",
+        "label": "Height",
+        "default": 100,
+        "hide_when": {
+          "key": "mode",
+          "is": [
+            "last"
+          ]
+        },
+        "options": [
+          {
+            "value": 50,
+            "label": "Short · 50 floors"
+          },
+          {
+            "value": 100,
+            "label": "Medium · 100 floors"
+          },
+          {
+            "value": 150,
+            "label": "Long · 150 floors"
+          }
+        ]
+      }
+    ],
+    "leaderboard": {
+      "split_by": [
+        "mode",
+        "floors"
+      ]
+    }
+  },
+  "resources": [
+    {
+      "url": "climb.js",
+      "sha256": "8cf84cf31774c656d9cf0f9a7d22da66ac6322e991fb58fc1d4172c671ddb5e3"
+    },
+    {
+      "url": "cover.png",
+      "sha256": "08ca847798f13e1ac9ce3b69eeaf1d23c8f489dc2d9339c315f32d4ca9d437ea"
+    },
+    {
+      "url": "drawFigure.js",
+      "sha256": "ae2d99d044814aacbc28875c1b12dd3a5f161892bb8162f86fb9e66165ce30e3"
+    },
+    {
+      "url": "drawNight.js",
+      "sha256": "829625a4b2f5726fa202e807b87857276b44e28ea4dc140eb584d9f83873b85c"
+    },
+    {
+      "url": "fight.js",
+      "sha256": "fce0cf4c5d9db7353210d6d16b0e3e3ef46e30077fd0d51c019aa5d5398ca342"
+    },
+    {
+      "url": "fonts/OFL.txt",
+      "sha256": "874ba00e75dcdf168372afe6426d693d80847b845ee7119e02b33f407378d00d"
+    },
+    {
+      "url": "fonts/fraunces-latin-italic.woff2",
+      "sha256": "7026a01ad498bfe76964ab92227aea0f4b7c9dc0d2ca153e962e3eef13257192"
+    },
+    {
+      "url": "fonts/fraunces-latin.woff2",
+      "sha256": "e79165432c3e1e01aff1ea4d394dec633c13ec70f09e92432ae77aa6e1aa7328"
+    },
+    {
+      "url": "hudParts.js",
+      "sha256": "48b267f298323522c934aef82934434255bf4ada736b071cbc52e5ff6ad41dbf"
+    },
+    {
+      "url": "input.js",
+      "sha256": "2534a1b65d1b9e484107f1d51ede8893919ef0840733d4eb0a91cb83e70818fc"
+    },
+    {
+      "url": "items.js",
+      "sha256": "22fa40ee2643a7e787d3692bc02e096d50c676c41184b0da265f6c7d5b3f9c66"
+    },
+    {
+      "url": "markers.js",
+      "sha256": "7b6f3f2a8806c4bd870c7e8f2af4307ee1aeba3e3a47f5b09be84f264e46e6be"
+    },
+    {
+      "url": "mist.js",
+      "sha256": "45ebf0096ac1c5fec2791293d7b0d00fbc8e77cd646c7ae01d80bd21ec9d543d"
+    },
+    {
+      "url": "net.js",
+      "sha256": "f842f6715326f20661f5b318eb8c713be1d4e8b04c66c0b5bb30dc6afba6ced2"
+    },
+    {
+      "url": "ragdoll.js",
+      "sha256": "941a97678e301d8456eaa9e2662decdfa18af66d7a74d0878ad92080116c256f"
+    },
+    {
+      "url": "roundClock.js",
+      "sha256": "628d75836d085b1f1426b7251450ea3bf14be1800190699f991b3356a864c738"
+    },
+    {
+      "url": "roundEffects.js",
+      "sha256": "d29ae7cdf65d6b4eccaeacfb5714b36eae532f4fd61cf74e8ea09c7872683955"
+    },
+    {
+      "url": "roundEnd.js",
+      "sha256": "81ccc3d91f5285a4261b66e45b5985c0a040d8bda084f3959524f354f0ac9df5"
+    },
+    {
+      "url": "sound/ascent.js",
+      "sha256": "0b602499e1de0a360976dba7c7fe8757c5b9d70c7a91281015f6e71cf0de0744"
+    },
+    {
+      "url": "sound/eventSounds.js",
+      "sha256": "3745970794bf2e2aa912512a9299d79f1347b7e973f64d83a51c4fdb53f835b8"
+    },
+    {
+      "url": "sound/synthParts.js",
+      "sha256": "0638d74604615920db8f6a685e89beb22808889e331f783a6e38725c3ffaa6be"
+    },
+    {
+      "url": "sound/towerAudio.js",
+      "sha256": "06f6416b26ad312aa0b3ba39274aad2ab9108bbcaa83daa95fe3a6df1982cb2a"
+    },
+    {
+      "url": "sound/towerSounds.js",
+      "sha256": "b8f8e73afe8187603539ee90d940bfe187d02bf04b7a1d13c895269c28cd0859"
+    },
+    {
+      "url": "tower-hud.js",
+      "sha256": "5e75d1b102a93e36803787fe4037f762c1489ae3aacfe90137b73326dbeecde9"
+    },
+    {
+      "url": "tower-main.js",
+      "sha256": "00a92a766d0018667bc100ae5fbafb52a1b8c968829f674008d52a5b1e4b078d"
+    },
+    {
+      "url": "towerGen.js",
+      "sha256": "4241046664b3123fb7ab4a967844993f93d7a51f7b0fc3e1685af28ce3e12f20"
+    },
+    {
+      "url": "towerProtocol.js",
+      "sha256": "43b6697581db53513625027bf07901247a0a2b486d010d965697721f67ffc955"
+    },
+    {
+      "url": "towerRound.js",
+      "sha256": "e863c1dce60611e12f61f1ea219642ad2a4bef17d89431500e1af6db2c1077df"
+    },
+    {
+      "url": "towerView.js",
+      "sha256": "3d4880318815995d0ffe0706a4141538f6867ffa46ed592933dd017bdad8e72a"
+    },
+    {
+      "url": "tuning.js",
+      "sha256": "10b2d640e30a738e31a126306d8a86ba2af4299eedbce7894d4cef66291750ac"
+    }
+  ]
+}
