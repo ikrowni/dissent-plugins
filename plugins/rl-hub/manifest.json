@@ -1,7 +1,7 @@
 {
   "id": "rl-hub",
   "name": "Rocket League Hub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Rocket League stats, replays, and rank tracking for your server.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -11,8 +11,14 @@
   ],
   "url": "https://plugins.dissent.chat/plugins/rl-hub/plugin.html",
   "declared_permissions": [
-    "fetch:external",
-    "game:telemetry"
+    "identity",
+    "storage:server",
+    "storage:user",
+    "realtime",
+    "members:read",
+    "media:embed",
+    "game:telemetry",
+    "fetch:external"
   ],
   "allowed_fetch_domains": [
     "rlstats.net"

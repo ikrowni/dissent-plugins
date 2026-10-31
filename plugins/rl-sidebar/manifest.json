@@ -1,7 +1,7 @@
 {
   "id": "rl-sidebar",
   "name": "Rocket League Sidebar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Quick Rocket League rank and stats sidebar panel.",
   "author": "KROWN",
   "public_key": "ed25519:b841fb8c7015bac747a385bd124d466deb3e1b8d4195c8f5543216fac2f88e5e",
@@ -11,10 +11,15 @@
   ],
   "url": "https://plugins.dissent.chat/plugins/rl-sidebar/plugin.html",
   "declared_permissions": [
+    "identity",
+    "storage:server",
+    "storage:user",
+    "realtime",
+    "members:read",
     "fetch:external"
   ],
   "allowed_fetch_domains": [
-    "api.tracker.gg",
+    "rlstats.net",
     "ballchasing.com"
   ],
   "config_schema": null,
