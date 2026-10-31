@@ -43,8 +43,8 @@ const PLUGINS_DIR = new URL("../plugins/", import.meta.url).pathname;
  * A target's path determines the SDK import depth, so nesting is handled automatically —
  * `ufc-hub/core/…` gets `../../plugin-sdk.js` and `rl-hub/…` gets `../plugin-sdk.js`.
  *
- * ⚠️ `ufc-hub` already has a DIFFERENT `core/polymarket.js` (implied win probability for a
- * card). The trading module is vendored under a distinct name so the two never collide.
+ * ⚠️ `ufc-hub` has its OWN `core/polymarket.js` (implied win probability for a card), unrelated
+ * to the shared trading module of the same name. Never vendor the shared one over it.
  */
 const VENDORED = [
   {
@@ -58,10 +58,8 @@ const VENDORED = [
       "dnd-player/dnd-hub-shared-storage.js",
     ],
   },
-  {
-    source: "polymarket.js",
-    targets: ["ufc-hub/core/polymarket-trade.js"],
-  },
+  // polymarket.js was vendored into ufc-hub as core/polymarket-trade.js for in-app betting;
+  // that and its wallet were removed 2026-10-31. The shared module stays for future plugins.
   // Three-way campaign merge used by every D&D save path (hub and both companions).
   {
     source: "dnd-campaign-merge.js",

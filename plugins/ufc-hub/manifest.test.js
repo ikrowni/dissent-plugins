@@ -43,12 +43,16 @@ describe('ufc-hub manifest', () => {
       // normalises every URL to www, and the images on those pages go through the
       // image proxy, which is allowlist-free.
       'www.ufc.com',                   // athlete career stats + event artwork
-      // ⚠️ THE CAPABILITY GATE FOR REAL-MONEY ORDERS. Removing this line and running
-      // the matching migration is the HARD off-switch for in-app betting: without the
-      // grant the node rejects the order fetch outright, whatever the plugin's config
-      // says. The config toggle is the convenient switch; this is the real one.
-      'clob.polymarket.com',           // order placement (betting_mode: 'trade' only)
     ]);
+  });
+
+  // In-app betting and its crypto wallet were removed (owner, 2026-10-31). The plugin must
+  // never ask for the wallet again, nor reach the order-placement host.
+  it('asks for no wallet and cannot place orders', () => {
+    const m = read('./manifest.json');
+    expect(m.declared_permissions).not.toContain('wallet');
+    expect(m.declared_permissions).not.toContain('storage:local');
+    expect(m.allowed_fetch_domains).not.toContain('clob.polymarket.com');
   });
 
   it('declares storage:user, which the cf-id cache needs', () => {

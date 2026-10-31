@@ -12,8 +12,7 @@ import {
 import { renderPbp } from './pbp.js';
 import { parseTracking, actionCounts } from '../core/fight-timeline.js';
 import { imageUrl } from '../../plugin-sdk.js';
-import { pct } from '../core/polymarket.js';
-import { canTrade, marketUrl } from '../core/polymarket-trade.js';
+import { marketUrl, pct } from '../core/polymarket.js';
 
 /** Images MUST go through the node proxy: the plugin CSP is
  *  `img-src data: blob: {asset} {core}` and blocks third-party hosts outright.
@@ -243,42 +242,18 @@ function resultBlock(fight) {
  * percentage because that is what it is.
  */
 /**
- * The betting surface.
- *
- * ⚠️ TWO MODES, AND LINK IS THE DEFAULT. `canTrade` reads the server's own config and
- * anything other than an explicit 'trade' means link-out — see plugins/polymarket.js.
- * This function only decides what to DRAW; the refusal that matters lives in
- * `placeBet`, so a bug here cannot cause an order.
+ * A plain link to the market's own page. Informational only: this plugin places no
+ * orders and holds no funds (in-app betting and its wallet were removed 2026-10-31).
  */
-function betting(fight, m, cfg) {
-  const url = marketUrl(m.slug, cfg);
-  if (!canTrade(cfg)) {
-    return url
-      ? `<a class="mk-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">`
-        + 'View this market on Polymarket</a>'
-      : '';
-  }
-  const side = (f, idx) => {
-    const p = m.byFighter?.[f?.fighterId];
-    if (!f || p == null) return '';
-    return `<button class="mk-bet" data-act="bet" data-fight="${esc(fight.fightId)}"`
-      + ` data-outcome="${esc(idx)}"`
-      + ` data-label="${esc(f.lastName ?? f.name ?? '')}">`
-      + `<span class="mk-bet-name">${esc(f.lastName ?? f.name)}</span>`
-      + `<span class="mk-bet-odds num">${esc(pct(p))}%</span>`
-      + '</button>';
-  };
-  return '<div class="mk-bet-row">'
-    + side(fight.red, 0) + side(fight.blue, 1)
-    + '</div>'
-    + '<p class="vs-note mk-warn">Places a REAL order on Polymarket with your own '
-    + 'wallet. Your wallet signs it; this server never holds your funds.'
-    + (url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">`
-      + 'Open the market</a>.' : '')
-    + '</p>';
+function marketLink(m) {
+  const url = marketUrl(m.slug);
+  return url
+    ? `<a class="mk-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">`
+      + 'View this market on Polymarket</a>'
+    : '';
 }
 
-function marketBlock(fight, m, cfg) {
+function marketBlock(fight, m) {
   if (!m) return '';
   const r = m.byFighter?.[fight.red?.fighterId];
   const b = m.byFighter?.[fight.blue?.fighterId];
@@ -307,11 +282,11 @@ function marketBlock(fight, m, cfg) {
     + row('Ends by submission', m.sub)
     + '<p class="vs-note">Implied probability from Polymarket order books '
     + '&mdash; a live prediction market, not a forecast by this plugin.</p>'
-    + betting(fight, m, cfg)
+    + marketLink(m)
     + '</div>';
 }
 
-export function renderVersus(fight, event, athletes, market, artwork, config) {
+export function renderVersus(fight, event, athletes, market, artwork) {
   if (!fight) return '';
   const red = fight.red;
   const blue = fight.blue;
@@ -330,7 +305,7 @@ export function renderVersus(fight, event, athletes, market, artwork, config) {
       : hero(fight, red, blue, event, athletes))
     + tape(red, blue)
     + chips(fight)
-    + (st === 'post' ? '' : marketBlock(fight, market, config))
+    + (st === 'post' ? '' : marketBlock(fight, market))
     + (st === 'in' ? liveBlock(fight, event) : '')
     + (st === 'post' && hasResult(fight) ? resultBlock(fight) : '')
     + counts(events, red, blue)
