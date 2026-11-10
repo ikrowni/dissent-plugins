@@ -1,0 +1,38 @@
+{
+  "id": "capability-probe",
+  "name": "Capability Probe",
+  "version": "2.0.0",
+  "description": "Test plugin: calls every host action once and lists what came back, so a person or a script can see what works in this place, for this person. Not for real servers.",
+  "author": "Dissent test",
+  "tier": 2,
+  "context": [
+    "channel",
+    "sidebar",
+    "profile"
+  ],
+  "url": "https://plugins.dissent.chat/plugins/capability-probe/plugin.html",
+  "declared_permissions": [
+    "profile:read",
+    "identity",
+    "members:read",
+    "fetch:external",
+    "storage:user",
+    "storage:server",
+    "storage:local",
+    "storage:log",
+    "realtime",
+    "bot:post",
+    "media:embed",
+    "voice",
+    "sparks:read"
+  ],
+  "allowed_fetch_domains": [
+    "example.com"
+  ],
+  "config_schema": null,
+  "categories": [
+    "testing"
+  ],
+  "sdk_version": "1",
+  "resources": []
+}
