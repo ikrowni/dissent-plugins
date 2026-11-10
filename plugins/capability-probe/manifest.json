@@ -1,7 +1,7 @@
 {
   "id": "capability-probe",
   "name": "Capability Probe",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Test plugin: calls every host action once and lists what came back, so a person or a script can see what works in this place, for this person. Not for real servers.",
   "author": "Dissent test",
   "tier": 2,
@@ -23,7 +23,6 @@
     "realtime",
     "bot:post",
     "media:embed",
-    "voice",
     "sparks:read"
   ],
   "allowed_fetch_domains": [
