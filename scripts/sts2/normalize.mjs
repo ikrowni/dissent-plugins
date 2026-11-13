@@ -90,13 +90,14 @@ export function normalize(src) {
  * Every image the plugin needs, as download jobs. `resize` is an ImageMagick geometry that
  * only ever SHRINKS (`>`).
  *
- * 🔴 SIZED TO THE NODE'S 16 MB PLUGIN TOTAL (registry_integrity.go maxResourceTotal — it bounds
- * what a mirroring node fetches, so raising it is a security decision, not a build tweak).
+ * 🔴 SIZED TO THE NODE'S OLD 16 MB PLUGIN TOTAL (registry_integrity.go maxResourceTotal — it bounds
+ * what a mirroring node fetches). The owner raised it to 64 MB on 2026-11-12 (Dissent plugin
+ * program 17d-2); these sizes still fit and stay until someone rebuilds the art on purpose.
  * Full-size art measured 49.6 MB on 2026-09-13. Cards at 300 px wide stay legible (~11 KB).
  *
  * ⚠️ NO UPGRADED CARD IMAGES: they would add ~6 MB and cross the cap. The view shows the
  * upgraded text on the base art, and already falls back when a `card-upg:` image is absent —
- * so if the cap is ever raised, re-adding them is this function and a rebuild, nothing else.
+ * so now that the cap is raised, re-adding them is this function and a rebuild, nothing else.
  */
 export function imageJobs(data) {
   const jobs = [];

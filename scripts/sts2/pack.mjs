@@ -1,12 +1,13 @@
 // scripts/sts2/pack.mjs — pack many small images into a few files.
 //
-// WHY: the node caps a plugin at 256 resources of at most 2 MB each
-// (dissent-core registry_integrity.go, mirrored in scripts/declare-resources.mjs). STS2 has
+// WHY: the node caps a plugin's resources (dissent-core registry_integrity.go, mirrored in
+// scripts/declare-resources.mjs) — 256 files of at most 2 MB when this was written; since
+// 2026-11-12 1024 files of at most 8 MB. STS2 has
 // about a thousand images; as separate files the plugin is refused at verification, which
 // looks like a broken plugin rather than a size error. Packs are plain concatenations; the
 // plugin slices one image out by offset (plugins/sts2-companion/core/pack.js).
 
-/** Below the node's 2 MB cap, leaving room for the declare-resources size check's rounding. */
+/** Below the node's old 2 MB cap (it is 8 MB since 2026-11-12); kept so packs stay small to fetch. */
 export const MAX_PACK_BYTES = 1_900_000;
 
 /**

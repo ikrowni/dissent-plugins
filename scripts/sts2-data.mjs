@@ -13,9 +13,9 @@
  * so a first build of ~1300 images stays under the per-IP limit.
  *
  * REFUSES — exits 1, writing nothing into the plugin — when:
- *   - any pack or data file would exceed 2 MB (the node's per-resource cap)
- *   - the plugin would exceed 256 files (the node's resource-count cap)
- *   - the plugin's data + art would exceed 16 MB in total (the node's resource-total cap)
+ *   - any pack or data file would exceed 8 MB (the node's per-resource cap)
+ *   - the plugin would exceed 1024 files (the node's resource-count cap)
+ *   - the plugin's data + art would exceed 62 MB (the node's 64 MB resource-total cap, less room for the code)
  *   - any card, relic, potion, power or monster has no downloadable image at all
  */
 import { execFileSync } from 'node:child_process';
@@ -28,11 +28,12 @@ import { packImages } from './sts2/pack.mjs';
 const ROOT = new URL('..', import.meta.url).pathname;
 const CACHE = join(ROOT, 'scripts/sts2/.cache');
 const PLUGIN = join(ROOT, 'plugins/sts2-companion');
-const MAX_FILE = 2 * 1024 * 1024;
-const MAX_FILES = 256;
+// The node's caps (dissent-core registry_integrity.go), raised 2026-11-12 (plugin program 17d-2).
+const MAX_FILE = 8 * 1024 * 1024;
+const MAX_FILES = 1024;
 // The node's maxResourceTotal. Kept below it so the plugin's own code still fits.
-const MAX_TOTAL = 16 * 1024 * 1024;
-const BUDGET_FOR_BUNDLE = 14 * 1024 * 1024;
+const MAX_TOTAL = 64 * 1024 * 1024;
+const BUDGET_FOR_BUNDLE = 62 * 1024 * 1024;
 const refresh = process.argv.includes('--refresh');
 
 mkdirSync(join(CACHE, 'img'), { recursive: true });
@@ -158,7 +159,7 @@ async function main() {
   }
   const tooBig = [...files].filter(([, b]) => b.length > MAX_FILE).map(([n, b]) => `${n} (${b.length})`);
   if (tooBig.length) {
-    console.error(`sts2-data: REFUSING — over the node's 2 MB per-file cap:\n  ${tooBig.join('\n  ')}`);
+    console.error(`sts2-data: REFUSING — over the node's 8 MB per-file cap:\n  ${tooBig.join('\n  ')}`);
     process.exit(1);
   }
   const existingOther = existsSync(PLUGIN)

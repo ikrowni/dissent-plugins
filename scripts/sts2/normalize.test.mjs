@@ -39,8 +39,9 @@ describe('normalize', () => {
 describe('imageJobs', () => {
   const jobs = imageJobs(normalize(S));
 
-  // 🔴 The node caps a plugin's declared resources at 16 MB in TOTAL (registry_integrity.go
-  // maxResourceTotal — a mirroring-node security bound). Full-size art came to 49.6 MB.
+  // 🔴 The node capped a plugin's declared resources at 16 MB in TOTAL when these sizes were
+  // chosen (registry_integrity.go maxResourceTotal — 64 MB since 2026-11-12). Full-size art came
+  // to 49.6 MB; larger art now fits, but only with a rebuild and a new release of the plugin.
   it('🔴 sizes every image to fit the 16 MB plugin budget, never upscaling', () => {
     const geom = (id) => jobs.find((j) => j.id === id).resize;
     expect(geom('card:BASH')).toBe('300x>');

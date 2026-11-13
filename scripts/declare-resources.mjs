@@ -36,9 +36,10 @@ const PLUGINS_DIR = new URL("../plugins/", import.meta.url).pathname;
 // Mirrors the node's caps (internal/api/handlers/registry_integrity.go). Kept in step by
 // the check below rather than by hope: a manifest that exceeds them is refused at
 // verification time, which reads as a broken plugin.
-const MAX_RESOURCE_BYTES = 2 * 1024 * 1024;
-const MAX_RESOURCE_COUNT = 256;
-const MAX_RESOURCE_TOTAL = 16 * 1024 * 1024;
+// Raised with the node on 2026-11-12 (Dissent plugin program row 17d-2): 8 MB / 1024 files / 64 MB.
+const MAX_RESOURCE_BYTES = 8 * 1024 * 1024;
+const MAX_RESOURCE_COUNT = 1024;
+const MAX_RESOURCE_TOTAL = 64 * 1024 * 1024;
 
 // tests/ is excluded because a fixture is not something the running plugin fetches — and
 // declaring one bites twice: it bloats every mirror with data nobody loads, and HTML
