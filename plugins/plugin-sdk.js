@@ -343,6 +343,21 @@ export async function gameAdapterConsent() {
 export async function gameAdapterWithdraw() {
   return request('game.adapter.withdraw', {});
 }
+/** Live kinds, desktop app: send this member's game to a channel (default this one) until gameAdapterStop(). */
+export async function gameAdapterStart(channelId) {
+  return request('game.adapter.start', channelId ? { channelId } : {});
+}
+export async function gameAdapterStop() {
+  return request('game.adapter.stop', {});
+}
+/** files: { files: [{ name, modified_ms, size, text, skipped }] }, newest first, on this computer only. */
+export async function gameAdapterRead() {
+  return request('game.adapter.read', {});
+}
+/** gsi: Dissent asks the member in its own window, then adds its settings file to the game. */
+export async function gameAdapterSetup() {
+  return request('game.adapter.setup', {});
+}
 
 // `identityExportToken` and `companionInstall` were removed 2026-08-15 along with the
 // identity:native permission and POST /auth/companion-token. The host no longer
