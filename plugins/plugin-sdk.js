@@ -326,6 +326,24 @@ export async function gameTelemetryUnbind(game) {
   return request('game.telemetry.unbind', { game });
 }
 
+/**
+ * A game Dissent does not read itself, added by THIS plugin's manifest `game_adapter` (row 18).
+ * Dissent's desktop app does the reading; your frame only parses. A live adapter's frames arrive
+ * as the plugin event 'game:raw' with data { game, raw, sender_id } — raw is the text the game sent.
+ *
+ * gameAdapterStatus()  → { game, kind, format, live, consented, paused, desktop, readable }
+ * gameAdapterConsent() → draws Dissent's per-game card; same shape back
+ */
+export async function gameAdapterStatus() {
+  return request('game.adapter.status', {});
+}
+export async function gameAdapterConsent() {
+  return request('game.adapter.consent', {});
+}
+export async function gameAdapterWithdraw() {
+  return request('game.adapter.withdraw', {});
+}
+
 // `identityExportToken` and `companionInstall` were removed 2026-08-15 along with the
 // identity:native permission and POST /auth/companion-token. The host no longer
 // implements either action, so calling one now fails with "unknown action". Plugins
