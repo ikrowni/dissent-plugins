@@ -329,7 +329,7 @@ export async function gameTelemetryUnbind(game) {
 /**
  * A game Dissent does not read itself, added by THIS plugin's manifest `game_adapter` (row 18).
  * Dissent's desktop app does the reading; your frame only parses. A live adapter's frames arrive
- * as the plugin event 'game:raw' with data { game, raw, sender_id } — raw is the text the game sent.
+ * as the plugin event 'game:raw' with data { game, raw } and the message's sender_id — raw is the text the game sent.
  *
  * gameAdapterStatus()  → { game, kind, format, live, consented, paused, desktop, readable }
  * gameAdapterConsent() → draws Dissent's per-game card; same shape back
