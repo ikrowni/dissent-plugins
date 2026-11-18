@@ -8,7 +8,7 @@
 //     (1.1 MB) and the English data gzipped in two parts; both are unzipped here (DecompressionStream).
 //   - The mirror serves .wasm and .gz as text/plain (an allowlist, on purpose): they are fetched as bytes and
 //     compiled from bytes, never streamed by type.
-// pdf.js needs its own decoders for a scan's page pictures (JPEG 2000 and JBIG2): vendor/pdfjs/wasm/.
+// pdf.js needs its own decoders for a scan's page pictures (JPEG 2000 and JBIG2): vendor/pdfjs/wasm/*.wasm.gz (book-pdf.js GzWasmData).
 import { pdfjs, openPdf } from './book-pdf.js';
 import { pagesToRead, tsvToLines, replacePages, blackAndWhite } from './book-ocr-lines.js';
 

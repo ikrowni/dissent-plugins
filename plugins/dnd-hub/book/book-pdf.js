@@ -19,12 +19,30 @@ export async function pdfjs() {
 }
 
 /**
+ * pdf.js's own image decoders (JPEG 2000, JBIG2), gzipped: vendor/pdfjs/wasm/<name>.wasm.gz. A signed plugin file
+ * may carry no compiled code (dissent-core pluginmodule/dplug.go refuses any .wasm), so they ship as .gz — like the
+ * OCR engine — and are unzipped here. pdf.js asks its BinaryDataFactory for each by name (`openjpeg.wasm`); with
+ * this factory it fetches on this thread, as the default one already does when no cMapUrl is given.
+ */
+export class GzWasmData {
+  constructor({ wasmUrl = null } = {}) { this.wasmUrl = wasmUrl; }
+  async fetch({ kind, filename }) {
+    if (kind !== 'wasmUrl' || !this.wasmUrl) throw new Error(`Ensure that the \`${kind}\` API parameter is provided.`);
+    const u = `${this.wasmUrl}${filename}.gz`;
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(`Unable to load wasm data at: ${u}`);
+    const gz = new Uint8Array(await r.arrayBuffer());
+    return new Uint8Array(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  }
+}
+
+/**
  * Open a PDF from a File/Blob, or from bytes. A Blob is read through a range transport: pdf.js asks for the byte
  * ranges it needs and they are cut from the file with slice(), so a map pack of hundreds of MB is never loaded whole
  * (reading one into an ArrayBuffer is what failed). `wasmUrl`: pdf.js's own image decoders (JPEG 2000, JBIG2).
  */
 export async function openPdf(lib, source, { wasmUrl } = {}) {
-  const opts = { isEvalSupported: false, verbosity: 0, ...(wasmUrl ? { wasmUrl } : {}) };
+  const opts = { isEvalSupported: false, verbosity: 0, ...(wasmUrl ? { wasmUrl, BinaryDataFactory: GzWasmData } : {}) };
   if (!(source instanceof Blob)) return lib.getDocument({ ...opts, data: new Uint8Array(source) }).promise;
   const first = new Uint8Array(await source.slice(0, Math.min(source.size, 1 << 20)).arrayBuffer());
   const transport = new lib.PDFDataRangeTransport(source.size, first);

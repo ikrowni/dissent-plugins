@@ -184,7 +184,7 @@
     },
     {
       "url": "book/book-ocr.js",
-      "sha256": "24108f230533eba27202bb00a74970d69f3ac515f06ed564f8841359ca38d6ab"
+      "sha256": "175a5d3ed58acd1b1c12919656bf7cf0034b99a90ac44b88e408daf79a17893a"
     },
     {
       "url": "book/book-outline.js",
@@ -200,7 +200,7 @@
     },
     {
       "url": "book/book-pdf.js",
-      "sha256": "82fcffda5d313a2bac73f77d74742174584517029645e5f8f051fc866d1ecfba"
+      "sha256": "a79719a1a9b968e2fb7b5bf77b4ffab50b2b368d59b24c881366dc8ab6da8023"
     },
     {
       "url": "book/book-picture-pack.js",
@@ -895,12 +895,12 @@
       "sha256": "717fc62da03292dbb4dd0c8280bd4ce7bb8550dcf31d772bc93455fb50313425"
     },
     {
-      "url": "vendor/pdfjs/wasm/jbig2.wasm",
-      "sha256": "e6bee67724a7b5436fe8162638e3708cfc8d52b6342db69a49715e30ff27cfdc"
+      "url": "vendor/pdfjs/wasm/jbig2.wasm.gz",
+      "sha256": "93b31ace57438fc8be5a47c4754f146ecd122e16d477adab862448310e22fc97"
     },
     {
-      "url": "vendor/pdfjs/wasm/openjpeg.wasm",
-      "sha256": "004a0e62db930ba9ff2a22212f4554d0bb57a0635a8287caf70f98117cee14ba"
+      "url": "vendor/pdfjs/wasm/openjpeg.wasm.gz",
+      "sha256": "802d2b7ce8877036f6e0d10f6988181772085cea4dbf02f5089636f0a303f0a4"
     },
     {
       "url": "vendor/pixi.min.js",
