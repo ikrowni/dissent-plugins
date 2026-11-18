@@ -1,0 +1,137 @@
+/* styles/marquee.css — the slate, and the two pages you click INTO.
+ *
+ * The last three surfaces in the hub, and the last of the per-tab layers after
+ * gridiron (League), podium (Leaders), booth (Game Center) and wire (News).
+ *
+ * They are grouped because they share one fault: every ONE of them already had a
+ * team's own colour available and used none of it. Around the League renders a
+ * hero built almost entirely out of club colour and then drops to grey cards
+ * underneath; the team page names a club, shows its badge, and paints nothing;
+ * the player page knows both his club and his position and uses neither.
+ *
+ * ⚠️ NO backdrop-filter AND NOTHING THAT LOOPS — the contract all five per-tab
+ * sheets hold, enforced by core/motion.test.js.
+ *
+ * ⚠️ AROUND THE LEAGUE POLLS. views/league.js re-renders on the scheduler at the
+ * live cadence, so every entrance here hangs off `.is-first`, exactly as
+ * booth.css does — see the `settled` flag in that view. The team and player pages
+ * do not poll and need no gate.
+ *
+ * The stage surface itself is `.stage`, in primetime.css.
+ */
+
+/* ── The slate ─────────────────────────────────────────────────────────────
+ * One stage under the hero holding every timeslot, so a Sunday reads as one
+ * card wall rather than three stacked boxes. */
+.gm-stage { margin: 14px 20px 0; }
+.gm-slot + .gm-slot { margin-top: 16px; }
+.gm-slot-head { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 8px; }
+.gm-slot-head h4 { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--text-2); }
+.gm-slot-head .kicker { margin-left: auto; }
+
+/* Lit objects on the surface, as everywhere else a stage is used. */
+.gm-stage .game-card {
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.014));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.gm-stage .game-card:hover { background: linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.02)); }
+.gm-stage .game-grid { padding: 0; }
+
+/* ⚠️ EACH SIDE CARRIES ITS OWN CLUB COLOUR. On a sixteen-card Sunday the
+ * abbreviation is a three-letter word you must READ; the rail is what lets
+ * somebody find their team without reading. teamColor() lifts near-black
+ * primaries — four clubs would otherwise get an invisible one. */
+.gm-side { position: relative; padding-left: 9px; }
+.gm-side::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
+  border-radius: 2px; background: var(--tc, transparent);
+}
+/* The trailing side keeps its colour but stops competing with the leader's score. */
+.gm-side:has(.sc.trail)::before { opacity: .45; }
+.gm-foot { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ── The team page ─────────────────────────────────────────────────────────
+ *
+ * ⚠️ IT NAMED A CLUB, SHOWED ITS BADGE AND PAINTED NOTHING. A team page is the
+ * one surface where a club's colour is not decoration but the subject, and this
+ * was a grey panel with a logo in it. The band is the same duotone-and-watermark
+ * gesture stadium.css uses for a game hero, at a fraction of the height — a team
+ * page is scrolled past on the way to the roster, so it gets a band, not a hero.
+ */
+.tm-band {
+  position: relative; overflow: hidden;
+  margin: 14px 20px 0; border-radius: var(--r); padding: 20px 22px;
+  background: linear-gradient(105deg, var(--tc, #243044) 0%, rgba(6,10,18,.92) 68%);
+  border: 1px solid rgba(255,255,255,.1);
+}
+.tm-band::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.14), transparent 60%);
+}
+/* The badge, big and faint, behind the name — gridiron's made-pick watermark rule:
+ * texture, never a second signal, because the same badge is already legible at
+ * full strength two inches to the left. */
+.tm-wm {
+  position: absolute; right: -18px; bottom: -34px; width: 172px; height: 172px;
+  opacity: .1; object-fit: contain; pointer-events: none;
+}
+.tm-band-in { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+.tm-badge { width: 62px; height: 62px; object-fit: contain; flex: 0 0 auto;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.7)); }
+.tm-name { font-family: var(--f-display); font-size: 30px; font-weight: 800; line-height: 1;
+  color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.6); }
+.tm-meta { font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: rgba(255,255,255,.72); margin-top: 6px; }
+.tm-band .badge { border-color: rgba(255,255,255,.3); color: #fff; }
+
+@media (max-width: 560px) {
+  .tm-band { padding: 15px 16px; }
+  .tm-name { font-size: 22px; }
+  .tm-wm { width: 120px; height: 120px; }
+}
+
+/* ── The player page ───────────────────────────────────────────────────────
+ *
+ * ⚠️ IT KNEW HIS CLUB AND HIS POSITION AND USED NEITHER. Both are already on the
+ * page as text. The band tints by CLUB and the position pill carries the
+ * categorical scale — the same two encodings the leaders board settled on, for
+ * the same reason: you should know what somebody plays before you read a word.
+ */
+.pl-band {
+  position: relative; overflow: hidden;
+  margin: 14px 20px 0; border-radius: var(--r); padding: 18px 20px;
+  background: linear-gradient(105deg, var(--tc, #243044) 0%, rgba(6,10,18,.94) 62%);
+  border: 1px solid rgba(255,255,255,.1);
+}
+.pl-band-in { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+.pl-shot {
+  width: 76px; height: 76px; border-radius: 50%; object-fit: cover; flex: 0 0 auto;
+  background: rgba(0,0,0,.35); box-shadow: 0 0 0 2px rgba(255,255,255,.18);
+}
+.pl-id { min-width: 0; }
+.pl-name { font-family: var(--f-display); font-size: 27px; font-weight: 800; line-height: 1.05;
+  color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.6); }
+.pl-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px;
+  font-size: 11px; color: rgba(255,255,255,.75); }
+.pl-vitals { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .04em; }
+
+@media (max-width: 560px) {
+  .pl-band-in { gap: 12px; }
+  .pl-shot { width: 56px; height: 56px; }
+  .pl-name { font-size: 21px; }
+}
+
+/* ── Entrances ─────────────────────────────────────────────────────────────
+ * ⚠️ GATED, because Around the League re-renders on the scheduler. Without the
+ * gate the whole slate re-cascades on every poll — the bug stadium.css's
+ * `heroLogo` shipped with, on this very tab. */
+.gm-stage.is-first { animation: mRise var(--dur) var(--ease-out) both; }
+.tm-band, .pl-band { animation: mRise var(--dur) var(--ease-out) both; }
+
+/* ── Interaction ───────────────────────────────────────────────────────────
+ * Transform only, as everywhere else. */
+.gm-stage .game-card { transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast), border-color var(--dur-fast); }
+.gm-stage .game-card:hover { transform: translate3d(0, -3px, 0); }
+
+body.reduce-motion .gm-stage .game-card:hover { transform: none; }

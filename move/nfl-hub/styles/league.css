@@ -1,0 +1,873 @@
+/* styles/league.css — the NATIVE fantasy league views.
+ *
+ * ⚠️ THESE CLASSES WERE NEVER WRITTEN. views/league-*.js shipped using .btn,
+ * .tbl, .stack, .row-actions, .muted and thirty-odd others, and not one of them
+ * existed in any stylesheet — so the whole league rendered as raw HTML controls
+ * on top of an otherwise finished-looking hub. Everything here is catching the
+ * stylesheet up with markup that already shipped.
+ *
+ * Tokens come from base.css. Nothing here invents a colour.
+ *
+ * ⚠️ Scoped to the league views by class name only. Every other tab shares this
+ * one document — it is a single-page plugin — so a bare `button {}` or `table {}`
+ * rule here would restyle a surface this file has never seen.
+ */
+
+/* ── Text ─────────────────────────────────────────────────────────────────── */
+.muted { color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
+.tiny  { font-size: 11px; color: var(--text-3); }
+.mono  { font-family: var(--f-mono); font-size: 11.5px; color: var(--text-3); }
+.you   { color: var(--gold); font-weight: 600; }
+
+/* A result of an action, not a failure — distinct from the muted explanations
+ * around it, or nobody notices the thing they just did worked. */
+.notice {
+  margin: 10px 0; padding: 9px 12px; border-radius: var(--r);
+  background: rgba(255, 182, 18, 0.08); border: 1px solid rgba(255, 182, 18, 0.22);
+  color: var(--text-2); font-size: 12.5px; line-height: 1.5;
+}
+
+/* ⚠️ USED SINCE BEFORE THIS FILE AND NEVER DEFINED, so every form error in the
+ * league section — including the settings form's validation refusals — rendered
+ * as plain body text among plain body text. An error nobody's eye catches is an
+ * error that reads as "the save did nothing". Found by auditing the classes the
+ * views emit against the ones the stylesheets define. */
+.imp-bad {
+  margin: 8px 0; padding: 8px 11px; border-radius: var(--r);
+  background: rgba(176, 69, 90, 0.12); border: 1px solid rgba(176, 69, 90, 0.4);
+  color: #e8798c; font-size: 12.5px; line-height: 1.45;
+}
+
+.section-body { padding-bottom: 24px; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text-2);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+/* 🔴 `hidden` DOES NOTHING WITHOUT THIS, and a button shipped visible because of
+ * it. The UA stylesheet's `[hidden] { display: none }` is a bare attribute
+ * selector; `.btn` above is a CLASS selector and therefore more specific, so its
+ * `display: inline-flex` wins and the attribute is silently ignored. The crop
+ * dialog's "Use whole image" is meant to appear only for animated images and was
+ * showing for every one of them — offering to upload the original uncropped,
+ * right after the user had finished framing a crop.
+ *
+ * ⚠️ This applies to EVERY `.btn` in the plugin, not just that one. Anything
+ * setting an explicit `display` needs its own `[hidden]` override. */
+.btn[hidden] { display: none; }
+.btn:hover:not(:disabled) { background: var(--panel); color: var(--text); border-color: var(--text-3); }
+/* ⚠️ A disabled control must LOOK disabled. Half this UI disables buttons while
+ * a call is in flight, and without this they stay bright and invite a second
+ * click that silently does nothing. */
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: var(--gold); border-color: transparent; color: #05070b; font-weight: 700; }
+.btn.primary:hover:not(:disabled) { background: #ffc63f; color: #05070b; }
+.btn.danger { color: var(--loss); border-color: rgba(176, 69, 90, 0.4); background: rgba(176, 69, 90, 0.1); }
+.btn.danger:hover:not(:disabled) { background: rgba(176, 69, 90, 0.2); color: #e8798c; }
+
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.season-strip { padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* A whole row that is itself a button — the league picker. */
+.row-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%;
+  font: inherit; text-align: left; cursor: pointer;
+  padding: 11px 13px; border-radius: var(--r);
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+}
+.row-btn:hover { border-color: var(--line-2); background: var(--panel-2); }
+.row-main { font-family: var(--f-display); font-size: 15px; font-weight: 700; }
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+.stack { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; max-width: 380px; }
+.stack label, .inline { display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.inline { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+
+.stack input, .stack select, .inline input, .inline select,
+input[data-act], select[data-act] {
+  font: inherit; font-size: 13px;
+  padding: 7px 10px; border-radius: var(--r-sm);
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+  text-transform: none; letter-spacing: 0;
+}
+.stack input:focus, .stack select:focus, .inline input:focus,
+input[data-act]:focus, select[data-act]:focus {
+  outline: none; border-color: var(--gold);
+}
+.inline input[type="number"], input[data-act="league-week-input"] { width: 72px; }
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+.tbl th {
+  text-align: left; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; padding: 8px 10px;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.tbl td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.045); color: var(--text-2); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl th.num, .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* The viewer's own team, so it is findable in a twelve-row table at a glance. */
+.tbl tr.mine td { color: var(--text); background: rgba(255, 182, 18, 0.05); }
+/* ⚠️ The line sits AFTER the last qualifying seed, marking the cut rather than
+ * decorating the team — a border on the row above would read as "this team is
+ * out", which is the opposite of true. */
+.tbl tr.playoff-cut td { border-bottom: 2px solid rgba(255, 182, 18, 0.45); }
+.tbl td .slot, .tbl td.slot {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700;
+}
+.tbl.lineup select { width: 100%; max-width: 260px; }
+
+/* ── Team accent ──────────────────────────────────────────────────────────────
+ *
+ * A fantasy team's own colour, on its own rows and cards.
+ *
+ * ⚠️ NOT teamColor(). That maps an NFL abbreviation to a franchise's colour, and
+ * these rows are FANTASY teams — server/ops-league.js stores one as
+ * `{ id, name, ownerId, coOwners }` with no colour at all. `managerColor()`
+ * derives a stable one from the team ID, which is the same source the draft
+ * hero's duotone uses, so a manager is the same colour on every surface.
+ *
+ * ⚠️ A BORDER, NOT A BACKGROUND. These rows already carry meaning in their
+ * background — `.mine` is gold-tinted and `.playoff-cut` draws the qualifying
+ * line — and a second tint would fight both. The left edge is unclaimed.
+ */
+.team-accent { border-left: 3px solid var(--mgr, transparent); }
+.tbl tr.team-accent > td:first-child { padding-left: 9px; }
+/* The matchup side is a flex button, so it needs the padding on itself. This
+ * also covers the bracket seats and the bye row — all three are `.side`. */
+.matchup .side.team-accent { padding-left: 9px; }
+/* The trade board's per-team block has no padding of its own, so the border
+ * would otherwise sit flush against the heading. */
+.tb-team.team-accent { padding-left: 9px; }
+
+/* ── Matchups and brackets ────────────────────────────────────────────────── */
+.matchup {
+  display: flex; align-items: center; gap: 12px; margin: 8px 0;
+  padding: 11px 13px; border-radius: var(--r);
+  background: var(--ink-2); border: 1px solid var(--line);
+}
+.matchup .side {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  font: inherit; font-size: 13px; color: var(--text-2);
+  background: none; border: none; padding: 0; text-align: left; cursor: pointer;
+}
+.matchup .side .team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup .side .pts { margin-left: auto; font-family: var(--f-display); font-size: 17px; font-weight: 700; color: var(--text); }
+/* The winner, not merely the higher number — flat text makes a reader compare
+ * two decimals to answer a question the layout should answer for them. */
+.matchup .side.winning { color: var(--text); }
+.matchup .side.winning .pts { color: var(--win); }
+.matchup .vs { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+.matchup.bye { color: var(--text-3); }
+
+/* Both lineups of an expanded matchup, side by side.
+ *
+ * ⚠️ TWO COLUMNS IS THE FEATURE, not decoration. A single full-width `.tbl`
+ * strands the points column against the far edge of a wide pane, metres from the
+ * player it belongs to — which is what the one-sided version looked like. Halving
+ * the width pulls the number back beside the name and puts the two lineups where
+ * they can be read against each other. Collapses to one column when two no
+ * longer fit, since a squeezed pair is worse than a stack. */
+.lineups {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin: -2px 0 10px;
+}
+.lineup-col { min-width: 0; }
+.lineup-head {
+  display: flex; align-items: center; gap: 7px; padding: 7px 9px;
+  border: 1px solid var(--line); border-bottom: none;
+  border-radius: var(--r) var(--r) 0 0; background: var(--ink-2);
+  font-size: 12px; font-weight: 700; color: var(--text-2);
+}
+.lineup-head.team-accent { padding-left: 9px; }
+.lineup-head .team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The head is the table's cap, so no gap between them. */
+.lineups .tbl { margin: 0; border: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); }
+@media (max-width: 760px) { .lineups { grid-template-columns: 1fr; } }
+.matchup.bracket-game .seed {
+  font-family: var(--f-mono); font-size: 11px; color: var(--text-3);
+  min-width: 26px; flex-shrink: 0;
+}
+
+.champion { color: var(--gold); font-weight: 700; font-size: 13px; }
+.champion-line { margin-top: 12px; color: var(--gold); font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+/* ⚠️ Visibly a SECOND bracket, not a continuation of the first. Run together,
+ * the also-rans read as more playoff rounds. */
+.consolation { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+.consolation h3 { font-family: var(--f-display); font-size: 14px; font-weight: 700; color: var(--text-2); }
+
+/* ── Draft and moves ──────────────────────────────────────────────────────── */
+.pick-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.pick { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12.5px; color: var(--text-2); }
+.fa { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.045); }
+.fa:last-child { border-bottom: none; }
+.check { accent-color: var(--gold); }
+
+.trade { margin: 10px 0; padding: 11px 13px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.trade-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; }
+.trade-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.trade-legs { font-size: 12.5px; color: var(--text-2); line-height: 1.7; }
+
+h4 {
+  font-family: var(--f-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.03em; color: var(--text-2);
+  margin: 16px 0 6px; text-transform: uppercase;
+}
+
+/* ═══ DRAFT BOARD ══════════════════════════════════════════════════════════
+ *
+ * ⚠️ THE BOARD IS THE PRODUCT. A fantasy draft is the one moment the whole
+ * league is in the room at once; a list of text rows does not carry it. Rounds
+ * run down, teams run across, every pick is coloured by position — which is the
+ * only way to see the shape of a roster, or a run on running backs, at a glance.
+ */
+
+.db-scroll { overflow-x: auto; padding-bottom: 6px; }
+/* ⚠️ Fixed column width, not 1fr. Auto columns resize as names arrive, so the
+ * board visibly reflows on every pick — in a live draft that is nauseating. */
+.db { display: grid; grid-template-columns: 32px repeat(var(--db-cols), 132px); gap: 3px; min-width: min-content; }
+.db-row { display: contents; }
+
+.db-rd {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-display); font-size: 12px; font-weight: 700;
+  color: var(--text-3); background: var(--ink-2); border-radius: var(--r-sm);
+}
+.db-th {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-3); padding: 6px 8px; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--ink-2); border-radius: var(--r-sm);
+}
+.db-th.mine { color: var(--gold); }
+
+.db-cell {
+  position: relative; min-height: 50px; padding: 6px 8px;
+  border-radius: var(--r-sm); background: rgba(255,255,255,0.022);
+  border: 1px solid transparent; overflow: hidden;
+}
+.db-empty, .db-cell:not(.db-made) { display: flex; flex-direction: column; justify-content: center; }
+.db-no { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); opacity: 0.5; }
+.db-mine { background: rgba(255,182,18,0.05); }
+/* Snake direction, in EVERY cell — the board scrolls sideways, so a direction
+ * that lived only on the round label would vanish exactly when a wide league
+ * needs it. Decorative: aria-hidden in the markup. */
+.db-dir {
+  position: absolute; left: 6px; bottom: 4px;
+  font-size: 14px; line-height: 1; font-weight: 700;
+  color: var(--gold); opacity: 0.75;
+}
+/* On a made pick the cell already carries a position colour and a name, so the
+ * arrow steps back — but stays readable. */
+.db-made .db-dir { opacity: 0.5; font-size: 12px; }
+
+/* A made pick: the position colour is the whole point of the cell. */
+.db-made { border-left: 3px solid var(--db-pos, var(--text-3)); background: var(--ink-2); }
+.db-name {
+  display: block; font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.25;
+  /* Two lines before truncating: "Christian McCaffrey" fits, and a board of
+   * ellipses is a board you cannot read at a glance. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.db-sub { display: block; font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-3); margin-top: 2px; }
+.db-auto {
+  position: absolute; top: 4px; right: 5px; font-size: 8px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3); opacity: 0.7;
+}
+
+/* ⚠️ The pick that just landed animates ONCE, from the position colour. A board
+ * where everything moves is noise; a board where the new thing moves is a
+ * broadcast graphic. */
+.db-made { animation: dbLand var(--dur) var(--ease-spring) both; }
+@keyframes dbLand {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.db-live { border-color: var(--gold); background: rgba(255,182,18,0.08); }
+.db-clocktag {
+  display: block; margin-top: 3px; font-size: 8.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 700; color: var(--gold);
+}
+/* Breathing, not blinking — a pulse you can sit next to for three hours.
+ *
+ * ⚠️ COMPOSITED, NOT PAINTED. This animated box-shadow originally, which
+ * repaints the cell every frame for the whole draft; the same pattern measured
+ * 68% of desktop idle GPU elsewhere in this project, because a repaint under a
+ * glass panel re-blurs the entire surface at refresh rate. A scaled, fading
+ * border is transform+opacity only, which never leaves the compositor. */
+.db-live::after {
+  content: ''; position: absolute; inset: 0; border-radius: var(--r-sm);
+  border: 1px solid rgba(255,182,18,0.55);
+  animation: dbPulse 2.4s var(--ease-out) infinite;
+  pointer-events: none; will-change: transform, opacity;
+}
+@keyframes dbPulse {
+  from { transform: scale(1);    opacity: 0.75; }
+  to   { transform: scale(1.09); opacity: 0; }
+}
+
+/* ── On the clock ─────────────────────────────────────────────────────────── */
+.db-clock {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+  margin: 10px 0 14px; padding: 12px 15px; border-radius: var(--r);
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  border: 1px solid var(--line);
+}
+.db-clock.is-me { border-color: rgba(255,182,18,0.45); background: linear-gradient(90deg, rgba(255,182,18,0.14), rgba(255,182,18,0.02)); }
+.db-clock-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--text-3); }
+.db-clock.is-me .db-clock-label { color: var(--gold); }
+.db-clock-team { font-family: var(--f-display); font-size: 21px; font-weight: 700; color: var(--text); }
+.db-clock-pick { font-size: 11.5px; color: var(--text-3); margin-left: auto; }
+.db-clock-done { border-color: rgba(79,158,127,0.4); background: rgba(79,158,127,0.1); }
+.db-clock-done .db-clock-label { color: var(--win); }
+
+/* ── Filters, search, pool ────────────────────────────────────────────────── */
+.db-filters { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.db-filter {
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  background: var(--ink-2); border: 1px solid var(--line); color: var(--text-3);
+}
+.db-filter:hover { color: var(--text); }
+.db-filter.on { background: var(--db-pos, var(--gold)); border-color: transparent; color: #05070b; }
+.db-filter-n { opacity: 0.65; font-weight: 600; }
+/* Roster need, e.g. `RB 4/2` — four rostered against two starting slots. It sits
+ * BEFORE the availability count and is deliberately allowed to exceed the slot
+ * number, because the surplus is what a drafter is reading for. */
+.db-filter-need { font-family: var(--f-mono); font-size: 10px; opacity: 0.9; font-weight: 700; }
+
+.db-search {
+  width: 100%; font: inherit; font-size: 13px; padding: 8px 12px;
+  border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); color: var(--text);
+}
+.db-search:focus { outline: none; border-color: var(--gold); }
+
+.db-pool { display: flex; flex-direction: column; }
+.db-pool-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.db-pool-row:hover { background: rgba(255,255,255,0.025); }
+.db-rank { font-family: var(--f-mono); font-size: 11px; color: var(--text-3); min-width: 26px; text-align: right; }
+.db-take { margin-left: auto; flex-shrink: 0; }
+
+/* ── Roster progress ──────────────────────────────────────────────────────── */
+.db-roster { display: flex; flex-direction: column; gap: 3px; }
+.db-slot {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+  border-radius: var(--r-sm); background: rgba(255,255,255,0.02);
+}
+/* ⚠️ An EMPTY slot is the most useful thing on a draft screen. Dimming the
+ * filled ones would hide exactly what a manager is scanning for. */
+.db-slot.filled { background: var(--ink-2); }
+.db-slot-tag {
+  min-width: 38px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--db-pos, var(--text-3)); text-transform: uppercase;
+}
+.db-slot-name { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-slot-empty { font-size: 12px; color: var(--text-3); opacity: 0.5; }
+.db-bench { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 6px; padding: 5px 8px; }
+
+/* ── Mock draft layout ────────────────────────────────────────────────────── */
+.mock-setup { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
+.mock-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(200px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .mock-cols { grid-template-columns: 1fr; } }
+.mock-pool-col { min-width: 0; }
+.mock-side { min-width: 0; }
+
+/* ═══ PLAYER VISUALS ═══════════════════════════════════════════════════════ */
+.pv-chip { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.pv-avatar {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--pv-ring, var(--line-2));
+}
+.pv-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+/* ⚠️ The monogram sits UNDER the portrait, not instead of it. When a headshot
+ * 404s the img removes itself and this is already in place — no gap, no reflow,
+ * no second request. Four active players in five never get a portrait at all. */
+.pv-mono { font-family: var(--f-display); font-size: 0.82em; font-weight: 700; letter-spacing: 0.02em; }
+.pv-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pv-name { font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-meta { display: flex; align-items: center; gap: 6px; }
+.pv-sub { font-size: 10.5px; color: var(--text-3); }
+.pv-chip.compact .pv-name { font-size: 12px; }
+
+.pv-pos {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.08em; padding: 2px 6px;
+  border-radius: 4px; color: var(--pv-pos, var(--text-3));
+  background: color-mix(in srgb, var(--pv-pos, #888) 16%, transparent);
+}
+.pv-team { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-3); letter-spacing: 0.05em; }
+.pv-team img { width: 13px; height: 13px; object-fit: contain; }
+.pv-team-none { opacity: 0.6; }
+
+/* Roster + waiver rows carry a portrait now, so they need room to breathe. */
+.lineup-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lineup-pick select { flex: 1; min-width: 150px; }
+.fa { justify-content: space-between; }
+.fa .btn { flex-shrink: 0; }
+
+/* ── Standings ────────────────────────────────────────────────────────────── */
+.seed-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  font-size: 10.5px; font-weight: 700; font-family: var(--f-display);
+  background: rgba(255,255,255,0.05); color: var(--text-3);
+}
+/* ⚠️ Marks who is IN, which is the question a standings table is asked. The cut
+ * line alone says where the boundary is but not which side anybody is on. */
+.seed-badge.in { background: rgba(255,182,18,0.16); color: var(--gold); }
+.std-team { display: block; }
+.std-bar {
+  display: block; height: 3px; margin-top: 5px; border-radius: 2px;
+  background: rgba(255,255,255,0.05); overflow: hidden; max-width: 190px;
+}
+.std-bar-fill {
+  display: block; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255,182,18,0.5), rgba(255,182,18,0.9));
+  transition: width var(--dur) var(--ease-out);
+}
+
+/* "you" as a badge rather than a parenthetical — findable at a glance in a
+ * twelve-row table, which "(you)" in body text is not. */
+.you {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  background: rgba(255,182,18,0.16); color: var(--gold);
+}
+
+/* ── Matchup score bar ────────────────────────────────────────────────────── */
+/* ⚠️ Scaled to the HIGHER of the two scores, so the bars answer "by how much"
+ * rather than "are these both large numbers", which they always are. */
+.mu-bar { display: block; height: 3px; margin-top: 6px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.mu-bar-fill { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,0.22); transition: width var(--dur) var(--ease-out); }
+.side.winning .mu-bar-fill { background: linear-gradient(90deg, rgba(79,158,127,0.5), rgba(79,158,127,0.95)); }
+
+/* ── Draft grades ─────────────────────────────────────────────────────────── */
+.mock-grades { margin: 14px 0 4px; padding: 14px 16px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.grade-list { display: flex; flex-direction: column; gap: 4px; }
+.grade-row { display: grid; grid-template-columns: 22px minmax(70px, 1fr) minmax(60px, 3fr) 42px; align-items: center; gap: 10px; padding: 4px 0; }
+.grade-row.mine .grade-team { color: var(--gold); font-weight: 700; }
+.grade-rank { font-family: var(--f-mono); font-size: 11px; color: var(--text-3); text-align: right; }
+.grade-team { font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grade-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.grade-bar-fill { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(79,158,127,0.45), rgba(79,158,127,0.95)); animation: gradeGrow var(--dur-slow) var(--ease-out) both; }
+@keyframes gradeGrow { from { width: 0 !important; } }
+.grade-mark { font-family: var(--f-display); font-size: 17px; font-weight: 700; text-align: right; }
+.grade-mark[data-grade="A"] { color: var(--win); }
+.grade-mark[data-grade="B"] { color: var(--gold); }
+.grade-mark[data-grade="C"] { color: var(--text-3); }
+
+/* ── Trending ─────────────────────────────────────────────────────────────── */
+.trend-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+.trend-head { margin: 0 0 6px; }
+/* ⚠️ Direction is carried by COLOUR AND AN ARROW, never colour alone — about 1 in
+ * 12 men cannot separate the red from the green. */
+.trend-head.up::before { content: '▲ '; color: var(--win); }
+.trend-head.down::before { content: '▼ '; color: var(--loss); }
+.trend-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 5px 6px; border-radius: var(--r-sm);
+}
+.trend-row:hover { background: rgba(255,255,255,0.03); }
+.trend-count { font-family: var(--f-mono); font-size: 11px; flex-shrink: 0; }
+.trend-count.up { color: var(--win); }
+.trend-count.down { color: var(--loss); }
+
+/* ── Weekly recap ─────────────────────────────────────────────────────────── */
+.recap { margin: 14px 0; padding: 13px 15px; border-radius: var(--r); background: var(--ink-2); border: 1px solid var(--line); }
+.rc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.rc-item { display: flex; flex-direction: column; gap: 3px; }
+.rc-label { font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.rc-value { font-size: 13px; color: var(--text-2); }
+.rc-value b { font-family: var(--f-display); font-size: 16px; color: var(--text); margin-left: 3px; }
+/* The story of the week gets the colour — it is the one people repeat. */
+.rc-item.unlucky .rc-label { color: var(--loss); }
+.rc-item.unlucky .rc-value b { color: var(--loss); }
+
+/* A chip that opens the player page says so on hover; one without an id does
+ * not pretend to. */
+.pv-chip.pv-open { cursor: pointer; border-radius: var(--r-sm); }
+.pv-chip.pv-open:hover .pv-name { color: var(--gold); }
+.pv-chip.pv-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── Power rankings ───────────────────────────────────────────────────────── */
+.power { margin: 14px 0; }
+.power h4 { margin-bottom: 2px; }
+/* Luck reads as a direction, so it needs a sign as well as a colour. */
+.tbl td.lucky { color: var(--win); }
+.tbl td.unlucky { color: var(--loss); }
+
+/* ── The pick clock ───────────────────────────────────────────────────────── */
+/* ⚠️ TABULAR FIGURES ARE NOT A FLOURISH. This repaints four times a second, and
+ * in a proportional face "1:11" is narrower than "1:00" — so the panel header
+ * twitches on every tick. Fixed-width digits are what make a live clock sit
+ * still. */
+.clock {
+  font-family: var(--f-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.clock.urgent { color: var(--loss); }
+/* Paused reads as deliberately stopped, not as broken or as expired. */
+.clock.paused { color: var(--text-3); opacity: 0.75; }
+
+/* ── Injury designations and IR ───────────────────────────────────────────── */
+.inj-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--loss);
+  background: rgba(198, 74, 74, 0.13);
+  border: 1px solid rgba(198, 74, 74, 0.3);
+}
+/* An empty IR slot is shown so a manager can see the spot exists at all. It is
+ * deliberately quiet — it is capacity, not a call to action. */
+.tbl tr.ir-empty td { opacity: 0.55; }
+.btn.tiny[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+
+/* ── The draft queue ──────────────────────────────────────────────────────────
+ * The queue is what lets autodraft express a preference; before it shipped the
+ * `draft:queue` op had no caller and every autopick fell to the league ranking. */
+.db-queue { margin-bottom: 14px; }
+.db-q-head {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--text-3); margin-bottom: 6px;
+}
+.db-q-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 7px;
+  border-radius: var(--r-sm); background: var(--ink-2); margin-bottom: 3px;
+}
+.db-q-rank { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); min-width: 14px; }
+.db-q-name { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.db-q-meta { font-size: 9.5px; color: var(--text-3); letter-spacing: 0.05em; }
+.db-q-up, .db-q-rm {
+  font: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 3px 7px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); color: var(--text-3);
+}
+.db-q-up { margin-left: auto; }
+.db-q-up:hover, .db-q-rm:hover { color: var(--text); border-color: var(--text-3); }
+
+/* ⚠️ The best idea in Sleeper's draft UI: a line showing how far down the queue
+ * your next pick is likely to reach. Without it a queue is a wish list. */
+.db-q-divider {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--f-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--gold); margin: 7px 0 5px;
+}
+.db-q-divider::before, .db-q-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,182,18,0.35);
+}
+
+/* ── AutoSubs ─────────────────────────────────────────────────────────────────
+ * A designated backup for a starter who does not play. The note is the point:
+ * a manager has to see the arrangement without opening anything, which is why
+ * it reads as a sentence rather than a second dropdown value. */
+.autosub { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.autosub select {
+  font: inherit; font-size: 10.5px; padding: 2px 6px;
+  border-radius: var(--r-sm); background: var(--ink-2);
+  border: 1px solid var(--line); color: var(--text-3);
+}
+.autosub-note {
+  position: relative; padding-left: 12px;
+  font-size: 10.5px; color: var(--text-3); letter-spacing: 0.02em;
+}
+/* The dashed elbow linking the sub back to the starter it covers. */
+.autosub-note::before {
+  content: ''; position: absolute; left: 0; top: 50%;
+  width: 8px; border-top: 1px dashed var(--text-3); opacity: 0.5;
+}
+
+/* ── Trade block ──────────────────────────────────────────────────────────────
+ * The heart carries a COUNT, because the question a manager has is not "who is
+ * popular" but "would anyone take him?" — and a number answers that where a
+ * plain icon does not. */
+.tb-team { margin-bottom: 10px; }
+.tb-team h5 {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--text-3); margin: 0 0 4px;
+}
+.tb-count {
+  margin-left: 6px; font-family: var(--f-mono); font-size: 10px;
+  color: var(--gold); font-weight: 700;
+}
+
+/* ── The waiver wire ──────────────────────────────────────────────────────────
+ * A dropped player is unaddable until he clears, so the deadline is the whole
+ * content of the row — without it a manager only learns the rule by failing. */
+.ww-row {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 5px 7px; border-radius: var(--r-sm); background: var(--ink-2);
+  margin-bottom: 3px;
+}
+.ww-name { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.ww-when { font-family: var(--f-mono); font-size: 10px; color: var(--gold); }
+.ww-by { font-size: 10px; color: var(--text-3); margin-left: auto; }
+
+
+/* ── Team identity ────────────────────────────────────────────────────────────
+ *
+ * A franchise's own picture, and the controls that set it.
+ *
+ * ⚠️ THE MARK IS THE SAME BOX WHETHER OR NOT THERE IS AN IMAGE. The monogram is
+ * not a placeholder waiting on a load — for every team that never uploads
+ * anything it IS the final state — so a standings table must not reflow as
+ * avatars resolve. Exactly the rule .pv-avatar already holds for headshots.
+ *
+ * ⚠️ THE MANAGER COLOUR SURVIVES. --tm tints the ring and the monogram, and the
+ * row's left accent border is untouched, so a league where nobody has uploaded
+ * anything looks precisely as it did. An avatar is an upgrade on the colour.
+ */
+.tm-avatar {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--tm, var(--line-2));
+}
+.tm-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+/* Under the image, never instead of it: when a signed URL expires the img
+ * removes itself and the initials are already in place. */
+/* ⚠️ `em` HERE IS RELATIVE TO THE RING, NOT TO THE PAGE, and that only holds
+ * because teamAvatar() sets `font-size:<size>px` on .tm-avatar itself. Without
+ * that inline value these initials inherit whatever text surrounds them — which
+ * shipped a ~5px monogram inside a 26px standings ring. Change one, change both. */
+.tm-mono {
+  font-family: var(--f-display); font-size: 0.4em; font-weight: 800;
+  letter-spacing: 0.02em; color: var(--tm, var(--text-2)); line-height: 1;
+}
+.tm-mark { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.tm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ⚠️ THE HEADER IS A COLUMN NOW, not a line of text. A 22px mark beside an
+ * uppercase 10px name in a board column ~90px wide leaves no room for the name;
+ * stacked, both are legible and the row height is set by the mark either way. */
+.db-th { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.db-th .tm-name { max-width: 100%; }
+/* The hero's team line keeps its display face and gains a mark beside it. */
+.gr-team { display: flex; align-items: center; gap: 10px; }
+/* The trade board's per-team heading. */
+.tb-team h5 { display: flex; align-items: center; gap: 7px; }
+
+/* ── Banners ──────────────────────────────────────────────────────────────────
+ * Absent rather than empty: a league with no banner renders no band at all, so
+ * there is never a grey scar where a picture is not. */
+.tm-banner {
+  margin: 0 0 12px; border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--line); background: var(--ink-2);
+}
+.tm-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tm-banner-league { aspect-ratio: 5 / 1; }
+.tm-banner-team { aspect-ratio: 6 / 1; }
+
+/* ── The identity card ──────────────────────────────────────────────────────── */
+.tm-id { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.tm-rename { display: flex; align-items: flex-end; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.tm-rename label { flex: 1; min-width: 160px; }
+.tm-pick { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+/* ⚠️ The shape guidance, beside the button that needs it rather than in a
+ * paragraph underneath. Every banner is `object-fit: cover`, so a wrong-shaped
+ * image is cropped from the centre silently — this line is the only warning. */
+.tm-pick-hint { font-size: 10.5px; color: var(--text-3); }
+.tm-pick-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); min-width: 96px;
+}
+/* ⚠️ THE FILE INPUT IS INSIDE THE LABEL AND HIDDEN, so the label IS the button
+ * and the browser's own "no file chosen" text never appears. Clicking the label
+ * opens the picker natively — no click handler, which matters because this view
+ * re-renders on every refresh and a bound handler would be gone by the time the
+ * dialog returned. */
+.tm-pick-btn { position: relative; overflow: hidden; cursor: pointer; }
+.tm-pick-btn input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+}
+.tm-pick-btn.is-disabled { opacity: .5; pointer-events: none; }
+
+/* ── The crop dialog ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ IT LIVES ON document.body, OUTSIDE THE ROUTER'S MOUNT, so a re-render of the
+ * League tab underneath cannot destroy the canvas mid-drag. That is also why it
+ * carries its own scrim rather than relying on a panel.
+ *
+ * ⚠️ NO backdrop-filter. league.css is not one of the sheets core/motion.test.js
+ * polices for it, but the rule exists for a reason that applies here too: a blur
+ * behind a surface that moves on every pointer event re-blurs on every frame, and
+ * a 15px animated dot under a glass panel already measured as ~68% of idle GPU.
+ */
+.cropper { position: fixed; inset: 0; z-index: 300; display: flex;
+  align-items: center; justify-content: center; }
+.cr-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.66); }
+.cr-panel {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 18px; border-radius: var(--r); background: var(--ink-1, #12161d);
+  border: 1px solid var(--line); box-shadow: 0 24px 70px rgba(0,0,0,.6);
+  max-width: min(92vw, 480px);
+}
+.cr-title { margin: 0; font-family: var(--f-display); font-size: 15px; color: var(--text); }
+.cr-hint { margin: 0; font-size: 10.5px; color: var(--text-3); }
+.cr-stage { position: relative; overflow: hidden; border-radius: var(--r-sm);
+  background: #0a0d12; max-width: 100%; }
+/* `touch-action: none` is what makes a drag work on a touchscreen — without it
+ * the browser claims the gesture for scrolling and the image never moves. */
+.cr-canvas { display: block; cursor: grab; touch-action: none; }
+.cr-canvas.is-dragging { cursor: grabbing; }
+/* The frame sits ABOVE the canvas and takes no pointer events, so it shows the
+ * crop boundary without ever swallowing a drag. */
+.cr-frame { position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.22); border-radius: var(--r-sm); }
+.cr-frame.is-circle { border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.22), 0 0 0 9999px rgba(0,0,0,.45); }
+.cr-note { margin: 0; font-size: 11px; color: var(--gold); text-align: center; max-width: 380px; }
+.cr-note.is-bad { color: var(--bad, #f2557d); }
+.cr-zoom-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.cr-zoom-label { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); }
+.cr-zoom { flex: 1; }
+.cr-actions { display: flex; gap: 8px; width: 100%; }
+.cr-actions .btn { flex: 1; }
+.cr-out { margin: 0; font-size: 10px; color: var(--text-3); }
+
+/* Draft controls: the chime toggle and the auto-draft escape hatch for a manager
+ * who has not turned up. Sits directly under the stage, where the clock already
+ * has everyone's attention. */
+.draft-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.draft-controls .btn.on { border-color: var(--win, #35c46a); color: var(--text); }
+
+/* ── My Roster: two columns ────────────────────────────────────────────────
+ *
+ * ⚠️ THE STARTER ROWS CANNOT FILL A WIDE PANE AND SHOULD NOT TRY. Each is a
+ * slot label plus a <select> capped at 260px (`.tbl.lineup select`), so on a
+ * desktop pane the right two-thirds of every row was empty while the bench sat
+ * far below the fold. Reported 2026-08-31 as "a lot of empty space". Putting
+ * the bench in that space is not decoration: setting a lineup means moving a
+ * player between the two lists, and they were never visible at once.
+ *
+ * ⚠️ NOT A 50/50 SPLIT. The starters column carries the selects and needs the
+ * room; the bench is name chips and two buttons. `1.15fr 1fr` gives the wider
+ * half to the side that has wide controls in it.
+ *
+ * ⚠️ COLLAPSES BEFORE THE SELECTS DO. Below 900px a 260px select plus its slot
+ * label and chip no longer fits in half a pane, so the columns stack rather
+ * than squeezing — the phone layout is the old one-column layout, which was
+ * always correct at that width and is why this was only ever a desktop
+ * complaint.
+ */
+.ros-cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 6px 26px; align-items: start; }
+.ros-col { min-width: 0; }
+/* The first heading in each column lines up with the other's; the panel's own
+ * padding already provides the space above. */
+.ros-col > h4:first-child { margin-top: 0; }
+@media (max-width: 900px) { .ros-cols { grid-template-columns: 1fr; gap: 0 0; } }
+
+/* ── Selectable player tables (trade block, trade proposal) ────────────────
+ *
+ * 🔴 REPLACES A WALL OF INLINE CHECKBOXES. `<label class="check">` per player
+ * reflowed twenty names into a paragraph across the full pane width, which is
+ * unreadable at roster size and is the state this screen shipped in.
+ *
+ * ⚠️ The whole name is a <label> for its checkbox, so the click target is the
+ * row rather than a 13px box. That is the single biggest usability difference
+ * here and it costs one `for=` attribute.
+ */
+.pick-table { max-height: 340px; overflow-y: auto; }
+.pick-table table { width: 100%; }
+/* ⚠️ Sticky so the columns stay named while the list scrolls under them —
+ * otherwise "Inj" and "Val" are two unexplained numbers ten rows down. */
+.pick-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--ink-2);
+  font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; text-align: left;
+  padding: 5px 8px; border-bottom: 1px solid var(--line);
+}
+.pick-table thead th.num { text-align: right; }
+.pick-table td { padding: 3px 8px; vertical-align: middle; }
+.pick-cell { width: 22px; padding-right: 0 !important; }
+.pick-label { display: block; cursor: pointer; min-width: 0; }
+.pick-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+/* A checked row is visibly part of the offer without re-reading the boxes. */
+.pick-table tbody tr:has(.check:checked) { background: rgba(255, 182, 18, 0.07); }
+
+/* The two sides of a proposal sit in the existing .trade-cols grid; this keeps
+ * each side's table from being squeezed under its own header. */
+.trade-cols .pick-table { max-height: 420px; }
+
+/* ── "Your season" fixture strip, under the week's pairings ────────────────
+ * Wraps rather than scrolls: an 14-week season is two tidy rows on a desktop
+ * pane and the whole point is seeing the run of it at once. */
+.season-strip { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.season-strip h4 { margin: 0 0 9px; }
+.fx-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.fx {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  background: var(--ink-2); border: 1px solid var(--line);
+  font-size: 12px; color: var(--text-2); min-width: 0;
+}
+.fx-wk { font-size: 9.5px; letter-spacing: 0.07em; color: var(--text-3); font-weight: 700; }
+.fx-at { font-size: 10px; color: var(--text-3); }
+.fx-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+/* ⚠️ The current week is marked by BORDER AND WEIGHT, not by colour alone —
+ * the opponent name already carries that manager's accent colour, so a second
+ * colour signal in the same chip competes with it. */
+.fx.now { border-color: var(--gold); color: var(--text); font-weight: 600; }
+.fx.past { opacity: 0.5; }
+
+/* Week navigation in the Matchups header. */
+.wk-nav { display: inline-flex; align-items: center; gap: 6px; }
+.wk-label { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+/* The fixture chips double as the week picker, so they take button reset. */
+.fx { font: inherit; text-align: left; cursor: pointer; }
+.fx:hover:not(.now) { border-color: var(--text-3); }
+
+/* Projected points and bye week, on the roster and in a matchup lineup. */
+.proj { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.bye { font-variant-numeric: tabular-nums; color: var(--text-3); }
+/* ⚠️ A bye in the week being viewed is the one thing that explains a 0.00
+ * without the manager having done anything wrong, so it is marked, not merely
+ * printed. `.past` dims a bye already gone by — still worth showing, because it
+ * explains an old zero, but it is no longer news. */
+.bye.on-bye { color: var(--gold); font-weight: 700; }
+.bye.past { opacity: 0.45; }
+.lineup-detail tr.row-bye td { background: rgba(255, 182, 18, 0.05); }
+.lineup-detail thead th, .tbl.lineup thead th {
+  font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 700; text-align: left; padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.lineup-detail thead th.num, .tbl.lineup thead th.num { text-align: right; }
+
+/* ── Trade veto vote ───────────────────────────────────────────────────────
+ * A trade in review used to show the word "review" and a date. The vote behind
+ * it was fully implemented and completely invisible. */
+.veto-pane { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); }
+.veto-pane p { margin: 5px 0 0; }
+/* One pip per vote NEEDED, filled per vote CAST — so the threshold is legible
+ * at a glance without reading the sentence, and "6 pips" makes a unanimous
+ * requirement obvious in a way "6" does not. */
+.veto-bar { display: flex; gap: 4px; }
+.veto-pip {
+  width: 26px; height: 5px; border-radius: 3px;
+  background: var(--line); transition: background 160ms ease;
+}
+.veto-pip.on { background: var(--loss, #b0455a); }

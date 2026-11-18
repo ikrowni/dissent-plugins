@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <!-- Governs every relative path in this FILE (so they start with nfl-hub/).
+       Paths inside a CSS file resolve relative to that CSS file instead. -->
+  <title>NFL Hub</title>
+  <!-- No ?v= cache-busters anywhere here. Caddy serves /plugins/** as
+       "no-store, no-cache, must-revalidate", so a buster buys nothing — and on the
+       module script it actively breaks: app.js?v=1 and app.js are two DIFFERENT module
+       instances, so the views (which import ../core/app.js) would get a second, fresh
+       copy with no replay and no context, double-booting the plugin. -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/primetime.css">
+  <link rel="stylesheet" href="styles/stadium.css">
+  <link rel="stylesheet" href="styles/controlroom.css">
+  <!-- The NATIVE league views. Last, so it can lean on the tokens and the panel
+       styling the earlier sheets establish. -->
+  <link rel="stylesheet" href="styles/league.css">
+  <!-- The League tab's cinematic layer. After league.css so it can raise the .db-*
+       cells that sheet defines; before motion.css so reduced-motion still wins. -->
+  <link rel="stylesheet" href="styles/gridiron.css">
+  <!-- The Leaders tab's broadcast layer. After controlroom.css, which owns the
+       .ld-* layout this only lights. -->
+  <link rel="stylesheet" href="styles/podium.css">
+  <!-- Game Center's. After stadium.css so it can sit under that hero, and after
+       controlroom.css whose .drives/.mod it promotes. -->
+  <link rel="stylesheet" href="styles/booth.css">
+  <!-- News & Odds. Last of the per-tab layers. -->
+  <link rel="stylesheet" href="styles/wire.css">
+  <!-- Around the League's slate, plus the team and player pages you click into. -->
+  <link rel="stylesheet" href="styles/marquee.css">
+  <!-- The standings board. -->
+  <link rel="stylesheet" href="styles/ledger.css">
+  <!-- The Fantasy sub-tabs draft night left flat. After league.css and
+       gridiron.css, both of which it re-tints rather than replaces. -->
+  <link rel="stylesheet" href="styles/clubhouse.css">
+  <!-- Movement last: it overrides durations for reduced motion, and that must
+       win over anything an earlier sheet set. -->
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div id="brand">
+        <span class="title">NFL HUB</span>
+        <span class="sub" id="season-label">Loading…</span>
+      </div>
+      <!-- Team and player pages are deliberately absent: they are drill-downs reached by
+           clicking a chip, which is how every real sports app works. -->
+      <nav id="nav" aria-label="Sections">
+        <button data-act="nav" data-view="league" aria-current="true">Around the League</button>
+        <button data-act="nav" data-view="game" aria-current="false">Game Center</button>
+        <button data-act="nav" data-view="standings" aria-current="false">Standings</button>
+        <button data-act="nav" data-view="leaders" aria-current="false">Leaders</button>
+        <button data-act="nav" data-view="news" aria-current="false">News &amp; Odds</button>
+        <!-- ⚠️ THE LABEL IS "Fantasy", THE ROUTE KEY IS STILL `myleague`, and that is
+             deliberate: nothing navigates by name (core/app.js reads
+             `t.dataset.view` off the button), so renaming the key would be churn
+             for no user-visible gain.
+
+             ⚠️ "Fantasy" was ALSO the name of the Sleeper mirror tab, removed on
+             2026-08-12. Old commits and docs saying "the Fantasy tab" mean that
+             read-only mirror, not this native league. -->
+        <button data-act="nav" data-view="myleague" aria-current="false">Fantasy</button>
+      </nav>
+      <!-- ⚠️ Global, so core/app.js owns it rather than a view: the topbar outlives
+           every mount. The label and pressed state are painted on boot by
+           paintSfxButton(), because the preference is stored per browser and the
+           served HTML cannot know it. -->
+      <button id="sfx-toggle" data-act="sfx-toggle" aria-pressed="true"
+              title="Click sounds on &#8212; mute them">&#128266;</button>
+    </header>
+    <main id="main">
+      <div class="state"><div class="spinner"></div><div>Loading NFL Hub…</div></div>
+    </main>
+  </div>
+  <script type="module" src="core/app.js"></script>
+</body>
+</html>

@@ -71,6 +71,12 @@ jobs:
       - name: Vendored shared modules match their source
         run: node scripts/vendor-shared.mjs --check
 
+      # move/nfl-hub is nfl-hub in Dissent Maker's shape (one server.js, no compiled module) for its move to a
+      # signed file (plugin v3 step 8). A stale copy would publish an old server part: rebuild it with
+      # `node scripts/nfl-hub-move.mjs` whenever plugins/nfl-hub changes, until nfl-hub has moved.
+      - name: move/nfl-hub matches plugins/nfl-hub
+        run: node scripts/nfl-hub-move.mjs --check
+
       # Any import reaching above a plugin's own directory can never be mirrored
       # (internal/pluginmirror.RelPath refuses it), permanently pinning that plugin to
       # whoever published it.

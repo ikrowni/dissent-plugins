@@ -1,0 +1,237 @@
+/* styles/controlroom.css — dense, labelled data modules. Monospace figures,
+ * minimal chrome, information per pixel. Effectively free to run: nothing here
+ * animates except row hover. */
+
+.mod { border: 1px solid var(--line); border-radius: var(--r); background: var(--ink-2); overflow: hidden; }
+.mod-head { display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); }
+.mod-head .t { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 700; }
+.mod-head .v { margin-left: auto; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-3); }
+.mod-body { padding: 11px 12px; }
+
+/* ── Drive chart: one block per possession ──────────────────────────────────── */
+.drives { display: flex; gap: 3px; }
+.drives button {
+  flex: 1; min-width: 0; height: 22px; border: 0; padding: 0; cursor: pointer;
+  border-radius: 2px; background: #232936;
+  transition: transform var(--dur-fast), filter var(--dur-fast);
+}
+.drives button:hover { transform: translateY(-2px); filter: brightness(1.3); }
+.drives button[aria-current='true'] { outline: 1px solid var(--gold); outline-offset: 1px; }
+.drives button.td { background: var(--gold); }
+.drives button.fg { background: #8a6d1f; }
+.drives button.punt { background: #2f6f4f; }
+.drives button.turnover { background: #7a2430; }
+.drives button.end { background: #3a4152; }
+
+.drive-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 9px;
+  font-size: 10px; color: var(--text-3); }
+.drive-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+/* Keyed on the same class the block uses, so a colour can never drift between
+ * chart and legend. */
+.drive-legend i.td { background: var(--gold); }
+.drive-legend i.fg { background: #8a6d1f; }
+.drive-legend i.punt { background: #2f6f4f; }
+.drive-legend i.turnover { background: #7a2430; }
+.drive-legend i.end { background: #3a4152; }
+
+/* ── Play-by-play ───────────────────────────────────────────────────────────── */
+.pbp { font-family: var(--f-mono); font-size: 10.5px; line-height: 1.7; color: #b3bccd;
+  max-height: 320px; overflow-y: auto; }
+.pbp .row { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.035); display: flex; gap: 9px; }
+.pbp .row:last-child { border-bottom: 0; }
+.pbp .tk { color: var(--text-3); white-space: nowrap; flex: 0 0 auto; }
+.pbp .row.score { color: var(--text); }
+.pbp .row.score .txt { font-weight: 700; }
+.pbp .row.score .tk { color: var(--gold); }
+.pbp .row.turnover .txt { color: #e0596c; }
+.pbp .tag { font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--gold); border: 1px solid rgba(255,182,18,.4); border-radius: 3px;
+  padding: 0 4px; flex: 0 0 auto; align-self: center; }
+
+/* ── Team stat comparison: bidirectional bars ───────────────────────────────── */
+.cmp { display: grid; gap: 9px; }
+.cmp-row { display: grid; grid-template-columns: 52px 1fr 96px 1fr 52px; align-items: center;
+  gap: 8px; font-size: 12px; }
+.cmp-row .lbl { text-align: center; font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.cmp-row .v { font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+.cmp-row .v.l { text-align: right; }
+.cmp-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.07);
+  overflow: hidden; display: flex; }
+.cmp-bar.l { justify-content: flex-end; }
+.cmp-bar i { display: block; height: 100%; transition: width var(--dur) var(--ease-out); }
+
+/* ── Sparkline + scoreboard rows ────────────────────────────────────────────── */
+.sb-row { display: flex; align-items: center; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,.045); }
+.sb-row:last-child { border-bottom: 0; }
+.sb-row .sc { font-family: var(--f-display); font-size: 19px; font-weight: 800;
+  width: 34px; text-align: right; }
+.sb-row .sc.lead { color: var(--text); }
+.sb-row .sc.trail { color: var(--text-3); }
+.spark { flex: 1; height: 22px; min-width: 40px; }
+.sb-meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-3);
+  width: 74px; text-align: right; margin-left: auto; }
+
+/* Live game card gets a gold-to-red accent rail. */
+.game-card { border: 1px solid var(--line); border-radius: var(--r); background: var(--ink-2);
+  padding: 10px 13px; position: relative; overflow: hidden; width: 100%;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast); }
+.game-card:hover { border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.game-card.live { border-color: rgba(255,182,18,.28); }
+.game-card.live::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, var(--gold), var(--nfl-red));
+}
+.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px; padding: 14px 16px; }
+
+/* ── Replay bar (development / demo only) ───────────────────────────────────── */
+.replay-bar { display: flex; align-items: center; gap: 8px; margin: 10px 20px 0;
+  padding: 8px 12px; border: 1px dashed var(--line-2); border-radius: var(--r);
+  background: rgba(255,182,18,.05); }
+.replay-bar button { appearance: none; border: 1px solid var(--line-2); background: transparent;
+  color: var(--text); font: inherit; font-size: 11px; padding: 4px 10px;
+  border-radius: var(--r-sm); cursor: pointer; }
+.replay-bar button:hover { background: var(--panel); }
+.replay-bar input[type="range"] { flex: 1; accent-color: var(--gold); }
+
+/* ── Standings ─────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THIS WAS THE LAST SURFACE BUILT FROM WORKHORSE CHROME ALONE — eight bare
+ * tables stacked vertically with eleven equally-weighted columns and no colour,
+ * which is exactly what the spec meant by "a different, older app sitting inside
+ * a polished one". Nothing here is a new idea: team colour, a bar scaled to the
+ * leader, and a muted secondary tier are all vocabulary the hub already owns.
+ */
+.st-conf { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.st-conf-col { min-width: 0; }
+.st-conf-h {
+  font-family: var(--f-display); font-size: 12px; font-weight: 800;
+  letter-spacing: 0.18em; color: var(--text-3); text-transform: uppercase;
+  margin: 4px 0 8px 2px;
+}
+.st-div { margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.st-rows { padding: 2px 0; }
+
+/* ⚠️ THE ACCENT IS teamColor(), which lifts near-black primaries (Raiders and
+ * Steelers are #000000) until they are legible. A raw primary would render four
+ * teams with an invisible stripe. */
+.st-row {
+  display: grid; align-items: center; gap: 10px;
+  grid-template-columns: minmax(0, 1.5fr) 62px 46px minmax(70px, 1fr) 92px 96px 44px;
+  padding: 7px 12px; border-left: 3px solid var(--tc, transparent);
+  border-bottom: 1px solid rgba(255,255,255,.045);
+}
+.st-row:last-child { border-bottom: 0; }
+.st-row:hover { background: rgba(255,255,255,.025); }
+.st-team { min-width: 0; }
+
+/* The record reads as one thing, because that is how it is read. */
+.st-rec { font-family: var(--f-display); font-size: 15px; font-weight: 800; color: var(--text); }
+.st-pct { font-family: var(--f-mono); font-size: 11px; color: var(--text-2); text-align: right; }
+
+/* Differential, scaled within the division so both directions compare. */
+.st-diff { display: flex; align-items: center; gap: 7px; }
+.st-diff-bar { flex: 1; height: 4px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.st-diff-bar i { display: block; height: 100%; background: var(--text-3); }
+.st-diff.up .st-diff-bar i { background: var(--win); }
+.st-diff.down .st-diff-bar i { background: var(--loss); }
+.st-diff b { font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--text-3); min-width: 4ch; text-align: right; }
+.st-diff.up b { color: var(--win); }
+.st-diff.down b { color: var(--loss); }
+
+/* Everything a reader consults second, weighted like it. */
+.st-sec { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); text-align: right; white-space: nowrap; }
+.st-strk { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-2); text-align: right; }
+
+@media (max-width: 900px) {
+  .st-row { grid-template-columns: minmax(0, 1.4fr) 58px 44px minmax(60px, 1fr); }
+  .st-sec, .st-strk { display: none; }
+}
+
+/* ── League leaders ────────────────────────────────────────────────────────
+ *
+ * ⚠️ SIXTEEN CATEGORIES RENDERED IDENTICALLY IS NO ANSWER TO "who is leading the
+ * league". A fan looks for passing yards, not punt yards, and the board gave both
+ * the same size, the same weight and — because a flat auto-fit grid reflows to
+ * whatever the width allows — no reliable reading order either. The six a fan
+ * looks for first are now the board; the other ten keep every number in a denser
+ * tier below it. Same rule as the standings pass: everything consulted second is
+ * weighted like it.
+ *
+ * Nothing here is a new visual idea. The position scale, the portrait-or-monogram
+ * and the share-of-the-leader bar are all vocabulary the hub already owns.
+ */
+.ld-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.ld-grid-more { grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 10px; }
+.ld-more-h { margin: 20px 0 9px 2px; }
+
+.ld-body { padding: 6px 6px 8px; }
+/* The featured tier states its name louder and sits inside a brighter frame; the
+ * second tier is deliberately quieter than the .mod default rather than smaller. */
+.ld-feat { border-color: var(--line-2); }
+.ld-feat .mod-head .t { color: var(--text-2); font-size: 10px; }
+.ld-cat:not(.ld-feat) .mod-head .t { font-size: 9px; color: var(--text-3); }
+
+.ld-row {
+  display: grid; align-items: center;
+  grid-template-columns: 15px auto minmax(0, 1fr) auto;
+  column-gap: 9px; row-gap: 5px;
+  width: 100%; padding: 6px; border: 0; border-bottom: 1px solid rgba(255,255,255,.045);
+  background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast);
+}
+/* The second tier drops the portrait, not the information. */
+.ld-row.dense { grid-template-columns: 15px minmax(0, 1fr) auto; padding: 5px 6px; }
+.ld-row:last-child { border-bottom: 0; }
+.ld-row:hover { background: rgba(255,255,255,.04); }
+
+.ld-rank { font-family: var(--f-mono); font-size: 10px; color: var(--text-3); }
+.ld-hero .ld-rank { color: var(--gold); font-weight: 700; }
+
+.ld-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ld-name {
+  font-family: var(--f-display); font-weight: 700; font-size: 13.5px; letter-spacing: .01em;
+  color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ld-hero .ld-name { font-size: 18px; color: var(--text); }
+.ld-row:hover .ld-name { color: var(--text); }
+.ld-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ld-row.dense .ld-meta { gap: 5px; }
+
+.ld-val { font-family: var(--f-display); font-weight: 800; font-size: 15px; color: var(--text-2); }
+.ld-hero .ld-val { font-size: 23px; color: var(--text); line-height: 1; }
+
+/* ⚠️ THE GAP BETWEEN #1 AND #3, as a share of the leader — the standings
+ * differential bar's rule applied to a category. It is what tells a runaway
+ * (46 · 34 · 31) apart from a dead heat (19 · 19 · 18) at a glance, which three
+ * bare numbers never do.
+ *
+ * ⚠️ TINTED BY THE POSITION SCALE, which is the point of tinting it at all: the
+ * third-best rusher for touchdowns being a QUARTERBACK is now visible without
+ * reading a name and knowing who he is. */
+.ld-bar {
+  grid-column: 1 / -1; height: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.06); overflow: hidden;
+}
+.ld-bar i {
+  display: block; height: 100%; background: var(--pc, var(--text-3));
+  transition: width var(--dur) var(--ease-out);
+}
+.ld-hero .ld-bar { height: 4px; }
+/* Behind the leader is the quieter statement, so the trailing bars are quieter.
+ * ⚠️ KEYED ON BEING FIRST IN THE CATEGORY, not on .ld-hero. Only the featured
+ * tier has a hero, so hanging this off it dimmed all three rows of the other ten
+ * categories equally — which is where the defensive grey is already the faintest
+ * colour on the board, and it took the leader's emphasis with it. */
+.ld-row:not(:first-child) .ld-bar i { opacity: .7; }
+
+@media (max-width: 560px) {
+  .ld-hero .ld-name { font-size: 16px; }
+  .ld-hero .ld-val { font-size: 19px; }
+}

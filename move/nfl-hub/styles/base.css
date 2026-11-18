@@ -1,0 +1,219 @@
+/* styles/base.css — design tokens, reset, type scale, layout shell.
+ *
+ * Paths here resolve relative to THIS FILE, not to the <base href> that governs
+ * plugin.html. Hence ../assets/fonts/, not nfl-hub/assets/fonts/. */
+@import url('../assets/fonts/barlow-condensed.css');
+
+:root {
+  /* Surfaces — near-black base, per the Primetime direction. */
+  --ink:      #05070b;
+  --ink-2:    #0b0e14;
+  --panel:    rgba(255, 255, 255, 0.035);
+  --panel-2:  rgba(255, 255, 255, 0.06);
+  --line:     rgba(255, 255, 255, 0.09);
+  --line-2:   rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text:   #e9edf5;
+  --text-2: #98a0b3;
+  --text-3: #6f7889;
+
+  /* League palette */
+  --gold:     #ffb612;
+  --live:     #ff2d4b;
+  --nfl-blue: #013369;
+  --nfl-red:  #d50a0a;
+  --win:      #4f9e7f;
+  --loss:     #b0455a;
+
+  /* Type */
+  --f-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --f-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --f-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --r-sm: 6px;
+  --r:    10px;
+  --r-lg: 14px;
+
+  --dur-fast: 140ms;
+  --dur:      260ms;
+  --dur-slow: 600ms;
+  /* Spring easing for entrances — overshoots slightly, which is what makes a
+   * scorebug feel like a broadcast graphic rather than a div. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--f-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* the app column scrolls, not the body */
+}
+
+/* Every number that changes in place must not jitter. */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+.display { font-family: var(--f-display); font-weight: 800; letter-spacing: -0.01em; }
+
+.kicker {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 600;
+}
+
+/* ── App shell ─────────────────────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100%; }
+
+#topbar {
+  display: flex; align-items: center; gap: 18px;
+  padding: 12px 20px; border-bottom: 1px solid var(--line);
+  background: var(--ink-2); flex: 0 0 auto;
+}
+
+#brand { display: flex; align-items: baseline; gap: 10px; }
+#brand .title { font-family: var(--f-display); font-size: 20px; font-weight: 800; letter-spacing: 0.01em; }
+#brand .sub { font-size: 11px; color: var(--text-2); }
+
+/* Seven sections do not fit a phone's width. The row scrolls sideways rather than
+   running off the screen with no way to reach the rest (owner, phone browser,
+   2026-10-15) — and on a narrow screen it takes a row of its own under the brand. */
+#nav {
+  display: flex; gap: 4px; margin-left: auto; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#nav::-webkit-scrollbar { display: none; }
+#nav button { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 760px) {
+  #topbar { flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; }
+  #sfx-toggle { margin-left: auto; }
+  #nav { order: 3; flex: 1 0 100%; margin-left: 0; }
+}
+
+#nav button {
+  appearance: none; border: 1px solid transparent; background: transparent;
+  color: var(--text-2); font: inherit; font-size: 12px; font-weight: 600;
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+#nav button:hover { color: var(--text); background: var(--panel); }
+#nav button[aria-current='true'] {
+  color: var(--text); background: var(--panel-2); border-color: var(--line-2);
+}
+
+/* The click-sound switch. Shaped like a nav pill so the topbar's right edge stays
+   one consistent row rather than a pill next to a loose glyph. */
+#sfx-toggle {
+  appearance: none; border: 1px solid transparent; background: transparent;
+  color: var(--text-2); font: inherit; font-size: 13px; line-height: 1;
+  padding: 7px 10px; border-radius: 999px; cursor: pointer;
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+#sfx-toggle:hover { color: var(--text); background: var(--panel); }
+/* Muted reads as recessed, so the state is legible without relying on the glyph
+   alone — the speaker and crossed-speaker emoji are near-identical at 13px. */
+#sfx-toggle[aria-pressed='false'] { opacity: 0.5; }
+
+#main { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; }
+
+/* ── States ────────────────────────────────────────────────────────────────── */
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 60px 20px; color: var(--text-2); font-size: 13px; text-align: center; }
+
+.spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--line-2); border-top-color: var(--gold);
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ⚠️ A REFUSAL, NOT A FAILURE. The viewer chose "View Without Joining", which
+ * grants the plugin nothing, so every fetch is refused until they change that.
+ * Deliberately NOT styled as an error: nothing is broken, and red here would
+ * send somebody hunting a bug that does not exist. Narrower than .state's
+ * centred text because it is three lines of explanation, not a status word. */
+.state-denied { gap: 8px; max-width: 46ch; margin: 0 auto; }
+.state-denied strong { color: var(--text); font-weight: 700; }
+.state-denied .muted { line-height: 1.55; }
+.state-denied .tiny { color: var(--text-3); line-height: 1.5; }
+
+.state .retry {
+  appearance: none; border: 1px solid var(--line-2); background: transparent;
+  color: var(--text); font: inherit; font-size: 12px; padding: 6px 14px;
+  border-radius: var(--r-sm); cursor: pointer;
+}
+
+/* ── Reduce motion ─────────────────────────────────────────────────────────────
+ * core/motion.js stamps this class on <body>. It kills ambient/looping effects and
+ * shortens transitions; it deliberately does NOT disable them entirely, because a
+ * score changing with no transition at all reads as a glitch. */
+body.reduce-motion .sweep,
+body.reduce-motion .ambient { display: none !important; }
+body.reduce-motion .spinner { animation-duration: 1600ms; }
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 80ms !important;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── Scrollbars ────────────────────────────────────────────────────────────
+ *
+ * The hub is a dark, panelled surface and a platform scrollbar sits on top of
+ * it as a bright grey slab — on the draft board, the pool, the bracket and the
+ * main column at once. Reported 2026-08-31 as making the sections "look bad".
+ *
+ * ⚠️ SCROLLABILITY IS KEPT. `scrollbar-width: none` / `::-webkit-scrollbar`
+ * hide the CONTROL, never the overflow — every one of these regions still
+ * scrolls by wheel, trackpad, touch, arrow keys, Page Up/Down and Home/End.
+ * `overflow: hidden` would have been the wrong tool and is not used here.
+ *
+ * ⚠️ IT COMES BACK ON HOVER, and that is the deliberate half of this. A region
+ * with no scrollbar at rest and none on hover gives a mouse user nothing to
+ * grab and no hint that there is more below — so the bar is hidden until the
+ * pointer is over the region that owns it, then fades in thin and themed. That
+ * keeps the affordance for the people who rely on it while the surface stays
+ * clean when nobody is looking at it.
+ *
+ * ⚠️ Firefox has no hover-scoped equivalent of the WebKit pseudo-element, so it
+ * gets `thin` on hover and `none` at rest — the same behaviour, one step
+ * coarser. Do not try to unify them; `scrollbar-width` takes no colour and
+ * `::-webkit-scrollbar` does not exist there.
+ */
+* {
+  scrollbar-width: none;                 /* Firefox: hidden at rest */
+  scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: transparent; border-radius: 8px; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* The thumb belongs to the hovered region, so it is drawn only while the
+ * pointer is inside the element that scrolls. */
+:hover::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+:hover::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: content-box; }
+:hover { scrollbar-width: thin; }
+
+/* ⚠️ Someone navigating by keyboard never generates a hover, so a focused
+ * region shows its bar unconditionally. Without this the affordance is
+ * mouse-only, which is the accessibility trap this whole treatment invites. */
+:focus-within::-webkit-scrollbar-thumb { background: var(--line); border: 2px solid transparent; background-clip: content-box; }
+:focus-within { scrollbar-width: thin; }
