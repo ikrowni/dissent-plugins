@@ -3484,7 +3484,7 @@ function requireLeagueId6(payload) {
 }
 
 // server/version.js
-var MODULE_VERSION = "2.47.0";
+var MODULE_VERSION = "2.47.2";
 
 // server/main.js
 var OPS = {
