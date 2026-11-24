@@ -11,7 +11,41 @@ let _initContext = null;
 // overlay closes; in the app it is ignored). Guarded: plugin unit tests import this in Node.
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') parent.postMessage({ type: 'dissent:escape' }, '*');
+    if (e.key === 'Escape' && !e.__dissentMadeUp) parent.postMessage({ type: 'dissent:escape' }, '*');
+  });
+}
+
+// On-screen controls (Android app spec 2026-11-23 §10): the host's pad and controller arrive as
+// dissent:key {type: 'down'|'up', key} and become real keydown/keyup on this document, so a keyboard game needs no
+// code for them. One SDK per page does it (the first to load owns window.__dissentKeys). getInitContext().hostControls
+// is true while the host reads the controller: a game that reads navigator.getGamepads() itself should stop then.
+const _KEY_CODES = { ' ': 32, Enter: 13, Escape: 27, Tab: 9, Backspace: 8, Shift: 16, Control: 17, Alt: 18,
+  ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 };
+function _codeOf(key) {
+  if (key === ' ') return 'Space';
+  if (/^[a-z]$/i.test(key)) return 'Key' + key.toUpperCase();
+  if (/^[0-9]$/.test(key)) return 'Digit' + key;
+  if (key === 'Shift' || key === 'Control' || key === 'Alt') return key + 'Left';
+  return key;
+}
+function _pressKey(type, key) {
+  const ev = new KeyboardEvent(type === 'down' ? 'keydown' : 'keyup', { key, code: _codeOf(key), bubbles: true, cancelable: true, composed: true });
+  const kc = _KEY_CODES[key] ?? (/^[a-z0-9]$/i.test(key) ? key.toUpperCase().charCodeAt(0) : 0);
+  try { Object.defineProperty(ev, 'keyCode', { get: () => kc }); Object.defineProperty(ev, 'which', { get: () => kc }); } catch { /* read-only here */ }
+  Object.defineProperty(ev, '__dissentMadeUp', { value: true });
+  const t = document.activeElement instanceof HTMLElement ? document.activeElement : document.body;
+  const go = t.dispatchEvent(ev);
+  // A real Enter presses a focused button; a made-up one does nothing by itself.
+  if (go && type === 'down' && key === 'Enter' && t !== document.body && (t.tagName === 'BUTTON' || t.getAttribute('role') === 'button')) t.click();
+}
+if (typeof window !== 'undefined' && !window.__dissentKeys) {
+  const me = {};
+  window.__dissentKeys = me;
+  window.addEventListener('message', (e) => {
+    if (window.__dissentKeys !== me || e.source !== window.parent || e.data?.type !== 'dissent:key') return;
+    const d = e.data.data;
+    if (!d || (d.type !== 'down' && d.type !== 'up') || typeof d.key !== 'string' || !d.key || d.key.length > 20) return;
+    _pressKey(d.type, d.key);
   });
 }
 
@@ -50,12 +84,16 @@ const _changeListeners = {
   'game.lobby': [], 'game.message': [], 'game.rate_limited': [],
   // Spec 2026-10-20-tower-plugin-design §5: the app's sound volume and deafen, for a game to follow.
   'game.sound': [],
+  // Android app spec §9: the screen turned on a phone (getInitContext().device is 'phone' on the phone layout).
+  'orientation': [],
 };
 /** Called with { scope, key } when this plugin's stored data changes (any writer, a scope you hold).
  *  Never the value — re-read what you need. Keep a slow safety poll: a server module's writes are not announced. */
 export function onStorageChange(fn) { _changeListeners['storage:changed'].push(fn); }
 /** Called when this install's friends:link links change (invite, accept, decline, stop, auto-match). Re-list them. */
 export function onLinksChange(fn) { _changeListeners['links:changed'].push(fn); }
+/** The screen turned (phone): fn('portrait' | 'landscape'). getInitContext().orientation follows it. */
+export function onOrientationChange(fn) { _changeListeners['orientation'].push((d) => fn(d?.orientation)); }
 
 export function handleSDKMessage(e, onInit, onEvent) {
   if (e.data?.type === 'dissent:init') {
@@ -68,6 +106,10 @@ export function handleSDKMessage(e, onInit, onEvent) {
     const p = _pending[e.data.id];
     if (p) { delete _pending[e.data.id]; e.data.ok ? p.resolve(e.data.data) : p.reject(new Error(e.data.error)); }
     return;
+  }
+  if (e.data?.type === 'dissent:event' && e.data.event === 'orientation' && _initContext) {
+    const o = e.data.data?.orientation;
+    if (o === 'portrait' || o === 'landscape') _initContext = { ..._initContext, orientation: o };
   }
   if (e.data?.type === 'dissent:event' && _changeListeners[e.data.event]) {
     for (const fn of _changeListeners[e.data.event]) {

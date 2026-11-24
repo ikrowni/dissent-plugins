@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Input, padKeys, applyPad } from './ul-input.js';
+import { Input, padKeys, applyPad, ownPads } from './ul-input.js';
 
 describe('Input', () => {
   it('keeps a tap that was released before any step ran', () => {
@@ -48,5 +48,16 @@ describe('controller', () => {
     expect(inp.read().jump).toBe(false);
     applyPad(inp, prev, new Set());
     expect(inp.read().jumpHeld).toBe(false);
+  });
+});
+
+describe('ownPads', () => {
+  const pad = { axes: [0, 0], buttons: [] };
+  it('reads the controller itself when the app does not', () => {
+    expect(ownPads({ contextType: 'games' }, () => [null, pad])).toEqual([pad]);
+    expect(ownPads(null, () => [pad])).toEqual([pad]);
+  });
+  it('leaves it to the app while hostControls is on (the phone pad reads it)', () => {
+    expect(ownPads({ hostControls: true }, () => [pad])).toEqual([]);
   });
 });

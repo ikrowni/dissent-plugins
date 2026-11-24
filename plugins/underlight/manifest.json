@@ -1,7 +1,7 @@
 {
   "id": "underlight",
   "name": "Underlight",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A hard side-on roguelike under the lantern town. Your lantern is your light and your fuel; when it runs dry, the Dark comes.",
   "author": "KROWN",
   "tier": 1,
@@ -105,7 +105,7 @@
     },
     {
       "url": "ul-input.js",
-      "sha256": "4b49b185ce655ead69b9e73ddf7df79d8d85236917eb52348b7de06de9fef468"
+      "sha256": "db7554d78c25d2197301513897371534f3c9d783d1db27c3c60c1d9107bbc6b9"
     },
     {
       "url": "ul-lantern.js",
@@ -129,7 +129,7 @@
     },
     {
       "url": "ul-main.js",
-      "sha256": "2ae21bc802cb889f59ef693da61eb66e97ca12a75f65eca4fff22faafc8380e0"
+      "sha256": "bb2be24ea49a5a508d0e2925dfd2d327e864a417eade3c698893d14a886b7c47"
     },
     {
       "url": "ul-moth.js",
@@ -217,6 +217,36 @@
     ],
     "watchers": true,
     "drop_in": false,
-    "blurb": "Go down under the lantern town. Keep your light."
+    "blurb": "Go down under the lantern town. Keep your light.",
+    "controls": {
+      "stick": "arrows",
+      "buttons": [
+        {
+          "label": "Jump",
+          "key": " "
+        },
+        {
+          "label": "Attack",
+          "key": "j"
+        },
+        {
+          "label": "Roll",
+          "key": "l"
+        },
+        {
+          "label": "Throw",
+          "key": "e"
+        },
+        {
+          "label": "Block",
+          "key": "k"
+        },
+        {
+          "label": "Flask",
+          "key": "f"
+        }
+      ],
+      "menu": "Escape"
+    }
   }
 }

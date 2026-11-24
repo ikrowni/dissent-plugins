@@ -3,13 +3,13 @@
 // testing (nothing saves then, and it says so).
 // Only helpers every SDK copy has: a node that mirrors plugins serves its own embedded copy, which may be older, and a
 // named import it lacks would stop the whole game loading. The sound level is asked for and listened to by hand.
-import { handleSDKMessage, request, gameLobby, onGameLobby } from '../plugin-sdk.js';
+import { handleSDKMessage, request, gameLobby, onGameLobby, getInitContext } from '../plugin-sdk.js';
 import { advance } from './ul-game.js';
 import { newRun, openStep, closeStep, stepLabel, hashSeed, STEPS } from './ul-run.js';
 import { CELLARS, LAMP_POST } from './biomes/cellars.js';
 import { RAT_KING_ARENA } from './biomes/cellars-arena.js';
 import { CAMP } from './biomes/camp.js';
-import { Input, padKeys, applyPad } from './ul-input.js';
+import { Input, padKeys, applyPad, ownPads } from './ul-input.js';
 import { Renderer } from './ul-render.js';
 import { takeFx } from './ul-fx.js';
 import { playFx, unlockAudio, setMuted, isMuted, setVolume, setAppSound } from './ul-sound.js';
@@ -158,7 +158,7 @@ function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - (last || ts)) / 1000); last = ts;
   if (!S) return;
-  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const pads = ownPads(getInitContext(), () => (navigator.getGamepads ? [...navigator.getGamepads()] : []));
   const now = padKeys(pads[0]);
   if (now.has('pad:pause') && !padPrev.has('pad:pause')) togglePause();
   if (phase === 'play') padPrev = applyPad(input, padPrev, now); else padPrev = now;

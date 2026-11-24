@@ -30,6 +30,15 @@ export class Input {
   consume() { this.pressed.clear(); }
 }
 
+/**
+ * The controllers this game reads itself: none while the Dissent app reads them for it (init context `hostControls`,
+ * the phone's on-screen pad — Android app spec §10), or every controller press would arrive twice.
+ */
+export function ownPads(ctx, getPads) {
+  if (ctx && ctx.hostControls === true) return [];
+  return (getPads() || []).filter(Boolean);
+}
+
 /** One snapshot of the first connected controller as virtual keys (standard mapping). */
 export function padKeys(pad) {
   const now = new Set();
