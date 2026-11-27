@@ -1,7 +1,7 @@
 {
   "id": "tower",
   "name": "The Tower",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Race up a tower at night while the mist rises. Up to 8 players, five playstyles, punches and pick-ups.",
   "author": "KROWN",
   "tier": 1,
@@ -94,7 +94,7 @@
       ]
     },
     "controls": {
-      "stick": "arrows",
+      "stick": "arrows-x",
       "buttons": [
         {
           "label": "Jump",

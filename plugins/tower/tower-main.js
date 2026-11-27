@@ -191,6 +191,7 @@ function onRoundEvent(r, ev) {
   if ("combo" in ev) hud.say(`Combo ×${ev.combo}`, "combo");
   else if ("comboEnded" in ev) hud.note(`Combo: ${ev.comboEnded} floors`);
   else if ("crate" in ev) hud.note(`Crate: ${ITEM_INFO[ev.crate].name}${ev.strong ? " (last place gets the strong ones)" : ""}`);
+  else if ("used" in ev) hud.note(`Used: ${ev.note}`);
   else if ("feed" in ev) hud.note(ev.feed);
   else if ("boom" in ev) view.blasts.push({ ...ev.boom, at: Math.max(0, r.raceMs) / 1000 });
 }
