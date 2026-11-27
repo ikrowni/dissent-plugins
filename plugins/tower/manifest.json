@@ -93,6 +93,7 @@
         "floors"
       ]
     },
+    "orientation": "portrait",
     "controls": {
       "stick": "arrows-x",
       "buttons": [
